@@ -30,6 +30,7 @@ from ._tensor import (  # noqa: F401
     load_buffer_custom_array,
     load_custom_array,
     load_mmap,
+    load_partial,
 )
 
 

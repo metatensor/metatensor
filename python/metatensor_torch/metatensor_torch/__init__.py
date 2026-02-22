@@ -48,6 +48,7 @@ from .serialization import (  # noqa: F401, E402
     load_block_mmap,
     load_labels,
     load_mmap,
+    load_partial,
     save,
 )
 

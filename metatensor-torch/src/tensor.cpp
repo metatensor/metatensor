@@ -1,4 +1,5 @@
 #include <metatensor.hpp>
+#include <cstring>
 #include <string>
 
 #include "metatensor/torch/tensor.hpp"
@@ -519,6 +520,37 @@ TensorMap TensorMapHolder::load(const std::string& path) {
 TensorMap TensorMapHolder::load_mmap(const std::string& path) {
     return torch::make_intrusive<TensorMapHolder>(
         TensorMapHolder(metatensor::io::load_mmap(path, metatensor_torch::details::create_mmap_torch_array))
+    );
+}
+
+TensorMap TensorMapHolder::load_partial(
+    const std::string& path,
+    Labels keys,
+    Labels samples,
+    Labels properties
+) {
+    // Empty labels (count==0) mean "select all" on that axis.
+    // The C API checks internal_ptr_==NULL && count==0 to detect this,
+    // but Labels created through the torch API always have internal_ptr_ set.
+    // So we bypass the C++ header wrapper and pass zeroed mts_labels_t directly.
+    mts_labels_t empty;
+    std::memset(&empty, 0, sizeof(empty));
+
+    auto keys_raw = keys->count() == 0 ? empty : keys->as_metatensor().as_mts_labels_t();
+    auto samples_raw = samples->count() == 0 ? empty : samples->as_metatensor().as_mts_labels_t();
+    auto properties_raw = properties->count() == 0 ? empty : properties->as_metatensor().as_mts_labels_t();
+
+    auto* ptr = mts_tensormap_load_partial(
+        path.c_str(),
+        keys_raw,
+        samples_raw,
+        properties_raw,
+        details::create_torch_array
+    );
+    metatensor::details::check_pointer(ptr);
+
+    return torch::make_intrusive<TensorMapHolder>(
+        TensorMapHolder(metatensor::TensorMap::unsafe_from_ptr(ptr))
     );
 }
 

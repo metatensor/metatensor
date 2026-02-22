@@ -44,3 +44,7 @@ dlpk = {version = "0.1.3", features = ["ndarray", "half"]}
 [[bench]]
 name = "labels"
 harness = false
+
+[[bench]]
+name = "partial_load"
+harness = false

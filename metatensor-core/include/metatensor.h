@@ -1393,6 +1393,41 @@ struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
                                                 mts_create_mmap_array_callback_t create_array);
 
 /**
+ * Load a tensor map from the file at the given path, selecting only a subset
+ * of the data based on keys, samples, and properties.
+ *
+ * This function uses file seeking for efficient random access: only the
+ * selected rows and columns are read from disk.
+ *
+ * For each of `keys`, `samples`, and `properties`: if the label has a NULL
+ * `internal_ptr_` and `count == 0`, it is treated as "select all" (no
+ * filtering on that axis). Otherwise the label is converted and used as a
+ * filter via `Labels::select` semantics.
+ *
+ * Arrays for the values and gradient data will be created with the given
+ * `create_array` callback, identical to `mts_tensormap_load`.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param keys label-based filter for which blocks to load
+ * @param samples label-based filter for which samples to keep
+ * @param properties label-based filter for which properties to keep
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_tensormap_t *mts_tensormap_load_partial(const char *path,
+                                                   struct mts_labels_t keys,
+                                                   struct mts_labels_t samples,
+                                                   struct mts_labels_t properties,
+                                                   mts_create_array_callback_t create_array);
+
+/**
  * Save a tensor map to the file at the given path.
  *
  * If the file already exists, it is overwritten. The recomended file extension

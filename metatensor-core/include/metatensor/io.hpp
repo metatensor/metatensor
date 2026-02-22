@@ -226,6 +226,41 @@ namespace io {
 
     /**************************************************************************/
 
+    /// Load a previously saved ``TensorMap`` from the given path, selecting
+    /// only a subset of the data based on keys, samples, and properties.
+    ///
+    /// This function uses file seeking for efficient random access: only the
+    /// selected rows and columns are read from disk.
+    ///
+    /// For each of ``keys``, ``samples``, and ``properties``: an empty
+    /// ``Labels`` (default) means "select all" on that axis. A non-empty
+    /// ``Labels`` filters using ``Labels::select`` semantics.
+    ///
+    /// @param path path to the file as a UTF-8 string
+    /// @param keys label-based filter for which blocks to load
+    /// @param samples label-based filter for which sample rows to keep
+    /// @param properties label-based filter for which property columns to keep
+    /// @param create_array callback function used to create data arrays
+    inline TensorMap load_partial(
+        const std::string& path,
+        const Labels& keys,
+        const Labels& samples,
+        const Labels& properties,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load_partial(
+            path.c_str(),
+            keys.as_mts_labels_t(),
+            samples.as_mts_labels_t(),
+            properties.as_mts_labels_t(),
+            create_array
+        );
+        details::check_pointer(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
+    }
+
+    /**************************************************************************/
+
     inline Labels load_labels(const std::string& path) {
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));

@@ -51,6 +51,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Added `MmapDataArray` C++ class (`arrays.hpp`) as a read-only
   `DataArrayBase` backed by memory-mapped data. Supports DLPack export and
   serves as the default C++ mmap array backend.
+- Added `mts_tensormap_load_partial` C API function for selective loading of
+  `.mts` files. Filters blocks by keys, samples, and properties using
+  `Labels::select` semantics. Uses file seeking for efficient random access
+  (only selected data is read from disk). Arrays are created via the standard
+  `mts_create_array_callback_t`, producing the same result as `load()` followed
+  by manual slicing. Corresponding wrappers: C++ `metatensor::io::load_partial`,
+  `TensorMap::load_partial`; Rust `metatensor::io::load_partial`; Python
+  `metatensor.load_partial`; PyTorch `metatensor_torch.load_partial`.
 - Fixed component carry logic in `SimpleDataArray::move_samples_from` for
   arrays with more than one component dimension (4D+ tensors).
 
