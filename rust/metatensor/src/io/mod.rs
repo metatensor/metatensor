@@ -7,7 +7,7 @@ use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
 use crate::{Array, Error};
 
 mod tensor;
-pub use self::tensor::{load, save, load_buffer, save_buffer, load_mmap};
+pub use self::tensor::{load, save, load_buffer, save_buffer, load_mmap, load_partial};
 
 mod block;
 pub use self::block::{load_block, load_block_buffer, save_block, save_block_buffer, load_block_mmap};

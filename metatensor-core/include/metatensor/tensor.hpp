@@ -435,6 +435,27 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
+     * Load a previously saved ``TensorMap`` from the given path, selecting
+     * only a subset of the data based on keys, samples, and properties.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_partial`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_partial(
+        const std::string& path,
+        const Labels& keys = Labels(),
+        const Labels& samples = Labels(),
+        const Labels& properties = Labels(),
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_partial(path, keys, samples, properties, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
      * Save this ``TensorMap`` to the given path.
      *
      * This is identical to :cpp:func:`metatensor::io::save`, and provided as a

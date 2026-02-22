@@ -38,3 +38,5 @@ Serialization
 .. autofunction:: metatensor.load_mmap
 
 .. autofunction:: metatensor.load_block_mmap
+
+.. autofunction:: metatensor.load_partial

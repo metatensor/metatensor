@@ -3,6 +3,9 @@ mod npy_header;
 mod mmap;
 pub use self::mmap::{load_mmap, load_block_mmap};
 
+mod partial;
+pub use self::partial::load_partial;
+
 mod labels;
 pub use self::labels::load_labels;
 pub use self::labels::save_labels;

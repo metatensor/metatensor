@@ -563,6 +563,13 @@ extern "C" {
         path: *const ::std::os::raw::c_char,
         create_array: mts_create_mmap_array_callback_t,
     ) -> *mut mts_tensormap_t;
+    pub fn mts_tensormap_load_partial(
+        path: *const ::std::os::raw::c_char,
+        keys: mts_labels_t,
+        samples: mts_labels_t,
+        properties: mts_labels_t,
+        create_array: mts_create_array_callback_t,
+    ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_save(
         path: *const ::std::os::raw::c_char,

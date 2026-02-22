@@ -334,6 +334,11 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
+        "load_partial(str file, __torch__.torch.classes.metatensor.Labels keys, __torch__.torch.classes.metatensor.Labels samples, __torch__.torch.classes.metatensor.Labels properties) -> __torch__.torch.classes.metatensor.TensorMap",
+        metatensor_torch::load_partial
+    );
+
+    m.def(
         "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block
     );

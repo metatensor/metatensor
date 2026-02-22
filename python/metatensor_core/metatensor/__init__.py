@@ -27,6 +27,7 @@ from .io import (  # noqa: F401
     load_block_mmap,
     load_labels,
     load_mmap,
+    load_partial,
     save,
 )
 from .labels import Labels, LabelsEntry  # noqa: F401

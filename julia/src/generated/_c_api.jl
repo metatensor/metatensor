@@ -522,6 +522,14 @@ function mts_tensormap_load_mmap(path::Ptr{Cchar}, create_array::mts_create_mmap
     )
 end
 
+function mts_tensormap_load_partial(path::Ptr{Cchar}, keys::mts_labels_t, samples::mts_labels_t, properties::mts_labels_t, create_array::mts_create_array_callback_t)
+    ccall((:mts_tensormap_load_partial, libmetatensor), 
+        Ptr{mts_tensormap_t},
+        (Ptr{Cchar}, mts_labels_t, mts_labels_t, mts_labels_t, mts_create_array_callback_t,),
+        path, keys, samples, properties, create_array
+    )
+end
+
 function mts_tensormap_save(path::Ptr{Cchar}, tensor::Ptr{mts_tensormap_t})
     ccall((:mts_tensormap_save, libmetatensor), 
         mts_status_t,

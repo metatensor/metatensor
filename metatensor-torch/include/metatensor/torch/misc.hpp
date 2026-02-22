@@ -51,6 +51,18 @@ METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TensorMap tensor);
 /// memory-mapped I/O.
 METATENSOR_TORCH_EXPORT TensorMap load_mmap(const std::string& path);
 
+/// Load a previously saved `TensorMap` from the given path, selecting
+/// only a subset of the data based on keys, samples, and properties.
+///
+/// Empty `Labels` (default-constructed) for any filter means "select all"
+/// on that axis.
+METATENSOR_TORCH_EXPORT TensorMap load_partial(
+    const std::string& path,
+    Labels keys,
+    Labels samples,
+    Labels properties
+);
+
 /******************************************************************************/
 
 /// Load a previously saved `TensorBlock` from the given path.

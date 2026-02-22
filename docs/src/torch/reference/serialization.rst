@@ -20,3 +20,5 @@ Serialization
 .. autofunction:: metatensor.torch.load_mmap
 
 .. autofunction:: metatensor.torch.load_block_mmap
+
+.. autofunction:: metatensor.torch.load_partial
