@@ -49,6 +49,7 @@ jobs:
 
       - name: Restore benchmark files (main)
         run: |
+          rm -rf benchmarks
           cp -r /tmp/benchmarks-stash benchmarks
           cp /tmp/asv-conf-stash.json asv.conf.json
 
@@ -69,6 +70,7 @@ jobs:
 
       - name: Restore benchmark files (PR)
         run: |
+          rm -rf benchmarks
           cp -r /tmp/benchmarks-stash benchmarks
           cp /tmp/asv-conf-stash.json asv.conf.json
 
