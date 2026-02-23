@@ -12,3 +12,6 @@ build/
 htmlcov/
 .coverage*
 coverage.xml
+
+# ASV benchmarks
+.asv/

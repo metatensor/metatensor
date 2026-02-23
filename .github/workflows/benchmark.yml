@@ -1,0 +1,107 @@
+name: Benchmark PR
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: benchmark-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Record SHAs
+        id: shas
+        run: |
+          echo "pr=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "main=$(git rev-parse origin/main)" >> "$GITHUB_OUTPUT"
+
+      - name: Stash benchmark files
+        run: |
+          cp -r benchmarks /tmp/benchmarks-stash
+          cp asv.conf.json /tmp/asv-conf-stash.json
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install ASV
+        run: uv pip install --system asv
+
+      - name: Configure ASV machine
+        run: asv machine --yes
+
+      # --- Benchmark main ---
+      - name: Checkout main
+        run: git checkout -f ${{ steps.shas.outputs.main }} && git clean -fd
+
+      - name: Restore benchmark files (main)
+        run: |
+          cp -r /tmp/benchmarks-stash benchmarks
+          cp /tmp/asv-conf-stash.json asv.conf.json
+
+      - name: Build metatensor-core (main)
+        run: |
+          uv pip install --system numpy cmake setuptools setuptools-scm 'packaging>=23'
+          uv pip install --system --no-build-isolation python/metatensor_core
+
+      - name: Run benchmarks (main)
+        run: |
+          asv run -E "existing:$(which python)" \
+            --set-commit-hash ${{ steps.shas.outputs.main }} \
+            --record-samples --quick
+
+      # --- Benchmark PR ---
+      - name: Checkout PR
+        run: git checkout -f ${{ steps.shas.outputs.pr }} && git clean -fd
+
+      - name: Restore benchmark files (PR)
+        run: |
+          cp -r /tmp/benchmarks-stash benchmarks
+          cp /tmp/asv-conf-stash.json asv.conf.json
+
+      - name: Build metatensor-core (PR)
+        run: |
+          uv pip install --system numpy cmake setuptools setuptools-scm 'packaging>=23'
+          uv pip install --system --no-build-isolation python/metatensor_core
+
+      - name: Run benchmarks (PR)
+        run: |
+          asv run -E "existing:$(which python)" \
+            --set-commit-hash ${{ steps.shas.outputs.pr }} \
+            --record-samples --quick
+
+      # --- Compare and upload ---
+      - name: Compare results
+        run: |
+          asv compare \
+            ${{ steps.shas.outputs.main }} \
+            ${{ steps.shas.outputs.pr }} \
+            --factor 1.1 --split \
+            > .asv/results/comparison.txt
+          cat .asv/results/comparison.txt
+
+      - name: Write metadata
+        run: |
+          cat > .asv/results/metadata.txt <<EOF
+          base=${{ steps.shas.outputs.main }}
+          contender=${{ steps.shas.outputs.pr }}
+          pr=${{ github.event.pull_request.number }}
+          EOF
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: .asv/results/

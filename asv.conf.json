@@ -1,0 +1,13 @@
+{
+    "version": 1,
+    "project": "metatensor",
+    "project_url": "https://github.com/metatensor/metatensor",
+    "repo": ".",
+    "environment_type": "existing",
+    "benchmark_dir": "benchmarks",
+    "results_dir": ".asv/results",
+    "html_dir": ".asv/html",
+    "branches": ["HEAD"],
+    "build_command": [],
+    "install_command": []
+}

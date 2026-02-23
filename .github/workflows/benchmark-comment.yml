@@ -1,0 +1,35 @@
+name: Comment benchmark results
+
+on:
+  workflow_run:
+    workflows: ["Benchmark PR"]
+    types: [completed]
+
+jobs:
+  comment:
+    if: >-
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+      actions: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: benchmark-results
+          path: results/
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: HaoZeke/asv-perch@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          comparison-text-file: results/comparison.txt
+          metadata-file: results/metadata.txt
+          regression-threshold: "10"
+          auto-draft-on-regression: "false"
+          label-before: main
+          label-after: pr
+          runner-info: ubuntu-24.04
