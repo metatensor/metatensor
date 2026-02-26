@@ -124,6 +124,8 @@ def c_type_name(name):
         return "DLDevice"
     elif name == "DLPackVersion":
         return "DLPackVersion"
+    elif name == "DLDataType":
+        return "DLDataType"
     elif name == "DLManagedTensorVersioned":
         return "DLManagedTensorVersioned"
     else:

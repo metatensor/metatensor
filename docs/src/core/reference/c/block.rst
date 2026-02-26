@@ -13,6 +13,8 @@ The following functions operate on :c:type:`mts_block_t`:
 - :c:func:`mts_block_gradient`: get existing gradient data from a block
 - :c:func:`mts_block_add_gradient`: add gradient data to this block
 - :c:func:`mts_block_gradients_list`: get the list of gradients in this block
+- :c:func:`mts_block_device`: get the device of a block's values
+- :c:func:`mts_block_dtype`: get the data type of a block's values
 
 --------------------------------------------------------------------------------
 
@@ -31,3 +33,7 @@ The following functions operate on :c:type:`mts_block_t`:
 .. doxygenfunction:: mts_block_add_gradient
 
 .. doxygenfunction:: mts_block_gradients_list
+
+.. doxygenfunction:: mts_block_device
+
+.. doxygenfunction:: mts_block_dtype

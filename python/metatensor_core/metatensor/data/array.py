@@ -4,6 +4,7 @@ from typing import Union
 import numpy as np
 
 from .._c_api import (
+    DLDataType,
     DLDevice,
     DLManagedTensorVersioned,
     c_uintptr_t,
@@ -204,9 +205,11 @@ def create_mts_array(array):
     if _is_numpy_array(array):
         mts_array_origin = _MTS_ARRAY_ORIGIN_NUMPY
         mts_array_device = _MTS_ARRAY_DEVICE_NUMPY
+        mts_array_dtype = _MTS_ARRAY_DTYPE_NUMPY
     elif _is_torch_array(array):
         mts_array_origin = _MTS_ARRAY_ORIGIN_PYTORCH
         mts_array_device = _MTS_ARRAY_DEVICE_PYTORCH
+        mts_array_dtype = _MTS_ARRAY_DTYPE_PYTORCH
     else:
         raise ValueError(f"unknown array type: {type(array)}")
 
@@ -220,6 +223,7 @@ def create_mts_array(array):
     mts_array.ptr = id(wrapper)
     mts_array.origin = mts_array_origin
     mts_array.device = mts_array_device
+    mts_array.dtype = mts_array_dtype
 
     return mts_array
 
@@ -342,8 +346,9 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
         capsule = array.__dlpack__(
             stream=stream, max_version=version_tuple, dl_device=dl_device
         )
-    except Exception:
-        # Fallback to legacy
+    except Exception as _:
+        # Fallback to legacy signatures. Each fallback drops one parameter.
+        # Warn so users know their array library doesn't support full DLPack.
         try:
             capsule = array.__dlpack__(stream=stream, dl_device=dl_device)
         except Exception:
@@ -458,9 +463,8 @@ _MTS_ARRAY_ORIGIN_NUMPY = _cast_to_ctype_functype(mts_array_origin_numpy, "origi
 _MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "origin")
 
 
-# DLPack kDLCPU device type constant
+# DLPack device type codes (from dlpack.h DLDeviceType enum)
 _KDLCPU = 1
-# DLPack kDLCUDA device type constant
 _KDLCUDA = 2
 
 
@@ -492,12 +496,75 @@ def _mts_array_device_pytorch(this, device_ptr):
             device_ptr[0] = DLDevice(
                 device_type=_KDLCUDA, device_id=torch_dev.index or 0
             )
+        elif torch_dev.type == "meta":
+            device_ptr[0] = DLDevice(device_type=12, device_id=0)  # kDLExtDev
         else:
             device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
 
 
 _MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")
 _MTS_ARRAY_DEVICE_PYTORCH = _cast_to_ctype_functype(_mts_array_device_pytorch, "device")
+
+
+# DLPack dtype type codes
+_KDLINT = 0
+_KDLUINT = 1
+_KDLFLOAT = 2
+_KDLBFLOAT = 4
+_KDLCOMPLEX = 5
+_KDLBOOL = 6
+
+# Numpy dtype.kind -> (DLDataType code, use dtype.itemsize for bits)
+_NUMPY_KIND_TO_DLPACK = {
+    "f": _KDLFLOAT,
+    "i": _KDLINT,
+    "u": _KDLUINT,
+    "b": _KDLBOOL,
+    "c": _KDLCOMPLEX,
+}
+
+# Torch scalar type name -> (code, bits)
+_TORCH_DTYPE_TO_DLPACK = {}
+if HAS_TORCH:
+    _TORCH_DTYPE_TO_DLPACK = {
+        torch.float16: (_KDLFLOAT, 16),
+        torch.float32: (_KDLFLOAT, 32),
+        torch.float64: (_KDLFLOAT, 64),
+        torch.bfloat16: (_KDLBFLOAT, 16),
+        torch.int8: (_KDLINT, 8),
+        torch.int16: (_KDLINT, 16),
+        torch.int32: (_KDLINT, 32),
+        torch.int64: (_KDLINT, 64),
+        torch.uint8: (_KDLUINT, 8),
+        torch.bool: (_KDLBOOL, 8),
+        torch.complex64: (_KDLCOMPLEX, 64),
+        torch.complex128: (_KDLCOMPLEX, 128),
+    }
+
+
+@catch_exceptions
+def _mts_array_dtype_numpy(this, dtype_ptr):
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    dt = wrapper.array.dtype
+    code = _NUMPY_KIND_TO_DLPACK.get(dt.kind)
+    if code is None:
+        raise ValueError(f"unsupported numpy dtype kind: '{dt.kind}' ({dt})")
+    dtype_ptr[0] = DLDataType(code=code, bits=dt.itemsize * 8, lanes=1)
+
+
+@catch_exceptions
+def _mts_array_dtype_pytorch(this, dtype_ptr):
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    dt = wrapper.array.dtype
+    entry = _TORCH_DTYPE_TO_DLPACK.get(dt)
+    if entry is None:
+        raise ValueError(f"unsupported torch dtype: {dt}")
+    code, bits = entry
+    dtype_ptr[0] = DLDataType(code=code, bits=bits, lanes=1)
+
+
+_MTS_ARRAY_DTYPE_NUMPY = _cast_to_ctype_functype(_mts_array_dtype_numpy, "dtype")
+_MTS_ARRAY_DTYPE_PYTORCH = _cast_to_ctype_functype(_mts_array_dtype_pytorch, "dtype")
 
 
 # The default value for all Python-provided `mts_array_t`. Only the first two members
@@ -507,6 +574,7 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     ptr=0,
     origin=_cast_to_ctype_functype(lambda u: u, "origin"),
     device=_cast_to_ctype_functype(lambda u, d: None, "device"),
+    dtype=_cast_to_ctype_functype(lambda u, d: None, "dtype"),
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,

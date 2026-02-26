@@ -19,7 +19,7 @@
 #define DLPACK_MAJOR_VERSION 1
 
 /*! \brief The current minor version of dlpack */
-#define DLPACK_MINOR_VERSION 2
+#define DLPACK_MINOR_VERSION 3
 
 /*! \brief DLPACK_DLL prefix for windows */
 #ifdef _WIN32
@@ -375,7 +375,7 @@ typedef struct DLManagedTensorVersioned {
 } DLManagedTensorVersioned;
 
 //----------------------------------------------------------------------
-// DLPack `__c_dlpack_exchange_api__` fast exchange protocol definitions
+// DLPack `__dlpack_c_exchange_api__` fast exchange protocol definitions
 //----------------------------------------------------------------------
 /*!
  * \brief Request a producer library to create a new tensor.
@@ -391,7 +391,7 @@ typedef struct DLManagedTensorVersioned {
  * \param error_ctx Context for `SetError`.
  * \param SetError The function to set the error.
  * \return The owning DLManagedTensorVersioned* or NULL on failure.
- *         SetError is called exactly when NULL is returned (the implementor
+ *         SetError is called exactly when NULL is returned (the implementer
  *         must ensure this).
  * \note - As a C function, must not thrown C++ exceptions.
  *       - Error propagation via SetError to avoid any direct need
@@ -415,6 +415,7 @@ typedef int (*DLPackManagedTensorAllocator)(                                    
  *
  * \param py_object The Python object to convert. Must have the same type
  *        as the one the `DLPackExchangeAPI` was discovered from.
+ * \param out The output DLManagedTensorVersioned.
  * \return The owning DLManagedTensorVersioned* or NULL on failure with a
  *         Python exception set. If the data cannot be described using DLPack
  *         this should be a BufferError if possible.
@@ -431,11 +432,11 @@ typedef int (*DLPackManagedTensorFromPyObjectNoSync)(                 //
  * \brief Exports a PyObject* Tensor/NDArray to a provided DLTensor.
  *
  * This function provides a faster interface for temporary, non-owning, exchange.
- * The producer (implementor) still owns the memory of data, strides, shape.
+ * The producer (implementer) still owns the memory of data, strides, shape.
  * The liveness of the DLTensor and the data it views is only guaranteed until
  * control is returned.
  *
- * This function currently assumes that the producer (implementor) can fill
+ * This function currently assumes that the producer (implementer) can fill
  * in the DLTensor shape and strides without the need for temporary allocations.
  *
  * This function does not perform any stream synchronization. The consumer should query
@@ -487,7 +488,7 @@ typedef int (*DLPackCurrentWorkStream)(                         //
  * \brief Imports a DLManagedTensorVersioned to a PyObject* Tensor/NDArray.
  *
  * Convert an owning DLManagedTensorVersioned* to the Python tensor of the
- * producer (implementor) library with the correct type.
+ * producer (implementer) library with the correct type.
  *
  * This function does not perform any stream synchronization.
  *
@@ -531,17 +532,24 @@ typedef struct DLPackExchangeAPIHeader {
  * \brief Framework-specific function pointers table for DLPack exchange.
  *
  * Additionally to `__dlpack__()` we define a C function table sharable by
- * Python implementations via `__c_dlpack_exchange_api__`.
- * This attribute must be set on the type as a Python integer compatible
- * with `PyLong_FromVoidPtr`/`PyLong_AsVoidPtr`.
+ *
+ * Python implementations via `__dlpack_c_exchange_api__`.
+ * This attribute must be set on the type as a Python PyCapsule
+ * with name "dlpack_exchange_api".
  *
  * A consumer library may use a pattern such as:
  *
  * \code
  *
- * PyObject *api_obj = type(tensor_obj).__c_dlpack_exchange_api__;  // as C-code
- * MyDLPackExchangeAPI *api = PyLong_AsVoidPtr(api_obj);
- * if (api == NULL && PyErr_Occurred()) { goto handle_error; }
+ *  PyObject *api_capsule = PyObject_GetAttrString(
+ *    (PyObject *)Py_TYPE(tensor_obj), "__dlpack_c_exchange_api__")
+ *  );
+ *  if (api_capsule == NULL) { goto handle_error; }
+ *  MyDLPackExchangeAPI *api = (MyDLPackExchangeAPI *)PyCapsule_GetPointer(
+ *    api_capsule, "dlpack_exchange_api"
+ *  );
+ *  Py_DECREF(api_capsule);
+ *  if (api == NULL) { goto handle_error; }
  *
  * \endcode
  *
@@ -616,7 +624,7 @@ typedef struct DLPackExchangeAPI {
   /*!
    * \brief Producer function pointer for DLPackManagedTensorToPyObject
    *        This function must be not NULL.
-   * \sa DLPackManagedTensorToPyObject
+   * \sa DLPackManagedTensorToPyObjectNoSync
    */
   DLPackManagedTensorToPyObjectNoSync managed_tensor_to_py_object_no_sync;
   /*!
