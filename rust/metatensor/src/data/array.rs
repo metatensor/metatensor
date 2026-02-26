@@ -3,7 +3,7 @@ use std::os::raw::c_void;
 
 use once_cell::sync::Lazy;
 
-use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+use dlpk::sys::{DLDataType, DLDevice, DLManagedTensorVersioned, DLPackVersion};
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
 use dlpk::{DLPackTensor, GetDLPackDataType};
 
@@ -67,6 +67,13 @@ pub trait Array: std::any::Any + Send + Sync {
     /// For CPU arrays this should return `DLDevice::cpu()`.
     fn device(&self) -> DLDevice;
 
+    /// Get the data type of this array.
+    ///
+    /// This populates the `dtype` vtable slot for fast dtype queries.
+    /// Implementations should return the appropriate `DLDataType` for their
+    /// element type (e.g. float64 = `DLDataType { code: kDLFloat, bits: 64, lanes: 1 }`).
+    fn dtype(&self) -> DLDataType;
+
     /// Convert the array to a `DLPack` tensor.
     /// The returned pointer is owned by the caller (and cleaned up via its deleter).
     fn as_dlpack(
@@ -88,6 +95,7 @@ impl From<Box<dyn Array>> for mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
             device: Some(rust_array_device),
+            dtype: Some(rust_array_dtype),
             as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
@@ -139,6 +147,18 @@ unsafe extern "C" fn rust_array_device(
         check_pointers!(array, device);
         let array = array.cast::<Box<dyn Array>>();
         *device = (*array).device();
+    })
+}
+
+/// Implementation of `mts_array_t.dtype` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_dtype(
+    array: *const c_void,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, dtype);
+        let array = array.cast::<Box<dyn Array>>();
+        *dtype = (*array).dtype();
     })
 }
 
@@ -338,6 +358,10 @@ where
         DLDevice::cpu()
     }
 
+    fn dtype(&self) -> DLDataType {
+        T::get_dlpack_data_type()
+    }
+
     fn as_dlpack(
         &self,
         device: DLDevice,
@@ -437,6 +461,15 @@ impl Array for EmptyArray {
 
     fn device(&self) -> DLDevice {
         DLDevice::cpu()
+    }
+
+    fn dtype(&self) -> DLDataType {
+        // Default to f64, consistent with metatensor-core's EmptyDataArray
+        DLDataType {
+            code: dlpk::sys::DLDataTypeCode::kDLFloat,
+            bits: 64,
+            lanes: 1,
+        }
     }
 
     fn as_dlpack(
