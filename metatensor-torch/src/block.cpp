@@ -176,20 +176,7 @@ void TensorBlockHolder::add_gradient(const std::string& parameter, TensorBlock g
         gradient->properties()->as_metatensor()
     );
 
-    if (gradient->values().device() != this->values().device()) {
-        C10_THROW_ERROR(ValueError,
-            "values and the new gradient must be on the same device, "
-            "got " + this->values().device().str() + " and " + gradient->values().device().str()
-        );
-    }
-    if (gradient->values().scalar_type() != this->values().scalar_type()) {
-        C10_THROW_ERROR(TypeError,
-            "values and the new gradient must have the same dtype, "
-            "got " + scalar_type_name(gradient->values().scalar_type()) +
-            " and " + scalar_type_name(this->values().scalar_type())
-        );
-    }
-
+    // device/dtype consistency is enforced by metatensor-core
     block_.add_gradient(parameter, std::move(gradient_block));
 }
 

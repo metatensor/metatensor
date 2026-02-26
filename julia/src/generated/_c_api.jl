@@ -20,7 +20,27 @@ mts_data_origin_t = UInt64
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
 mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
-# ====== Enf of manual definitions ====== #
+# DLPack types (matching dlpack.h structs)
+struct DLPackVersion
+    major :: UInt32
+    minor :: UInt32
+end
+
+struct DLDevice
+    device_type :: Int32
+    device_id :: Int32
+end
+
+struct DLDataType
+    code :: UInt8
+    bits :: UInt8
+    lanes :: UInt16
+end
+
+# Opaque: only passed by pointer in the C API
+struct DLManagedTensorVersioned end
+
+# ====== End of manual definitions ====== #
 
 
 # ===== Macros definitions
@@ -58,8 +78,9 @@ end
 struct mts_array_t
     ptr :: Ptr{Cvoid}
     origin :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_data_origin_t}) -> mts_status_t =#
-    device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{CDLDevice}) -> mts_status_t =#
-    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{CDLManagedTensorVersioned}}, CDLDevice, Ptr{Int64}, CDLPackVersion) -> mts_status_t =#
+    device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDevice}) -> mts_status_t =#
+    dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDataType}) -> mts_status_t =#
+    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{DLManagedTensorVersioned}}, DLDevice, Ptr{Int64}, DLPackVersion) -> mts_status_t =#
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
@@ -265,6 +286,22 @@ function mts_block_gradients_list(block::Ptr{mts_block_t}, parameters::Ptr{Ptr{P
     )
 end
 
+function mts_block_device(block::Ptr{mts_block_t}, device::Ptr{DLDevice})
+    ccall((:mts_block_device, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_block_t}, Ptr{DLDevice},),
+        block, device
+    )
+end
+
+function mts_block_dtype(block::Ptr{mts_block_t}, dtype::Ptr{DLDataType})
+    ccall((:mts_block_dtype, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_block_t}, Ptr{DLDataType},),
+        block, dtype
+    )
+end
+
 function mts_tensormap(keys::mts_labels_t, blocks::Ptr{Ptr{mts_block_t}}, blocks_count::UIntptr)
     ccall((:mts_tensormap, libmetatensor), 
         Ptr{mts_tensormap_t},
@@ -358,6 +395,22 @@ function mts_tensormap_info_keys(tensor::Ptr{mts_tensormap_t}, keys::Ptr{Ptr{Ptr
         mts_status_t,
         (Ptr{mts_tensormap_t}, Ptr{Ptr{Ptr{Cchar}}}, Ptr{UIntptr},),
         tensor, keys, keys_count
+    )
+end
+
+function mts_tensormap_device(tensor::Ptr{mts_tensormap_t}, device::Ptr{DLDevice})
+    ccall((:mts_tensormap_device, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{DLDevice},),
+        tensor, device
+    )
+end
+
+function mts_tensormap_dtype(tensor::Ptr{mts_tensormap_t}, dtype::Ptr{DLDataType})
+    ccall((:mts_tensormap_dtype, libmetatensor), 
+        mts_status_t,
+        (Ptr{mts_tensormap_t}, Ptr{DLDataType},),
+        tensor, dtype
     )
 end
 

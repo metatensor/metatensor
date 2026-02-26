@@ -17,6 +17,8 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 - :c:func:`mts_tensormap_set_info`: set or update the info value associated with a key for a tensor map
 - :c:func:`mts_tensormap_get_info`: get the info value associated with a key for a tensor map
 - :c:func:`mts_tensormap_info_keys`: get all the keys defined in the info of a tensor map
+- :c:func:`mts_tensormap_device`: get the device of all blocks in a tensor map
+- :c:func:`mts_tensormap_dtype`: get the data type of all blocks in a tensor map
 
 
 --------------------------------------------------------------------------------
@@ -44,3 +46,7 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 .. doxygenfunction:: mts_tensormap_get_info
 
 .. doxygenfunction:: mts_tensormap_info_keys
+
+.. doxygenfunction:: mts_tensormap_device
+
+.. doxygenfunction:: mts_tensormap_dtype
