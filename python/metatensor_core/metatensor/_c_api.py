@@ -115,6 +115,7 @@ mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("device", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDevice))),
+    ("dtype", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDataType))),
     ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)), DLDevice, POINTER(ctypes.c_int64), DLPackVersion)),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
@@ -291,6 +292,18 @@ def setup_functions(lib):
     ]
     lib.mts_block_gradients_list.restype = _check_status
 
+    lib.mts_block_device.argtypes = [
+        POINTER(mts_block_t),
+        POINTER(DLDevice),
+    ]
+    lib.mts_block_device.restype = _check_status
+
+    lib.mts_block_dtype.argtypes = [
+        POINTER(mts_block_t),
+        POINTER(DLDataType),
+    ]
+    lib.mts_block_dtype.restype = _check_status
+
     lib.mts_tensormap.argtypes = [
         mts_labels_t,
         POINTER(POINTER(mts_block_t)),
@@ -370,6 +383,18 @@ def setup_functions(lib):
         POINTER(c_uintptr_t),
     ]
     lib.mts_tensormap_info_keys.restype = _check_status
+
+    lib.mts_tensormap_device.argtypes = [
+        POINTER(mts_tensormap_t),
+        POINTER(DLDevice),
+    ]
+    lib.mts_tensormap_device.restype = _check_status
+
+    lib.mts_tensormap_dtype.argtypes = [
+        POINTER(mts_tensormap_t),
+        POINTER(DLDataType),
+    ]
+    lib.mts_tensormap_dtype.restype = _check_status
 
     lib.mts_labels_load.argtypes = [
         ctypes.c_char_p,

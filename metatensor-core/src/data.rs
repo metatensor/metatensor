@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
-use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion};
+use dlpk::sys::{DLDataType, DLDevice, DLManagedTensorVersioned, DLPackVersion};
 use dlpk::DLPackTensor;
 
 use crate::c_api::mts_status_t;
@@ -94,6 +94,14 @@ pub struct mts_array_t {
     pub(crate) device: Option<unsafe extern "C" fn(
         array: *const c_void,
         device: *mut DLDevice,
+    ) -> mts_status_t>,
+
+    /// Query the data type of this array without a full DLPack export.
+    ///
+    /// The implementation must store the data type in `*dtype`.
+    pub(crate) dtype: Option<unsafe extern "C" fn(
+        array: *const c_void,
+        dtype: *mut DLDataType,
     ) -> mts_status_t>,
 
     /// Get a DLPack representation of the underlying data.
@@ -257,6 +265,7 @@ impl mts_array_t {
             ptr: self.ptr,
             origin: self.origin,
             device: self.device,
+            dtype: self.dtype,
             as_dlpack: self.as_dlpack,
             shape: self.shape,
             reshape: self.reshape,
@@ -275,6 +284,7 @@ impl mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
             device: None,
+            dtype: None,
             as_dlpack: None,
             shape: None,
             reshape: None,
@@ -305,7 +315,6 @@ impl mts_array_t {
     }
 
     /// Get the device where this array's data resides
-    #[allow(dead_code)]
     pub fn device(&self) -> Result<DLDevice, Error> {
         let function = self.device.expect("mts_array_t.device function is NULL");
 
@@ -321,6 +330,20 @@ impl mts_array_t {
         }
 
         return Ok(device);
+    }
+
+    /// Get the data type of this array.
+    pub fn dtype(&self) -> Result<DLDataType, Error> {
+        let function = self.dtype.expect("mts_array_t.dtype function is NULL");
+
+        let mut dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+        let status = unsafe { function(self.ptr, &mut dtype) };
+        if !status.is_success() {
+            return Err(Error::External {
+                status, context: "calling mts_array_t.dtype failed".into()
+            });
+        }
+        return Ok(dtype);
     }
 
     /// Get a dlpack representation of the data
@@ -531,7 +554,8 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
-                device: None,
+                device: Some(TestArray::device_cpu),
+                dtype: Some(TestArray::dtype_f64),
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
@@ -549,7 +573,48 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::other_origin),
-                device: None,
+                device: Some(TestArray::device_cpu),
+                dtype: Some(TestArray::dtype_f64),
+                as_dlpack: None,
+                shape: Some(TestArray::shape),
+                reshape: Some(TestArray::reshape),
+                swap_axes: Some(TestArray::swap_axes),
+                create: None,
+                copy: None,
+                destroy: Some(TestArray::destroy),
+                move_samples_from: None,
+            }
+        }
+
+        /// Create a test array reporting a non-CPU device (device_type=2, id=0)
+        pub fn new_other_device(shape: Vec<usize>) -> mts_array_t {
+            let array = Box::new(TestArray {shape});
+
+            return mts_array_t {
+                ptr: Box::into_raw(array).cast(),
+                origin: Some(TestArray::origin),
+                device: Some(TestArray::device_cuda),
+                dtype: Some(TestArray::dtype_f64),
+                as_dlpack: None,
+                shape: Some(TestArray::shape),
+                reshape: Some(TestArray::reshape),
+                swap_axes: Some(TestArray::swap_axes),
+                create: None,
+                copy: None,
+                destroy: Some(TestArray::destroy),
+                move_samples_from: None,
+            }
+        }
+
+        /// Create a test array reporting f32 dtype instead of f64
+        pub fn new_other_dtype(shape: Vec<usize>) -> mts_array_t {
+            let array = Box::new(TestArray {shape});
+
+            return mts_array_t {
+                ptr: Box::into_raw(array).cast(),
+                origin: Some(TestArray::origin),
+                device: Some(TestArray::device_cpu),
+                dtype: Some(TestArray::dtype_f32),
                 as_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
@@ -570,6 +635,26 @@ mod tests {
         unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
             *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
 
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        unsafe extern "C" fn device_cpu(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
+            *device = DLDevice::cpu();
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        unsafe extern "C" fn device_cuda(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
+            *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLCUDA, device_id: 0 };
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        unsafe extern "C" fn dtype_f64(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
+            *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+            return mts_status_t(MTS_SUCCESS);
+        }
+
+        unsafe extern "C" fn dtype_f32(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
+            *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 32, lanes: 1 };
             return mts_status_t(MTS_SUCCESS);
         }
 

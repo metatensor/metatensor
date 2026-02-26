@@ -57,8 +57,9 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(std::vector<ui
     ));
 }
 
-// Helpful deleter: destroys legacy DLPack tensor when the versioned one is done
-// TODO(rg): shouldn't be required later, we we shift to at::toDLPackVersioned()
+// Wraps legacy DLManagedTensor in DLManagedTensorVersioned. Required because
+// at::toDLPack() returns the legacy format.
+// TODO: Replace with at::toDLPackVersioned() when our MSTorchV is 2.9.
 static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
     if (self != nullptr) {
         // Retrieve the legacy tensor stored in the context
@@ -98,6 +99,9 @@ DLDevice TorchDataArray::device() const {
     case torch::DeviceType::Vulkan:
         dl_type = kDLVulkan;
         break;
+    case torch::DeviceType::Meta:
+        dl_type = kDLExtDev;
+        break;
     default:
         throw metatensor::Error(
             "TorchDataArray::device(): unsupported torch device type: "
@@ -105,6 +109,58 @@ DLDevice TorchDataArray::device() const {
     }
 
     return DLDevice{dl_type, static_cast<int32_t>(torch_dev.index() < 0 ? 0 : torch_dev.index())};
+}
+
+DLDataType TorchDataArray::dtype() const {
+    auto scalar_type = tensor_.scalar_type();
+
+    DLDataType dt;
+    dt.lanes = 1;
+
+    switch (scalar_type) {
+    case torch::kFloat16:
+        dt.code = kDLFloat; dt.bits = 16;
+        break;
+    case torch::kFloat32:
+        dt.code = kDLFloat; dt.bits = 32;
+        break;
+    case torch::kFloat64:
+        dt.code = kDLFloat; dt.bits = 64;
+        break;
+    case torch::kBFloat16:
+        dt.code = kDLBfloat; dt.bits = 16;
+        break;
+    case torch::kInt8:
+        dt.code = kDLInt; dt.bits = 8;
+        break;
+    case torch::kInt16:
+        dt.code = kDLInt; dt.bits = 16;
+        break;
+    case torch::kInt32:
+        dt.code = kDLInt; dt.bits = 32;
+        break;
+    case torch::kInt64:
+        dt.code = kDLInt; dt.bits = 64;
+        break;
+    case torch::kUInt8:
+        dt.code = kDLUInt; dt.bits = 8;
+        break;
+    case torch::kBool:
+        dt.code = kDLBool; dt.bits = 8;
+        break;
+    case torch::kComplexFloat:
+        dt.code = kDLComplex; dt.bits = 64;
+        break;
+    case torch::kComplexDouble:
+        dt.code = kDLComplex; dt.bits = 128;
+        break;
+    default:
+        throw metatensor::Error(
+            "TorchDataArray::dtype(): unsupported torch scalar type: "
+            + std::string(c10::toString(scalar_type)));
+    }
+
+    return dt;
 }
 
 namespace {
@@ -147,6 +203,9 @@ torch::Device dlpack_device_to_torch(DLDevice device) {
     case kDLVulkan:
         type = torch::DeviceType::Vulkan;
         break;
+    case kDLExtDev:
+        type = torch::DeviceType::Meta;
+        break;
     default:
         throw metatensor::Error(
             "TorchDataArray: Unsupported or unmapped DLPack device type: " +
@@ -159,11 +218,9 @@ torch::Device dlpack_device_to_torch(DLDevice device) {
 } // namespace
 
 DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) {
-    // Uses the existing ATen API to get a legacy DLManagedTensor.
-    // TODO(rg): this should eventually just be
-    // return at::toDLPackVersioned(this->tensor_);
-    // https://github.com/pytorch/pytorch/blob/2.9.1/aten/src/ATen/DLConvertor.cpp
-    // ... until then.
+    // Uses the existing ATen API which returns legacy DLManagedTensor, then
+    // wraps it in DLManagedTensorVersioned. Replace the wrapping below with
+    // at::toDLPackVersioned() when PyTorch exposes it in stable releases.
     DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
     bool major_mismatch = max_version.major != mta_version.major;
     bool minor_too_high = max_version.minor < mta_version.minor;
@@ -188,11 +245,18 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
     // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
     if (tensor_to_pack.is_cuda()) {
         if (stream != nullptr && *stream != 0) {
-            throw metatensor::Error("TorchDataArray: CUDA stream support is not implemented yet");
+            throw metatensor::Error(
+                "TorchDataArray: CUDA stream synchronization is not yet "
+                "implemented. The required functions (at::cuda::getCurrentCUDAStream, "
+                "at::cuda::getStreamFromExternal) are in libtorch_cuda.so, which "
+                "cannot be linked in pre-built CPU+CUDA wheels. Pass stream=nullptr "
+                "for default stream behavior."
+            );
         }
 
-        // No implementation for now, since the functions we need are in
-        // libtorch_cuda.so, which makes linking complicated for pre-built wheels.
+        // Stream synchronization requires libtorch_cuda.so. Linking it
+        // unconditionally breaks pre-built wheels that must work in both
+        // CUDA and CPU-only environments.
 
         // auto device = tensor_to_pack.device();
 

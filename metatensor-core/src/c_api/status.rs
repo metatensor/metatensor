@@ -51,7 +51,6 @@ pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 /// inside metatensor itself
 pub const MTS_INTERNAL_ERROR: i32 = 255;
 
-
 impl From<Error> for mts_status_t {
     #[allow(clippy::match_same_arms)]
     fn from(error: Error) -> mts_status_t {

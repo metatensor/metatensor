@@ -462,11 +462,8 @@ def test_components_to_properties_same_device(meta_tensor):
 
 
 def test_different_device(meta_tensor):
-    message = (
-        "cannot create TensorMap: keys and blocks must be on the same device, "
-        "got cpu and meta"
-    )
-    with pytest.raises(ValueError, match=message):
+    message = "tried to build a TensorMap from blocks on different devices"
+    with pytest.raises(RuntimeError, match=message):
         TensorMap(
             keys=meta_tensor.keys,
             blocks=[
@@ -482,11 +479,8 @@ def test_different_device(meta_tensor):
 
 
 def test_different_dtype(meta_tensor):
-    message = (
-        "cannot create TensorMap: all blocks must have the same dtype, "
-        "got torch.float16 and torch.float32"
-    )
-    with pytest.raises(ValueError, match=message):
+    message = "tried to build a TensorMap from blocks with different dtypes"
+    with pytest.raises(RuntimeError, match=message):
         TensorMap(
             keys=meta_tensor.keys,
             blocks=[
