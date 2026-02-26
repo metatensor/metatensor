@@ -437,3 +437,53 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     managed->deleter(managed);
     array.destroy(array.ptr);
 }
+
+TEST_CASE("SimpleDataArray - dtype()") {
+    SECTION("double") {
+        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+        auto dt = data->dtype();
+        CHECK(dt.code == kDLFloat);
+        CHECK(dt.bits == 64);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("float") {
+        auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3}));
+        auto dt = data->dtype();
+        CHECK(dt.code == kDLFloat);
+        CHECK(dt.bits == 32);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("int32") {
+        auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3}));
+        auto dt = data->dtype();
+        CHECK(dt.code == kDLInt);
+        CHECK(dt.bits == 32);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("via mts_array_t callback") {
+        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+        auto array = DataArrayBase::to_mts_array_t(std::move(data));
+        REQUIRE(array.dtype != nullptr);
+
+        DLDataType dt;
+        std::memset(&dt, 0xFF, sizeof(dt));
+        auto status = array.dtype(array.ptr, &dt);
+        CHECK(status == MTS_SUCCESS);
+        CHECK(dt.code == kDLFloat);
+        CHECK(dt.bits == 64);
+        CHECK(dt.lanes == 1);
+
+        array.destroy(array.ptr);
+    }
+}
+
+TEST_CASE("EmptyDataArray - dtype()") {
+    auto data = std::unique_ptr<EmptyDataArray>(new EmptyDataArray({2, 3}));
+    auto dt = data->dtype();
+    CHECK(dt.code == kDLFloat);
+    CHECK(dt.bits == 64);
+    CHECK(dt.lanes == 1);
+}

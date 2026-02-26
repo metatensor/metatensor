@@ -114,11 +114,16 @@ CTYPES_TO_JULIA = {
 }
 
 
+DLPACK_TYPES = {"DLDevice", "DLDataType", "DLPackVersion", "DLManagedTensorVersioned"}
+
+
 def c_type_name(name):
     if name.startswith("mts_"):
         return name
     if name in CTYPES_TO_JULIA:
         return CTYPES_TO_JULIA[name]
+    if name in DLPACK_TYPES:
+        return name
     else:
         return "C" + name
 
@@ -253,7 +258,27 @@ mts_data_origin_t = UInt64
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
 mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
-# ====== Enf of manual definitions ====== #
+# DLPack types (matching dlpack.h structs)
+struct DLPackVersion
+    major :: UInt32
+    minor :: UInt32
+end
+
+struct DLDevice
+    device_type :: Int32
+    device_id :: Int32
+end
+
+struct DLDataType
+    code :: UInt8
+    bits :: UInt8
+    lanes :: UInt16
+end
+
+# Opaque: only passed by pointer in the C API
+struct DLManagedTensorVersioned end
+
+# ====== End of manual definitions ====== #
 """
         )
 

@@ -117,6 +117,23 @@ namespace details {
         }
     }
 
+    /// Map a C++ arithmetic type to the corresponding DLDataType.
+    template<typename T>
+    DLDataType dtype_of() {
+        static_assert(std::is_arithmetic_v<T>, "dtype_of requires an arithmetic type");
+        DLDataType dt;
+        dt.lanes = 1;
+        dt.bits = static_cast<uint8_t>(sizeof(T) * 8);
+        if constexpr (std::is_floating_point_v<T>) {
+            dt.code = kDLFloat;
+        } else if constexpr (std::is_signed_v<T>) {
+            dt.code = kDLInt;
+        } else {
+            dt.code = kDLUInt;
+        }
+        return dt;
+    }
+
     /// Check whether a DLDataType matches the C++ type T.
     ///
     /// Returns true when code, bits **and** lanes all match.
@@ -639,6 +656,13 @@ public:
             }, array, device);
         };
 
+        array.dtype = [](const void* array, DLDataType* dtype) {
+            return details::catch_exceptions([](const void* array, DLDataType* dtype){
+                const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                *dtype = cxx_array->dtype();
+            }, array, dtype);
+        };
+
         array.copy = [](const void* array, mts_array_t* new_array) {
             return details::catch_exceptions([](const void* array, mts_array_t* new_array){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -746,6 +770,14 @@ public:
     /// Get the device where this array's data resides.
     virtual DLDevice device() const = 0;
 
+    /// Get the data type of this array.
+    ///
+    /// This provides the `dtype` vtable callback for metatensor-core.
+    /// If not overridden, the dtype falls back to extracting it from
+    /// `as_dlpack`, which is more expensive. Implementations should
+    /// override this for better performance.
+    virtual DLDataType dtype() const = 0;
+
     /// Get a DLPack representation of this array
     ///
     /// The returned pointer is owned by the caller and should be freed
@@ -845,6 +877,10 @@ public:
 
     DLDevice device() const override {
         return {kDLCPU, 0};
+    }
+
+    DLDataType dtype() const override {
+        return details::dtype_of<T>();
     }
 
     const std::vector<uintptr_t>& shape() const & override {
@@ -1138,6 +1174,11 @@ public:
 
     DLDevice device() const override {
         return {kDLCPU, 0};
+    }
+
+    DLDataType dtype() const override {
+        // EmptyDataArray defaults to f64 for consistency with default_create_array
+        return details::dtype_of<double>();
     }
 
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {

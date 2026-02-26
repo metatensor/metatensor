@@ -222,8 +222,10 @@ def test_different_device():
         devices.append("cuda")
 
     for device in devices:
-        message = "values and the new gradient must be on the same device, got cpu and"
-        with pytest.raises(ValueError, match=message):
+        message = (
+            "the gradient values are on device .* but the block values are on device"
+        )
+        with pytest.raises(RuntimeError, match=message):
             block.add_gradient(
                 "g",
                 TensorBlock(
@@ -243,11 +245,8 @@ def test_different_dtype():
         properties=Labels.range("p", 2),
     )
 
-    message = (
-        "values and the new gradient must have the same dtype, "
-        "got torch.float16 and torch.float32"
-    )
-    with pytest.raises(TypeError, match=message):
+    message = "the gradient values have dtype .* but the block values have dtype"
+    with pytest.raises(RuntimeError, match=message):
         block.add_gradient(
             "g",
             TensorBlock(
