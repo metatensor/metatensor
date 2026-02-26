@@ -123,6 +123,20 @@ public:
         return block;
     }
 
+    /// Get the device of the data in this block.
+    DLDevice device() const {
+        DLDevice device;
+        details::check_status(mts_block_device(this->as_mts_block_t(), &device));
+        return device;
+    }
+
+    /// Get the data type of the values in this block.
+    DLDataType dtype() const {
+        DLDataType dtype;
+        details::check_status(mts_block_dtype(this->as_mts_block_t(), &dtype));
+        return dtype;
+    }
+
     /// Get the values in this block as a DLPackArray.
     ///
     /// By default, the data is requested on CPU via DLPack. You can

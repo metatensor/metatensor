@@ -168,6 +168,12 @@ typedef struct mts_array_t {
    */
   mts_status_t (*device)(const void *array, DLDevice *device);
   /**
+   * Query the data type of this array without a full DLPack export.
+   *
+   * The implementation must store the data type in `*dtype`.
+   */
+  mts_status_t (*dtype)(const void *array, DLDataType *dtype);
+  /**
    * Get a DLPack representation of the underlying data.
    *
    * This function exports the array as a `DLManagedTensorVersioned` struct
@@ -759,6 +765,30 @@ mts_status_t mts_block_gradients_list(const struct mts_block_t *block,
                                       uintptr_t *parameters_count);
 
 /**
+ * Get the device of this `block`'s values array.
+ *
+ * @param block pointer to an existing block
+ * @param device pointer to a `DLDevice` that will be set to the block's device
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_block_device(const struct mts_block_t *block, DLDevice *device);
+
+/**
+ * Get the data type of this `block`'s values array.
+ *
+ * @param block pointer to an existing block
+ * @param dtype pointer to a `DLDataType` that will be set to the block's dtype
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_block_dtype(const struct mts_block_t *block, DLDataType *dtype);
+
+/**
  * Create a new `mts_tensormap_t` with the given `keys` and `blocks`.
  * `blocks_count` must be set to the number of entries in the blocks array.
  *
@@ -1012,6 +1042,34 @@ mts_status_t mts_tensormap_get_info(const struct mts_tensormap_t *tensor,
 mts_status_t mts_tensormap_info_keys(const struct mts_tensormap_t *tensor,
                                      const char *const **keys,
                                      uintptr_t *keys_count);
+
+/**
+ * Get the device of this tensor map.
+ *
+ * For an empty tensor map, the device is set to CPU.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param device pointer to a `DLDevice` that will be set to the tensor's device
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_device(const struct mts_tensormap_t *tensor, DLDevice *device);
+
+/**
+ * Get the data type of this tensor map.
+ *
+ * For an empty tensor map (no blocks), the dtype is set to float64.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param dtype pointer to a `DLDataType` that will be set to the tensor's dtype
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataType *dtype);
 
 /**
  * Load labels from the file at the given path.

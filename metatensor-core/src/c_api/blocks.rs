@@ -2,6 +2,8 @@ use std::sync::Arc;
 use std::os::raw::c_char;
 use std::ffi::CStr;
 
+use dlpk::sys::{DLDataType, DLDevice};
+
 use crate::{TensorBlock, Error, mts_array_t};
 
 use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
@@ -348,6 +350,50 @@ pub unsafe extern "C" fn mts_block_gradients_list(
         } else {
             list.as_ptr().cast()
         };
+        Ok(())
+    })
+}
+
+
+/// Get the device of this `block`'s values array.
+///
+/// @param block pointer to an existing block
+/// @param device pointer to a `DLDevice` that will be set to the block's device
+///
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_device(
+    block: *const mts_block_t,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(block, device);
+        let block = &(*block);
+        *device = block.values.device()?;
+        Ok(())
+    })
+}
+
+
+/// Get the data type of this `block`'s values array.
+///
+/// @param block pointer to an existing block
+/// @param dtype pointer to a `DLDataType` that will be set to the block's dtype
+///
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_dtype(
+    block: *const mts_block_t,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(block, dtype);
+        let block = &(*block);
+        *dtype = block.values.dtype()?;
         Ok(())
     })
 }

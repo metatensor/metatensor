@@ -5,6 +5,8 @@ use std::ffi::CString;
 use crate::utils::ConstCString;
 use std::collections::BTreeSet;
 
+use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
+
 use crate::{TensorMap, TensorBlock, Error};
 
 use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
@@ -556,6 +558,64 @@ pub unsafe extern "C" fn mts_tensormap_info_keys(
         } else {
             list.as_ptr().cast()
         };
+        Ok(())
+    })
+}
+
+
+/// Get the device of this tensor map.
+///
+/// For an empty tensor map, the device is set to CPU.
+///
+/// @param tensor pointer to an existing tensor map
+/// @param device pointer to a `DLDevice` that will be set to the tensor's device
+///
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_device(
+    tensor: *const mts_tensormap_t,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(tensor, device);
+        let tensor = &(*tensor);
+        let blocks = tensor.blocks();
+        if blocks.is_empty() {
+            *device = DLDevice::cpu();
+        } else {
+            *device = blocks[0].values.device()?;
+        }
+        Ok(())
+    })
+}
+
+
+/// Get the data type of this tensor map.
+///
+/// For an empty tensor map (no blocks), the dtype is set to float64.
+///
+/// @param tensor pointer to an existing tensor map
+/// @param dtype pointer to a `DLDataType` that will be set to the tensor's dtype
+///
+/// @returns The status code of this operation. If the status is not
+///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+///          error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_dtype(
+    tensor: *const mts_tensormap_t,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(tensor, dtype);
+        let tensor = &(*tensor);
+        let blocks = tensor.blocks();
+        if blocks.is_empty() {
+            *dtype = DLDataType { code: DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+        } else {
+            *dtype = blocks[0].values.dtype()?;
+        }
         Ok(())
     })
 }

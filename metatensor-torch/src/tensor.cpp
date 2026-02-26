@@ -55,26 +55,15 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
     tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
 {
-    if (blocks.empty()) {
-        // nothing to check
-        return;
-    }
-
-    auto device = keys->values().device();
-    auto scalar_type = blocks[0]->values().scalar_type();
-
-    for (const auto& block : blocks) {
-        if (block->values().device() != device) {
+    // Block-vs-block device/dtype consistency is enforced by metatensor-core.
+    // The torch-specific check below ensures keys (which may live on GPU) are
+    // on the same device as the blocks.
+    if (!blocks.empty()) {
+        auto device = keys->values().device();
+        if (blocks[0]->values().device() != device) {
             C10_THROW_ERROR(ValueError,
                 "cannot create TensorMap: keys and blocks must be on the same device, "
-                "got " + block->values().device().str() + " and " + device.str()
-            );
-        }
-        if (block->values().scalar_type() != scalar_type) {
-            C10_THROW_ERROR(ValueError,
-                "cannot create TensorMap: all blocks must have the same dtype, "
-                "got " + scalar_type_name(block->values().scalar_type()) +
-                " and " + scalar_type_name(scalar_type)
+                "got " + blocks[0]->values().device().str() + " and " + device.str()
             );
         }
     }

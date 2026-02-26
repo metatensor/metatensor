@@ -91,6 +91,44 @@ fn check_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
     Ok(())
 }
 
+fn check_device(blocks: &[TensorBlock]) -> Result<(), Error> {
+    if blocks.is_empty() {
+        return Ok(());
+    }
+
+    let first_device = blocks[0].values.device()?;
+    for block in blocks.iter().skip(1) {
+        let block_device = block.values.device()?;
+        if first_device != block_device {
+            return Err(Error::InvalidParameter(format!(
+                "tried to build a TensorMap from blocks on different devices: at least '{}' and '{}' were detected",
+                first_device, block_device,
+            )));
+        }
+    }
+
+    Ok(())
+}
+
+fn check_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
+    if blocks.is_empty() {
+        return Ok(());
+    }
+
+    let first_dtype = blocks[0].values.dtype()?;
+    for block in blocks.iter().skip(1) {
+        let block_dtype = block.values.dtype()?;
+        if first_dtype != block_dtype {
+            return Err(Error::InvalidParameter(format!(
+                "tried to build a TensorMap from blocks with different dtypes: at least '{}' and '{}' were detected",
+                first_dtype, block_dtype,
+            )));
+        }
+    }
+
+    Ok(())
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct GradientMetadata<'a> {
     sample_names: Vec<&'a str>,
@@ -138,6 +176,8 @@ impl TensorMap {
         }
 
         check_origin(&blocks)?;
+        check_device(&blocks)?;
+        check_dtype(&blocks)?;
 
         if !blocks.is_empty() {
             // extract metadata from the first block
@@ -500,6 +540,60 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: 'key_3' is not part of the keys for this tensor"
+        );
+    }
+
+    #[test]
+    fn blocks_device_mismatch() {
+        let block_1 = TensorBlock::new(
+            TestArray::new(vec![1, 1]),
+            example_labels(&["samples"], &[0]),
+            vec![],
+            example_labels(&["properties"], &[0]),
+        ).unwrap();
+
+        let block_2 = TensorBlock::new(
+            TestArray::new_other_device(vec![2, 1]),
+            example_labels(&["samples"], &[0, 1]),
+            vec![],
+            example_labels(&["properties"], &[0]),
+        ).unwrap();
+
+        let result = TensorMap::new(
+            example_labels(&["keys"], &[0, 1]),
+            vec![block_1, block_2],
+        );
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: tried to build a TensorMap from blocks on \
+            different devices: at least 'CPU:0' and 'CUDA:0' were detected"
+        );
+    }
+
+    #[test]
+    fn blocks_dtype_mismatch() {
+        let block_1 = TensorBlock::new(
+            TestArray::new(vec![1, 1]),
+            example_labels(&["samples"], &[0]),
+            vec![],
+            example_labels(&["properties"], &[0]),
+        ).unwrap();
+
+        let block_2 = TensorBlock::new(
+            TestArray::new_other_dtype(vec![2, 1]),
+            example_labels(&["samples"], &[0, 1]),
+            vec![],
+            example_labels(&["properties"], &[0]),
+        ).unwrap();
+
+        let result = TensorMap::new(
+            example_labels(&["keys"], &[0, 1]),
+            vec![block_1, block_2],
+        );
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: tried to build a TensorMap from blocks with \
+            different dtypes: at least 'f64' and 'f32' were detected"
         );
     }
 }

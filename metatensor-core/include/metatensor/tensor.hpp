@@ -189,6 +189,24 @@ public:
         return TensorMap(this->keys(), std::move(blocks));
     }
 
+    /// Get the device of the data in this TensorMap.
+    ///
+    /// For an empty TensorMap the device is set to CPU.
+    DLDevice device() const {
+        DLDevice device;
+        details::check_status(mts_tensormap_device(this->as_mts_tensormap_t(), &device));
+        return device;
+    }
+
+    /// Get the data type of the values in this TensorMap.
+    ///
+    /// For an empty TensorMap the dtype is set to float64.
+    DLDataType dtype() const {
+        DLDataType dtype;
+        details::check_status(mts_tensormap_dtype(this->as_mts_tensormap_t(), &dtype));
+        return dtype;
+    }
+
     /// Get the set of keys labeling the blocks in this tensor map
     Labels keys() const {
         mts_labels_t keys;
