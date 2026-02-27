@@ -17,9 +17,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.1.20](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.20) - 2026-02-27
+
 ### Fixed
-- Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
-  `components_to_properties`, and `key_to_properties` are called
+
+- Ensure the `info` of `TensorMap` is kept in the new tensor when
+  `keys_to_samples`, `components_to_properties`, and `key_to_properties` are
+  called
+- Pin getrandom to make sure the code compiles with rustc 1.74
 
 ## [Version 0.1.19](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.19) - 2025-12-11
 
