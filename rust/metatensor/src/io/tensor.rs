@@ -88,6 +88,72 @@ pub fn save(path: impl AsRef<std::path::Path>, tensor: &TensorMap) -> Result<(),
 }
 
 
+/// Load a tensor map from the file at the given path using memory mapping.
+///
+/// This provides zero-copy loading: data arrays point directly into the
+/// memory-mapped file, avoiding copies. Labels are still loaded normally.
+///
+/// Data is lazily loaded from the file as needed.
+pub fn load_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
+    let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
+    let path = CString::new(path).expect("this path contains a NULL byte");
+
+    let ptr = unsafe {
+        crate::c_api::mts_tensormap_load_mmap(path.as_ptr(), Some(super::create_mmap_ndarray))
+    };
+
+    check_ptr(ptr)?;
+
+    return Ok(unsafe { TensorMap::from_raw(ptr) });
+}
+
+/// Load a tensor map from the file at the given path, selecting only a subset
+/// of the data based on keys, samples, and properties.
+///
+/// This function memory-maps the file for efficient random access: only the
+/// selected rows and columns are copied into the output arrays.
+///
+/// - `keys`: if `Some`, only blocks whose key matches the selection are loaded.
+/// - `samples`: if `Some`, only rows matching the selection are kept.
+/// - `properties`: if `Some`, only columns matching the selection are kept.
+///
+/// Each selection uses `Labels::select` semantics.
+pub fn load_partial(
+    path: impl AsRef<std::path::Path>,
+    keys: Option<&crate::Labels>,
+    samples: Option<&crate::Labels>,
+    properties: Option<&crate::Labels>,
+) -> Result<TensorMap, Error> {
+    let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
+    let path = CString::new(path).expect("this path contains a NULL byte");
+
+    let empty = crate::c_api::mts_labels_t {
+        internal_ptr_: std::ptr::null_mut(),
+        names: std::ptr::null(),
+        values: std::ptr::null(),
+        size: 0,
+        count: 0,
+    };
+
+    let keys_raw = keys.map_or(empty, |l| l.as_mts_labels_t());
+    let samples_raw = samples.map_or(empty, |l| l.as_mts_labels_t());
+    let properties_raw = properties.map_or(empty, |l| l.as_mts_labels_t());
+
+    let ptr = unsafe {
+        crate::c_api::mts_tensormap_load_partial(
+            path.as_ptr(),
+            keys_raw,
+            samples_raw,
+            properties_raw,
+            Some(create_ndarray),
+        )
+    };
+
+    check_ptr(ptr)?;
+
+    return Ok(unsafe { TensorMap::from_raw(ptr) });
+}
+
 /// Save the given `tensor` to an in-memory `buffer`.
 ///
 /// This function will grow the buffer as required to fit the whole tensor.

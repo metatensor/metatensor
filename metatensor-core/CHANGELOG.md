@@ -21,7 +21,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Added `mts_array_t.device` function pointer to query the device of an array
   without exporting via DLPack. Implemented for all array backends (Rust
-  `ArcArray`, `MmapArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,
+  `ArcArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,
   `TorchDataArray`, and Python numpy/torch arrays).
 - C++ `TensorBlock::values()` now accepts optional `device` and `stream`
   parameters, allowing data to be requested on a specific device rather than
@@ -37,6 +37,30 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   preventing dangling-pointer issues. The data is requested on CPU; if the
   underlying array lives on another device, a copy may occur. For direct GPU
   access without a copy, use the C-level ``as_dlpack`` interface instead.
+- Added `mts_tensormap_load_mmap` and `mts_block_load_mmap` C API functions for
+  memory-mapped loading of `.mts` files. Data arrays are created via a
+  user-provided `mts_create_mmap_array_callback_t`, keeping the core library
+  array-agnostic. The callback receives the raw mmap pointer and data shape,
+  letting each language binding construct its own array type (e.g.
+  `MmapDataArray` in C++, `MmapNdarray` in Rust, `MmapOwner`-backed arrays in
+  Python, `torch::from_blob` in PyTorch). Call `mts_mmap_free` to release the
+  underlying mapping. Labels are still loaded normally. Corresponding wrappers:
+  C++ `metatensor::io::load_mmap`/`load_block_mmap`, `TensorMap::load_mmap`,
+  `TensorBlock::load_mmap`; Rust `metatensor::io::load_mmap`/`load_block_mmap`;
+  Python `metatensor.load_mmap`/`metatensor.load_block_mmap`.
+- Added `MmapDataArray` C++ class (`arrays.hpp`) as a read-only
+  `DataArrayBase` backed by memory-mapped data. Supports DLPack export and
+  serves as the default C++ mmap array backend.
+- Added `mts_tensormap_load_partial` C API function for selective loading of
+  `.mts` files. Filters blocks by keys, samples, and properties using
+  `Labels::select` semantics. Uses file seeking for efficient random access
+  (only selected data is read from disk). Arrays are created via the standard
+  `mts_create_array_callback_t`, producing the same result as `load()` followed
+  by manual slicing. Corresponding wrappers: C++ `metatensor::io::load_partial`,
+  `TensorMap::load_partial`; Rust `metatensor::io::load_partial`; Python
+  `metatensor.load_partial`; PyTorch `metatensor_torch.load_partial`.
+- Fixed component carry logic in `SimpleDataArray::move_samples_from` for
+  arrays with more than one component dimension (4D+ tensors).
 
 ### Removed
 

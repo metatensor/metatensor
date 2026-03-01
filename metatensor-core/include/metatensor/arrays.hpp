@@ -75,6 +75,16 @@ namespace details {
         mts_array_t* array
     );
 
+    mts_status_t default_create_mmap_array(
+        const uintptr_t* shape_ptr,
+        uintptr_t shape_count,
+        DLDataType dtype,
+        const void* data,
+        uintptr_t data_len,
+        void* mmap_ptr,
+        mts_array_t* array
+    );
+
     /**
      * @brief DLTensor resource bundle
      *
@@ -604,6 +614,11 @@ bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     return !(lhs == rhs);
 }
 
+class MmapDataArray;
+
+template <typename T, typename P = std::enable_if_t<std::is_arithmetic_v<T>>>
+class SimpleDataArray;
+
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
 /// tensor map. The array itself if opaque to this library and can come from
 /// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
@@ -832,13 +847,160 @@ public:
     ) = 0;
 };
 
+class MmapDataArray: public metatensor::DataArrayBase {
+public:
+    MmapDataArray(std::vector<uintptr_t> shape, DLDataType dtype, const void* data, void* mmap_ptr):
+        shape_(std::move(shape)), dtype_(dtype), data_(data), mmap_ptr_(mmap_ptr) {}
+
+    ~MmapDataArray() override {
+        if (mmap_ptr_ != nullptr) {
+            mts_mmap_free(mmap_ptr_);
+        }
+    }
+
+    /// MmapDataArray can be copy-constructed
+    MmapDataArray(const MmapDataArray& other):
+        shape_(other.shape_), dtype_(other.dtype_), data_(other.data_), mmap_ptr_(nullptr)
+    {
+        throw metatensor::Error("can not copy a MmapDataArray");
+    }
+
+    /// MmapDataArray can be move-constructed
+    MmapDataArray(MmapDataArray&& other) noexcept:
+        shape_(std::move(other.shape_)),
+        dtype_(other.dtype_),
+        data_(other.data_),
+        mmap_ptr_(other.mmap_ptr_)
+    {
+        other.mmap_ptr_ = nullptr;
+    }
+
+    mts_data_origin_t origin() const override {
+        mts_data_origin_t origin = 0;
+        mts_register_data_origin("metatensor::MmapDataArray", &origin);
+        return origin;
+    }
+
+    DLDevice device() const override {
+        return {kDLCPU, 0};
+    }
+
+    DLDataType dtype() const override {
+        return dtype_;
+    }
+
+    const std::vector<uintptr_t>& shape() const & override {
+        return shape_;
+    }
+
+    void reshape(std::vector<uintptr_t>) override {
+        throw metatensor::Error("can not reshape a MmapDataArray");
+    }
+
+    void swap_axes(uintptr_t, uintptr_t) override {
+        throw metatensor::Error("can not swap axes of a MmapDataArray");
+    }
+
+    std::unique_ptr<DataArrayBase> copy() const override;
+    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override;
+
+    void move_samples_from(const DataArrayBase&, std::vector<mts_sample_mapping_t>, uintptr_t, uintptr_t) override {
+        throw metatensor::Error("can not call `move_samples_from` for a MmapDataArray (it is read-only)");
+    }
+
+    /// Get a const view of the data managed by this MmapDataArray
+    template <typename T>
+    NDArray<T> view() const {
+        auto shape = std::vector<size_t>();
+        for (auto s: shape_) {
+            shape.push_back(static_cast<size_t>(s));
+        }
+        // TODO: check dtype matching T
+        return NDArray<T>(static_cast<const T*>(data_), std::move(shape));
+    }
+
+    DLManagedTensorVersioned *as_dlpack(
+        DLDevice device,
+        const int64_t* stream,
+        DLPackVersion max_version
+    ) override {
+        if (device.device_type != kDLCPU) {
+            throw Error("MmapDataArray only supports CPU device (kDLCPU)");
+        }
+
+        if (stream != nullptr) {
+            throw Error("`stream` must be null for CPU data");
+        }
+
+        DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        bool major_mismatch = max_version.major != mta_version.major;
+        bool minor_too_high = max_version.minor < mta_version.minor;
+        if (major_mismatch || minor_too_high) {
+            throw Error("MmapDataArray supports DLPack version " +
+                        std::to_string(mta_version.major) + "." + std::to_string(mta_version.minor));
+        }
+
+        auto* managed = new DLManagedTensorVersioned();
+        managed->version = mta_version;
+        managed->flags = 1; // Read-only
+        managed->deleter = [](DLManagedTensorVersioned* self) {
+            if (self->manager_ctx != nullptr) {
+                auto* ctx = static_cast<DLPackMmapContext*>(self->manager_ctx);
+                delete ctx;
+            }
+            delete[] self->dl_tensor.shape;
+            delete self;
+        };
+
+        auto &tensor = managed->dl_tensor;
+        tensor.device = {kDLCPU, 0};
+        tensor.ndim = static_cast<int32_t>(shape_.size());
+        tensor.dtype = dtype_;
+        tensor.byte_offset = 0;
+
+        auto elem_bytes = (dtype_.bits / 8) * dtype_.lanes;
+        if (elem_bytes <= 1 || reinterpret_cast<uintptr_t>(data_) % elem_bytes == 0) {
+            // Properly aligned
+            tensor.data = const_cast<void*>(data_);
+            managed->manager_ctx = nullptr;
+        } else {
+            // Not aligned, must copy
+            auto* ctx = new DLPackMmapContext();
+            auto size = details::product(shape_) * elem_bytes;
+            ctx->aligned_storage.resize(size);
+            std::memcpy(ctx->aligned_storage.data(), data_, size);
+            tensor.data = ctx->aligned_storage.data();
+            managed->manager_ctx = ctx;
+        }
+
+        auto* shape = new int64_t[shape_.size()];
+        for (size_t i = 0; i < shape_.size(); ++i) {
+            shape[i] = static_cast<int64_t>(shape_[i]);
+        }
+        tensor.shape = shape;
+        tensor.strides = nullptr;
+
+        return managed;
+    }
+
+private:
+    struct DLPackMmapContext {
+        std::vector<uint8_t> aligned_storage;
+    };
+
+    std::vector<uintptr_t> shape_;
+    DLDataType dtype_;
+    const void* data_;
+    void* mmap_ptr_;
+};
+
 /// Very basic implementation of DataArrayBase in C++.
 ///
 /// This is included as an example implementation of DataArrayBase, and to make
 /// metatensor usable without additional dependencies. For other uses cases, it
 /// might be better to implement DataArrayBase on your data, using
 /// functionalities from `Eigen`, `Boost.Array`, etc.
-template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+template <typename T, typename P>
 class SimpleDataArray : public metatensor::DataArrayBase {
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
@@ -923,65 +1085,7 @@ public:
         std::vector<mts_sample_mapping_t> samples,
         uintptr_t property_start,
         uintptr_t property_end
-    ) override {
-        const auto& input_array = dynamic_cast<const SimpleDataArray<T>&>(input);
-        assert(input_array.shape_.size() == this->shape_.size());
-
-        size_t property_count = property_end - property_start;
-        size_t property_dim = shape_.size() - 1;
-        assert(input_array.shape_[property_dim] == property_count);
-
-        auto input_index = std::vector<size_t>(shape_.size(), 0);
-        auto output_index = std::vector<size_t>(shape_.size(), 0);
-
-        for (const auto& sample: samples) {
-            input_index[0] = sample.input;
-            output_index[0] = sample.output;
-
-            if (property_dim == 1) {
-                // no components
-                for (size_t property_i=0; property_i<property_count; property_i++) {
-                    input_index[property_dim] = property_i;
-                    output_index[property_dim] = property_i + property_start;
-
-                    auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
-                    (*this->data_)[details::linear_index(shape_, output_index)] = value;
-                }
-            } else {
-                auto last_component_dim = shape_.size() - 2;
-                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                    input_index[component_i] = 0;
-                }
-
-                bool done = false;
-                while (!done) {
-                    for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
-                        output_index[component_i] = input_index[component_i];
-                    }
-
-                    for (size_t property_i=0; property_i<property_count; property_i++) {
-                        input_index[property_dim] = property_i;
-                        output_index[property_dim] = property_i + property_start;
-
-                        auto value = (*input_array.data_)[details::linear_index(input_array.shape_, input_index)];
-                        (*this->data_)[details::linear_index(shape_, output_index)] = value;
-                    }
-
-                    input_index[last_component_dim] += 1;
-                    for (size_t component_i=last_component_dim; component_i>2; component_i--) {
-                        if (input_index[component_i] >= shape_[component_i]) {
-                            input_index[component_i] = 0;
-                            input_index[component_i - 1] += 1;
-                        }
-                    }
-
-                    if (input_index[1] >= shape_[1]) {
-                        done = true;
-                    }
-                }
-            }
-        }
-    }
+    ) override;
 
     /// Get a const view of the data managed by this SimpleDataArray
     NDArray<T> view() const {
@@ -1234,6 +1338,142 @@ inline mts_status_t details::default_create_array(
 
         return MTS_SUCCESS;
     }, shape_ptr, shape_count, array);
+}
+
+/// Default callback for data array creation in `TensorMap::load_mmap`.
+inline mts_status_t details::default_create_mmap_array(
+    const uintptr_t* shape_ptr,
+    uintptr_t shape_count,
+    DLDataType dtype,
+    const void* data,
+    uintptr_t /*data_len*/,
+    void* mmap_ptr,
+    mts_array_t* array
+) {
+    return details::catch_exceptions([](
+        const uintptr_t* shape_ptr,
+        uintptr_t shape_count,
+        DLDataType dtype,
+        const void* data,
+        void* mmap_ptr,
+        mts_array_t* array
+    ) {
+        auto shape = std::vector<uintptr_t>(shape_ptr, shape_ptr + shape_count);
+        auto cxx_array = std::unique_ptr<DataArrayBase>(new MmapDataArray(shape, dtype, data, mmap_ptr));
+        *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
+
+        return MTS_SUCCESS;
+    }, shape_ptr, shape_count, dtype, data, mmap_ptr, array);
+}
+
+template <typename T, typename P>
+void SimpleDataArray<T, P>::move_samples_from(
+    const DataArrayBase& input,
+    std::vector<mts_sample_mapping_t> samples,
+    uintptr_t property_start,
+    uintptr_t property_end
+) {
+    NDArray<T> input_view;
+    mts_data_origin_t input_origin = input.origin();
+    std::array<char, 64> buffer = {0};
+    if (mts_get_data_origin(input_origin, buffer.data(), buffer.size()) != MTS_SUCCESS) {
+        throw Error("failed to get data origin name");
+    }
+    std::string origin_name(buffer.data());
+
+    if (origin_name == "metatensor::SimpleDataArray") {
+        const auto& input_simple = dynamic_cast<const SimpleDataArray<T, P>&>(input);
+        input_view = input_simple.view();
+    } else if (origin_name == "metatensor::MmapDataArray") {
+        const auto& input_mmap = dynamic_cast<const MmapDataArray&>(input);
+        input_view = input_mmap.template view<T>();
+    } else {
+        throw Error("unsupported input array type in move_samples_from: " + origin_name);
+    }
+
+    // Use const reference to access data() without hitting the non-const
+    // overload that throws for const-marked NDArrays (e.g. mmap views).
+    const auto& input_cref = input_view;
+    const T* input_data = input_cref.data();
+    const auto& input_shape = input_cref.shape();
+
+    assert(input_shape.size() == this->shape_.size());
+
+    size_t property_count = property_end - property_start;
+    size_t property_dim = shape_.size() - 1;
+
+    assert(input_shape[property_dim] == property_count);
+
+    auto input_index = std::vector<size_t>(shape_.size(), 0);
+    auto output_index = std::vector<size_t>(shape_.size(), 0);
+
+    for (const auto& sample: samples) {
+        input_index[0] = sample.input;
+        output_index[0] = sample.output;
+
+        if (property_dim == 1) {
+            // no components
+            for (size_t property_i=0; property_i<property_count; property_i++) {
+                input_index[property_dim] = property_i;
+                output_index[property_dim] = property_i + property_start;
+
+                auto value = input_data[details::linear_index(input_shape, input_index)];
+                (*this->data_)[details::linear_index(shape_, output_index)] = value;
+            }
+        } else {
+            auto last_component_dim = shape_.size() - 2;
+            for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                input_index[component_i] = 0;
+            }
+
+            bool done = false;
+            while (!done) {
+                for (size_t component_i=1; component_i<shape_.size() - 1; component_i++) {
+                    output_index[component_i] = input_index[component_i];
+                }
+
+                for (size_t property_i=0; property_i<property_count; property_i++) {
+                    input_index[property_dim] = property_i;
+                    output_index[property_dim] = property_i + property_start;
+
+                    auto value = input_data[details::linear_index(input_shape, input_index)];
+                    (*this->data_)[details::linear_index(shape_, output_index)] = value;
+                }
+
+                input_index[last_component_dim] += 1;
+                for (size_t component_i=last_component_dim; component_i>1; component_i--) {
+                    if (input_index[component_i] >= input_shape[component_i]) {
+                        input_index[component_i] = 0;
+                        input_index[component_i - 1] += 1;
+                    }
+                }
+
+                if (input_index[1] >= input_shape[1]) {
+                    done = true;
+                }
+            }
+        }
+    }
+}
+
+inline std::unique_ptr<DataArrayBase> MmapDataArray::copy() const {
+    // Fallback to SimpleDataArray for copies (which are writable)
+    // Since we don't know T here, we would need a more complex solution
+    // to support all types. For now, let's just throw or support float64.
+    if (dtype_.code == kDLFloat && dtype_.bits == 64) {
+        auto size = details::product(shape_);
+        auto data = std::vector<double>(size);
+        std::memcpy(data.data(), data_, size * sizeof(double));
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray<double>(shape_, std::move(data)));
+    }
+    throw metatensor::Error("copy() is not implemented for this MmapDataArray type");
+}
+
+inline std::unique_ptr<DataArrayBase> MmapDataArray::create(std::vector<uintptr_t> shape) const {
+    if (dtype_.code == kDLFloat && dtype_.bits == 64) {
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray<double>(std::move(shape)));
+    }
+    throw metatensor::Error("create() is not implemented for this MmapDataArray type");
 }
 
 } // namespace metatensor
