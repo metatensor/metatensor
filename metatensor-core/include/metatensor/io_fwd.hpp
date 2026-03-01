@@ -187,6 +187,22 @@ namespace metatensor {
 
         /**************************************************************************/
 
+        /// Load a previously saved `TensorMap` from the given path using
+        /// memory-mapped I/O. Data arrays are lazily loaded for zero-copy.
+        TensorMap load_mmap(
+            const std::string& path,
+            mts_create_mmap_array_callback_t create_array = details::default_create_mmap_array
+        );
+
+        /// Load a previously saved `TensorBlock` from the given path using
+        /// memory-mapped I/O. Data arrays are lazily loaded for zero-copy.
+        TensorBlock load_block_mmap(
+            const std::string& path,
+            mts_create_mmap_array_callback_t create_array = details::default_create_mmap_array
+        );
+
+        /**************************************************************************/
+
         /// Load previously saved `Labels` from the given path.
         Labels load_labels(const std::string& path);
 

@@ -262,6 +262,64 @@ else:
 
 # %%
 #
+# Memory-mapped loading
+# ---------------------
+#
+# When working with large datasets, you may not want to read the entire file
+# into memory at once. ``metatensor.load_mmap`` uses memory-mapped I/O to
+# map the file directly into your address space. Data pages are only faulted in
+# when you actually access a block's values, giving you:
+#
+# - **Near-instant loading** -- only metadata (keys, labels) is read eagerly
+# - **Lazy page-in** -- each block's data is loaded on first access
+# - **Shared pages** -- the OS can share pages between processes reading the
+#   same file
+#
+# The returned ``TensorMap`` behaves identically to one loaded with
+# ``metatensor.load``; the only difference is that the underlying arrays are
+# read-only and backed by the file on disk.
+
+with tempfile.TemporaryDirectory() as tmp:
+    path = os.path.join(tmp, "example.mts")
+    mts.save(path, tensor_i32, use_numpy=False)
+
+    # Regular load: reads everything into memory
+    regular = mts.load(path, use_numpy=True)
+
+    # Mmap load: maps the file, pages in data lazily
+    mmap = mts.load_mmap(path)
+
+    print("Regular block dtype:", regular.block(0).values.dtype)
+    print("Mmap    block dtype:", mmap.block(0).values.dtype)
+    print(
+        "Values match:", np.array_equal(regular.block(0).values, mmap.block(0).values)
+    )
+
+# %%
+#
+# Memory-mapped loading works for individual blocks too, via
+# ``metatensor.load_block_mmap``:
+
+with tempfile.TemporaryDirectory() as tmp:
+    block_path = os.path.join(tmp, "block.mts")
+    mts.save(block_path, block_i32, use_numpy=False)
+
+    regular_block = mts.load_block(block_path, use_numpy=True)
+    mmap_block = mts.load_block_mmap(block_path)
+
+    print("Regular shape:", regular_block.values.shape)
+    print("Mmap    shape:", mmap_block.values.shape)
+    print("Values match:", np.array_equal(regular_block.values, mmap_block.values))
+
+# %%
+#
+# Because mmap-loaded data goes through DLPack, the dtype is preserved just as
+# with a regular load. All metatensor operations (``keys_to_properties``,
+# ``keys_to_samples``, ``components_to_properties``, ``copy``, ``save``, etc.)
+# work transparently on mmap-loaded data.
+
+# %%
+#
 # Cleanup
 
 

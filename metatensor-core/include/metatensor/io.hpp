@@ -136,7 +136,7 @@ namespace io {
     ) {
         auto* ptr = mts_tensormap_load(path.c_str(), create_array);
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     inline TensorMap load_buffer(
@@ -146,7 +146,7 @@ namespace io {
     ) {
         auto* ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     template <typename Buffer>
@@ -174,7 +174,7 @@ namespace io {
     ) {
         auto* ptr = mts_block_load(path.c_str(), create_array);
         details::check_pointer(ptr);
-        return TensorBlock(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
     }
 
     inline TensorBlock load_block_buffer(
@@ -184,7 +184,7 @@ namespace io {
     ) {
         auto* ptr = mts_block_load_buffer(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
-        return TensorBlock(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
     }
 
     template <typename Buffer>
@@ -202,6 +202,26 @@ namespace io {
             buffer.size(),
             create_array
         );
+    }
+
+    /**************************************************************************/
+
+    inline TensorMap load_mmap(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load_mmap(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
+    }
+
+    inline TensorBlock load_block_mmap(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array
+    ) {
+        auto* ptr = mts_block_load_mmap(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
     }
 
     /**************************************************************************/

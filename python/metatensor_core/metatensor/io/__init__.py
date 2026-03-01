@@ -14,6 +14,7 @@ from ._block import (  # noqa: F401
     load_block_buffer,
     load_block_buffer_custom_array,
     load_block_custom_array,
+    load_block_mmap,
 )
 from ._labels import (  # noqa: F401
     _save_labels,
@@ -28,6 +29,7 @@ from ._tensor import (  # noqa: F401
     load_buffer,
     load_buffer_custom_array,
     load_custom_array,
+    load_mmap,
 )
 
 

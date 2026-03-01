@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import os
+import sys
 
 from pycparser import c_ast, parse_file
 
@@ -284,11 +285,19 @@ elif arch == "64bit":
             file.write(f"{name} = {value}\n")
         file.write("\n\n")
 
+        print(f"Found types: {list(data.types.keys())}", file=sys.stderr)
         for name, c_type in data.types.items():
-            if name == "mts_create_array_callback_t":
+            if name in [
+                "mts_create_array_callback_t",
+                "mts_create_mmap_array_callback_t",
+            ]:
                 # will be generated below, it depends on the structs
                 continue
-            file.write(f"{name} = {type_to_ctypes(c_type)}\n")
+            try:
+                ctypes_type = type_to_ctypes(c_type)
+                file.write(f"{name} = {ctypes_type}\n")
+            except Exception as e:
+                print(f"Skipping {name}: {e}", file=sys.stderr)
 
         # --- Manual definitions for the DLPack structs (ala pydlpack) ---
         file.write("""
@@ -346,6 +355,12 @@ DLManagedTensorVersioned._fields_ = [
         file.write("\n\n")
         callback_type = type_to_ctypes(data.types["mts_create_array_callback_t"])
         file.write(f"mts_create_array_callback_t = {callback_type}\n")
+
+        if "mts_create_mmap_array_callback_t" in data.types:
+            callback_type = type_to_ctypes(
+                data.types["mts_create_mmap_array_callback_t"]
+            )
+            file.write(f"mts_create_mmap_array_callback_t = {callback_type}\n")
 
         generate_functions(file, data.functions)
 

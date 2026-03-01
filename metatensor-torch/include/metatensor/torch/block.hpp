@@ -173,6 +173,9 @@ public:
     /// `torch::Tensor` of bytes)
     static TensorBlock load_buffer(torch::Tensor buffer);
 
+    /// Load a serialized TensorBlock from the given path using memory-mapped I/O
+    static TensorBlock load_mmap(const std::string& path);
+
     /// Serialize and save a TensorBlock to the given path
     void save(const std::string& path) const;
 

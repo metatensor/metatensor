@@ -516,6 +516,12 @@ TensorMap TensorMapHolder::load(const std::string& path) {
     );
 }
 
+TensorMap TensorMapHolder::load_mmap(const std::string& path) {
+    return torch::make_intrusive<TensorMapHolder>(
+        TensorMapHolder(metatensor::io::load_mmap(path, metatensor_torch::details::create_mmap_torch_array))
+    );
+}
+
 TensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
     if (buffer.scalar_type() != torch::kUInt8) {
         C10_THROW_ERROR(ValueError,
