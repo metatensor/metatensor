@@ -15,6 +15,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.4) - 2026-03-05
+
+### Changed
+
+- Bumped the ndarray dependency to `0.17`
+
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.3) - 2025-12-05
 
 ### Added
