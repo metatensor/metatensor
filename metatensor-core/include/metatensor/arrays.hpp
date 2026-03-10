@@ -671,21 +671,23 @@ public:
             }, array, new_array);
         };
 
-        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
+        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, const mts_array_t* fill_value, mts_array_t* new_array) {
             return details::catch_exceptions([](
                 const void* array,
                 const uintptr_t* shape,
                 uintptr_t shape_count,
+                const mts_array_t* fill_value,
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
+                const auto* cxx_fill = static_cast<const DataArrayBase*>(fill_value->ptr);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape));
+                auto copy = cxx_array->create(std::move(cxx_shape), *cxx_fill);
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-            }, array, shape, shape_count, new_array);
+            }, array, shape, shape_count, fill_value, new_array);
         };
 
         array.as_dlpack = [](
@@ -795,8 +797,12 @@ public:
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
+    /// The new array should be filled with the scalar value from
+    /// `fill_value`, which has the same dtype as this array.
+    virtual std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        const DataArrayBase& fill_value
+    ) const = 0;
 
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
@@ -909,8 +915,13 @@ public:
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        const DataArrayBase& fill_value
+    ) const override {
+        const auto& fv = dynamic_cast<const SimpleDataArray<T>&>(fill_value);
+        auto scalar = (*fv.data_)[0];
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape), scalar));
     }
 
     void move_data(
@@ -1190,7 +1201,10 @@ public:
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        const DataArrayBase& /*fill_value*/
+    ) const override {
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
 

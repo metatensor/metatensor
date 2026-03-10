@@ -56,7 +56,8 @@ TEST_CASE("Arrays") {
         CHECK((copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4}));
         CHECK(copy_ptr->tensor().dtype() == torch::kF64);
 
-        auto created = array.create({5, 6});
+        auto fv = TorchDataArray(torch::zeros({1}, torch::kF64));
+        auto created = array.create({5, 6}, fv);
         auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
 
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));

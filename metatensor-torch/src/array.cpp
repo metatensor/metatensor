@@ -41,15 +41,22 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy() const {
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(this->tensor().clone()));
 }
 
-std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(std::vector<uintptr_t> shape) const {
+std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
+    std::vector<uintptr_t> shape,
+    const metatensor::DataArrayBase& fill_value
+) const {
     auto sizes = std::vector<int64_t>();
     for (auto size: shape) {
         sizes.push_back(static_cast<int64_t>(size));
     }
 
+    const auto& fv = dynamic_cast<const TorchDataArray&>(fill_value);
+    auto scalar = fv.tensor().item();
+
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(
-        torch::zeros(
+        torch::full(
             sizes,
+            scalar,
             torch::TensorOptions()
                 .dtype(this->tensor().dtype())
                 .device(this->tensor().device())

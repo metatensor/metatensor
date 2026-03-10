@@ -261,7 +261,7 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
 
 
 @catch_exceptions
-def _mts_array_create(this, shape_ptr, shape_count, new_array):
+def _mts_array_create(this, shape_ptr, shape_count, fill_value_ptr, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
@@ -269,10 +269,14 @@ def _mts_array_create(this, shape_ptr, shape_count, new_array):
         shape.append(shape_ptr[i])
     dtype = wrapper.array.dtype
 
+    # Extract the scalar fill value from the fill_value mts_array_t
+    fill_wrapper = _KNOWN_ARRAY_WRAPPERS[fill_value_ptr.contents.ptr]
+    scalar = fill_wrapper.array.flat[0]
+
     if _is_numpy_array(wrapper.array):
-        array = np.zeros(shape, dtype=dtype)
+        array = np.full(shape, scalar, dtype=dtype)
     elif _is_torch_array(wrapper.array):
-        array = torch.zeros(shape, dtype=dtype, device=wrapper.array.device)
+        array = torch.full(shape, scalar, dtype=dtype, device=wrapper.array.device)
 
     new_array[0] = create_mts_array(array)
 

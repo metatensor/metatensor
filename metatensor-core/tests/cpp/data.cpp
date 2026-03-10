@@ -79,7 +79,9 @@ TEST_CASE("Data Array") {
 
         uintptr_t new_shape[] = {1, 2, 3, 4};
         shape_count = 4;
-        status = array.create(array.ptr, new_shape, shape_count, &new_array);
+        auto fv_data2 = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({1}, 0.0));
+        auto fv2 = DataArrayBase::to_mts_array_t(std::move(fv_data2));
+        status = array.create(array.ptr, new_shape, shape_count, &fv2, &new_array);
         CHECK(status == MTS_SUCCESS);
 
         status = new_array.shape(new_array.ptr, &shape, &shape_count);
@@ -91,6 +93,7 @@ TEST_CASE("Data Array") {
         CHECK(shape[2] == 3);
         CHECK(shape[3] == 4);
         new_array.destroy(new_array.ptr);
+        fv2.destroy(fv2.ptr);
     }
 
     array.destroy(array.ptr);
