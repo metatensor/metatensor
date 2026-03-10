@@ -102,6 +102,11 @@ print(missing)
 #
 # This is useful for downstream code that needs to handle missing data
 # explicitly, for example by masking losses during training.
+#
+# Note that the fill_value also applies to gradient blocks: if blocks have
+# gradients, the gradient arrays for missing entries will also be filled with
+# the specified value (e.g. NaN). This ensures consistent missing-data
+# semantics across both values and gradients.
 
 # %%
 #

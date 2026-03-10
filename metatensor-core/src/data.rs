@@ -464,6 +464,11 @@ impl mts_array_t {
     ///
     /// `fill_value` must be a CPU `mts_array_t` with shape `(1,)` and the
     /// same dtype as this array.
+    ///
+    /// **Invariant**: The `fill_value` must have been created by the same
+    /// backend as `self`. Each backend casts `fill_value.ptr` to its own
+    /// internal type; passing a fill_value from a different backend is
+    /// undefined behavior.
     pub fn create(&self, shape: &[usize], fill_value: &mts_array_t) -> Result<mts_array_t, Error> {
         let self_dtype = self.dtype()?;
         let fill_dtype = fill_value.dtype()?;
@@ -473,6 +478,13 @@ impl mts_array_t {
                  array dtype (code={}, bits={}, lanes={})",
                 fill_dtype.code as u32, fill_dtype.bits, fill_dtype.lanes,
                 self_dtype.code as u32, self_dtype.bits, self_dtype.lanes,
+            )));
+        }
+
+        let fill_shape = fill_value.shape()?;
+        if fill_shape != [1] {
+            return Err(Error::InvalidParameter(format!(
+                "fill_value must have shape [1], got {:?}", fill_shape
             )));
         }
 

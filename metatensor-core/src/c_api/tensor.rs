@@ -348,11 +348,12 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        // For empty tensors, keys_to_properties will error before using
-        // fill_value, so we allow null fill_value in that case.
         if fill_value.is_null() {
-            // This will fail with "no keys to move in an empty TensorMap" if
-            // the tensor is empty, or with an appropriate error otherwise.
+            if (*tensor).keys().count() > 0 {
+                return Err(Error::InvalidParameter(
+                    "fill_value must not be null for non-empty TensorMap".into()
+                ));
+            }
             let dummy = mts_array_t::null();
             let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &dummy)?;
             let _ = &unwind_wrapper;
@@ -467,6 +468,11 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
         if fill_value.is_null() {
+            if (*tensor).keys().count() > 0 {
+                return Err(Error::InvalidParameter(
+                    "fill_value must not be null for non-empty TensorMap".into()
+                ));
+            }
             let dummy = mts_array_t::null();
             let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &dummy)?;
             let _ = &unwind_wrapper;

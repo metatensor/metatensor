@@ -542,13 +542,20 @@ class TensorMap:
         :param fill_value: scalar value used to fill missing entries in the merged
             blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
+
+        .. note::
+
+            The fill_value also applies to gradient blocks. If using NaN,
+            gradient arrays for missing entries will also contain NaN.
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fv_mts = _make_fill_value_array(self, fill_value)
-
-        ptr = self._lib.mts_tensormap_keys_to_samples(
-            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
-        )
+        try:
+            ptr = self._lib.mts_tensormap_keys_to_samples(
+                self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
+            )
+        finally:
+            _cleanup_fill_value(fv_mts)
         return TensorMap._from_ptr(ptr)
 
     def components_to_properties(
@@ -615,12 +622,20 @@ class TensorMap:
         :param fill_value: scalar value used to fill missing entries in the merged
             blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
+
+        .. note::
+
+            The fill_value also applies to gradient blocks. If using NaN,
+            gradient arrays for missing entries will also contain NaN.
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fv_mts = _make_fill_value_array(self, fill_value)
-        ptr = self._lib.mts_tensormap_keys_to_properties(
-            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
-        )
+        try:
+            ptr = self._lib.mts_tensormap_keys_to_properties(
+                self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
+            )
+        finally:
+            _cleanup_fill_value(fv_mts)
         return TensorMap._from_ptr(ptr)
 
     @property
@@ -793,6 +808,14 @@ def _make_fill_value_array(tensor_map, fill_value):
     fv_array = np.array([fill_value], dtype=values.dtype)
     mts = data.create_mts_array(fv_array)
     return ctypes.pointer(mts)
+
+
+def _cleanup_fill_value(fv_ptr):
+    """Destroy the fill_value mts_array_t created by _make_fill_value_array."""
+    if fv_ptr is not None:
+        mts = fv_ptr.contents
+        if mts.destroy is not None:
+            mts.destroy(mts.ptr)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:
