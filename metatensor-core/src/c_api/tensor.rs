@@ -344,15 +344,24 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers_non_null!(tensor, fill_value);
+        check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
-        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &*fill_value)?;
 
-        // force the closure to capture the full unwind_wrapper, not just
-        // unwind_wrapper.0
-        let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        // For empty tensors, keys_to_properties will error before using
+        // fill_value, so we allow null fill_value in that case.
+        if fill_value.is_null() {
+            // This will fail with "no keys to move in an empty TensorMap" if
+            // the tensor is empty, or with an appropriate error otherwise.
+            let dummy = mts_array_t::null();
+            let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &dummy)?;
+            let _ = &unwind_wrapper;
+            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        } else {
+            let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &*fill_value)?;
+            let _ = &unwind_wrapper;
+            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        }
         Ok(())
     });
 
@@ -453,15 +462,20 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers_non_null!(tensor, fill_value);
+        check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
-        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &*fill_value)?;
 
-        // force the closure to capture the full unwind_wrapper, not just
-        // unwind_wrapper.0
-        let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        if fill_value.is_null() {
+            let dummy = mts_array_t::null();
+            let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &dummy)?;
+            let _ = &unwind_wrapper;
+            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        } else {
+            let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &*fill_value)?;
+            let _ = &unwind_wrapper;
+            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        }
         Ok(())
     });
 

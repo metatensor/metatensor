@@ -772,7 +772,10 @@ def _make_fill_value_array(tensor_map, fill_value):
 
     The dtype is inferred from the first block's values array.
     Returns a ctypes.POINTER(mts_array_t) suitable for passing to C functions.
+    Returns None if the TensorMap has no blocks.
     """
+    if len(tensor_map) == 0:
+        return None
     block = tensor_map.block_by_id(0)
     values = block.values
 

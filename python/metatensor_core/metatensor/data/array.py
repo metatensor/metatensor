@@ -271,7 +271,11 @@ def _mts_array_create(this, shape_ptr, shape_count, fill_value_ptr, new_array):
 
     # Extract the scalar fill value from the fill_value mts_array_t
     fill_wrapper = _KNOWN_ARRAY_WRAPPERS[fill_value_ptr.contents.ptr]
-    scalar = fill_wrapper.array.flat[0]
+    fv_arr = fill_wrapper.array
+    if _is_torch_array(fv_arr):
+        scalar = fv_arr.item()
+    else:
+        scalar = fv_arr.flat[0]
 
     if _is_numpy_array(wrapper.array):
         array = np.full(shape, scalar, dtype=dtype)

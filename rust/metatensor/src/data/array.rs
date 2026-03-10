@@ -23,8 +23,8 @@ pub trait Array: std::any::Any + Send + Sync {
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    fn create(&self, shape: &[usize]) -> Box<dyn Array>;
+    /// The new array should be filled with the scalar value from `fill_value`.
+    fn create(&self, shape: &[usize], fill_value: &dyn Array) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
@@ -214,6 +214,7 @@ unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
+    fill_value: *const mts_array_t,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
@@ -223,7 +224,10 @@ unsafe extern "C" fn rust_array_create(
         let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        let new_array = (*array).create(shape);
+
+        // Extract the fill_value Array from its mts_array_t wrapper
+        let fill_array = &*(*fill_value).ptr.cast::<Box<dyn Array>>();
+        let new_array = (*array).create(shape, fill_array.as_ref());
 
         *array_storage = new_array.into();
     })
@@ -307,8 +311,11 @@ where
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::ArcArray::from_elem(shape, T::default()));
+    fn create(&self, shape: &[usize], fill_value: &dyn Array) -> Box<dyn Array> {
+        let fv = fill_value.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>()
+            .expect("fill_value must be the same array type");
+        let scalar = fv.as_slice().expect("fill_value must be contiguous")[0].clone();
+        return Box::new(ndarray::ArcArray::from_elem(shape, scalar));
     }
 
     fn copy(&self) -> Box<dyn Array> {
@@ -518,7 +525,7 @@ impl Array for EmptyArray {
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
+    fn create(&self, shape: &[usize], _fill_value: &dyn Array) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
@@ -579,7 +586,9 @@ mod tests {
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
 
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
+        let fv_data: Box<dyn Array> = Box::new(ndarray::ArcArray::<f64, _>::zeros(vec![1]));
+        let fv = mts_array_t::from(fv_data);
+        let created = mts_array.create(&[2, 3, 4], &fv).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
     }
 
@@ -649,7 +658,9 @@ mod tests {
         }
 
         // And creation should make an array of the same type (i32)
-        let created = mts_array.create(&[1, 1]).unwrap();
+        let fv_data: Box<dyn Array> = Box::new(ndarray::ArcArray::<i32, _>::from_elem(vec![1], 0));
+        let fv = mts_array_t::from(fv_data);
+        let created = mts_array.create(&[1, 1], &fv).unwrap();
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
             let status = (created.as_dlpack.unwrap())(

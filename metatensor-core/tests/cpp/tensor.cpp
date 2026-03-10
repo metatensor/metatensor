@@ -1,4 +1,6 @@
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <cstdlib>
 #include <map>
@@ -266,6 +268,30 @@ TEST_CASE("TensorMap") {
         CHECK(components.empty());
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
+    }
+
+    SECTION("keys_to_properties with NaN fill") {
+        auto nan_data = std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, std::numeric_limits<double>::quiet_NaN());
+        auto nan_fv = DataArrayBase::to_mts_array_t(std::move(nan_data));
+        auto tensor = test_tensor_map().keys_to_properties("key_1", &nan_fv);
+
+        auto block = tensor.block_by_id(0);
+        auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());
+        auto view = values.view();
+
+        // Sample 0: exists in both key_1=0 (val=1.0) and key_1=1 (val=2.0)
+        CHECK(view(0, 0, 0) == 1.0);
+        CHECK(view(0, 0, 1) == 2.0);
+
+        // Sample 1: only in key_1=1 -> key_1=0 part should be NaN
+        CHECK(std::isnan(view(1, 0, 0)));
+        CHECK(view(1, 0, 1) == 2.0);
+
+        // Sample 2: only in key_1=0 -> key_1=1 part should be NaN
+        CHECK(view(2, 0, 0) == 1.0);
+        CHECK(std::isnan(view(2, 0, 1)));
+
+        nan_fv.destroy(nan_fv.ptr);
     }
 
     SECTION("clone") {

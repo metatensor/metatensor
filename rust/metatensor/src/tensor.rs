@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
-use crate::c_api::{mts_tensormap_t, mts_labels_t};
+use crate::c_api::{mts_tensormap_t, mts_labels_t, mts_array_t};
 
 use crate::errors::{check_status, check_ptr};
 use crate::{Error, TensorBlock, TensorBlockRef, Labels, LabelValue};
@@ -327,12 +327,13 @@ impl TensorMap {
     /// This function is only implemented if all merged block have the same
     /// property labels.
     #[inline]
-    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool, fill_value: &mts_array_t) -> Result<TensorMap, Error> {
         let ptr = unsafe {
             crate::c_api::mts_tensormap_keys_to_samples(
                 self.ptr,
                 keys_to_move.as_mts_labels_t(),
                 sort_samples,
+                fill_value as *const mts_array_t,
             )
         };
 
@@ -367,12 +368,13 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     #[inline]
-    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool, fill_value: &mts_array_t) -> Result<TensorMap, Error> {
         let ptr = unsafe {
             crate::c_api::mts_tensormap_keys_to_properties(
                 self.ptr,
                 keys_to_move.as_mts_labels_t(),
                 sort_samples,
+                fill_value as *const mts_array_t,
             )
         };
 

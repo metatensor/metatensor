@@ -159,13 +159,13 @@ impl mts_array_t {
     }
 
     /// call `mts_array_t.create` with a more convenient API
-    pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
+    pub fn create(&self, shape: &[usize], fill_value: &mts_array_t) -> Result<mts_array_t, Error> {
         let function = self.create.expect("mts_array_t.create function is NULL");
 
         let mut new_array = mts_array_t::null();
         unsafe {
             check_status_external(
-                function(self.ptr, shape.as_ptr(), shape.len(), &mut new_array),
+                function(self.ptr, shape.as_ptr(), shape.len(), fill_value as *const mts_array_t, &mut new_array),
                 "mts_array_t.create",
             )?;
         }
