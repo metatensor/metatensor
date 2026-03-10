@@ -335,7 +335,9 @@ static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_mo
 TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool sort_samples, double fill_value) const {
     auto device = this->keys()->values().device();
     // Create a fill_value mts_array_t matching the tensor's dtype
-    auto values_dtype = this->block_by_id(0)->values().scalar_type();
+    auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+    auto first_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+    auto values_dtype = first_block->values().scalar_type();
     auto fv_tensor = torch::tensor({fill_value}, torch::TensorOptions().dtype(values_dtype));
     auto fv_data = std::make_unique<TorchDataArray>(std::move(fv_tensor));
     auto fv_mts = metatensor::DataArrayBase::to_mts_array_t(std::move(fv_data));
@@ -360,7 +362,9 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
 TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort_samples, double fill_value) const {
     auto device = this->keys()->values().device();
     // Create a fill_value mts_array_t matching the tensor's dtype
-    auto values_dtype = this->block_by_id(0)->values().scalar_type();
+    auto block_s = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+    auto first_block_s = torch::make_intrusive<TensorBlockHolder>(std::move(block_s), torch::IValue());
+    auto values_dtype = first_block_s->values().scalar_type();
     auto fv_tensor = torch::tensor({fill_value}, torch::TensorOptions().dtype(values_dtype));
     auto fv_data = std::make_unique<TorchDataArray>(std::move(fv_tensor));
     auto fv_mts = metatensor::DataArrayBase::to_mts_array_t(std::move(fv_data));
