@@ -188,14 +188,22 @@ namespace metatensor {
         /**************************************************************************/
 
         /// Load a previously saved `TensorMap` from the given path using
-        /// memory-mapped I/O. Arrays are created internally as read-only
-        /// mmap-backed arrays.
-        TensorMap load_mmap(const std::string& path);
+        /// memory-mapped I/O. If `create_array` is `nullptr`, arrays are
+        /// created internally as read-only mmap-backed arrays.
+        TensorMap load_mmap(
+            const std::string& path,
+            mts_create_file_array_callback_t create_array = nullptr,
+            void* user_data = nullptr
+        );
 
         /// Load a previously saved `TensorBlock` from the given path using
-        /// memory-mapped I/O. Arrays are created internally as read-only
-        /// mmap-backed arrays.
-        TensorBlock load_block_mmap(const std::string& path);
+        /// memory-mapped I/O. If `create_array` is `nullptr`, arrays are
+        /// created internally as read-only mmap-backed arrays.
+        TensorBlock load_block_mmap(
+            const std::string& path,
+            mts_create_file_array_callback_t create_array = nullptr,
+            void* user_data = nullptr
+        );
 
         /**************************************************************************/
 

@@ -46,7 +46,7 @@ pub fn load_block_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorBlock,
     let path = CString::new(path).expect("this path contains a NULL byte");
 
     let ptr = unsafe {
-        crate::c_api::mts_block_load_mmap(path.as_ptr())
+        crate::c_api::mts_block_load_mmap(path.as_ptr(), None, std::ptr::null_mut())
     };
 
     check_ptr(ptr)?;

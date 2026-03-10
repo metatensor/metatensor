@@ -8,7 +8,7 @@ from typing import BinaryIO, Union
 
 import numpy as np
 
-from .._c_api import mts_create_array_callback_t
+from .._c_api import mts_create_array_callback_t, mts_create_file_array_callback_t
 from .._c_lib import _get_library
 from ..tensor import TensorMap
 from ._block import (
@@ -161,7 +161,9 @@ def load_mmap(path: Union[str, pathlib.Path]) -> TensorMap:
 
     path = path.encode("utf8")
 
-    ptr = lib.mts_tensormap_load_mmap(path)
+    ptr = lib.mts_tensormap_load_mmap(
+        path, mts_create_file_array_callback_t(0), None
+    )
 
     return TensorMap._from_ptr(ptr)
 

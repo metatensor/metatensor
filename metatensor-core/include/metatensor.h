@@ -301,6 +301,27 @@ typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     uintptr_t shape_count,
                                                     struct mts_array_t *array);
 
+/**
+ * Function pointer to create a new `mts_array_t` from file offset data,
+ * used during mmap/file-based loading.
+ *
+ * This callback receives the shape, DLPack data type, byte offset within
+ * the file, and byte length of the raw array data. The implementation
+ * creates the `mts_array_t` using whatever I/O strategy it prefers:
+ * memory mapping, GPU Direct Storage, or plain reads.
+ *
+ * `user_data` is the pointer passed to `mts_tensormap_load_mmap` /
+ * `mts_block_load_mmap`; it can carry a cached file descriptor, mmap
+ * handle, or GDS context.
+ */
+typedef mts_status_t (*mts_create_file_array_callback_t)(void *user_data,
+                                                         const uintptr_t *shape,
+                                                         uintptr_t shape_count,
+                                                         DLDataType dtype,
+                                                         uintptr_t file_offset,
+                                                         uintptr_t data_len,
+                                                         struct mts_array_t *array);
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1142,22 +1163,26 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
 /**
  * Load a tensor block from the file at the given path using memory mapping.
  *
- * This provides zero-copy loading: data arrays point directly into the
- * memory-mapped file, avoiding copies. Labels are still loaded normally.
- *
- * No `create_array` callback is needed — arrays are created internally
- * as read-only memory-mapped arrays.
+ * If `create_array` is `NULL`, data arrays are created internally as
+ * read-only memory-mapped arrays (default behavior). If `create_array`
+ * is non-NULL, the callback is called for each data array with the
+ * shape, DLPack dtype, byte offset within the file, and byte length.
+ * `user_data` is forwarded to the callback as-is.
  *
  * The memory allocated by this function should be released using
  * `mts_block_free`.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback for creating data arrays, or NULL for default
+ * @param user_data opaque pointer forwarded to create_array
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_block_t *mts_block_load_mmap(const char *path);
+struct mts_block_t *mts_block_load_mmap(const char *path,
+                                        mts_create_file_array_callback_t create_array,
+                                        void *user_data);
 
 /**
  * Save a tensor block to the file at the given path.
@@ -1288,22 +1313,30 @@ struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
 /**
  * Load a tensor map from the file at the given path using memory mapping.
  *
- * This provides zero-copy loading: data arrays point directly into the
- * memory-mapped file, avoiding copies. Labels are still loaded normally.
+ * If `create_array` is `NULL`, data arrays are created internally as
+ * read-only memory-mapped arrays (default behavior). If `create_array`
+ * is non-NULL, the callback is called for each data array with the
+ * shape, DLPack dtype, byte offset within the file, and byte length of
+ * the raw data. The callback creates the `mts_array_t` using whatever
+ * I/O strategy it prefers (mmap, GPU Direct Storage, plain reads, etc.).
+ * `user_data` is forwarded to the callback as-is.
  *
- * No `create_array` callback is needed — arrays are created internally
- * as read-only memory-mapped arrays.
+ * Labels are always loaded normally regardless of the callback.
  *
  * The memory allocated by this function should be released using
  * `mts_tensormap_free`.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback for creating data arrays, or NULL for default
+ * @param user_data opaque pointer forwarded to create_array
  *
  * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path);
+struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
+                                                mts_create_file_array_callback_t create_array,
+                                                void *user_data);
 
 /**
  * Save a tensor map to the file at the given path.

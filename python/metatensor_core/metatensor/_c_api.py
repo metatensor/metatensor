@@ -127,6 +127,7 @@ mts_array_t._fields_ = [
 
 
 mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, POINTER(mts_array_t))
+mts_create_file_array_callback_t = CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, c_uintptr_t, c_uintptr_t, POINTER(mts_array_t))
 
 
 def setup_functions(lib):
@@ -414,6 +415,8 @@ def setup_functions(lib):
 
     lib.mts_block_load_mmap.argtypes = [
         ctypes.c_char_p,
+        mts_create_file_array_callback_t,
+        ctypes.c_void_p,
     ]
     lib.mts_block_load_mmap.restype = POINTER(mts_block_t)
 
@@ -447,6 +450,8 @@ def setup_functions(lib):
 
     lib.mts_tensormap_load_mmap.argtypes = [
         ctypes.c_char_p,
+        mts_create_file_array_callback_t,
+        ctypes.c_void_p,
     ]
     lib.mts_tensormap_load_mmap.restype = POINTER(mts_tensormap_t)
 

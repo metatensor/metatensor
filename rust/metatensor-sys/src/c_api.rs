@@ -274,6 +274,17 @@ pub type mts_create_array_callback_t = ::std::option::Option<
         array: *mut mts_array_t,
     ) -> mts_status_t,
 >;
+pub type mts_create_file_array_callback_t = ::std::option::Option<
+    unsafe extern "C" fn(
+        user_data: *mut ::std::os::raw::c_void,
+        shape: *const usize,
+        shape_count: usize,
+        dtype: DLDataType,
+        file_offset: usize,
+        data_len: usize,
+        array: *mut mts_array_t,
+    ) -> mts_status_t,
+>;
 extern "C" {
     pub fn mts_disable_panic_printing();
     pub fn mts_version() -> *const ::std::os::raw::c_char;
@@ -480,6 +491,11 @@ extern "C" {
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_block_t;
+    pub fn mts_block_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_file_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
+    ) -> *mut mts_block_t;
     #[must_use]
     pub fn mts_block_save(
         path: *const ::std::os::raw::c_char,
@@ -502,6 +518,11 @@ extern "C" {
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_tensormap_t;
+    pub fn mts_tensormap_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_file_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
+    ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_save(
         path: *const ::std::os::raw::c_char,
@@ -515,13 +536,4 @@ extern "C" {
         realloc: mts_realloc_buffer_t,
         tensor: *const mts_tensormap_t,
     ) -> mts_status_t;
-}
-
-extern "C" {
-    pub fn mts_tensormap_load_mmap(
-        path: *const ::std::os::raw::c_char,
-    ) -> *mut mts_tensormap_t;
-    pub fn mts_block_load_mmap(
-        path: *const ::std::os::raw::c_char,
-    ) -> *mut mts_block_t;
 }
