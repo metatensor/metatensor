@@ -760,9 +760,7 @@ def test_keys_to_properties_fill_value_default(tensor):
 
 def test_keys_to_samples_fill_value_default(tensor):
     tensor_default = tensor.keys_to_samples("key_2", sort_samples=True)
-    tensor_explicit = tensor.keys_to_samples(
-        "key_2", sort_samples=True, fill_value=0.0
-    )
+    tensor_explicit = tensor.keys_to_samples("key_2", sort_samples=True, fill_value=0.0)
 
     for i in range(len(tensor_default)):
         assert torch.all(
