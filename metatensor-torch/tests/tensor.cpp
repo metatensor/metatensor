@@ -259,7 +259,7 @@ TEST_CASE("TensorMap serialization") {
 TEST_CASE("fill_value") {
     SECTION("keys_to_properties with NaN fill") {
         auto tensor = test_tensor_map();
-        auto result = tensor->keys_to_properties("key_1", /*fill_value*/ std::numeric_limits<double>::quiet_NaN());
+        auto result = tensor->keys_to_properties("key_1", /*sort_samples*/ true, /*fill_value*/ std::numeric_limits<double>::quiet_NaN());
 
         auto block = TensorMapHolder::block_by_id(result, 0);
         auto values = block->values();
@@ -279,8 +279,8 @@ TEST_CASE("fill_value") {
 
     SECTION("keys_to_properties with default zero") {
         auto tensor = test_tensor_map();
-        auto result_default = tensor->keys_to_properties("key_1");
-        auto result_explicit = tensor->keys_to_properties("key_1", /*fill_value*/ 0.0);
+        auto result_default = tensor->keys_to_properties("key_1", /*sort_samples*/ true);
+        auto result_explicit = tensor->keys_to_properties("key_1", /*sort_samples*/ true, /*fill_value*/ 0.0);
 
         for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
             auto block_default = TensorMapHolder::block_by_id(result_default, i);
@@ -291,8 +291,8 @@ TEST_CASE("fill_value") {
 
     SECTION("keys_to_samples with default zero") {
         auto tensor = test_tensor_map();
-        auto result_default = tensor->keys_to_samples("key_2");
-        auto result_explicit = tensor->keys_to_samples("key_2", /*fill_value*/ 0.0);
+        auto result_default = tensor->keys_to_samples("key_2", /*sort_samples*/ true);
+        auto result_explicit = tensor->keys_to_samples("key_2", /*sort_samples*/ true, /*fill_value*/ 0.0);
 
         for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
             auto block_default = TensorMapHolder::block_by_id(result_default, i);
