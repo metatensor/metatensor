@@ -100,7 +100,7 @@ pub fn load_mmap(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> 
     let path = CString::new(path).expect("this path contains a NULL byte");
 
     let ptr = unsafe {
-        crate::c_api::mts_tensormap_load_mmap(path.as_ptr())
+        crate::c_api::mts_tensormap_load_mmap(path.as_ptr(), None, std::ptr::null_mut())
     };
 
     check_ptr(ptr)?;

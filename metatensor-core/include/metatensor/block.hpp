@@ -480,7 +480,9 @@ private:
         mts_create_array_callback_t create_array
     );
     friend TensorBlock metatensor::io::load_block_mmap(
-        const std::string& path
+        const std::string& path,
+        mts_create_file_array_callback_t create_array,
+        void* user_data
     );
 
     mts_block_t* block_;

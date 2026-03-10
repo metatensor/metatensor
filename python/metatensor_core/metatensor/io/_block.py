@@ -8,7 +8,12 @@ from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t
+from .._c_api import (
+    c_uintptr_t,
+    mts_array_t,
+    mts_create_array_callback_t,
+    mts_create_file_array_callback_t,
+)
 from .._c_lib import _get_library
 from ..block import TensorBlock
 from ..data.array import _is_numpy_array, _is_torch_array, create_mts_array
@@ -196,7 +201,9 @@ def load_block_mmap(path: Union[str, pathlib.Path]) -> TensorBlock:
 
     path = path.encode("utf8")
 
-    ptr = lib.mts_block_load_mmap(path)
+    ptr = lib.mts_block_load_mmap(
+        path, mts_create_file_array_callback_t(0), None
+    )
 
     return TensorBlock._from_ptr(ptr, parent=None)
 
