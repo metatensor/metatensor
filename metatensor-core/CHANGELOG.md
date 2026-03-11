@@ -43,6 +43,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `mts_array_t.move_samples_from` is now `mts_array_t.move_data`, and allows for
   more granular data movement. `mts_sample_mapping_t` has been renamed to
   `mts_data_movement_t`.
+- `TensorMap::keys_to_samples` now handles merging blocks with different set
+  of properties.
 
 ### Removed
 
