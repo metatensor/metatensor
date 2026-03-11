@@ -67,6 +67,18 @@ class TensorModule(torch.nn.Module):
         }
 
 
+class BufferModule(torch.nn.Module):
+    def __init__(self, name):
+        super().__init__()
+        self.register_buffer(name, torch.rand(3, 4, dtype=torch.float64))
+
+
+class ParameterModule(torch.nn.Module):
+    def __init__(self, name):
+        super().__init__()
+        self.register_parameter(name, torch.nn.Parameter(torch.rand(3, 4, dtype=torch.float64)))
+
+
 class EverythingModule(torch.nn.Module):
     def __init__(self, name):
         super().__init__()
@@ -83,6 +95,8 @@ class EverythingModule(torch.nn.Module):
         self.a = LabelsModule(name)
         self.b = BlockModule(name)
         self.c = TensorModule(name)
+        self.d = BufferModule(name)
+        self.e = ParameterModule(name)
 
 
 module = EverythingModule("test")
