@@ -8,7 +8,7 @@ from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 import numpy as np
 
 from . import data
-from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType

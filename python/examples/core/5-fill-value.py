@@ -30,6 +30,7 @@ import numpy as np
 
 import metatensor
 
+
 keys = metatensor.Labels(["species"], np.array([[1], [6]]))
 
 block_H = metatensor.TensorBlock(
