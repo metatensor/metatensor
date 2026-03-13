@@ -25,10 +25,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   when merging blocks. Defaults to zero in the Python and C++ wrappers.
 - Added `fill_value` parameter to the `mts_array_t.create` callback, which
   receives the fill value to use when creating new arrays during block merging.
-- C++ `OwnedMtsArray` RAII wrapper for `mts_array_t`. Calls `destroy`
-  automatically at scope exit, preventing resource leaks when working with
-  standalone `mts_array_t` values (e.g. fill values). Use `.ptr()` to pass
-  to C API functions.
 - Added `mts_array_t.device` function pointer to query the device of an array
   without exporting via DLPack. Implemented for all array backends (Rust
   `ArcArray`, `MmapArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,

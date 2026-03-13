@@ -4,6 +4,7 @@
 #include <cstring>
 
 #include <string>
+#include <type_traits>
 #include <vector>
 #include <optional>
 #include <string_view>
@@ -13,6 +14,7 @@
 #include "./errors.hpp"
 #include "./labels.hpp"
 #include "./block.hpp"
+#include "./arrays.hpp"
 
 namespace metatensor {
 
@@ -261,12 +263,11 @@ public:
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
-    ///                   used to fill missing entries. Ownership is transferred
-    ///                   to the callee (the array is destroyed after the call).
+    ///                   used to fill missing entries
     TensorMap keys_to_properties(
         const Labels& keys_to_move,
-        mts_array_t fill_value,
-        bool sort_samples = true
+        bool sort_samples,
+        mts_array_t fill_value
     ) const {
         auto* ptr = mts_tensormap_keys_to_properties(
             tensor_,
@@ -283,17 +284,51 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_properties(
         const std::vector<std::string>& keys_to_move,
-        mts_array_t fill_value,
-        bool sort_samples = true
+        bool sort_samples,
+        mts_array_t fill_value
     ) const {
-        return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_properties(Labels(keys_to_move), sort_samples, fill_value);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_properties(
         std::string key_to_move,
-        mts_array_t fill_value,
+        bool sort_samples,
+        mts_array_t fill_value
+    ) const {
+        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fill_value);
+    }
+
+    /// Convenience overload: create fill_value from a scalar.
+    /// T defaults to double, so `keys_to_properties(keys)` fills with 0.0.
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_properties(
+        const Labels& keys_to_move,
+        T fill_value = T{},
+        bool sort_samples = true
+    ) const {
+        auto fv = DataArrayBase::to_mts_array_t(
+            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
+        );
+        return keys_to_properties(keys_to_move, sort_samples, fv);
+    }
+
+    /// Convenience overload with vector of strings
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_properties(
+        const std::vector<std::string>& keys_to_move,
+        T fill_value = T{},
+        bool sort_samples = true
+    ) const {
+        return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
+    }
+
+    /// Convenience overload with a single string
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_properties(
+        std::string key_to_move,
+        T fill_value = T{},
         bool sort_samples = true
     ) const {
         return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
@@ -322,12 +357,11 @@ public:
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
-    ///                   used to fill missing entries. Ownership is transferred
-    ///                   to the callee (the array is destroyed after the call).
+    ///                   used to fill missing entries
     TensorMap keys_to_samples(
         const Labels& keys_to_move,
-        mts_array_t fill_value,
-        bool sort_samples = true
+        bool sort_samples,
+        mts_array_t fill_value
     ) const {
         auto* ptr = mts_tensormap_keys_to_samples(
             tensor_,
@@ -344,17 +378,51 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_samples(
         const std::vector<std::string>& keys_to_move,
-        mts_array_t fill_value,
-        bool sort_samples = true
+        bool sort_samples,
+        mts_array_t fill_value
     ) const {
-        return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_samples(Labels(keys_to_move), sort_samples, fill_value);
     }
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_samples(
         std::string key_to_move,
-        mts_array_t fill_value,
+        bool sort_samples,
+        mts_array_t fill_value
+    ) const {
+        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fill_value);
+    }
+
+    /// Convenience overload: create fill_value from a scalar.
+    /// T defaults to double, so `keys_to_samples(keys)` fills with 0.0.
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_samples(
+        const Labels& keys_to_move,
+        T fill_value = T{},
+        bool sort_samples = true
+    ) const {
+        auto fv = DataArrayBase::to_mts_array_t(
+            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
+        );
+        return keys_to_samples(keys_to_move, sort_samples, fv);
+    }
+
+    /// Convenience overload with vector of strings
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_samples(
+        const std::vector<std::string>& keys_to_move,
+        T fill_value = T{},
+        bool sort_samples = true
+    ) const {
+        return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
+    }
+
+    /// Convenience overload with a single string
+    template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
+    TensorMap keys_to_samples(
+        std::string key_to_move,
+        T fill_value = T{},
         bool sort_samples = true
     ) const {
         return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
