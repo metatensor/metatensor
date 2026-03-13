@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
-use crate::labels::LabelValue;
 use crate::utils::ConstCString;
 use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
@@ -250,8 +249,8 @@ impl TensorBlock {
         }
 
         if gradient.samples.count() > 0 {
-            let mut min_sample_value = LabelValue::new(0);
-            let mut max_sample_value = LabelValue::new(0);
+            let mut min_sample_value = 0;
+            let mut max_sample_value = 0;
             if gradient.samples.is_sorted() {
                 // only check the first and last entry
                 min_sample_value = gradient.samples[0][0];
@@ -269,14 +268,14 @@ impl TensorBlock {
                 }
             }
 
-            if min_sample_value.i32() < 0 {
+            if min_sample_value < 0 {
                 return Err(Error::InvalidParameter(format!(
                     "invalid value for the 'sample' dimension in gradient samples: \
                     all values should be positive, but we got {}", min_sample_value
                 )));
             }
 
-            if max_sample_value.usize() >= self.samples.count() {
+            if usize::try_from(max_sample_value).expect("could not convert to usize") >= self.samples.count() {
                 return Err(Error::InvalidParameter(format!(
                     "invalid value for the 'sample' dimension in gradient samples: we got \
                     {}, but the values contain {} samples", max_sample_value, self.samples.count()
