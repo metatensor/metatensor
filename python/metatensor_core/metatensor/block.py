@@ -104,7 +104,7 @@ class TensorBlock:
                 f"`properties` must be metatensor Labels, not {type(properties)}"
             )
 
-        components_array = ctypes.ARRAY(mts_labels_t, len(components))()
+        components_array = ctypes.ARRAY(ctypes.POINTER(mts_labels_t), len(components))()
         for i, component in enumerate(components):
             components_array[i] = component._as_mts_labels_t()
 
@@ -314,8 +314,8 @@ class TensorBlock:
         return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
-        result = mts_labels_t()
-        self._lib.mts_block_labels(self._ptr, axis, result)
+        result = self._lib.mts_block_labels(self._ptr, axis)
+        _check_pointer(result)
         return Labels._from_mts_labels_t(result)
 
     def gradient(self, parameter: str) -> "TensorBlock":

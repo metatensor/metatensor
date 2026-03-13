@@ -39,6 +39,7 @@ fn main() {
     // if not ok, rerun the build script unconditionally
     if result.is_ok() {
         println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=build.rs");
     }
 
     if std::env::var("METATENSOR_FULL_VERSION").is_err() {
@@ -47,3 +48,5 @@ fn main() {
     }
     println!("cargo:rerun-if-env-changed=METATENSOR_FULL_VERSION");
 }
+// Force rebuild: 1773394365
+// Rebuild trigger: 1773394852

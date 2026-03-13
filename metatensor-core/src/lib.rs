@@ -14,6 +14,8 @@ mod utils;
 mod labels;
 use self::labels::{LabelValue, Labels};
 
+mod labels_array;
+
 mod data;
 use self::data::{mts_array_t, mts_data_origin_t};
 use self::data::{register_data_origin, get_data_origin};
@@ -105,3 +107,4 @@ impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
         Error::Internal(message)
     }
 }
+// Rebuild required: 20260313-110654
