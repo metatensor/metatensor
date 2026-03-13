@@ -14,88 +14,8 @@ use crate::Error;
 use crate::utils::ConstCString;
 
 /// A single value inside a label. This is represented as a 32-bit signed
-/// integer, with a couple of helper function to get its value as usize/isize.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct LabelValue(i32);
-
-impl PartialEq<i32> for LabelValue {
-    fn eq(&self, other: &i32) -> bool {
-        self.0 == *other
-    }
-}
-
-impl PartialEq<LabelValue> for i32 {
-    fn eq(&self, other: &LabelValue) -> bool {
-        *self == other.0
-    }
-}
-
-impl std::fmt::Debug for LabelValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::fmt::Display for LabelValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-impl From<u32> for LabelValue {
-    fn from(value: u32) -> LabelValue {
-        assert!(value < i32::MAX as u32);
-        LabelValue(value as i32)
-    }
-}
-
-impl From<i32> for LabelValue {
-    fn from(value: i32) -> LabelValue {
-        LabelValue(value)
-    }
-}
-
-#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-impl From<usize> for LabelValue {
-    fn from(value: usize) -> LabelValue {
-        assert!(value < i32::MAX as usize);
-        LabelValue(value as i32)
-    }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-impl From<isize> for LabelValue {
-    fn from(value: isize) -> LabelValue {
-        assert!(value < i32::MAX as isize && value > i32::MIN as isize);
-        LabelValue(value as i32)
-    }
-}
-
-impl LabelValue {
-    /// Create a `LabelValue` with the given `value`
-    pub fn new(value: i32) -> LabelValue {
-        LabelValue(value)
-    }
-
-    /// Get the integer value of this `LabelValue` as a usize
-    #[allow(clippy::cast_sign_loss)]
-    pub fn usize(self) -> usize {
-        debug_assert!(self.0 >= 0);
-        self.0 as usize
-    }
-
-    /// Get the integer value of this `LabelValue` as an isize
-    pub fn isize(self) -> isize {
-        self.0 as isize
-    }
-
-    /// Get the integer value of this `LabelValue` as an i32
-    pub fn i32(self) -> i32 {
-        self.0
-    }
-}
+/// integer
+pub type LabelValue = i32;
 
 // Labels uses `AHash` instead of the default hasher in std since `AHash` is
 // much faster and we don't need the cryptographic strength hash from std.
@@ -202,7 +122,7 @@ impl std::fmt::Debug for Labels {
         for values in self {
             write!(f, "    ")?;
             for (value, width) in values.iter().zip(&widths) {
-                write!(f, "{:^width$}  ", value.isize(), width=width)?;
+                write!(f, "{:^width$}  ", value, width=width)?;
             }
             writeln!(f)?;
         }
@@ -253,7 +173,6 @@ impl Labels {
     /// Helper constructor to make tests more readable
     #[cfg(test)]
     pub fn new_i32(names: &[&str], values: Vec<i32>) -> Result<Labels, Error> {
-        let values = values.into_iter().map(Into::into).collect();
         return Labels::new(names, values);
     }
 
@@ -622,7 +541,7 @@ impl Labels {
                 dimensions_to_match.push(i);
             }
 
-            let mut candidate = vec![LabelValue::new(0); dimensions_to_match.len()];
+            let mut candidate = vec![0; dimensions_to_match.len()];
             for (entry_i, entry) in self.iter().enumerate() {
                 for (i, &d) in dimensions_to_match.iter().enumerate() {
                     candidate[i] = entry[d];
@@ -885,10 +804,7 @@ mod tests {
     #[test]
     fn new_unchecked_uniqueness_valid_no_duplicates() {
         let names = &["x", "y"];
-        let values: Vec<LabelValue> = vec![1, 10, 2, 20, 3, 30]
-            .into_iter()
-            .map(Into::into)
-            .collect();
+        let values = vec![1, 10, 2, 20, 3, 30];
 
         let labels_safe = Labels::new(names, values.clone()).unwrap();
         let labels_unchecked = unsafe { Labels::new_unchecked_uniqueness(names, values.clone()).unwrap() };
