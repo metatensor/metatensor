@@ -97,8 +97,8 @@ pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result
     header.write(&mut *writer)?;
 
     for entry in labels {
-        for value in entry {
-            writer.write_i32::<NativeEndian>(value.i32())?;
+        for &value in entry {
+            writer.write_i32::<NativeEndian>(value)?;
         }
     }
 

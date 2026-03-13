@@ -298,10 +298,10 @@ fn merge_blocks_along_properties(
             for (sample_i, grad_sample) in gradient.samples.iter().enumerate() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
-                let old_sample_i = grad_sample[0].usize();
+                let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");
 
                 let new_sample_i = samples_mapping[old_sample_i];
-                grad_sample[0] = new_sample_i.into();
+                grad_sample[0] = i32::try_from(new_sample_i).expect("could not convert to i32");
 
                 let new_grad_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
 

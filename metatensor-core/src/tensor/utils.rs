@@ -68,7 +68,7 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
     }).expect("the set should contain at least an empty vector");
 
     let remaining_keys = if values.is_empty() {
-        Labels::new(&["_"], vec![LabelValue::new(0)]).expect("invalid labels")
+        Labels::new(&["_"], vec![0]).expect("invalid labels")
     } else {
         unsafe {
             // SAFETY: the values come from an IndexSet and should already be unique
@@ -99,10 +99,10 @@ pub fn merge_gradient_samples(
         for grad_sample in &*gradient.samples {
             // translate from the old sample id in gradients to the new ones
             let mut grad_sample = grad_sample.to_vec();
-            let old_sample_i = grad_sample[0].usize();
+            let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");
 
             let new_sample_i = samples_mapping[old_sample_i];
-            grad_sample[0] = new_sample_i.into();
+            grad_sample[0] = i32::try_from(new_sample_i).expect("could not convert to i32");
 
             new_sample_values.insert(grad_sample);
         }
@@ -181,10 +181,9 @@ pub use self::tests_utils::example_labels;
 #[cfg(test)]
 mod tests_utils {
     use std::sync::Arc;
-    use crate::labels::{Labels, LabelValue};
+    use crate::labels::Labels;
 
     pub fn example_labels(names: &[&str], values: &[i32]) -> Arc<Labels> {
-        let values = values.iter().copied().map(LabelValue::new).collect();
-        return Arc::new(Labels::new(names, values).expect("invalid labels"));
+        return Arc::new(Labels::new(names, values.to_vec()).expect("invalid labels"));
     }
 }
