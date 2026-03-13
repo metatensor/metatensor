@@ -261,7 +261,7 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
 
 
 @catch_exceptions
-def _mts_array_create(this, shape_ptr, shape_count, fill_value_ptr, new_array):
+def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
@@ -270,7 +270,7 @@ def _mts_array_create(this, shape_ptr, shape_count, fill_value_ptr, new_array):
     dtype = wrapper.array.dtype
 
     # Extract the scalar fill value from the fill_value mts_array_t
-    fill_wrapper = _KNOWN_ARRAY_WRAPPERS[fill_value_ptr.contents.ptr]
+    fill_wrapper = _KNOWN_ARRAY_WRAPPERS[fill_value.ptr]
     fv_arr = fill_wrapper.array
     if _is_torch_array(fv_arr):
         scalar = fv_arr.item()

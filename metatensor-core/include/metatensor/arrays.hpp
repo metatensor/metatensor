@@ -671,16 +671,16 @@ public:
             }, array, new_array);
         };
 
-        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, const mts_array_t* fill_value, mts_array_t* new_array) {
+        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t fill_value, mts_array_t* new_array) {
             return details::catch_exceptions([](
                 const void* array,
                 const uintptr_t* shape,
                 uintptr_t shape_count,
-                const mts_array_t* fill_value,
+                mts_array_t fill_value,
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                const auto* cxx_fill = static_cast<const DataArrayBase*>(fill_value->ptr);
+                const auto* cxx_fill = static_cast<const DataArrayBase*>(fill_value.ptr);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));

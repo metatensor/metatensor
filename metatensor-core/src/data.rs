@@ -184,7 +184,7 @@ pub struct mts_array_t {
         array: *const c_void,
         shape: *const usize,
         shape_count: usize,
-        fill_value: *const mts_array_t,
+        fill_value: mts_array_t,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
 
@@ -464,11 +464,6 @@ impl mts_array_t {
     ///
     /// `fill_value` must be a CPU `mts_array_t` with shape `(1,)` and the
     /// same dtype as this array.
-    ///
-    /// **Invariant**: The `fill_value` must have been created by the same
-    /// backend as `self`. Each backend casts `fill_value.ptr` to its own
-    /// internal type; passing a fill_value from a different backend is
-    /// undefined behavior.
     pub fn create(&self, shape: &[usize], fill_value: &mts_array_t) -> Result<mts_array_t, Error> {
         let self_dtype = self.dtype()?;
         let fill_dtype = fill_value.dtype()?;
@@ -488,6 +483,13 @@ impl mts_array_t {
             )));
         }
 
+        let fill_device = fill_value.device()?;
+        if fill_device.device_type != DLDevice::cpu().device_type {
+            return Err(Error::InvalidParameter(
+                "fill_value must be on CPU".into()
+            ));
+        }
+
         let function = self.create.expect("mts_array_t.create function is NULL");
 
         let mut data_storage = mts_array_t::null();
@@ -496,7 +498,11 @@ impl mts_array_t {
                 self.ptr,
                 shape.as_ptr(),
                 shape.len(),
-                fill_value as *const mts_array_t,
+                // Shallow bitwise copy: the C callback reads the scalar
+                // from fill_value.ptr but does not take ownership. The
+                // extern "C" ABI does not call Rust's Drop on the copy,
+                // so the original fill_value retains sole ownership.
+                std::ptr::read(fill_value as *const mts_array_t),
                 &mut data_storage
             )
         };

@@ -257,7 +257,7 @@ typedef struct mts_array_t {
   mts_status_t (*create)(const void *array,
                          const uintptr_t *shape,
                          uintptr_t shape_count,
-                         const struct mts_array_t *fill_value,
+                         struct mts_array_t fill_value,
                          struct mts_array_t *new_array);
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
