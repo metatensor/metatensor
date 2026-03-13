@@ -5,7 +5,7 @@ compile_error!("the bench feature is required for bencharks, use `cargo bench --
 mod benchmarks {
     use criterion::{BatchSize, BenchmarkId, Criterion};
     pub use criterion::{criterion_group, criterion_main};
-    use metatensor::{LabelValue, LabelsBuilder};
+    use metatensor::LabelsBuilder;
 
     pub fn labels_creation(c: &mut Criterion) {
         let mut group = c.benchmark_group("LabelsBuilder");
@@ -56,18 +56,14 @@ mod benchmarks {
 
         let labels = labels_builder(10_000).finish();
         // initialize the `positions` hash map
-        let entry = [LabelValue::new(0), LabelValue::new(0), LabelValue::new(0)];
+        let entry = [0i32, 0, 0];
         labels.position(&entry);
 
         for n_lookups in [1, 100, 1000] {
             group.bench_function(BenchmarkId::new("lookup", n_lookups), |b| {
                 b.iter(|| {
                     for i in 0..n_lookups {
-                        let p = labels.position(&[
-                            LabelValue::new(i),
-                            LabelValue::new(i % 42),
-                            LabelValue::new(i + 44)
-                        ]);
+                        let p = labels.position(&[i, i % 42, i + 44]);
                         std::hint::black_box(p);
                     }
                 });

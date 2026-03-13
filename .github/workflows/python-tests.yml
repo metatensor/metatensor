@@ -48,7 +48,7 @@ jobs:
       - name: setup rust
         uses: dtolnay/rust-toolchain@master
         with:
-          toolchain: stable
+          toolchain: nightly
 
       - name: Cache Rust dependencies
         uses: Leafwing-Studios/cargo-cache@v2.6.1
@@ -67,8 +67,8 @@ jobs:
       - name: Setup sccache environnement variables
         if: ${{ !env.ACT }}
         run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          # echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          # echo "RUSTC_WRAPPER=" // Disabled to force rebuild >> $GITHUB_ENV
           echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 

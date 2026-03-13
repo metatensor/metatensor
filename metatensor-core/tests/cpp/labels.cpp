@@ -53,7 +53,7 @@ TEST_CASE("Labels") {
     CHECK(empty.size() == 0);
     CHECK(empty.count() == 0);
 
-    CHECK_THROWS_WITH(Labels({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
+    CHECK_THROWS_WITH(Labels({}, {{}, {}, {}}), "invalid parameter: can not have count > 0 if names_count is 0");
 }
 
 
@@ -182,80 +182,28 @@ TEST_CASE("Set operations") {
     }
 }
 
-struct UserData {
-    std::string name;
-    int64_t count;
-    std::vector<double> values;
-};
+TEST_CASE("Values array") {
+    auto labels = Labels({"sample"}, {{0}, {1}, {2}});
 
-// some data will be stored here to check `user_data_delete` has been called
-static int DELETE_CALL_MARKER = 0;
+    // values_array returns a valid mts_array_t with correct shape
+    auto array = labels.values_array();
+    uintptr_t shape_count = 0;
+    const uintptr_t* shape = nullptr;
+    auto status = array.shape(array.ptr, &shape, &shape_count);
+    REQUIRE(status == MTS_SUCCESS);
+    REQUIRE(shape_count == 2);
+    CHECK(shape[0] == 3);
+    CHECK(shape[1] == 1);
 
-TEST_CASE("User data") {
-    {
-        // check that we can register and recover user data on Labels
-        auto* data = new UserData{"aabbccdd", 0xDEADBEEF, {1.0, 2.0, 3.0, 42.1}};
-        auto user_data = metatensor::LabelsUserData(data, [](void* ptr){
-            DELETE_CALL_MARKER += 1;
-            delete static_cast<UserData*>(ptr);
-        });
+    // values_array has the correct origin
+    mts_data_origin_t origin = 0;
+    status = array.origin(array.ptr, &origin);
+    REQUIRE(status == MTS_SUCCESS);
 
-        auto labels = Labels({"sample"}, {{0}, {1}, {2}});
-        labels.set_user_data(std::move(user_data));
-
-        auto* data_ptr = static_cast<UserData*>(labels.user_data());
-        REQUIRE(data_ptr != nullptr);
-        CHECK(data_ptr->name == "aabbccdd");
-        CHECK(data_ptr->count == 0xDEADBEEF);
-        CHECK(data_ptr->values == std::vector<double>{1.0, 2.0, 3.0, 42.1});
-
-        // check we can recover user data from Labels inside a TensorBlock
-        auto block = TensorBlock(
-            std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 2})),
-            labels,
-            {},
-            Labels({"properties"}, {{5}, {3}})
-        );
-
-        auto samples = block.samples();
-        data_ptr = static_cast<UserData*>(samples.user_data());
-        REQUIRE(data_ptr != nullptr);
-        CHECK(data_ptr->name == "aabbccdd");
-        CHECK(data_ptr->count == 0xDEADBEEF);
-        CHECK(data_ptr->values == std::vector<double>{1.0, 2.0, 3.0, 42.1});
-
-        // check that we can mutate the data in-place
-        data_ptr->count = 42;
-        data_ptr->values.push_back(12356);
-
-        samples = block.samples();
-        data_ptr = static_cast<UserData*>(samples.user_data());
-        REQUIRE(data_ptr != nullptr);
-        CHECK(data_ptr->name == "aabbccdd");
-        CHECK(data_ptr->count == 42);
-        CHECK(data_ptr->values == std::vector<double>{1.0, 2.0, 3.0, 42.1, 12356});
-
-        // check that we can register user data after the construction of the block
-        data = new UserData{"properties", 0, {}};
-        user_data = metatensor::LabelsUserData(data, [](void* ptr){
-            DELETE_CALL_MARKER += 10000000;
-            delete static_cast<UserData*>(ptr);
-        });
-
-        auto properties = block.properties();
-        properties.set_user_data(std::move(user_data));
-
-        properties = block.properties();
-        data_ptr = static_cast<UserData*>(properties.user_data());
-        REQUIRE(data_ptr != nullptr);
-        CHECK(data_ptr->name == "properties");
-        CHECK(data_ptr->count == 0);
-        CHECK(data_ptr->values.empty());
-    }
-
-    // Check that the `user_data_delete` function was called the
-    // appropriate number of times
-    CHECK(DELETE_CALL_MARKER == 10000001);
+    char buffer[64] = {0};
+    status = mts_get_data_origin(origin, buffer, sizeof(buffer));
+    REQUIRE(status == MTS_SUCCESS);
+    CHECK(std::string(buffer) == "metatensor.labels");
 }
 
 void check_loaded_labels(metatensor::Labels& labels) {
@@ -317,8 +265,8 @@ TEST_CASE("Serialization") {
         REQUIRE(saved.size() == buffer.size());
         CHECK(saved == buffer);
 
-        // using the raw C API, without user_data in the callback, and making
-        // the callback a small wrapper around std::realloc
+        // using the raw C API, making the callback a small wrapper around
+        // std::realloc
         uint8_t* raw_buffer = nullptr;
         uintptr_t buflen = 0;
         auto status = mts_labels_save_buffer(

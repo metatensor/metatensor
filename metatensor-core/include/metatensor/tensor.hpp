@@ -191,11 +191,9 @@ public:
 
     /// Get the set of keys labeling the blocks in this tensor map
     Labels keys() const {
-        mts_labels_t keys;
-        std::memset(&keys, 0, sizeof(keys));
-
-        details::check_status(mts_tensormap_keys(tensor_, &keys));
-        return Labels(keys);
+        auto* ptr = mts_tensormap_keys(tensor_);
+        details::check_pointer(ptr);
+        return Labels(ptr);
     }
 
     /// Get a (possibly empty) list of block indexes matching the `selection`
