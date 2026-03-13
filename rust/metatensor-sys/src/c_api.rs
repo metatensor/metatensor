@@ -193,7 +193,7 @@ pub struct mts_array_t {
             array: *const ::std::os::raw::c_void,
             shape: *const usize,
             shape_count: usize,
-            fill_value: *const mts_array_t,
+            fill_value: mts_array_t,
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,

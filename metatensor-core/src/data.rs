@@ -498,11 +498,9 @@ impl mts_array_t {
                 self.ptr,
                 shape.as_ptr(),
                 shape.len(),
-                // Shallow bitwise copy: the C callback reads the scalar
-                // from fill_value.ptr but does not take ownership. The
-                // extern "C" ABI does not call Rust's Drop on the copy,
-                // so the original fill_value retains sole ownership.
-                std::ptr::read(fill_value as *const mts_array_t),
+                // raw_copy() sets destroy to None, so the callback
+                // receives a readable copy without taking ownership
+                fill_value.raw_copy(),
                 &mut data_storage
             )
         };

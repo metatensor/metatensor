@@ -214,7 +214,7 @@ unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
-    fill_value: *const mts_array_t,
+    fill_value: mts_array_t,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
@@ -226,7 +226,7 @@ unsafe extern "C" fn rust_array_create(
         let shape = std::slice::from_raw_parts(shape, shape_count);
 
         // Extract the fill_value Array from its mts_array_t wrapper
-        let fill_array = &*(*fill_value).ptr.cast::<Box<dyn Array>>();
+        let fill_array = &*fill_value.ptr.cast::<Box<dyn Array>>();
         let new_array = (*array).create(shape, fill_array.as_ref());
 
         *array_storage = new_array.into();
