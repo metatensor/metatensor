@@ -559,12 +559,9 @@ class TensorMap:
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fv_mts = _make_fill_value_array(self, fill_value)
-        try:
-            ptr = self._lib.mts_tensormap_keys_to_samples(
-                self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
-            )
-        finally:
-            _cleanup_fill_value(fv_mts)
+        ptr = self._lib.mts_tensormap_keys_to_samples(
+            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
+        )
         return TensorMap._from_ptr(ptr)
 
     def components_to_properties(
@@ -639,12 +636,9 @@ class TensorMap:
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fv_mts = _make_fill_value_array(self, fill_value)
-        try:
-            ptr = self._lib.mts_tensormap_keys_to_properties(
-                self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
-            )
-        finally:
-            _cleanup_fill_value(fv_mts)
+        ptr = self._lib.mts_tensormap_keys_to_properties(
+            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
+        )
         return TensorMap._from_ptr(ptr)
 
     @property
@@ -809,21 +803,13 @@ def _make_fill_value_array(tensor_map, fill_value):
 
         if isinstance(values, torch.Tensor):
             fv_array = torch.tensor([fill_value], dtype=values.dtype)
-            data.create_mts_array(fv_array)
             return data.create_mts_array(fv_array)
     except ImportError:
         pass
 
     # numpy fallback
     fv_array = np.array([fill_value], dtype=values.dtype)
-    data.create_mts_array(fv_array)
     return data.create_mts_array(fv_array)
-
-
-def _cleanup_fill_value(fv_array):
-    """Destroy the fill_value mts_array_t created by _make_fill_value_array."""
-    if fv_array.destroy:
-        fv_array.destroy(fv_array.ptr)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:
