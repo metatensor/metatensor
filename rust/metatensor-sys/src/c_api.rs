@@ -450,7 +450,7 @@ extern "C" {
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
         sort_samples: bool,
-        fill_value: *const mts_array_t,
+        fill_value: mts_array_t,
     ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_components_to_properties(
         tensor: *mut mts_tensormap_t,
@@ -461,7 +461,7 @@ extern "C" {
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
         sort_samples: bool,
-        fill_value: *const mts_array_t,
+        fill_value: mts_array_t,
     ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_set_info(
