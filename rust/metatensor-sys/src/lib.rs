@@ -162,10 +162,17 @@ impl mts_array_t {
     pub fn create(&self, shape: &[usize], fill_value: &mts_array_t) -> Result<mts_array_t, Error> {
         let function = self.create.expect("mts_array_t.create function is NULL");
 
+        // Shallow copy with destroy=None: the callback reads the scalar
+        // from fill_value.ptr but does not take ownership
+        let fill_copy = mts_array_t {
+            destroy: None,
+            ..*fill_value
+        };
+
         let mut new_array = mts_array_t::null();
         unsafe {
             check_status_external(
-                function(self.ptr, shape.as_ptr(), shape.len(), fill_value as *const mts_array_t, &mut new_array),
+                function(self.ptr, shape.as_ptr(), shape.len(), fill_copy, &mut new_array),
                 "mts_array_t.create",
             )?;
         }
