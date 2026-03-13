@@ -4,7 +4,6 @@ use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndi
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
-use crate::labels::LabelValue;
 use crate::{Error, Labels};
 
 
@@ -62,19 +61,7 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 
     check_for_extra_bytes(&mut reader)?;
 
-    let values = unsafe {
-        // This is the recomended version of `std::mem::transmute` for Vec. It
-        // is safe because `LabelValue` is a #[repr(transparent)] wrapper for
-        // i32
-        let mut data = std::mem::ManuallyDrop::new(data);
-        Vec::from_raw_parts(
-            data.as_mut_ptr().cast::<LabelValue>(),
-            data.len(),
-            data.capacity()
-        )
-    };
-
-    return Labels::new(&names, values);
+    return Labels::new(&names, data);
 }
 
 /// Write `Labels` to the writer using numpy's NPY format.
@@ -97,8 +84,8 @@ pub fn save_labels<W: std::io::Write>(writer: &mut W, labels: &Labels) -> Result
     header.write(&mut *writer)?;
 
     for entry in labels {
-        for value in entry {
-            writer.write_i32::<NativeEndian>(value.i32())?;
+        for &value in entry {
+            writer.write_i32::<NativeEndian>(value)?;
         }
     }
 

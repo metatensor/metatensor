@@ -83,20 +83,12 @@ class mts_block_t(ctypes.Structure):
     pass
 
 
-class mts_tensormap_t(ctypes.Structure):
-    pass
-
-
 class mts_labels_t(ctypes.Structure):
     pass
 
-mts_labels_t._fields_ = [
-    ("internal_ptr_", ctypes.c_void_p),
-    ("names", POINTER(ctypes.c_char_p)),
-    ("values", POINTER(ctypes.c_int32)),
-    ("size", c_uintptr_t),
-    ("count", c_uintptr_t),
-]
+
+class mts_tensormap_t(ctypes.Structure):
+    pass
 
 
 class mts_data_movement_t(ctypes.Structure):
@@ -148,47 +140,92 @@ def setup_functions(lib):
     ]
     lib.mts_last_error.restype = ctypes.c_char_p
 
+    lib.mts_labels_create.argtypes = [
+        POINTER(ctypes.c_char_p),
+        c_uintptr_t,
+        POINTER(ctypes.c_int32),
+        c_uintptr_t,
+    ]
+    lib.mts_labels_create.restype = POINTER(mts_labels_t)
+
+    lib.mts_labels_create_assume_unique.argtypes = [
+        POINTER(ctypes.c_char_p),
+        c_uintptr_t,
+        POINTER(ctypes.c_int32),
+        c_uintptr_t,
+    ]
+    lib.mts_labels_create_assume_unique.restype = POINTER(mts_labels_t)
+
+    lib.mts_labels_names.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(POINTER(ctypes.c_char_p)),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_names.restype = _check_status
+
+    lib.mts_labels_count.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_count.restype = _check_status
+
+    lib.mts_labels_size.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_size.restype = _check_status
+
+    lib.mts_labels_values.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(POINTER(ctypes.c_int32)),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_values.restype = _check_status
+
     lib.mts_labels_position.argtypes = [
-        mts_labels_t,
+        POINTER(mts_labels_t),
         POINTER(ctypes.c_int32),
         c_uintptr_t,
         POINTER(ctypes.c_int64),
     ]
     lib.mts_labels_position.restype = _check_status
 
-    lib.mts_labels_create.argtypes = [
+    lib.mts_labels_values_array.argtypes = [
         POINTER(mts_labels_t),
+        POINTER(mts_array_t),
     ]
-    lib.mts_labels_create.restype = _check_status
+    lib.mts_labels_values_array.restype = _check_status
 
-    lib.mts_labels_create_assume_unique.argtypes = [
+    lib.mts_labels_create_from_array.argtypes = [
+        POINTER(ctypes.c_char_p),
+        c_uintptr_t,
+        mts_array_t,
+    ]
+    lib.mts_labels_create_from_array.restype = POINTER(mts_labels_t)
+
+    lib.mts_labels_create_from_array_assume_unique.argtypes = [
+        POINTER(ctypes.c_char_p),
+        c_uintptr_t,
+        mts_array_t,
+    ]
+    lib.mts_labels_create_from_array_assume_unique.restype = POINTER(mts_labels_t)
+
+    lib.mts_labels_set_cached_values.argtypes = [
         POINTER(mts_labels_t),
+        POINTER(ctypes.c_int32),
+        c_uintptr_t,
     ]
-    lib.mts_labels_create_assume_unique.restype = _check_status
-
-    lib.mts_labels_set_user_data.argtypes = [
-        mts_labels_t,
-        ctypes.c_void_p,
-        CFUNCTYPE(None, ctypes.c_void_p),
-    ]
-    lib.mts_labels_set_user_data.restype = _check_status
-
-    lib.mts_labels_user_data.argtypes = [
-        mts_labels_t,
-        POINTER(POINTER(None)),
-    ]
-    lib.mts_labels_user_data.restype = _check_status
+    lib.mts_labels_set_cached_values.restype = _check_status
 
     lib.mts_labels_clone.argtypes = [
-        mts_labels_t,
         POINTER(mts_labels_t),
     ]
-    lib.mts_labels_clone.restype = _check_status
+    lib.mts_labels_clone.restype = POINTER(mts_labels_t)
 
     lib.mts_labels_union.argtypes = [
-        mts_labels_t,
-        mts_labels_t,
         POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        POINTER(POINTER(mts_labels_t)),
         POINTER(ctypes.c_int64),
         c_uintptr_t,
         POINTER(ctypes.c_int64),
@@ -197,9 +234,9 @@ def setup_functions(lib):
     lib.mts_labels_union.restype = _check_status
 
     lib.mts_labels_intersection.argtypes = [
-        mts_labels_t,
-        mts_labels_t,
         POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        POINTER(POINTER(mts_labels_t)),
         POINTER(ctypes.c_int64),
         c_uintptr_t,
         POINTER(ctypes.c_int64),
@@ -208,17 +245,17 @@ def setup_functions(lib):
     lib.mts_labels_intersection.restype = _check_status
 
     lib.mts_labels_difference.argtypes = [
-        mts_labels_t,
-        mts_labels_t,
         POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        POINTER(POINTER(mts_labels_t)),
         POINTER(ctypes.c_int64),
         c_uintptr_t,
     ]
     lib.mts_labels_difference.restype = _check_status
 
     lib.mts_labels_select.argtypes = [
-        mts_labels_t,
-        mts_labels_t,
+        POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
         POINTER(ctypes.c_int64),
         POINTER(c_uintptr_t),
     ]
@@ -244,10 +281,10 @@ def setup_functions(lib):
 
     lib.mts_block.argtypes = [
         mts_array_t,
-        mts_labels_t,
         POINTER(mts_labels_t),
+        POINTER(POINTER(mts_labels_t)),
         c_uintptr_t,
-        mts_labels_t,
+        POINTER(mts_labels_t),
     ]
     lib.mts_block.restype = POINTER(mts_block_t)
 
@@ -264,9 +301,8 @@ def setup_functions(lib):
     lib.mts_block_labels.argtypes = [
         POINTER(mts_block_t),
         c_uintptr_t,
-        POINTER(mts_labels_t),
     ]
-    lib.mts_block_labels.restype = _check_status
+    lib.mts_block_labels.restype = POINTER(mts_labels_t)
 
     lib.mts_block_gradient.argtypes = [
         POINTER(mts_block_t),
@@ -308,7 +344,7 @@ def setup_functions(lib):
     lib.mts_block_dtype.restype = _check_status
 
     lib.mts_tensormap.argtypes = [
-        mts_labels_t,
+        POINTER(mts_labels_t),
         POINTER(POINTER(mts_block_t)),
         c_uintptr_t,
     ]
@@ -326,9 +362,8 @@ def setup_functions(lib):
 
     lib.mts_tensormap_keys.argtypes = [
         POINTER(mts_tensormap_t),
-        POINTER(mts_labels_t),
     ]
-    lib.mts_tensormap_keys.restype = _check_status
+    lib.mts_tensormap_keys.restype = POINTER(mts_labels_t)
 
     lib.mts_tensormap_block_by_id.argtypes = [
         POINTER(mts_tensormap_t),
@@ -341,13 +376,13 @@ def setup_functions(lib):
         POINTER(mts_tensormap_t),
         POINTER(c_uintptr_t),
         POINTER(c_uintptr_t),
-        mts_labels_t,
+        POINTER(mts_labels_t),
     ]
     lib.mts_tensormap_blocks_matching.restype = _check_status
 
     lib.mts_tensormap_keys_to_properties.argtypes = [
         POINTER(mts_tensormap_t),
-        mts_labels_t,
+        POINTER(mts_labels_t),
         ctypes.c_bool,
     ]
     lib.mts_tensormap_keys_to_properties.restype = POINTER(mts_tensormap_t)
@@ -361,7 +396,7 @@ def setup_functions(lib):
 
     lib.mts_tensormap_keys_to_samples.argtypes = [
         POINTER(mts_tensormap_t),
-        mts_labels_t,
+        POINTER(mts_labels_t),
         ctypes.c_bool,
     ]
     lib.mts_tensormap_keys_to_samples.restype = POINTER(mts_tensormap_t)
@@ -401,20 +436,18 @@ def setup_functions(lib):
 
     lib.mts_labels_load.argtypes = [
         ctypes.c_char_p,
-        POINTER(mts_labels_t),
     ]
-    lib.mts_labels_load.restype = _check_status
+    lib.mts_labels_load.restype = POINTER(mts_labels_t)
 
     lib.mts_labels_load_buffer.argtypes = [
         ctypes.c_char_p,
         c_uintptr_t,
-        POINTER(mts_labels_t),
     ]
-    lib.mts_labels_load_buffer.restype = _check_status
+    lib.mts_labels_load_buffer.restype = POINTER(mts_labels_t)
 
     lib.mts_labels_save.argtypes = [
         ctypes.c_char_p,
-        mts_labels_t,
+        POINTER(mts_labels_t),
     ]
     lib.mts_labels_save.restype = _check_status
 
@@ -423,7 +456,7 @@ def setup_functions(lib):
         POINTER(c_uintptr_t),
         ctypes.c_void_p,
         mts_realloc_buffer_t,
-        mts_labels_t,
+        POINTER(mts_labels_t),
     ]
     lib.mts_labels_save_buffer.restype = _check_status
 

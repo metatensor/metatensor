@@ -4,21 +4,15 @@
 
 
 int main(void) {
-    mts_labels_t labels = {0};
     const char* names[1] = {"name"};
-    labels.names = names;
-    labels.size = 1;
-
     int32_t values[3] = {1, 2, 3};
-    labels.values = values;
-    labels.count = 3;
 
-    mts_status_t status = mts_labels_create(&labels);
-    if (status != MTS_SUCCESS) {
+    mts_labels_t* labels = mts_labels_create(names, 1, values, 3);
+    if (labels == NULL) {
         goto fail;
     }
 
-    status = mts_labels_free(&labels);
+    mts_status_t status = mts_labels_free(labels);
     if (status != MTS_SUCCESS) {
         goto fail;
     }

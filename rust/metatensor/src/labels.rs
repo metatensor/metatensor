@@ -5,104 +5,14 @@ use std::iter::FusedIterator;
 
 use smallvec::SmallVec;
 
-use crate::c_api::{mts_labels_t, mts_status_t};
+use crate::c_api::mts_labels_t;
 use crate::errors::{Error, check_status};
 
 /// A single value inside a label.
 ///
 /// This is represented as a 32-bit signed integer, with a couple of helper
-/// function to get its value as usize/isize.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(transparent)]
-pub struct LabelValue(i32);
-
-impl PartialEq<i32> for LabelValue {
-    #[inline]
-    fn eq(&self, other: &i32) -> bool {
-        self.0 == *other
-    }
-}
-
-impl PartialEq<LabelValue> for i32 {
-    #[inline]
-    fn eq(&self, other: &LabelValue) -> bool {
-        *self == other.0
-    }
-}
-
-impl std::fmt::Debug for LabelValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl std::fmt::Display for LabelValue {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-impl From<u32> for LabelValue {
-    #[inline]
-    fn from(value: u32) -> LabelValue {
-        assert!(value < i32::MAX as u32);
-        LabelValue(value as i32)
-    }
-}
-
-impl From<i32> for LabelValue {
-    #[inline]
-    fn from(value: i32) -> LabelValue {
-        LabelValue(value)
-    }
-}
-
-#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-impl From<usize> for LabelValue {
-    #[inline]
-    fn from(value: usize) -> LabelValue {
-        assert!(value < i32::MAX as usize);
-        LabelValue(value as i32)
-    }
-}
-
-#[allow(clippy::cast_possible_truncation)]
-impl From<isize> for LabelValue {
-    #[inline]
-    fn from(value: isize) -> LabelValue {
-        assert!(value < i32::MAX as isize && value > i32::MIN as isize);
-        LabelValue(value as i32)
-    }
-}
-
-impl LabelValue {
-    /// Create a `LabelValue` with the given `value`
-    #[inline]
-    pub fn new(value: i32) -> LabelValue {
-        LabelValue(value)
-    }
-
-    /// Get the integer value of this `LabelValue` as a usize
-    #[inline]
-    #[allow(clippy::cast_sign_loss)]
-    pub fn usize(self) -> usize {
-        debug_assert!(self.0 >= 0);
-        self.0 as usize
-    }
-
-    /// Get the integer value of this `LabelValue` as an isize
-    #[inline]
-    pub fn isize(self) -> isize {
-        self.0 as isize
-    }
-
-    /// Get the integer value of this `LabelValue` as an i32
-    #[inline]
-    pub fn i32(self) -> i32 {
-        self.0
-    }
-}
+/// integer
+pub type LabelValue = i32;
 
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
@@ -116,14 +26,14 @@ impl LabelValue {
 /// Labels are internally reference counted and immutable, so cloning a `Labels`
 /// should be a cheap operation.
 pub struct Labels {
-    pub(crate) raw: mts_labels_t,
+    pub(crate) ptr: *mut mts_labels_t,
 }
 
 // Labels can be sent to other thread safely since mts_labels_t uses an
 // `Arc<metatensor_core::Labels>`, so freeing them from another thread is fine
 unsafe impl Send for Labels {}
-// &Labels can be sent to other thread safely since there is no un-synchronized
-// interior mutability (`user_data` is protected by RwLock).
+// &Labels can be sent to other thread safely since the interior mutability
+// (values array) uses OnceCell, which is Sync.
 unsafe impl Sync for Labels {}
 
 impl std::fmt::Debug for Labels {
@@ -140,14 +50,14 @@ pub(crate) fn pretty_print_labels(
 ) -> std::fmt::Result {
     let names = labels.names();
 
-    writeln!(f, "Labels @ {:p} {{", labels.raw.internal_ptr_)?;
+    writeln!(f, "Labels @ {:p} {{", labels.ptr)?;
     writeln!(f, "{}    {}", offset, names.join(", "))?;
 
     let widths = names.iter().map(|s| s.len()).collect::<Vec<_>>();
     for values in labels {
         write!(f, "{}    ", offset)?;
         for (value, width) in values.iter().zip(&widths) {
-            write!(f, "{:^width$}  ", value.isize(), width=width)?;
+            write!(f, "{:^width$}  ", value, width=width)?;
         }
         writeln!(f)?;
     }
@@ -158,12 +68,9 @@ pub(crate) fn pretty_print_labels(
 impl Clone for Labels {
     #[inline]
     fn clone(&self) -> Self {
-        let mut clone = mts_labels_t::null();
-        unsafe {
-            check_status(crate::c_api::mts_labels_clone(self.raw, &mut clone)).expect("failed to clone Labels");
-        }
-
-        return unsafe { Labels::from_raw(clone) };
+        let ptr = unsafe { crate::c_api::mts_labels_clone(self.ptr) };
+        assert!(!ptr.is_null(), "failed to clone Labels");
+        Labels { ptr }
     }
 }
 
@@ -171,7 +78,7 @@ impl std::ops::Drop for Labels {
     #[allow(unused_must_use)]
     fn drop(&mut self) {
         unsafe {
-            crate::c_api::mts_labels_free(&mut self.raw);
+            crate::c_api::mts_labels_free(self.ptr);
         }
     }
 }
@@ -243,28 +150,45 @@ impl Labels {
     /// Get the number of entries/named values in a single label
     #[inline]
     pub fn size(&self) -> usize {
-        self.raw.size
+        let mut size = 0;
+        unsafe {
+            check_status(crate::c_api::mts_labels_size(self.ptr, &mut size))
+                .expect("failed to get labels size");
+        }
+        size
     }
 
     /// Get the names of the entries/columns in this set of labels
     #[inline]
     pub fn names(&self) -> Vec<&str> {
-        if self.raw.size == 0 {
+        let mut names_ptr = std::ptr::null();
+        let mut count = 0;
+        unsafe {
+            check_status(crate::c_api::mts_labels_names(self.ptr, &mut names_ptr, &mut count))
+                .expect("failed to get labels names");
+        }
+
+        if count == 0 {
             return Vec::new();
-        } else {
-            unsafe {
-                let names = std::slice::from_raw_parts(self.raw.names, self.raw.size);
-                return names.iter()
-                            .map(|&ptr| CStr::from_ptr(ptr).to_str().expect("invalid UTF8"))
-                            .collect();
-            }
+        }
+
+        unsafe {
+            let names = std::slice::from_raw_parts(names_ptr, count);
+            return names.iter()
+                        .map(|&ptr| CStr::from_ptr(ptr).to_str().expect("invalid UTF8"))
+                        .collect();
         }
     }
 
     /// Get the total number of entries in this set of labels
     #[inline]
     pub fn count(&self) -> usize {
-        return self.raw.count;
+        let mut count = 0;
+        unsafe {
+            check_status(crate::c_api::mts_labels_count(self.ptr, &mut count))
+                .expect("failed to get labels count");
+        }
+        count
     }
 
     /// Check if this set of Labels is empty (contains no entry)
@@ -288,7 +212,7 @@ impl Labels {
         let mut result = 0;
         unsafe {
             check_status(crate::c_api::mts_labels_position(
-                self.raw,
+                self.ptr,
                 value.as_ptr().cast(),
                 value.len(),
                 &mut result,
@@ -314,7 +238,7 @@ impl Labels {
         first_mapping: Option<&mut [i64]>,
         second_mapping: Option<&mut [i64]>,
     ) -> Result<Labels, Error> {
-        let mut output = mts_labels_t::null();
+        let mut output: *mut mts_labels_t = std::ptr::null_mut();
         let (first_mapping, first_mapping_count) = if let Some(m) = first_mapping {
             (m.as_mut_ptr(), m.len())
         } else {
@@ -329,8 +253,8 @@ impl Labels {
 
         unsafe {
             check_status(crate::c_api::mts_labels_union(
-                self.raw,
-                other.raw,
+                self.ptr,
+                other.ptr,
                 &mut output,
                 first_mapping,
                 first_mapping_count,
@@ -360,7 +284,7 @@ impl Labels {
         first_mapping: Option<&mut [i64]>,
         second_mapping: Option<&mut [i64]>,
     ) -> Result<Labels, Error> {
-        let mut output = mts_labels_t::null();
+        let mut output: *mut mts_labels_t = std::ptr::null_mut();
         let (first_mapping, first_mapping_count) = if let Some(m) = first_mapping {
             (m.as_mut_ptr(), m.len())
         } else {
@@ -375,8 +299,8 @@ impl Labels {
 
         unsafe {
             check_status(crate::c_api::mts_labels_intersection(
-                self.raw,
-                other.raw,
+                self.ptr,
+                other.ptr,
                 &mut output,
                 first_mapping,
                 first_mapping_count,
@@ -403,7 +327,7 @@ impl Labels {
         other: &Labels,
         mapping: Option<&mut [i64]>,
     ) -> Result<Labels, Error> {
-        let mut output = mts_labels_t::null();
+        let mut output: *mut mts_labels_t = std::ptr::null_mut();
         let (mapping, mapping_count) = if let Some(m) = mapping {
             (m.as_mut_ptr(), m.len())
         } else {
@@ -412,8 +336,8 @@ impl Labels {
 
         unsafe {
             check_status(crate::c_api::mts_labels_difference(
-                self.raw,
-                other.raw,
+                self.ptr,
+                other.ptr,
                 &mut output,
                 mapping,
                 mapping_count,
@@ -441,7 +365,7 @@ impl Labels {
     pub fn par_iter(&self) -> LabelsParIter<'_> {
         use rayon::prelude::*;
         return LabelsParIter {
-            chunks: self.values().par_chunks_exact(self.raw.size)
+            chunks: self.values().par_chunks_exact(self.size())
         };
     }
 
@@ -488,34 +412,36 @@ impl Labels {
         if self.count() == 0 || self.size() == 0 {
             return &[]
         } else {
+            let mut values_ptr = std::ptr::null();
+            let mut count = 0;
             unsafe {
-                std::slice::from_raw_parts(self.raw.values.cast(), self.count() * self.size())
+                check_status(crate::c_api::mts_labels_values(self.ptr, &mut values_ptr, &mut count))
+                    .expect("failed to get labels values");
+                std::slice::from_raw_parts(values_ptr.cast(), count * self.size())
             }
         }
     }
 }
 
 impl Labels {
-    /// Get the underlying `mts_labels_t`
-    pub(crate) fn as_mts_labels_t(&self) -> mts_labels_t {
-        return self.raw;
+    /// Get a pointer to the underlying `mts_labels_t`
+    pub(crate) fn as_mts_labels_t(&self) -> *const mts_labels_t {
+        self.ptr
     }
 
-    /// Create a new set of `Labels` from a raw `mts_labels_t`.
+    /// Create a new set of `Labels` from a raw `*mut mts_labels_t` pointer.
     ///
-    /// This function takes ownership of the `mts_labels_t` and will call
-    /// `mts_labels_free` on it.
+    /// This function takes ownership of the pointer and will call
+    /// `mts_labels_free` on it when dropped.
     ///
     /// # Safety
     ///
-    /// The raw `mts_labels_t` must have been returned by one of the function
-    /// returning `mts_labels_t` in metatensor-core
+    /// The pointer must be non-null and returned by one of the metatensor-core
+    /// functions that create `mts_labels_t`.
     #[inline]
-    pub unsafe fn from_raw(raw: mts_labels_t) -> Labels {
-        assert!(!raw.internal_ptr_.is_null(), "expected mts_labels_t.internal_ptr_ to not be NULL");
-        Labels {
-            raw: raw,
-        }
+    pub unsafe fn from_raw(ptr: *mut mts_labels_t) -> Labels {
+        assert!(!ptr.is_null(), "expected mts_labels_t pointer to not be NULL");
+        Labels { ptr }
     }
 }
 
@@ -717,35 +643,50 @@ impl LabelsBuilder {
     /// Common implementation for `finish` and `finish_unchecked`.
     fn finish_with(
         self,
-        creator: unsafe extern "C" fn(*mut mts_labels_t) -> mts_status_t
+        creator: unsafe extern "C" fn(
+            *const *const std::os::raw::c_char,
+            usize,
+            *const i32,
+            usize,
+        ) -> *mut mts_labels_t
     ) -> Labels {
         let mut raw_names = Vec::new();
         let mut raw_names_ptr = Vec::new();
 
-        let mut raw_labels = if self.names.is_empty() {
-            assert!(self.values.is_empty());
-            mts_labels_t::null()
-        } else {
-            for name in &self.names {
-                let name = CString::new(&**name).expect("name contains a NULL byte");
-                raw_names_ptr.push(name.as_ptr());
-                raw_names.push(name);
-            }
-
-            mts_labels_t {
-                internal_ptr_: std::ptr::null_mut(),
-                names: raw_names_ptr.as_ptr(),
-                values: self.values.as_ptr().cast(),
-                size: self.size(),
-                count: self.values.len() / self.size(),
-            }
-        };
-
-        unsafe {
-            check_status(creator(&mut raw_labels)).expect("invalid labels?");
+        for name in &self.names {
+            let name = CString::new(&**name).expect("name contains a NULL byte");
+            raw_names_ptr.push(name.as_ptr());
+            raw_names.push(name);
         }
 
-        return unsafe { Labels::from_raw(raw_labels) };
+        let names_count = raw_names_ptr.len();
+        let count = if names_count == 0 {
+            assert!(self.values.is_empty());
+            0
+        } else {
+            self.values.len() / names_count
+        };
+
+        let ptr = unsafe {
+            creator(
+                raw_names_ptr.as_ptr(),
+                names_count,
+                self.values.as_ptr().cast(),
+                count,
+            )
+        };
+
+        if ptr.is_null() {
+            let error = unsafe { crate::c_api::mts_last_error() };
+            let message = if error.is_null() {
+                "failed to create labels".to_string()
+            } else {
+                unsafe { std::ffi::CStr::from_ptr(error) }.to_string_lossy().into_owned()
+            };
+            panic!("{}", message);
+        }
+
+        unsafe { Labels::from_raw(ptr) }
     }
 
     /// Finish building the `Labels`.
@@ -873,8 +814,8 @@ mod tests {
         let labels = builder.finish();
 
         for (i, [a, b]) in labels.iter_fixed_size().enumerate() {
-            assert_eq!(a.usize(), 1 + i);
-            assert_eq!(b.usize(), 2 + i);
+            assert_eq!(*a as usize, 1 + i);
+            assert_eq!(*b as usize, 2 + i);
         }
     }
 
@@ -931,14 +872,14 @@ mod tests {
         builder.add(&[2, 3]);
         let labels = builder.finish();
 
-        assert!(labels.contains(&[LabelValue::new(1), LabelValue::new(2)]));
-        assert_eq!(labels.position(&[LabelValue::new(1), LabelValue::new(2)]), Some(0));
+        assert!(labels.contains(&[1, 2]));
+        assert_eq!(labels.position(&[1, 2]), Some(0));
 
-        assert!(labels.contains(&[LabelValue::new(2), LabelValue::new(3)]));
-        assert_eq!(labels.position(&[LabelValue::new(2), LabelValue::new(3)]), Some(1));
+        assert!(labels.contains(&[2, 3]));
+        assert_eq!(labels.position(&[2, 3]), Some(1));
 
-        assert!(!labels.contains(&[LabelValue::new(3), LabelValue::new(3)]));
-        assert_eq!(labels.position(&[LabelValue::new(3), LabelValue::new(3)]), None);
+        assert!(!labels.contains(&[3, 3]));
+        assert_eq!(labels.position(&[3, 3]), None);
     }
 
     #[test]
@@ -969,7 +910,7 @@ mod tests {
 
         let expected = format!(
             "Labels @ {:p} {{\n    foo, bar\n     2    3   \n     1   243  \n    -4   -2413  \n}}\n",
-            labels.as_mts_labels_t().internal_ptr_
+            labels.ptr
         );
         assert_eq!(format!("{:?}", labels), expected);
     }

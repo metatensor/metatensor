@@ -1,37 +1,54 @@
 Labels
 ======
 
-.. doxygenstruct:: mts_labels_t
-    :members:
+.. doxygentypedef:: mts_labels_t
 
 The following functions operate on :c:type:`mts_labels_t`:
 
-- :c:func:`mts_labels_create`: create the Rust-side data for the labels
-- :c:func:`mts_labels_clone`: increment the reference count of the Rust-side data
-- :c:func:`mts_labels_free`: decrement the reference count of the Rust-side data,
+- :c:func:`mts_labels_create`: create new labels from dimension names and values
+- :c:func:`mts_labels_create_assume_unique`: create new labels without verifying uniqueness
+- :c:func:`mts_labels_create_from_array`: create new labels from dimension names and an ``mts_array_t``
+- :c:func:`mts_labels_create_from_array_assume_unique`: create new labels from an array without verifying uniqueness
+- :c:func:`mts_labels_clone`: increment the reference count of the labels
+- :c:func:`mts_labels_free`: decrement the reference count of the labels,
   and free the data when it reaches 0
+- :c:func:`mts_labels_names`: get the dimension names of the labels
+- :c:func:`mts_labels_count`: get the number of entries in the labels
+- :c:func:`mts_labels_size`: get the number of dimensions of the labels
+- :c:func:`mts_labels_values`: get the values of the labels as a flat array
+- :c:func:`mts_labels_values_array`: get the backing ``mts_array_t`` of the labels
+- :c:func:`mts_labels_set_cached_values`: set the cached CPU values for the labels
 - :c:func:`mts_labels_position`: get the position of an entry in the labels
 - :c:func:`mts_labels_union`: get the union of two labels
 - :c:func:`mts_labels_intersection`: get the intersection of two labels
 - :c:func:`mts_labels_difference`: get the set difference of two labels
 - :c:func:`mts_labels_select`: select entries in labels that match a selection
-- :c:func:`mts_labels_set_user_data`: store some data inside the labels for later retrieval
-- :c:func:`mts_labels_user_data`: retrieve data stored earlier in the labels
-
-Additionally, there are a few advanced functions which may be used if the user
-can guarantee that the data used for labels is already unique.
-
-- :c:func:`mts_labels_create_assume_unique`: create the Rust-side data for labels without verifying uniqueness
 
 --------------------------------------------------------------------------------
 
+.. doxygenfunction:: mts_labels_create
+
 .. doxygenfunction:: mts_labels_create_assume_unique
 
-.. doxygenfunction:: mts_labels_create
+.. doxygenfunction:: mts_labels_create_from_array
+
+.. doxygenfunction:: mts_labels_create_from_array_assume_unique
 
 .. doxygenfunction:: mts_labels_clone
 
 .. doxygenfunction:: mts_labels_free
+
+.. doxygenfunction:: mts_labels_names
+
+.. doxygenfunction:: mts_labels_count
+
+.. doxygenfunction:: mts_labels_size
+
+.. doxygenfunction:: mts_labels_values
+
+.. doxygenfunction:: mts_labels_values_array
+
+.. doxygenfunction:: mts_labels_set_cached_values
 
 .. doxygenfunction:: mts_labels_position
 
@@ -42,7 +59,3 @@ can guarantee that the data used for labels is already unique.
 .. doxygenfunction:: mts_labels_difference
 
 .. doxygenfunction:: mts_labels_select
-
-.. doxygenfunction:: mts_labels_set_user_data
-
-.. doxygenfunction:: mts_labels_user_data
