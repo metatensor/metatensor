@@ -90,13 +90,9 @@ impl TensorMap {
     pub unsafe fn from_raw(ptr: *mut mts_tensormap_t) -> TensorMap {
         assert!(!ptr.is_null());
 
-        let mut keys = mts_labels_t::null();
-        check_status(crate::c_api::mts_tensormap_keys(
-            ptr,
-            &mut keys
-        )).expect("failed to get the keys");
-
-        let keys = Labels::from_raw(keys);
+        let keys_ptr = crate::c_api::mts_tensormap_keys(ptr);
+        assert!(!keys_ptr.is_null(), "failed to get the keys");
+        let keys = Labels::from_raw(keys_ptr);
 
         return TensorMap {
             ptr,
@@ -806,7 +802,7 @@ mod tests {
         for (key, mut block) in &mut tensor {
             let array = block.values_mut().to_ndarray_mut();
             *array *= 2.0;
-            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0]));
         }
     }
 
@@ -826,7 +822,7 @@ mod tests {
         tensor.par_iter_mut().for_each(|(key, mut block)| {
             let array = block.values_mut().to_ndarray_mut();
             *array *= 2.0;
-            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
+            assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0]));
         });
     }
 

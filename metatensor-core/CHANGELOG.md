@@ -27,6 +27,32 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   preventing dangling-pointer issues. The data is requested on CPU; if the
   underlying array lives on another device, a copy may occur. For direct GPU
   access without a copy, use the C-level ``as_dlpack`` interface instead.
+- Labels now use `mts_array_t` as the primary (always-present) data and lazily
+  materialize CPU `Vec<LabelValue>` on demand via DLPack. New constructors:
+  `Labels::from_array(names, array)` (CPU, checked uniqueness) and
+  `Labels::from_array_assume_unique(names, array)` (any device, unchecked).
+- `mts_labels_create_from_array`, `mts_labels_create_from_array_assume_unique`,
+  and `mts_labels_values` (on-demand materialization) C API functions.
+- `mts_labels_values_array` C API function for accessing the backing
+  `mts_array_t`.
+- `mts_labels_set_cached_values` C API function for pre-filling the cached CPU
+  values without triggering materialization from the backing array. Used for
+  device transfers where the backing array is on a device that cannot produce
+  values via DLPack (e.g. Meta tensors).
+- `Labels::set_cached_values()` in C++ and Rust wrappers.
+- `LabelsValuesArray` internal struct providing a read-only `mts_array_t` vtable
+  for CPU-backed label values, with `device()` (returns CPU) and `as_dlpack()`
+  (i32 DLPack export) support.
+
+### Changed
+
+- Labels now use `mts_array_t` as always-present primary data with
+  `OnceCell<Vec<LabelValue>>` for lazy CPU materialization, instead of
+  `RwLock<UserData>`. Labels are fully immutable after construction.
+- `validate_names()` error message changed from
+  `"all labels names must be valid identifiers, '{}' is not"` to
+  `"'{}' is not a valid label name"`, matching the `mts_labels_create` C API
+  format.
 
 ### Removed
 
@@ -34,6 +60,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   implementations (`DataArrayBase::data()` in C++, `Array::data()` in Rust,
   `_mts_array_data` in Python). Use `mts_array_t.as_dlpack` instead, which
   supports all numeric types via the DLPack standard rather than only float64.
+- `mts_labels_set_user_data` and `mts_labels_user_data` C API functions.
+- `LabelsUserData` C++ class.
+- `Labels::user_data()` and `Labels::set_user_data()` methods in C++ and Rust.
+
+### Fixed
+- Ensure `info` of `TensorMap` is also moved when `to`, `keys_to_samples`,
+  `components_to_properties`, and `key_to_properties` are called
+
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
@@ -349,3 +383,4 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Wrapper around `mts_array_t` as an abstract base class `metatensor.data.Array`;
 - Implementation of `metatensor.data.Array` with `numpy.ndarray` and
   `torch.Tensor`;
+# CI trigger Fri Mar 13 05:01:47 AM CET 2026

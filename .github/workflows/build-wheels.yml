@@ -3,18 +3,17 @@ name: Build Python wheels
 on:
   push:
     tags: ["*"]
-  pull_request:
-    paths:
-      # build wheels in PR if this file changed
-      - '.github/workflows/build-wheels.yml'
-      # build wheels in PR if any of the build system files changed
-      - '**/VERSION'
-      - '**/setup.py'
-      - '**/pyproject.toml'
-      - '**/MANIFEST.in'
-      - '**/Cargo.toml'
-      - '**/CMakeLists.txt'
-      - '**/build.rs'
+  # TEMPORARILY DISABLED: git deps in Cargo.toml break wheel builds
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/build-wheels.yml'
+  #     - '**/VERSION'
+  #     - '**/setup.py'
+  #     - '**/pyproject.toml'
+  #     - '**/MANIFEST.in'
+  #     - '**/Cargo.toml'
+  #     - '**/CMakeLists.txt'
+  #     - '**/build.rs'
   schedule:
     # check the build once a week on mondays
     - cron: '0 10 * * 1'

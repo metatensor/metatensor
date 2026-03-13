@@ -33,59 +33,15 @@ pub struct mts_block_t {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
+pub struct mts_labels_t {
+    _unused: [u8; 0],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone)]
 pub struct mts_tensormap_t {
     _unused: [u8; 0],
 }
 pub type mts_status_t = i32;
-#[repr(C)]
-#[derive(Debug, Copy, Clone)]
-pub struct mts_labels_t {
-    pub internal_ptr_: *mut ::std::os::raw::c_void,
-    pub names: *const *const ::std::os::raw::c_char,
-    pub values: *const i32,
-    pub size: usize,
-    pub count: usize,
-}
-#[test]
-fn bindgen_test_layout_mts_labels_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mts_labels_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<mts_labels_t>(),
-        40usize,
-        "Size of mts_labels_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<mts_labels_t>(),
-        8usize,
-        "Alignment of mts_labels_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).internal_ptr_) as usize - ptr as usize },
-        0usize,
-        "Offset of field: mts_labels_t::internal_ptr_"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).names) as usize - ptr as usize },
-        8usize,
-        "Offset of field: mts_labels_t::names"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).values) as usize - ptr as usize },
-        16usize,
-        "Offset of field: mts_labels_t::values"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).size) as usize - ptr as usize },
-        24usize,
-        "Offset of field: mts_labels_t::size"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).count) as usize - ptr as usize },
-        32usize,
-        "Offset of field: mts_labels_t::count"
-    );
-}
 pub type mts_data_origin_t = u64;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -307,37 +263,68 @@ extern "C" {
     pub fn mts_disable_panic_printing();
     pub fn mts_version() -> *const ::std::os::raw::c_char;
     pub fn mts_last_error() -> *const ::std::os::raw::c_char;
+    pub fn mts_labels_create(
+        names: *const *const ::std::os::raw::c_char,
+        names_count: usize,
+        values: *const i32,
+        count: usize,
+    ) -> *mut mts_labels_t;
+    pub fn mts_labels_create_assume_unique(
+        names: *const *const ::std::os::raw::c_char,
+        names_count: usize,
+        values: *const i32,
+        count: usize,
+    ) -> *mut mts_labels_t;
+    #[must_use]
+    pub fn mts_labels_names(
+        labels: *const mts_labels_t,
+        names: *mut *const *const ::std::os::raw::c_char,
+        count: *mut usize,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_count(labels: *const mts_labels_t, count: *mut usize) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_size(labels: *const mts_labels_t, size: *mut usize) -> mts_status_t;
+    #[must_use]
+    pub fn mts_labels_values(
+        labels: *const mts_labels_t,
+        values: *mut *const i32,
+        count: *mut usize,
+    ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_position(
-        labels: mts_labels_t,
+        labels: *const mts_labels_t,
         values: *const i32,
         values_count: usize,
         result: *mut i64,
     ) -> mts_status_t;
     #[must_use]
-    pub fn mts_labels_create(labels: *mut mts_labels_t) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_create_assume_unique(labels: *mut mts_labels_t) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_set_user_data(
-        labels: mts_labels_t,
-        user_data: *mut ::std::os::raw::c_void,
-        user_data_delete: ::std::option::Option<
-            unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void),
-        >,
+    pub fn mts_labels_values_array(
+        labels: *const mts_labels_t,
+        array: *mut mts_array_t,
     ) -> mts_status_t;
+    pub fn mts_labels_create_from_array(
+        names: *const *const ::std::os::raw::c_char,
+        names_count: usize,
+        array: mts_array_t,
+    ) -> *mut mts_labels_t;
+    pub fn mts_labels_create_from_array_assume_unique(
+        names: *const *const ::std::os::raw::c_char,
+        names_count: usize,
+        array: mts_array_t,
+    ) -> *mut mts_labels_t;
     #[must_use]
-    pub fn mts_labels_user_data(
-        labels: mts_labels_t,
-        user_data: *mut *mut ::std::os::raw::c_void,
+    pub fn mts_labels_set_cached_values(
+        labels: *const mts_labels_t,
+        values: *const i32,
+        count: usize,
     ) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_clone(labels: mts_labels_t, clone: *mut mts_labels_t) -> mts_status_t;
+    pub fn mts_labels_clone(labels: *const mts_labels_t) -> *mut mts_labels_t;
     #[must_use]
     pub fn mts_labels_union(
-        first: mts_labels_t,
-        second: mts_labels_t,
-        result: *mut mts_labels_t,
+        first: *const mts_labels_t,
+        second: *const mts_labels_t,
+        result: *mut *mut mts_labels_t,
         first_mapping: *mut i64,
         first_mapping_count: usize,
         second_mapping: *mut i64,
@@ -345,9 +332,9 @@ extern "C" {
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_intersection(
-        first: mts_labels_t,
-        second: mts_labels_t,
-        result: *mut mts_labels_t,
+        first: *const mts_labels_t,
+        second: *const mts_labels_t,
+        result: *mut *mut mts_labels_t,
         first_mapping: *mut i64,
         first_mapping_count: usize,
         second_mapping: *mut i64,
@@ -355,16 +342,16 @@ extern "C" {
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_difference(
-        first: mts_labels_t,
-        second: mts_labels_t,
-        result: *mut mts_labels_t,
+        first: *const mts_labels_t,
+        second: *const mts_labels_t,
+        result: *mut *mut mts_labels_t,
         first_mapping: *mut i64,
         first_mapping_count: usize,
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_select(
-        labels: mts_labels_t,
-        selection: mts_labels_t,
+        labels: *const mts_labels_t,
+        selection: *const mts_labels_t,
         selected: *mut i64,
         selected_count: *mut usize,
     ) -> mts_status_t;
@@ -383,20 +370,15 @@ extern "C" {
     ) -> mts_status_t;
     pub fn mts_block(
         data: mts_array_t,
-        samples: mts_labels_t,
-        components: *const mts_labels_t,
+        samples: *const mts_labels_t,
+        components: *const *const mts_labels_t,
         components_count: usize,
-        properties: mts_labels_t,
+        properties: *const mts_labels_t,
     ) -> *mut mts_block_t;
     #[must_use]
     pub fn mts_block_free(block: *mut mts_block_t) -> mts_status_t;
     pub fn mts_block_copy(block: *const mts_block_t) -> *mut mts_block_t;
-    #[must_use]
-    pub fn mts_block_labels(
-        block: *const mts_block_t,
-        axis: usize,
-        labels: *mut mts_labels_t,
-    ) -> mts_status_t;
+    pub fn mts_block_labels(block: *const mts_block_t, axis: usize) -> *mut mts_labels_t;
     #[must_use]
     pub fn mts_block_gradient(
         block: *mut mts_block_t,
@@ -422,18 +404,14 @@ extern "C" {
     #[must_use]
     pub fn mts_block_dtype(block: *const mts_block_t, dtype: *mut DLDataType) -> mts_status_t;
     pub fn mts_tensormap(
-        keys: mts_labels_t,
+        keys: *const mts_labels_t,
         blocks: *mut *mut mts_block_t,
         blocks_count: usize,
     ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts_status_t;
     pub fn mts_tensormap_copy(tensor: *const mts_tensormap_t) -> *mut mts_tensormap_t;
-    #[must_use]
-    pub fn mts_tensormap_keys(
-        tensor: *const mts_tensormap_t,
-        keys: *mut mts_labels_t,
-    ) -> mts_status_t;
+    pub fn mts_tensormap_keys(tensor: *const mts_tensormap_t) -> *mut mts_labels_t;
     #[must_use]
     pub fn mts_tensormap_block_by_id(
         tensor: *mut mts_tensormap_t,
@@ -445,11 +423,11 @@ extern "C" {
         tensor: *const mts_tensormap_t,
         block_indexes: *mut usize,
         count: *mut usize,
-        selection: mts_labels_t,
+        selection: *const mts_labels_t,
     ) -> mts_status_t;
     pub fn mts_tensormap_keys_to_properties(
         tensor: *const mts_tensormap_t,
-        keys_to_move: mts_labels_t,
+        keys_to_move: *const mts_labels_t,
         fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
@@ -460,7 +438,7 @@ extern "C" {
     ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_keys_to_samples(
         tensor: *const mts_tensormap_t,
-        keys_to_move: mts_labels_t,
+        keys_to_move: *const mts_labels_t,
         fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
@@ -492,21 +470,12 @@ extern "C" {
         tensor: *const mts_tensormap_t,
         dtype: *mut DLDataType,
     ) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_load(
-        path: *const ::std::os::raw::c_char,
-        labels: *mut mts_labels_t,
-    ) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_load_buffer(
-        buffer: *const u8,
-        buffer_count: usize,
-        labels: *mut mts_labels_t,
-    ) -> mts_status_t;
+    pub fn mts_labels_load(path: *const ::std::os::raw::c_char) -> *mut mts_labels_t;
+    pub fn mts_labels_load_buffer(buffer: *const u8, buffer_count: usize) -> *mut mts_labels_t;
     #[must_use]
     pub fn mts_labels_save(
         path: *const ::std::os::raw::c_char,
-        labels: mts_labels_t,
+        labels: *const mts_labels_t,
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_save_buffer(
@@ -514,7 +483,7 @@ extern "C" {
         buffer_count: *mut usize,
         realloc_user_data: *mut ::std::os::raw::c_void,
         realloc: mts_realloc_buffer_t,
-        labels: mts_labels_t,
+        labels: *const mts_labels_t,
     ) -> mts_status_t;
     pub fn mts_block_load(
         path: *const ::std::os::raw::c_char,

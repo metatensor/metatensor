@@ -10,6 +10,8 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, mts_labels_t
 from ._c_lib import _get_library
+from .status import _check_pointer
+from .utils import _ptr_to_const_ndarray
 
 
 class LabelsValues(np.ndarray):
@@ -20,9 +22,17 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
+        lib = _get_library()
+        values_ptr = ctypes.POINTER(ctypes.c_int32)()
+        count = c_uintptr_t()
+        lib.mts_labels_values(labels._labels, values_ptr, count)
+
+        size = c_uintptr_t()
+        lib.mts_labels_size(labels._labels, size)
+
         array = _ptr_to_const_ndarray(
-            ptr=labels._labels.values,
-            shape=(labels._labels.count, labels._labels.size),
+            ptr=values_ptr,
+            shape=(count.value, size.value),
             dtype=np.int32,
         )
         obj = array.view(cls)
@@ -346,16 +356,21 @@ class Labels:
         )
 
     @classmethod
-    def _from_mts_labels_t(cls, labels: mts_labels_t):
-        assert labels.internal_ptr_ is not None
+    def _from_mts_labels_t(cls, labels):
+        """Create Labels from an opaque mts_labels_t pointer."""
+        _check_pointer(labels)
 
         obj = cls.__new__(cls)
         obj._lib = _get_library()
         obj._labels = labels
 
+        names_ptr = ctypes.POINTER(ctypes.c_char_p)()
+        names_count = c_uintptr_t()
+        obj._lib.mts_labels_names(labels, names_ptr, names_count)
+
         names = []
-        for i in range(labels.size):
-            names.append(labels.names[i].decode("utf8"))
+        for i in range(names_count.value):
+            names.append(names_ptr[i].decode("utf8"))
         obj._names = names
 
         obj._cached_values = None
@@ -368,9 +383,9 @@ class Labels:
                 self._lib.mts_labels_free(self._labels)
 
     def __deepcopy__(self, _memodict):
-        labels = mts_labels_t()
-        self._lib.mts_labels_clone(self._labels, labels)
-        return Labels._from_mts_labels_t(labels)
+        ptr = self._lib.mts_labels_clone(self._labels)
+        _check_pointer(ptr)
+        return Labels._from_mts_labels_t(ptr)
 
     def __copy__(self):
         return self.__deepcopy__({})
@@ -779,9 +794,13 @@ class Labels:
             2  2
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_difference(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -814,13 +833,13 @@ class Labels:
         >>> print(mapping_1)
         [ 0 -1 -1  1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
         self._lib.mts_labels_difference(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
         )
@@ -847,9 +866,15 @@ class Labels:
             1  3
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_union(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -886,14 +911,14 @@ class Labels:
         >>> print(mapping_2)
         [2 3 1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_union(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
             second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
@@ -920,9 +945,15 @@ class Labels:
             0  3
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -958,14 +989,14 @@ class Labels:
         >>> print(mapping_2)
         [ 1 -1  0]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_intersection(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
             second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
@@ -1091,25 +1122,23 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
 
 def _create_new_labels(
     lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
-) -> mts_labels_t:
-    labels = mts_labels_t()
-
+):
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
     for i, n in enumerate(names):
         c_names[i] = n.encode("utf8")
 
-    labels.internal_ptr_ = None
-    labels.names = c_names
-    labels.size = len(names)
+    values_ptr = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
+    count = values.shape[0]
 
-    labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-    labels.count = values.shape[0]
     if assume_unique:
-        lib.mts_labels_create_assume_unique(labels)
+        ptr = lib.mts_labels_create_assume_unique(
+            c_names, len(names), values_ptr, count
+        )
     else:
-        lib.mts_labels_create(labels)
+        ptr = lib.mts_labels_create(c_names, len(names), values_ptr, count)
 
-    return labels
+    _check_pointer(ptr)
+    return ptr
 
 
 def _print_string_center(output, string, width, last):

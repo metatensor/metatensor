@@ -59,6 +59,17 @@ typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 typedef struct mts_block_t mts_block_t;
 
 /**
+ * Opaque type representing a set of labels used to carry metadata associated
+ * with a tensor map.
+ *
+ * This is similar to a list of `count` named tuples, but stored as a 2D array
+ * of shape `(count, size)`, with a set of names associated with the columns of
+ * this array (often called *dimensions*). Each row/entry in this array is
+ * unique, and they are often (but not always) sorted in lexicographic order.
+ */
+typedef struct mts_labels_t mts_labels_t;
+
+/**
  * Opaque type representing a `TensorMap`.
  */
 typedef struct mts_tensormap_t mts_tensormap_t;
@@ -72,45 +83,6 @@ typedef struct mts_tensormap_t mts_tensormap_t;
  * in callbacks.
  */
 typedef int32_t mts_status_t;
-
-/**
- * A set of labels used to carry metadata associated with a tensor map.
- *
- * This is similar to a list of `count` named tuples, but stored as a 2D array
- * of shape `(count, size)`, with a set of names associated with the columns of
- * this array (often called *dimensions*). Each row/entry in this array is
- * unique, and they are often (but not always) sorted in lexicographic order.
- *
- * `mts_labels_t` with a non-NULL `internal_ptr_` correspond to a
- * reference-counted Rust data structure, which allow for fast lookup inside
- * the labels with `mts_labels_positions`.
- */
-typedef struct mts_labels_t {
-  /**
-   * internal: pointer to the rust `Labels` struct if any, null otherwise
-   */
-  void *internal_ptr_;
-  /**
-   * Names of the dimensions composing this set of labels. There are `size`
-   * elements in this array, each being a NULL terminated UTF-8 string.
-   */
-  const char *const *names;
-  /**
-   * Pointer to the first element of a 2D row-major array of 32-bit signed
-   * integer containing the values taken by the different dimensions in
-   * `names`. Each row has `size` elements, and there are `count` rows in
-   * total.
-   */
-  const int32_t *values;
-  /**
-   * Number of dimensions/size of a single entry in the set of labels
-   */
-  uintptr_t size;
-  /**
-   * Number entries in the set of labels
-   */
-  uintptr_t count;
-} mts_labels_t;
 
 /**
  * A single 64-bit integer representing a data origin (numpy ndarray, rust
@@ -352,11 +324,123 @@ const char *mts_version(void);
 const char *mts_last_error(void);
 
 /**
- * Get the position of the entry defined by the `values` array in the given set
- * of `labels`. This operation is only available if the labels correspond to a
- * set of Rust Labels (i.e. `labels.internal_ptr_` is not NULL).
+ * Create a new set of Labels from the given dimension names and values.
  *
- * @param labels set of labels with an associated Rust data structure
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param names array of NULL-terminated UTF-8 strings containing the names
+ *        of each dimension
+ * @param names_count number of entries in the `names` array (i.e. the
+ *        number of dimensions)
+ * @param values pointer to the first element of a 2D row-major array of
+ *        32-bit signed integers. Each row has `names_count` elements, and
+ *        there are `count` rows in total. This can be NULL if `count` is 0.
+ * @param count number of entries (rows) in the labels
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_labels_t *mts_labels_create(const char *const *names,
+                                       uintptr_t names_count,
+                                       const int32_t *values,
+                                       uintptr_t count);
+
+/**
+ * Create a new set of Labels from the given dimension names and values,
+ * without checking for uniqueness of the entries.
+ *
+ * This function does not check for uniqueness of the labels entries, which
+ * should be enforced by the caller. Calling this function with non-unique
+ * entries is invalid and can lead to crashes or infinite loops.
+ *
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param names array of NULL-terminated UTF-8 strings containing the names
+ *        of each dimension
+ * @param names_count number of entries in the `names` array
+ * @param values pointer to the first element of a 2D row-major array of
+ *        32-bit signed integers (same layout as `mts_labels_create`)
+ * @param count number of entries (rows) in the labels
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
+                                                     uintptr_t names_count,
+                                                     const int32_t *values,
+                                                     uintptr_t count);
+
+/**
+ * Get the dimension names for the given set of `labels`.
+ *
+ * @param labels pointer to an existing set of labels
+ * @param names on output, will be set to a pointer to an array of
+ *        NULL-terminated UTF-8 strings containing the names of each
+ *        dimension. The array contains `*count` elements.
+ * @param count on output, will be set to the number of dimensions
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_names(const struct mts_labels_t *labels,
+                              const char *const **names,
+                              uintptr_t *count);
+
+/**
+ * Get the number of entries in the given set of `labels`.
+ *
+ * @param labels pointer to an existing set of labels
+ * @param count on output, will be set to the number of entries
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_count(const struct mts_labels_t *labels, uintptr_t *count);
+
+/**
+ * Get the number of dimensions in the given set of `labels`.
+ *
+ * @param labels pointer to an existing set of labels
+ * @param size on output, will be set to the number of dimensions
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_size(const struct mts_labels_t *labels, uintptr_t *size);
+
+/**
+ * Get the values for the given set of `labels`.
+ *
+ * The values are returned as a pointer to a row-major 2D array of shape
+ * `(count, size)`, where `count` is the number of entries and `size` is the
+ * number of dimensions.
+ *
+ * @param labels pointer to an existing set of labels
+ * @param values on output, will be set to a pointer to the first element of
+ *        the values array. The pointer is valid as long as the labels are
+ *        alive. Will be NULL if the labels are empty.
+ * @param count on output, will be set to the number of entries
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_labels_values(const struct mts_labels_t *labels,
+                               const int32_t **values,
+                               uintptr_t *count);
+
+/**
+ * Get the position of the entry defined by the `values` array in the given set
+ * of `labels`.
+ *
+ * @param labels pointer to an existing set of labels
  * @param values array containing the label to lookup
  * @param values_count size of the values array
  * @param result position of the values in the labels or -1 if the values
@@ -366,117 +450,121 @@ const char *mts_last_error(void);
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_position(struct mts_labels_t labels,
+mts_status_t mts_labels_position(const struct mts_labels_t *labels,
                                  const int32_t *values,
                                  uintptr_t values_count,
                                  int64_t *result);
 
 /**
- * Finish the creation of `mts_labels_t` by associating it to Rust-owned
- * labels.
+ * Get the values array backing these `labels`.
  *
- * This allows using the `mts_labels_positions` and `mts_labels_clone`
- * functions on the `mts_labels_t`.
+ * The returned `mts_array_t` is a non-owning view into the Labels and must
+ * not be freed by the caller.
  *
- * This function allocates memory which must be released `mts_labels_free` when
- * you don't need it anymore.
- *
- * @param labels new set of labels containing pointers to user-managed memory
- *        on input, and pointers to Rust-managed memory on output.
+ * @param labels pointer to an existing set of labels
+ * @param array on output, will contain the values array
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_create(struct mts_labels_t *labels);
+mts_status_t mts_labels_values_array(const struct mts_labels_t *labels, struct mts_array_t *array);
 
 /**
- * Finish the creation of `mts_labels_t` by associating it to Rust-owned
+ * Create a new set of labels from the given names and array.
  *
- * This function does not check for uniqueness of the labels entries, which
- * should be enforced by the caller. Calling this function with non-unique
- * entries is invalid and can lead to crashes or infinite loops.
+ * The array must be on a CPU device. This function verifies uniqueness of
+ * the labels entries.
  *
- * This allows using the `mts_labels_positions` and `mts_labels_clone`
- * functions on the `mts_labels_t`.
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
  *
- * This function allocates memory which must be released `mts_labels_free` when
- * you don't need it anymore.
+ * @param names array of NULL-terminated UTF-8 strings containing the names
+ *        of each dimension
+ * @param names_count number of entries in the `names` array
+ * @param array the values array. The labels take ownership of this array.
  *
- * @param labels new set of labels containing pointers to user-managed memory
- *        on input, and pointers to Rust-managed memory on output.
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_labels_t *mts_labels_create_from_array(const char *const *names,
+                                                  uintptr_t names_count,
+                                                  struct mts_array_t array);
+
+/**
+ * Create a new set of labels from the given names and array, without
+ * checking uniqueness.
+ *
+ * The array can be on any device (CPU or GPU). The caller must ensure
+ * that the labels entries are unique; passing non-unique entries is
+ * invalid and can lead to crashes or infinite loops.
+ *
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param names array of NULL-terminated UTF-8 strings containing the names
+ *        of each dimension
+ * @param names_count number of entries in the `names` array
+ * @param array the values array. The labels take ownership of this array.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_labels_t *mts_labels_create_from_array_assume_unique(const char *const *names,
+                                                                uintptr_t names_count,
+                                                                struct mts_array_t array);
+
+/**
+ * Pre-fill the cached CPU values for these `labels` without triggering
+ * materialization from the backing array. This is used when the caller
+ * has known-good CPU values (e.g., from a device transfer) and the
+ * backing array is on a device that cannot produce values via DLPack
+ * (such as Meta tensors).
+ *
+ * If the values are already cached, this is a no-op.
+ *
+ * @param labels pointer to an existing set of labels
+ * @param values pointer to a flat array of int32 values (count * size elements)
+ * @param count number of entries (rows) in the values array
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_create_assume_unique(struct mts_labels_t *labels);
+mts_status_t mts_labels_set_cached_values(const struct mts_labels_t *labels,
+                                          const int32_t *values,
+                                          uintptr_t count);
 
 /**
- * Update the registered user data in `labels`
- *
- * This function changes the registered user data in the Rust Labels to be
- * `user_data`; and store the corresponding `user_data_delete` function to be
- * called once the labels go out of scope.
- *
- * Any existing user data will be released (by calling the provided
- * `user_data_delete` function) before overwriting with the new data.
- *
- * @param labels set of labels where we want to add user data
- * @param user_data pointer to the data
- * @param user_data_delete function pointer that will be used (if not NULL)
- *                         to free the memory associated with `data` when the
- *                         `labels` are freed.
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_set_user_data(struct mts_labels_t labels,
-                                      void *user_data,
-                                      void (*user_data_delete)(void*));
-
-/**
- * Get the registered user data in `labels` in `*user_data`.
- *
- * If no data has been registered, `*user_data` will be NULL.
- *
- * @param labels set of labels containing user data
- * @param user_data this will be set to the pointer than was registered with
- *                  these `labels`
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_user_data(struct mts_labels_t labels, void **user_data);
-
-/**
- * Make a copy of `labels` inside `clone`.
+ * Make a copy of `labels`, incrementing the internal reference count.
  *
  * Since `mts_labels_t` are immutable, the copy is actually just a reference
  * count increase, and as such should not be an expensive operation.
  *
- * `mts_labels_free` must be used with `clone` to decrease the reference count
- * and release the memory when you don't need it anymore.
+ * `mts_labels_free` must be used with the returned pointer to decrease the
+ * reference count and release the memory when you don't need it anymore.
  *
- * @param labels set of labels with an associated Rust data structure
- * @param clone empty labels, on output will contain a copy of `labels`
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
+ * @param labels pointer to an existing set of labels
+ *
+ * @returns A pointer to the newly allocated (cloned) labels, or a `NULL`
+ *          pointer in case of error. In case of error, you can use
+ *          `mts_last_error()` to get the error message.
  */
-mts_status_t mts_labels_clone(struct mts_labels_t labels, struct mts_labels_t *clone);
+struct mts_labels_t *mts_labels_clone(const struct mts_labels_t *labels);
 
 /**
- * Take the union of two `mts_labels_t`.
+ * Take the union of two sets of labels.
  *
  * If requested, this function can also give the positions in the union where
- * each entry of the input `mts_labels_t` ended up.
+ * each entry of the input labels ended up.
  *
- * This function allocates memory for `result` which must be released
+ * This function allocates memory for `*result` which must be released with
  * `mts_labels_free` when you don't need it anymore.
  *
- * @param first first set of labels
- * @param second second set of labels
- * @param result empty labels, on output will contain the union of `first` and
- *        `second`
+ * @param first pointer to the first set of labels
+ * @param second pointer to the second set of labels
+ * @param result on output, will be set to a pointer to the newly allocated
+ *        labels containing the union
  * @param first_mapping if you want the mapping from the positions of entries
  *        in `first` to the positions in `result`, this should be a pointer
  *        to an array containing `first.count` elements, to be filled by this
@@ -491,27 +579,27 @@ mts_status_t mts_labels_clone(struct mts_labels_t labels, struct mts_labels_t *c
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_union(struct mts_labels_t first,
-                              struct mts_labels_t second,
-                              struct mts_labels_t *result,
+mts_status_t mts_labels_union(const struct mts_labels_t *first,
+                              const struct mts_labels_t *second,
+                              struct mts_labels_t **result,
                               int64_t *first_mapping,
                               uintptr_t first_mapping_count,
                               int64_t *second_mapping,
                               uintptr_t second_mapping_count);
 
 /**
- * Take the intersection of two `mts_labels_t`.
+ * Take the intersection of two sets of labels.
  *
  * If requested, this function can also give the positions in the intersection
- * where each entry of the input `mts_labels_t` ended up.
+ * where each entry of the input labels ended up.
  *
- * This function allocates memory for `result` which must be released
+ * This function allocates memory for `*result` which must be released with
  * `mts_labels_free` when you don't need it anymore.
  *
- * @param first first set of labels
- * @param second second set of labels
- * @param result empty labels, on output will contain the intersection of `first` and
- *        `second`
+ * @param first pointer to the first set of labels
+ * @param second pointer to the second set of labels
+ * @param result on output, will be set to a pointer to the newly allocated
+ *        labels containing the intersection
  * @param first_mapping if you want the mapping from the positions of entries
  *        in `first` to the positions in `result`, this should be a pointer to
  *        an array containing `first.count` elements, to be filled by this
@@ -522,33 +610,33 @@ mts_status_t mts_labels_union(struct mts_labels_t first,
  *        in `second` to the positions in `result`, this should be a pointer
  *        to an array containing `second.count` elements, to be filled by this
  *        function. Otherwise it should be a `NULL` pointer. If an entry in
- *        `first` is not used in `result`, the mapping will be set to -1.
+ *        `second` is not used in `result`, the mapping will be set to -1.
  * @param second_mapping_count number of elements in the `second_mapping` array
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_intersection(struct mts_labels_t first,
-                                     struct mts_labels_t second,
-                                     struct mts_labels_t *result,
+mts_status_t mts_labels_intersection(const struct mts_labels_t *first,
+                                     const struct mts_labels_t *second,
+                                     struct mts_labels_t **result,
                                      int64_t *first_mapping,
                                      uintptr_t first_mapping_count,
                                      int64_t *second_mapping,
                                      uintptr_t second_mapping_count);
 
 /**
- * Take the difference of two `mts_labels_t`.
+ * Take the difference of two sets of labels.
  *
  * If requested, this function can also give the positions in the difference
- * where each entry of the input `mts_labels_t` ended up.
+ * where each entry of the first set of labels ended up.
  *
- * This function allocates memory for `result` which must be released
+ * This function allocates memory for `*result` which must be released with
  * `mts_labels_free` when you don't need it anymore.
  *
- * @param first first set of labels
- * @param second second set of labels
- * @param result empty labels, on output will contain the union of `first` and
- *        `second`
+ * @param first pointer to the first set of labels
+ * @param second pointer to the second set of labels
+ * @param result on output, will be set to a pointer to the newly allocated
+ *        labels containing the difference
  * @param first_mapping if you want the mapping from the positions of entries
  *        in `first` to the positions in `result`, this should be a pointer to
  *        an array containing `first.count` elements, to be filled by this
@@ -559,9 +647,9 @@ mts_status_t mts_labels_intersection(struct mts_labels_t first,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_difference(struct mts_labels_t first,
-                                   struct mts_labels_t second,
-                                   struct mts_labels_t *result,
+mts_status_t mts_labels_difference(const struct mts_labels_t *first,
+                                   const struct mts_labels_t *second,
+                                   struct mts_labels_t **result,
                                    int64_t *first_mapping,
                                    uintptr_t first_mapping_count);
 
@@ -574,9 +662,9 @@ mts_status_t mts_labels_difference(struct mts_labels_t first,
  * for all the selection's dimension will be picked. Any entry in the
  * `selection` but not in the `labels` will be ignored.
  *
- * @param labels Labels on which to run the selection
- * @param selection definition of the selection criteria. Multiple entries are
- *        interpreted as a logical `or` operation.
+ * @param labels pointer to an existing set of labels
+ * @param selection pointer to labels defining the selection criteria.
+ *        Multiple entries are interpreted as a logical `or` operation.
  * @param selected on input, a pointer to an array with space for
  *        `*selected_count` entries. On output, the first `*selected_count`
  *        values will contain the index in `labels` of selected entries.
@@ -586,8 +674,8 @@ mts_status_t mts_labels_difference(struct mts_labels_t first,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_select(struct mts_labels_t labels,
-                               struct mts_labels_t selection,
+mts_status_t mts_labels_select(const struct mts_labels_t *labels,
+                               const struct mts_labels_t *selection,
                                int64_t *selected,
                                uintptr_t *selected_count);
 
@@ -595,7 +683,7 @@ mts_status_t mts_labels_select(struct mts_labels_t labels,
  * Decrease the reference count of `labels`, and release the corresponding
  * memory once the reference count reaches 0.
  *
- * @param labels set of labels with an associated Rust data structure
+ * @param labels pointer to an existing set of labels, or NULL
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
@@ -639,21 +727,23 @@ mts_status_t mts_get_data_origin(mts_data_origin_t origin, char *buffer, uintptr
  * @param data array handle containing the data for this block. The block takes
  *             ownership of the array, and will release it with
  *             `array.destroy(array.ptr)` when it no longer needs it.
- * @param samples sample labels corresponding to the first dimension of the data
- * @param components array of component labels corresponding to intermediary
- *                   dimensions of the data
+ * @param samples pointer to sample labels corresponding to the first
+ *                dimension of the data
+ * @param components array of pointers to component labels corresponding to
+ *                   intermediary dimensions of the data
  * @param components_count number of entries in the `components` array
- * @param properties property labels corresponding to the last dimension of the data
+ * @param properties pointer to property labels corresponding to the last
+ *                   dimension of the data
  *
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
 struct mts_block_t *mts_block(struct mts_array_t data,
-                              struct mts_labels_t samples,
-                              const struct mts_labels_t *components,
+                              const struct mts_labels_t *samples,
+                              const struct mts_labels_t *const *components,
                               uintptr_t components_count,
-                              struct mts_labels_t properties);
+                              const struct mts_labels_t *properties);
 
 /**
  * Free the memory associated with a `block` previously created with
@@ -686,21 +776,17 @@ struct mts_block_t *mts_block_copy(const struct mts_block_t *block);
 /**
  * Get the set of labels from this `block`.
  *
- * This function allocates memory for `labels` which must be released
- * `mts_labels_free` when you don't need it anymore.
+ * This function allocates memory for the returned labels which must be
+ * released with `mts_labels_free` when you don't need it anymore.
  *
  * @param block pointer to an existing block
  * @param axis axis/dimension of the data array for which you need the labels
- * @param labels pointer to an empty `mts_labels_t` that will be set to the
- *        `block`'s labels
  *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
  */
-mts_status_t mts_block_labels(const struct mts_block_t *block,
-                              uintptr_t axis,
-                              struct mts_labels_t *labels);
+struct mts_labels_t *mts_block_labels(const struct mts_block_t *block, uintptr_t axis);
 
 /**
  * Get one of the gradients in this `block`.
@@ -815,7 +901,7 @@ mts_status_t mts_block_dtype(const struct mts_block_t *block, DLDataType *dtype)
  * The memory allocated by this function and the blocks should be released
  * using `mts_tensormap_free`.
  *
- * @param keys labels containing the keys associated with each block
+ * @param keys pointer to labels containing the keys associated with each block
  * @param blocks pointer to the first element of an array of blocks
  * @param blocks_count number of elements in the `blocks` array
  *
@@ -823,7 +909,7 @@ mts_status_t mts_block_dtype(const struct mts_block_t *block, DLDataType *dtype)
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_tensormap_t *mts_tensormap(struct mts_labels_t keys,
+struct mts_tensormap_t *mts_tensormap(const struct mts_labels_t *keys,
                                       struct mts_block_t **blocks,
                                       uintptr_t blocks_count);
 
@@ -858,17 +944,16 @@ struct mts_tensormap_t *mts_tensormap_copy(const struct mts_tensormap_t *tensor)
 /**
  * Get the keys for the given `tensor` map.
  *
- * This function allocates memory for `keys` which must be released
- * `mts_labels_free` when you don't need it anymore.
+ * This function allocates memory for the returned labels which must be
+ * released with `mts_labels_free` when you don't need it anymore.
  *
  * @param tensor pointer to an existing tensor map
- * @param keys pointer to be filled with the keys of the tensor map
  *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
+ * @returns A pointer to the newly allocated labels containing the keys, or a
+ *          `NULL` pointer in case of error. In case of error, you can use
+ *          `mts_last_error()` to get the error message.
  */
-mts_status_t mts_tensormap_keys(const struct mts_tensormap_t *tensor, struct mts_labels_t *keys);
+struct mts_labels_t *mts_tensormap_keys(const struct mts_tensormap_t *tensor);
 
 /**
  * Get a pointer to the `index`-th block in this tensor map.
@@ -905,7 +990,8 @@ mts_status_t mts_tensormap_block_by_id(struct mts_tensormap_t *tensor,
  * @param block_indexes array to be filled with indexes of blocks in the tensor
  *                      map matching the `selection`
  * @param count number of entries in `block_indexes`
- * @param selection labels with a single entry describing which blocks are requested
+ * @param selection pointer to labels with a single entry describing which
+ *                  blocks are requested
  *
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
@@ -914,7 +1000,7 @@ mts_status_t mts_tensormap_block_by_id(struct mts_tensormap_t *tensor,
 mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
                                            uintptr_t *block_indexes,
                                            uintptr_t *count,
-                                           struct mts_labels_t selection);
+                                           const struct mts_labels_t *selection);
 
 /**
  * Merge blocks with the same value for selected keys dimensions along the
@@ -947,7 +1033,7 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  * The result is a new tensor map, which should be freed with `mts_tensormap_free`.
  *
  * @param tensor pointer to an existing tensor map
- * @param keys_to_move description of the keys to move
+ * @param keys_to_move pointer to labels describing the keys to move
  * @param fill_value an mts_array_t with shape (1,) and the same dtype as the
  *                   data, used to fill missing entries when merging blocks
  * @param sort_samples whether to sort the samples lexicographically after
@@ -958,7 +1044,7 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  *          to get the error message.
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensormap_t *tensor,
-                                                         struct mts_labels_t keys_to_move,
+                                                         const struct mts_labels_t *keys_to_move,
                                                          struct mts_array_t fill_value,
                                                          bool sort_samples);
 
@@ -1003,7 +1089,7 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  * property labels.
  *
  * @param tensor pointer to an existing tensor map
- * @param keys_to_move description of the keys to move
+ * @param keys_to_move pointer to labels describing the keys to move
  * @param fill_value an mts_array_t with shape (1,) and the same dtype as the
  *                   data, used to fill missing entries when merging blocks
  * @param sort_samples whether to sort the samples lexicographically after
@@ -1014,7 +1100,7 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  *          error message.
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap_t *tensor,
-                                                      struct mts_labels_t keys_to_move,
+                                                      const struct mts_labels_t *keys_to_move,
                                                       struct mts_array_t fill_value,
                                                       bool sort_samples);
 
@@ -1097,33 +1183,31 @@ mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataTyp
 /**
  * Load labels from the file at the given path.
  *
- * This function allocates memory which must be released `mts_labels_free` when
- * you don't need it anymore.
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
- * @param labels pointer to empty Labels
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
  */
-mts_status_t mts_labels_load(const char *path, struct mts_labels_t *labels);
+struct mts_labels_t *mts_labels_load(const char *path);
 
 /**
  * Load labels from the given in-memory buffer.
  *
- * This function allocates memory which must be released `mts_labels_free` when
- * you don't need it anymore.
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
  *
  * @param buffer buffer containing a previously serialized `mts_labels_t`
  * @param buffer_count number of elements in the buffer
- * @param labels pointer to empty Labels
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
  */
-mts_status_t mts_labels_load_buffer(const uint8_t *buffer,
-                                    uintptr_t buffer_count,
-                                    struct mts_labels_t *labels);
+struct mts_labels_t *mts_labels_load_buffer(const uint8_t *buffer, uintptr_t buffer_count);
 
 /**
  * Save labels to the file at the given path.
@@ -1132,13 +1216,13 @@ mts_status_t mts_labels_load_buffer(const uint8_t *buffer,
  * when saving data is `.mts`, to prevent confusion with generic `.npz` files.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
- * @param labels Labels to save to the file
+ * @param labels pointer to labels to save to the file
  *
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_save(const char *path, struct mts_labels_t labels);
+mts_status_t mts_labels_save(const char *path, const struct mts_labels_t *labels);
 
 /**
  * Save labels to an in-memory buffer.
@@ -1161,7 +1245,7 @@ mts_status_t mts_labels_save(const char *path, struct mts_labels_t labels);
  * @param realloc_user_data custom data for the `realloc` callback. This will
  *        be passed as the first argument to `realloc` as-is.
  * @param realloc function that allows to grow the buffer allocation
- * @param labels Labels that will saved to the buffer
+ * @param labels pointer to labels that will saved to the buffer
  *
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
@@ -1171,7 +1255,7 @@ mts_status_t mts_labels_save_buffer(uint8_t **buffer,
                                     uintptr_t *buffer_count,
                                     void *realloc_user_data,
                                     mts_realloc_buffer_t realloc,
-                                    struct mts_labels_t labels);
+                                    const struct mts_labels_t *labels);
 
 /**
  * Load a tensor block from the file at the given path.

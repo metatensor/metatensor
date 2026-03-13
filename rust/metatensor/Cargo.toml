@@ -15,8 +15,7 @@ bench = false
 
 [dependencies]
 metatensor-sys = {version = "0.1.18", path="../metatensor-sys"}
-dlpk = {version = "0.1.4", features = ["ndarray", "half"]}
-half = "<2.5"
+dlpk = {git = "https://github.com/metatensor/dlpk", branch = "vec-slice", features = ["ndarray"]}
 
 once_cell = "1"
 smallvec = {version = "1", features = ["union"]}
@@ -39,7 +38,7 @@ bench = ["dep:criterion"]
 # pin for compatibility with rustc 1.74
 tempfile = "=3.24.0"
 half = "<2.5"
-dlpk = {version = "0.1.3", features = ["ndarray", "half"]}
+dlpk = {git = "https://github.com/metatensor/dlpk", branch = "vec-slice", features = ["ndarray", "half"]}
 
 
 [[bench]]
