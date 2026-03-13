@@ -348,12 +348,6 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        if fill_value.ptr.is_null() && (*tensor).keys().count() > 0 {
-            return Err(Error::InvalidParameter(
-                "fill_value must not be null for non-empty TensorMap".into()
-            ));
-        }
-
         let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &fill_value)?;
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
@@ -460,12 +454,6 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
         check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
-
-        if fill_value.ptr.is_null() && (*tensor).keys().count() > 0 {
-            return Err(Error::InvalidParameter(
-                "fill_value must not be null for non-empty TensorMap".into()
-            ));
-        }
 
         let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &fill_value)?;
         let _ = &unwind_wrapper;
