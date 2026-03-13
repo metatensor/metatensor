@@ -260,11 +260,12 @@ public:
     /// @param keys_to_move description of the keys to move
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
-    /// @param fill_value pointer to an mts_array_t with shape (1,) and the
-    ///                   same dtype, used to fill missing entries
+    /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
+    ///                   used to fill missing entries. Ownership is transferred
+    ///                   to the callee (the array is destroyed after the call).
     TensorMap keys_to_properties(
         const Labels& keys_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         auto* ptr = mts_tensormap_keys_to_properties(
@@ -282,7 +283,7 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_properties(
         const std::vector<std::string>& keys_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
@@ -292,7 +293,7 @@ public:
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_properties(
         std::string key_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
@@ -320,11 +321,12 @@ public:
     /// @param keys_to_move description of the keys to move
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
-    /// @param fill_value pointer to an mts_array_t with shape (1,) and the
-    ///                   same dtype, used to fill missing entries
+    /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
+    ///                   used to fill missing entries. Ownership is transferred
+    ///                   to the callee (the array is destroyed after the call).
     TensorMap keys_to_samples(
         const Labels& keys_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         auto* ptr = mts_tensormap_keys_to_samples(
@@ -342,7 +344,7 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_samples(
         const std::vector<std::string>& keys_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
@@ -352,7 +354,7 @@ public:
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_samples(
         std::string key_to_move,
-        const mts_array_t* fill_value,
+        mts_array_t fill_value,
         bool sort_samples = true
     ) const {
         return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);

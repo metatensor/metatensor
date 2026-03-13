@@ -833,57 +833,6 @@ public:
     ) = 0;
 };
 
-/// RAII wrapper for `mts_array_t` that calls `destroy` automatically.
-///
-/// Move-only. Use this whenever you create a standalone `mts_array_t` (e.g.
-/// fill values, temporaries) to avoid leaking the underlying data.
-///
-/// ```cpp
-/// auto fv = OwnedMtsArray(DataArrayBase::to_mts_array_t(
-///     std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1})
-/// ));
-/// tensor.keys_to_properties("key_1", &fv);
-/// // destroy called automatically at scope exit
-/// ```
-class OwnedMtsArray {
-public:
-    /// Take ownership of an existing `mts_array_t`.
-    explicit OwnedMtsArray(mts_array_t array): array_(array) {}
-
-    ~OwnedMtsArray() {
-        if (array_.destroy != nullptr) {
-            array_.destroy(array_.ptr);
-        }
-    }
-
-    OwnedMtsArray(const OwnedMtsArray&) = delete;
-    OwnedMtsArray& operator=(const OwnedMtsArray&) = delete;
-
-    OwnedMtsArray(OwnedMtsArray&& other) noexcept: array_(other.array_) {
-        std::memset(&other.array_, 0, sizeof(mts_array_t));
-    }
-
-    OwnedMtsArray& operator=(OwnedMtsArray&& other) noexcept {
-        if (this != &other) {
-            if (array_.destroy != nullptr) {
-                array_.destroy(array_.ptr);
-            }
-            array_ = other.array_;
-            std::memset(&other.array_, 0, sizeof(mts_array_t));
-        }
-        return *this;
-    }
-
-    /// Get a const pointer for passing to C API functions.
-    const mts_array_t* ptr() const { return &array_; }
-    /// Get a mutable pointer for passing to C API functions.
-    mts_array_t* ptr() { return &array_; }
-
-private:
-    mts_array_t array_;
-};
-
-
 /// Very basic implementation of DataArrayBase in C++.
 ///
 /// This is included as an example implementation of DataArrayBase, and to make

@@ -956,7 +956,7 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
 struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensormap_t *tensor,
                                                          struct mts_labels_t keys_to_move,
                                                          bool sort_samples,
-                                                         const struct mts_array_t *fill_value);
+                                                         struct mts_array_t fill_value);
 
 /**
  * Move the given dimensions from the component labels to the property labels
@@ -1010,7 +1010,7 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
 struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap_t *tensor,
                                                       struct mts_labels_t keys_to_move,
                                                       bool sort_samples,
-                                                      const struct mts_array_t *fill_value);
+                                                      struct mts_array_t fill_value);
 
 /**
  * Set or update the info (i.e. global metadata) for `key` to `value` for this

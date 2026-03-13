@@ -15,10 +15,11 @@ static TensorMap test_tensor_map();
 static mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t *array);
 static void check_loaded_tensor(metatensor::TensorMap& tensor);
 
-// Create a zero-fill OwnedMtsArray for use in keys_to_* calls
-static OwnedMtsArray make_zero_fill() {
+// Create a zero-fill mts_array_t for use in keys_to_* calls.
+// Ownership transfers to the callee, so each call site needs a fresh one.
+static mts_array_t make_zero_fill() {
     auto data = std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, 0.0);
-    return OwnedMtsArray(DataArrayBase::to_mts_array_t(std::move(data)));
+    return DataArrayBase::to_mts_array_t(std::move(data));
 }
 
 static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
@@ -71,8 +72,7 @@ TEST_CASE("TensorMap") {
 
         std::set<std::string> expected_keys = {"creator", "description"};
         std::set<std::string> actual_keys;
-        auto fv = make_zero_fill();
-        auto k2p_tensor = tensor.keys_to_properties("key_1", fv.ptr(), /*sort_samples*/ true);
+        auto k2p_tensor = tensor.keys_to_properties("key_1", make_zero_fill(), /*sort_samples*/ true);
         auto k2p_new_info = k2p_tensor.info();
         for (auto [key, value]: k2p_new_info) {
             std::string key_str(key);
@@ -90,7 +90,7 @@ TEST_CASE("TensorMap") {
         REQUIRE(actual_keys == expected_keys);
         actual_keys.clear();
 
-        auto k2s_tensor = tensor.keys_to_samples("key_2", fv.ptr(), /* sort_samples */ true);
+        auto k2s_tensor = tensor.keys_to_samples("key_2", make_zero_fill(), /* sort_samples */ true);
         auto k2s_new_info = k2s_tensor.info();
         for (auto [key, value]: k2s_new_info) {
             std::string key_str(key);
@@ -127,8 +127,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_samples") {
-        auto fv = make_zero_fill();
-        auto tensor = test_tensor_map().keys_to_samples("key_2", fv.ptr(), /* sort_samples */ true);
+        auto tensor = test_tensor_map().keys_to_samples("key_2", make_zero_fill(), /* sort_samples */ true);
 
         CHECK(tensor.keys() == Labels({"key_1"}, {{0}, {1}, {2}}));
 
@@ -180,7 +179,7 @@ TEST_CASE("TensorMap") {
         CHECK(gradient_3 == expected);
 
         // unsorted samples
-        tensor = test_tensor_map().keys_to_samples("key_2", fv.ptr(), /*sort_samples*/ false);
+        tensor = test_tensor_map().keys_to_samples("key_2", make_zero_fill(), /*sort_samples*/ false);
 
         block = tensor.block_by_id(2);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {
@@ -189,8 +188,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_properties") {
-        auto fv = make_zero_fill();
-        auto tensor = test_tensor_map().keys_to_properties("key_1", fv.ptr());
+        auto tensor = test_tensor_map().keys_to_properties("key_1", make_zero_fill());
 
         CHECK(tensor.keys() == Labels({"key_2"}, {{0}, {2}, {3}}));
 
@@ -269,8 +267,8 @@ TEST_CASE("TensorMap") {
 
     SECTION("keys_to_properties with NaN fill") {
         auto nan_data = std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, std::numeric_limits<double>::quiet_NaN());
-        auto nan_fv = OwnedMtsArray(DataArrayBase::to_mts_array_t(std::move(nan_data)));
-        auto tensor = test_tensor_map().keys_to_properties("key_1", nan_fv.ptr());
+        auto nan_fv = DataArrayBase::to_mts_array_t(std::move(nan_data));
+        auto tensor = test_tensor_map().keys_to_properties("key_1", nan_fv);
 
         auto block = tensor.block_by_id(0);
         auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());

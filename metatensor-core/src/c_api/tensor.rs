@@ -338,7 +338,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,
-    fill_value: *const mts_array_t,
+    fill_value: mts_array_t,
 ) -> *mut mts_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
@@ -348,21 +348,15 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        if fill_value.is_null() {
-            if (*tensor).keys().count() > 0 {
-                return Err(Error::InvalidParameter(
-                    "fill_value must not be null for non-empty TensorMap".into()
-                ));
-            }
-            let dummy = mts_array_t::null();
-            let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &dummy)?;
-            let _ = &unwind_wrapper;
-            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
-        } else {
-            let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &*fill_value)?;
-            let _ = &unwind_wrapper;
-            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        if fill_value.ptr.is_null() && (*tensor).keys().count() > 0 {
+            return Err(Error::InvalidParameter(
+                "fill_value must not be null for non-empty TensorMap".into()
+            ));
         }
+
+        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &fill_value)?;
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())
     });
 
@@ -457,7 +451,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,
-    fill_value: *const mts_array_t,
+    fill_value: mts_array_t,
 ) -> *mut mts_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
@@ -467,21 +461,15 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        if fill_value.is_null() {
-            if (*tensor).keys().count() > 0 {
-                return Err(Error::InvalidParameter(
-                    "fill_value must not be null for non-empty TensorMap".into()
-                ));
-            }
-            let dummy = mts_array_t::null();
-            let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &dummy)?;
-            let _ = &unwind_wrapper;
-            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
-        } else {
-            let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &*fill_value)?;
-            let _ = &unwind_wrapper;
-            *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
+        if fill_value.ptr.is_null() && (*tensor).keys().count() > 0 {
+            return Err(Error::InvalidParameter(
+                "fill_value must not be null for non-empty TensorMap".into()
+            ));
         }
+
+        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &fill_value)?;
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())
     });
 
