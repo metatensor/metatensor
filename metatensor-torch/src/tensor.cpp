@@ -337,7 +337,7 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
-    metatensor::mts_array_t fv_array = metatensor::mts_array_t{};
+    ::mts_array_t fv_array = ::mts_array_t{};
     if (this->keys()->count() > 0) {
         auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
         auto first_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
@@ -370,7 +370,7 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
-    metatensor::mts_array_t fv_array = metatensor::mts_array_t{};
+    ::mts_array_t fv_array = ::mts_array_t{};
     if (this->keys()->count() > 0) {
         auto block_s = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
         auto first_block_s = torch::make_intrusive<TensorBlockHolder>(std::move(block_s), torch::IValue());
