@@ -680,23 +680,11 @@ public:
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                // Use as_dlpack to safely extract fill_value from any array implementation
-                DLDevice cpu_device = {kDLCPU, 0};
-                DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-                DLManagedTensorVersioned* fill_managed = nullptr;
-                auto status = fill_value.as_dlpack(fill_value.ptr, &fill_managed, cpu_device, nullptr, max_version);
-                if (status != MTS_SUCCESS) {
-                    throw Error("failed to extract fill_value as DLPack");
-                }
-                auto fill_dlpack = DLPackArray<T>(fill_managed);
-                auto scalar = fill_dlpack(0);
-                // Create a temporary SimpleDataArray to pass to create()
-                auto temp_fill = SimpleDataArray<T>(std::vector<uintptr_t>{1}, scalar);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape), temp_fill);
+                auto copy = cxx_array->create(std::move(cxx_shape), fill_value);
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
             }, array, shape, shape_count, fill_value, new_array);
         };
@@ -812,7 +800,7 @@ public:
     /// `fill_value`, which has the same dtype as this array.
     virtual std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        const DataArrayBase& fill_value
+        mts_array_t fill_value
     ) const = 0;
 
     /// Get the shape of this array
@@ -928,10 +916,35 @@ public:
 
     std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        const DataArrayBase& fill_value
+        mts_array_t fill_value
     ) const override {
-        const auto& fv = dynamic_cast<const SimpleDataArray<T>&>(fill_value);
-        auto scalar = (*fv.data_)[0];
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        DLManagedTensorVersioned* fill_managed = nullptr;
+        auto status = fill_value.as_dlpack(fill_value.ptr, &fill_managed, cpu_device, nullptr, max_version);
+        if (status != MTS_SUCCESS) {
+            throw Error("failed to extract fill_value as DLPack");
+        }
+        
+        T scalar;
+        auto code = fill_managed->dl_tensor.dtype.code;
+        auto bits = fill_managed->dl_tensor.dtype.bits;
+        if (code == kDLFloat && bits == 64) {
+            scalar = static_cast<T>(*static_cast<const double*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLFloat && bits == 32) {
+            scalar = static_cast<T>(*static_cast<const float*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLInt && bits == 32) {
+            scalar = static_cast<T>(*static_cast<const int32_t*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLInt && bits == 64) {
+            scalar = static_cast<T>(*static_cast<const int64_t*>(fill_managed->dl_tensor.data));
+        } else {
+            if (fill_managed->deleter) fill_managed->deleter(fill_managed);
+            throw Error("unsupported fill_value dtype");
+        }
+        if (fill_managed->deleter) {
+            fill_managed->deleter(fill_managed);
+        }
+
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape), scalar));
     }
 
@@ -1214,7 +1227,7 @@ public:
 
     std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        const DataArrayBase& /*fill_value*/
+        mts_array_t /*fill_value*/
     ) const override {
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }

@@ -319,8 +319,14 @@ where
         // Use as_dlpack to extract scalar from fill_value, preserving dtype and device
         let cpu_device = DLDevice::cpu();
         let max_version = DLPackVersion::current();
-        let dlpack_tensor = fill_value.as_dlpack(cpu_device, None, max_version)
-            .expect("failed to extract fill_value as DLPack");
+        let mut dlpack_ptr: *mut dlpk::sys::DLManagedTensorVersioned = std::ptr::null_mut();
+        let as_dlpack_fn = fill_value.as_dlpack.expect("as_dlpack is missing on fill_value");
+        let status = unsafe {
+            as_dlpack_fn(fill_value.ptr, &mut dlpack_ptr, cpu_device, std::ptr::null(), max_version)
+        };
+        crate::errors::check_status(status).expect("failed to extract fill_value as DLPack");
+
+        let dlpack_tensor = unsafe { &*dlpack_ptr };
         
         // Extract scalar value based on dtype
         let dtype = dlpack_tensor.dl_tensor.dtype;
@@ -343,8 +349,14 @@ where
                     panic!("dtype mismatch: fill_value int does not match array type");
                 }
             }
-            _ => panic!("unsupported dtype code: {}", dtype.code),
+            _ => panic!("unsupported dtype code: {:?}", dtype.code),
         };
+
+        if let Some(deleter) = dlpack_tensor.deleter {
+            unsafe {
+                deleter(dlpack_ptr);
+            }
+        }
         
         Box::new(ndarray::ArcArray::from_elem(shape, scalar))
     }
