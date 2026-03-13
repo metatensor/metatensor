@@ -348,7 +348,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, fill_value)?;
+        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, &fill_value)?;
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())
@@ -455,7 +455,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
 
-        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, fill_value)?;
+        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, &fill_value)?;
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())

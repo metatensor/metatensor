@@ -327,18 +327,18 @@ where
         let scalar: T = match dtype.code {
             dlpk::sys::DLDataTypeCode::kDLFloat => {
                 if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
-                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<f64>() as T }
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
                 } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
-                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<f32>() as T }
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
                 } else {
                     panic!("dtype mismatch: fill_value float does not match array type");
                 }
             }
             dlpk::sys::DLDataTypeCode::kDLInt => {
                 if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
-                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<i64>() as T }
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
                 } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
-                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<i32>() as T }
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
                 } else {
                     panic!("dtype mismatch: fill_value int does not match array type");
                 }
