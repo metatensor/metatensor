@@ -8,7 +8,7 @@ from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 import numpy as np
 
 from . import data
-from ._c_api import c_uintptr_t, mts_block_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
@@ -128,8 +128,17 @@ class TensorMap:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
-            self._lib.mts_tensormap_free(self._ptr)
+        try:
+            if (
+                hasattr(self, "_lib")
+                and self._lib is not None
+                and hasattr(self, "_ptr")
+            ):
+                if self._ptr is not None:
+                    self._lib.mts_tensormap_free(self._ptr)
+        except Exception:
+            # Ignore errors during garbage collection
+            pass
 
     def __copy__(self):
         raise ValueError(
@@ -782,15 +791,16 @@ class TensorMap:
 
 
 def _make_fill_value_array(tensor_map, fill_value):
-    """Create a ctypes pointer to an mts_array_t wrapping a shape-(1,) array
+    """Create an mts_array_t wrapping a shape-(1,) array
     with the given scalar fill_value.
 
     The dtype is inferred from the first block's values array.
-    Returns a ctypes.POINTER(mts_array_t) suitable for passing to C functions.
-    Returns None if the TensorMap has no blocks.
+    Returns an mts_array_t struct suitable for passing to C functions.
+    For empty TensorMaps, returns a zero-initialized struct.
     """
     if len(tensor_map) == 0:
-        return None
+        # Return zero-initialized mts_array_t for empty TensorMaps
+        return mts_array_t()
     block = tensor_map.block_by_id(0)
     values = block.values
 
@@ -800,22 +810,20 @@ def _make_fill_value_array(tensor_map, fill_value):
         if isinstance(values, torch.Tensor):
             fv_array = torch.tensor([fill_value], dtype=values.dtype)
             mts = data.create_mts_array(fv_array)
-            return ctypes.pointer(mts)
+            return data.create_mts_array(fv_array)
     except ImportError:
         pass
 
     # numpy fallback
     fv_array = np.array([fill_value], dtype=values.dtype)
     mts = data.create_mts_array(fv_array)
-    return ctypes.pointer(mts)
+    return data.create_mts_array(fv_array)
 
 
-def _cleanup_fill_value(fv_ptr):
+def _cleanup_fill_value(fv_array):
     """Destroy the fill_value mts_array_t created by _make_fill_value_array."""
-    if fv_ptr is not None:
-        mts = fv_ptr.contents
-        if mts.destroy is not None:
-            mts.destroy(mts.ptr)
+    if fv_array.destroy:
+        fv_array.destroy(fv_array.ptr)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

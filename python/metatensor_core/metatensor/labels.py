@@ -362,9 +362,13 @@ class Labels:
         return obj
 
     def __del__(self):
-        if hasattr(self, "_lib") and self._lib is not None:
-            if hasattr(self, "_labels") and self._labels is not None:
-                self._lib.mts_labels_free(self._labels)
+        try:
+            if hasattr(self, "_lib") and self._lib is not None:
+                if hasattr(self, "_labels") and self._labels is not None:
+                    self._lib.mts_labels_free(self._labels)
+        except Exception:
+            # Ignore errors during garbage collection
+            pass
 
     def __deepcopy__(self, _memodict):
         labels = mts_labels_t()
