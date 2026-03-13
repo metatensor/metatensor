@@ -680,12 +680,23 @@ public:
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                const auto* cxx_fill = static_cast<const DataArrayBase*>(fill_value.ptr);
+                // Use as_dlpack to safely extract fill_value from any array implementation
+                DLDevice cpu_device = {kDLCPU, 0};
+                DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+                DLManagedTensorVersioned* fill_managed = nullptr;
+                auto status = fill_value.as_dlpack(fill_value.ptr, &fill_managed, cpu_device, nullptr, max_version);
+                if (status != MTS_SUCCESS) {
+                    throw Error("failed to extract fill_value as DLPack");
+                }
+                auto fill_dlpack = DLPackArray<T>(fill_managed);
+                auto scalar = fill_dlpack(0);
+                // Create a temporary SimpleDataArray to pass to create()
+                auto temp_fill = SimpleDataArray<T>(std::vector<uintptr_t>{1}, scalar);
                 auto cxx_shape = std::vector<size_t>();
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape), *cxx_fill);
+                auto copy = cxx_array->create(std::move(cxx_shape), temp_fill);
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
             }, array, shape, shape_count, fill_value, new_array);
         };

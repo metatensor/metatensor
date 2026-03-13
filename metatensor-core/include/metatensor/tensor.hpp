@@ -321,7 +321,7 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_properties(Labels(keys_to_move), sort_samples, fv);
     }
 
     /// Convenience overload with a single string
@@ -331,7 +331,7 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fv);
     }
 
     /// Merge blocks with the same value for selected keys dimensions along the
@@ -415,7 +415,7 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_samples(Labels(keys_to_move), sort_samples, fv);
     }
 
     /// Convenience overload with a single string
@@ -425,7 +425,7 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fv);
     }
 
     /// Move the given `dimensions` from the component labels to the property

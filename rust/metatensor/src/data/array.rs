@@ -24,7 +24,9 @@ pub trait Array: std::any::Any + Send + Sync {
     /// data location, etc.) and the requested `shape`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`.
-    fn create(&self, shape: &[usize], fill_value: &dyn Array) -> Box<dyn Array>;
+    /// The `fill_value` is passed as an `mts_array_t` to support cross-implementation
+    /// usage without unsafe casts.
+    fn create(&self, shape: &[usize], fill_value: mts_array_t) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
@@ -225,9 +227,11 @@ unsafe extern "C" fn rust_array_create(
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
 
-        // Extract the fill_value Array from its mts_array_t wrapper
-        let fill_array = &*fill_value.ptr.cast::<Box<dyn Array>>();
-        let new_array = (*array).create(shape, fill_array.as_ref());
+        
+        // Pass fill_value directly as mts_array_t - the implementation will use
+        // as_dlpack or other methods to extract data while preserving dtype/device
+        let new_array = (*array).create(shape, fill_value);
+        
 
         *array_storage = new_array.into();
     })
@@ -311,11 +315,38 @@ where
         self
     }
 
-    fn create(&self, shape: &[usize], fill_value: &dyn Array) -> Box<dyn Array> {
-        let fv = fill_value.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>()
-            .expect("fill_value must be the same array type");
-        let scalar = fv.as_slice().expect("fill_value must be contiguous")[0].clone();
-        return Box::new(ndarray::ArcArray::from_elem(shape, scalar));
+    fn create(&self, shape: &[usize], fill_value: mts_array_t) -> Box<dyn Array> {
+        // Use as_dlpack to extract scalar from fill_value, preserving dtype and device
+        let cpu_device = DLDevice::cpu();
+        let max_version = DLPackVersion::current();
+        let dlpack_tensor = fill_value.as_dlpack(cpu_device, None, max_version)
+            .expect("failed to extract fill_value as DLPack");
+        
+        // Extract scalar value based on dtype
+        let dtype = dlpack_tensor.dl_tensor.dtype;
+        let scalar: T = match dtype.code {
+            dlpk::sys::DLDataTypeCode::kDLFloat => {
+                if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
+                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<f64>() as T }
+                } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
+                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<f32>() as T }
+                } else {
+                    panic!("dtype mismatch: fill_value float does not match array type");
+                }
+            }
+            dlpk::sys::DLDataTypeCode::kDLInt => {
+                if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
+                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<i64>() as T }
+                } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
+                    unsafe { *dlpack_tensor.dl_tensor.data.cast::<i32>() as T }
+                } else {
+                    panic!("dtype mismatch: fill_value int does not match array type");
+                }
+            }
+            _ => panic!("unsupported dtype code: {}", dtype.code),
+        };
+        
+        Box::new(ndarray::ArcArray::from_elem(shape, scalar))
     }
 
     fn copy(&self) -> Box<dyn Array> {
@@ -525,7 +556,7 @@ impl Array for EmptyArray {
         self
     }
 
-    fn create(&self, shape: &[usize], _fill_value: &dyn Array) -> Box<dyn Array> {
+    fn create(&self, shape: &[usize], _fill_value: mts_array_t) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
