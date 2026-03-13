@@ -809,14 +809,14 @@ def _make_fill_value_array(tensor_map, fill_value):
 
         if isinstance(values, torch.Tensor):
             fv_array = torch.tensor([fill_value], dtype=values.dtype)
-            mts = data.create_mts_array(fv_array)
+            data.create_mts_array(fv_array)
             return data.create_mts_array(fv_array)
     except ImportError:
         pass
 
     # numpy fallback
     fv_array = np.array([fill_value], dtype=values.dtype)
-    mts = data.create_mts_array(fv_array)
+    data.create_mts_array(fv_array)
     return data.create_mts_array(fv_array)
 
 
