@@ -376,11 +376,7 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
         save_labels(archive, &block.properties)?;
     }
 
-    // Sort gradient parameters to ensure deterministic serialization order
-    let mut gradient_params: Vec<_> = block.gradients().keys().collect();
-    gradient_params.sort_unstable();
-    for parameter in gradient_params {
-        let gradient = &block.gradients()[parameter];
+    for (parameter, gradient) in block.gradients() {
         let prefix = format!("{}gradients/{}/", prefix, parameter);
         write_single_block(archive, &prefix, false, gradient)?;
     }
