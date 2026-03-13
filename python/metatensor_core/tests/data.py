@@ -106,7 +106,7 @@ class MtsArrayMixin:
             mts_array.ptr,
             new_shape,
             len(new_shape),
-            ctypes.pointer(fv_mts),
+            fv_mts,
             new_mts_array,
         )
         assert status == MTS_SUCCESS
