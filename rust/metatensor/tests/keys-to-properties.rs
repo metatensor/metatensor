@@ -3,15 +3,14 @@
 use metatensor::{Labels, TensorMap};
 
 mod utils;
-use utils::{example_tensor, example_block, example_labels, make_fill_value, destroy_fill_value};
+use utils::{example_tensor, example_block, example_labels, make_fill_value};
 
 use ndarray::ArrayD;
 
 #[test]
 fn sorted_samples() {
-    let fv = make_fill_value(0.0);
     let keys_to_move = Labels::empty(vec!["key_1"]);
-    let tensor = example_tensor().keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = example_tensor().keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     assert_eq!(tensor.keys(), &example_labels(vec!["key_2"], vec![[0], [2], [3]]));
 
@@ -76,9 +75,8 @@ fn sorted_samples() {
 
 #[test]
 fn unsorted_samples() {
-    let fv = make_fill_value(0.0);
     let keys_to_move = Labels::empty(vec!["key_1"]);
-    let tensor = example_tensor().keys_to_properties(&keys_to_move, false, &fv).unwrap();
+    let tensor = example_tensor().keys_to_properties(&keys_to_move, false, make_fill_value(0.0)).unwrap();
 
     assert_eq!(tensor.keys().count(), 3);
 
@@ -91,9 +89,8 @@ fn unsorted_samples() {
 
 #[test]
 fn user_provided_entries_different_properties() {
-    let fv = make_fill_value(0.0);
     let keys_to_move = Labels::new(["key_1"], &[[0]]);
-    let result = example_tensor().keys_to_properties(&keys_to_move, false, &fv);
+    let result = example_tensor().keys_to_properties(&keys_to_move, false, make_fill_value(0.0));
 
     assert_eq!(
         result.unwrap_err().message,
@@ -105,7 +102,6 @@ fn user_provided_entries_different_properties() {
 #[test]
 #[allow(clippy::vec_init_then_push)]
 fn empty_properties() {
-    let fv = make_fill_value(0.0);
     let mut blocks = Vec::new();
     blocks.push(example_block(
         /* samples          */ vec![[0], [2], [4]],
@@ -132,7 +128,7 @@ fn empty_properties() {
     let mut tensor = TensorMap::new(keys, blocks).unwrap();
 
     let keys_to_move = Labels::empty(vec!["key_1"]);
-    tensor = tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    tensor = tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
@@ -185,10 +181,9 @@ fn example_tensor_same_properties_in_all_blocks() -> TensorMap {
 
 #[test]
 fn keys_to_move_in_different_order() {
-    let fv = make_fill_value(0.0);
     let keys_to_move = Labels::empty(vec!["key_1", "key_2"]);
     let reference_tensor = example_tensor_same_properties_in_all_blocks();
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
@@ -209,7 +204,7 @@ fn keys_to_move_in_different_order() {
     );
 
     let keys_to_move = Labels::empty(vec!["key_2", "key_1"]);
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
@@ -233,11 +228,10 @@ fn keys_to_move_in_different_order() {
 #[test]
 #[allow(clippy::too_many_lines)]
 fn user_provided_entries() {
-    let fv = make_fill_value(0.0);
     let reference_tensor = example_tensor_same_properties_in_all_blocks();
 
     let keys_to_move = Labels::new(["key_1"], &[[0], [1]]);
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     // The new first block contains the old first two blocks merged
     let block = tensor.block_by_id(0);
@@ -291,7 +285,7 @@ fn user_provided_entries() {
 
     // only keep a subset of the data
     let keys_to_move = Labels::new(["key_1"], &[[0]]);
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     let block = tensor.block_by_id(0);
     assert_eq!(
@@ -336,7 +330,7 @@ fn user_provided_entries() {
     /**********************************************************************/
     // request keys not present in the input
     let keys_to_move = Labels::new(["key_1"], &[[0], [1], [2]]);
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(0.0)).unwrap();
 
     let block = tensor.block_by_id(0);
     assert_eq!(
@@ -389,11 +383,10 @@ fn user_provided_entries() {
 
 #[test]
 fn nan_fill_value() {
-    let fv = make_fill_value(f64::NAN);
     let reference_tensor = example_tensor_same_properties_in_all_blocks();
 
     let keys_to_move = Labels::new(["key_1"], &[[0], [1]]);
-    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, &fv).unwrap();
+    let tensor = reference_tensor.keys_to_properties(&keys_to_move, true, make_fill_value(f64::NAN)).unwrap();
 
     // The new first block merges blocks with key_1=0 and key_1=1.
     // Samples present in one block but missing in the other should be NaN.

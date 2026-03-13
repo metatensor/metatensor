@@ -12,14 +12,6 @@ pub fn make_fill_value(scalar: f64) -> mts_array_t {
     mts_array_t::from(data)
 }
 
-/// Destroy an mts_array_t (call its destroy callback)
-pub fn destroy_fill_value(fv: &mut mts_array_t) {
-    if let Some(destroy) = fv.destroy {
-        unsafe { destroy(fv.ptr); }
-    }
-    fv.ptr = std::ptr::null_mut();
-}
-
 pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
     let mut builder = LabelsBuilder::new(names);
     for entry in values {
