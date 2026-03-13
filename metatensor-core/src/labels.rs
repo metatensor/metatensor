@@ -370,11 +370,6 @@ impl Labels {
         })
     }
 
-    /// Check if the CPU values have already been materialized
-    pub(crate) fn values_materialized(&self) -> bool {
-        self.values.get().is_some()
-    }
-
     /// Pre-fill the cached CPU values without triggering materialization
     /// from the array. Used when the caller has values from a known-good
     /// source (e.g., device transfer where the source Labels was validated).
