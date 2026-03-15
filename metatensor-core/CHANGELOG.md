@@ -19,6 +19,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
+- Added `fill_value` parameter to `mts_tensormap_keys_to_properties` and
+  `mts_tensormap_keys_to_samples`. The fill value is an `mts_array_t` with
+  shape `(1,)` and the same dtype as the data, used to fill missing entries
+  when merging blocks. Defaults to zero in the Python and C++ wrappers.
+- Added `fill_value` parameter to the `mts_array_t.create` callback, which
+  receives the fill value to use when creating new arrays during block merging.
 - Added `mts_array_t.device` function pointer to query the device of an array
   without exporting via DLPack. Implemented for all array backends (Rust
   `ArcArray`, `MmapArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,

@@ -8,7 +8,7 @@ from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 import numpy as np
 
 from . import data
-from ._c_api import c_uintptr_t, mts_block_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
@@ -512,6 +512,7 @@ class TensorMap:
         keys_to_move: Union[str, Sequence[str]],
         *,
         sort_samples=True,
+        fill_value=0.0,
     ) -> "TensorMap":
         """
         Merge blocks along the samples axis, adding ``keys_to_move`` to the end of the
@@ -538,12 +539,19 @@ class TensorMap:
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in the
             order in which they appear in the original blocks
+        :param fill_value: scalar value used to fill missing entries in the merged
+            blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
+
+        .. note::
+
+            The fill_value also applies to gradient blocks. If using NaN,
+            gradient arrays for missing entries will also contain NaN.
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
-
+        fv_mts = _make_fill_value_array(self, fill_value)
         ptr = self._lib.mts_tensormap_keys_to_samples(
-            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples
+            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
         )
         return TensorMap._from_ptr(ptr)
 
@@ -568,6 +576,7 @@ class TensorMap:
         keys_to_move: Union[str, Sequence[str], Labels],
         *,
         sort_samples=True,
+        fill_value=0.0,
     ) -> "TensorMap":
         """
         Merge blocks along the properties direction, adding ``keys_to_move`` at the
@@ -594,7 +603,7 @@ class TensorMap:
         in ``keys_to_move``, blocks with properties ``p=1, 2`` will result in ``a, p =
         (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no block/missing
         sample) for a given property in the merged block, then the value will be set to
-        zero.
+        the ``fill_value``.
 
         When using a non empty :py:class:`Labels` for ``keys_to_move``, the properties
         labels of all the merged blocks must take the same values.
@@ -607,11 +616,19 @@ class TensorMap:
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in the
             order in which they appear in the original blocks
+        :param fill_value: scalar value used to fill missing entries in the merged
+            blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
+
+        .. note::
+
+            The fill_value also applies to gradient blocks. If using NaN,
+            gradient arrays for missing entries will also contain NaN.
         """
         keys_to_move = _normalize_keys_to_move(keys_to_move)
+        fv_mts = _make_fill_value_array(self, fill_value)
         ptr = self._lib.mts_tensormap_keys_to_properties(
-            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples
+            self._ptr, keys_to_move._as_mts_labels_t(), sort_samples, fv_mts
         )
         return TensorMap._from_ptr(ptr)
 
@@ -756,6 +773,34 @@ class TensorMap:
             key = keys[i].decode("utf8")
             result[key] = self.get_info(key)
         return result
+
+
+def _make_fill_value_array(tensor_map, fill_value):
+    """Create an mts_array_t wrapping a shape-(1,) array
+    with the given scalar fill_value.
+
+    The dtype is inferred from the first block's values array.
+    Returns an mts_array_t struct suitable for passing to C functions.
+    For empty TensorMaps, returns a zero-initialized struct.
+    """
+    if len(tensor_map) == 0:
+        # Return zero-initialized mts_array_t for empty TensorMaps
+        return mts_array_t()
+    block = tensor_map.block_by_id(0)
+    values = block.values
+
+    try:
+        import torch
+
+        if isinstance(values, torch.Tensor):
+            fv_array = torch.tensor([fill_value], dtype=values.dtype)
+            return data.create_mts_array(fv_array)
+    except ImportError:
+        pass
+
+    # numpy fallback
+    fv_array = np.array([fill_value], dtype=values.dtype)
+    return data.create_mts_array(fv_array)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

@@ -16,6 +16,16 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added `fill_value` parameter to `TensorMap::keys_to_properties` and
+  `TensorMap::keys_to_samples`. The fill value is an `&mts_array_t` with
+  shape `(1,)` and the same dtype, used to fill missing entries when merging
+  blocks.
+- The `Array::create` trait method now takes a `fill_value: &dyn Array`
+  parameter. Implementations extract the scalar and use it to fill the new
+  array instead of defaulting to zero.
+
 ### Removed
 
 - Removed `Array::data()` trait method and all implementations. Use

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
-use crate::data::mts_data_movement_t;
+use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
@@ -28,7 +28,7 @@ impl TensorMap {
     ///
     /// This function is only implemented if all merged block have the same
     /// property labels.
-    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool, fill_value: mts_array_t) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -67,6 +67,7 @@ impl TensorMap {
                 &blocks_to_merge,
                 &names_to_move,
                 sort_samples,
+                &fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -97,6 +98,7 @@ impl TensorMap {
                     &blocks_to_merge,
                     &names_to_move,
                     sort_samples,
+                    &fill_value,
                 )?);
             }
         }
@@ -113,6 +115,7 @@ fn merge_blocks_along_samples(
     blocks_to_merge: &[KeyAndBlock],
     extracted_names: &[&str],
     sort_samples: bool,
+    fill_value: &mts_array_t,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
@@ -160,7 +163,7 @@ fn merge_blocks_along_samples(
 
     let mut new_shape = first_block.values.shape()?.to_vec();
     new_shape[0] = merged_samples.count();
-    let mut new_data = first_block.values.create(&new_shape)?;
+    let mut new_data = first_block.values.create(&new_shape, fill_value)?;
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
     for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
@@ -192,7 +195,7 @@ fn merge_blocks_along_samples(
 
         let mut new_shape = first_gradient.values.shape()?.to_vec();
         new_shape[0] = new_gradient_samples.count();
-        let mut new_gradient = first_block.values.create(&new_shape)?;
+        let mut new_gradient = first_block.values.create(&new_shape, fill_value)?;
         let new_components = first_gradient.components.to_vec();
 
         for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {

@@ -23,8 +23,10 @@ pub trait Array: std::any::Any + Send + Sync {
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    fn create(&self, shape: &[usize]) -> Box<dyn Array>;
+    /// The new array should be filled with the scalar value from `fill_value`.
+    /// The `fill_value` is passed as an `mts_array_t` to support cross-implementation
+    /// usage without unsafe casts.
+    fn create(&self, shape: &[usize], fill_value: mts_array_t) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
@@ -214,6 +216,7 @@ unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
+    fill_value: mts_array_t,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
@@ -223,7 +226,12 @@ unsafe extern "C" fn rust_array_create(
         let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        let new_array = (*array).create(shape);
+
+        
+        // Pass fill_value directly as mts_array_t - the implementation will use
+        // as_dlpack or other methods to extract data while preserving dtype/device
+        let new_array = (*array).create(shape, fill_value);
+        
 
         *array_storage = new_array.into();
     })
@@ -307,8 +315,50 @@ where
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::ArcArray::from_elem(shape, T::default()));
+    fn create(&self, shape: &[usize], fill_value: mts_array_t) -> Box<dyn Array> {
+        // Use as_dlpack to extract scalar from fill_value, preserving dtype and device
+        let cpu_device = DLDevice::cpu();
+        let max_version = DLPackVersion::current();
+        let mut dlpack_ptr: *mut dlpk::sys::DLManagedTensorVersioned = std::ptr::null_mut();
+        let as_dlpack_fn = fill_value.as_dlpack.expect("as_dlpack is missing on fill_value");
+        let status = unsafe {
+            as_dlpack_fn(fill_value.ptr, &mut dlpack_ptr, cpu_device, std::ptr::null(), max_version)
+        };
+        crate::errors::check_status(status).expect("failed to extract fill_value as DLPack");
+
+        let dlpack_tensor = unsafe { &*dlpack_ptr };
+        
+        // Extract scalar value based on dtype
+        let dtype = dlpack_tensor.dl_tensor.dtype;
+        let scalar: T = match dtype.code {
+            dlpk::sys::DLDataTypeCode::kDLFloat => {
+                if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
+                } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
+                } else {
+                    panic!("dtype mismatch: fill_value float does not match array type");
+                }
+            }
+            dlpk::sys::DLDataTypeCode::kDLInt => {
+                if dtype.bits == 64 && std::mem::size_of::<T>() == 8 {
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
+                } else if dtype.bits == 32 && std::mem::size_of::<T>() == 4 {
+                    unsafe { std::ptr::read(dlpack_tensor.dl_tensor.data.cast::<T>()) }
+                } else {
+                    panic!("dtype mismatch: fill_value int does not match array type");
+                }
+            }
+            _ => panic!("unsupported dtype code: {:?}", dtype.code),
+        };
+
+        if let Some(deleter) = dlpack_tensor.deleter {
+            unsafe {
+                deleter(dlpack_ptr);
+            }
+        }
+        
+        Box::new(ndarray::ArcArray::from_elem(shape, scalar))
     }
 
     fn copy(&self) -> Box<dyn Array> {
@@ -518,7 +568,7 @@ impl Array for EmptyArray {
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
+    fn create(&self, shape: &[usize], _fill_value: mts_array_t) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
@@ -579,7 +629,9 @@ mod tests {
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
 
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
+        let fv_data: Box<dyn Array> = Box::new(ndarray::ArcArray::<f64, _>::zeros(vec![1]));
+        let fv = mts_array_t::from(fv_data);
+        let created = mts_array.create(&[2, 3, 4], &fv).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
     }
 
@@ -649,7 +701,9 @@ mod tests {
         }
 
         // And creation should make an array of the same type (i32)
-        let created = mts_array.create(&[1, 1]).unwrap();
+        let fv_data: Box<dyn Array> = Box::new(ndarray::ArcArray::<i32, _>::from_elem(vec![1], 0));
+        let fv = mts_array_t::from(fv_data);
+        let created = mts_array.create(&[1, 1], &fv).unwrap();
         unsafe {
             let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
             let status = (created.as_dlpack.unwrap())(

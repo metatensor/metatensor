@@ -260,8 +260,71 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
     wrapper.c_shape[:] = shape
 
 
+def _extract_scalar_from_mts_array(mts_array):
+    """
+    Extract a scalar value from an mts_array_t using as_dlpack.
+
+    This is the generic, safe way to get data from any array implementation,
+    not just Python wrappers.
+    """
+    from .._c_api import DLDevice, DLPackVersion
+    from ..status import _check_status
+    from .extract import _DLPACK_TO_NUMPY
+
+    # Get shape to verify it's a scalar
+    shape_ptr = ctypes.POINTER(c_uintptr_t)()
+    shape_count = c_uintptr_t()
+    status = mts_array.shape(
+        mts_array.ptr, ctypes.byref(shape_ptr), ctypes.byref(shape_count)
+    )
+    _check_status(status)
+
+    if shape_count.value != 1:
+        raise ValueError(
+            "fill_value must be a scalar (shape (1,)), "
+            f"got shape with {shape_count.value} dimensions"
+        )
+
+    # Use as_dlpack to get the data
+    dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+    version = DLPackVersion(major=1, minor=0)
+    status = mts_array.as_dlpack(
+        mts_array.ptr,
+        ctypes.byref(dl_managed_ptr),
+        device,
+        None,
+        version,
+    )
+    _check_status(status)
+
+    try:
+        dl_tensor = dl_managed_ptr.contents.dl_tensor
+        data_ptr = dl_tensor.data
+        dtype_code = dl_tensor.dtype.code
+        dtype_bits = dl_tensor.dtype.bits
+
+        np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+        if np_dtype is None:
+            raise ValueError(
+                f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+            )
+
+        # Create a numpy array from the pointer
+        c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+        array = np.ctypeslib.as_array(
+            ctypes.cast(data_ptr, ctypes.POINTER(c_type)), shape=(1,)
+        ).copy()  # Copy to avoid keeping DLPack alive
+
+        return array[0]
+    finally:
+        # Free the DLPack tensor
+        if dl_managed_ptr:
+            dl_managed_ptr.contents.deleter(dl_managed_ptr)
+
+
 @catch_exceptions
-def _mts_array_create(this, shape_ptr, shape_count, new_array):
+def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
@@ -269,10 +332,13 @@ def _mts_array_create(this, shape_ptr, shape_count, new_array):
         shape.append(shape_ptr[i])
     dtype = wrapper.array.dtype
 
+    # Extract the scalar fill value from the fill_value mts_array_t using as_dlpack
+    scalar = _extract_scalar_from_mts_array(fill_value)
+
     if _is_numpy_array(wrapper.array):
-        array = np.zeros(shape, dtype=dtype)
+        array = np.full(shape, scalar, dtype=dtype)
     elif _is_torch_array(wrapper.array):
-        array = torch.zeros(shape, dtype=dtype, device=wrapper.array.device)
+        array = torch.full(shape, scalar, dtype=dtype, device=wrapper.array.device)
 
     new_array[0] = create_mts_array(array)
 

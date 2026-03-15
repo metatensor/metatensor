@@ -7,6 +7,7 @@ use std::collections::BTreeSet;
 
 use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
 
+use crate::data::mts_array_t;
 use crate::{TensorMap, TensorBlock, Error};
 
 use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
@@ -337,6 +338,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,
+    fill_value: mts_array_t,
 ) -> *mut mts_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
@@ -345,10 +347,8 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
         check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
-        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples)?;
 
-        // force the closure to capture the full unwind_wrapper, not just
-        // unwind_wrapper.0
+        let moved = (*tensor).keys_to_properties(&keys_to_move, sort_samples, fill_value)?;
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())
@@ -445,6 +445,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     tensor: *const mts_tensormap_t,
     keys_to_move: mts_labels_t,
     sort_samples: bool,
+    fill_value: mts_array_t,
 ) -> *mut mts_tensormap_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
@@ -453,10 +454,8 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
         check_pointers_non_null!(tensor);
 
         let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
-        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples)?;
 
-        // force the closure to capture the full unwind_wrapper, not just
-        // unwind_wrapper.0
+        let moved = (*tensor).keys_to_samples(&keys_to_move, sort_samples, fill_value)?;
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_tensormap_t::into_boxed_raw(moved);
         Ok(())

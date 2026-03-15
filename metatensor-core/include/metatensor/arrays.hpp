@@ -671,11 +671,12 @@ public:
             }, array, new_array);
         };
 
-        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
+        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t fill_value, mts_array_t* new_array) {
             return details::catch_exceptions([](
                 const void* array,
                 const uintptr_t* shape,
                 uintptr_t shape_count,
+                mts_array_t fill_value,
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -683,9 +684,9 @@ public:
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape));
+                auto copy = cxx_array->create(std::move(cxx_shape), fill_value);
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-            }, array, shape, shape_count, new_array);
+            }, array, shape, shape_count, fill_value, new_array);
         };
 
         array.as_dlpack = [](
@@ -795,8 +796,12 @@ public:
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
+    /// The new array should be filled with the scalar value from
+    /// `fill_value`, which has the same dtype as this array.
+    virtual std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t fill_value
+    ) const = 0;
 
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
@@ -909,8 +914,38 @@ public:
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t fill_value
+    ) const override {
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        DLManagedTensorVersioned* fill_managed = nullptr;
+        auto status = fill_value.as_dlpack(fill_value.ptr, &fill_managed, cpu_device, nullptr, max_version);
+        if (status != MTS_SUCCESS) {
+            throw Error("failed to extract fill_value as DLPack");
+        }
+        
+        T scalar;
+        auto code = fill_managed->dl_tensor.dtype.code;
+        auto bits = fill_managed->dl_tensor.dtype.bits;
+        if (code == kDLFloat && bits == 64) {
+            scalar = static_cast<T>(*static_cast<const double*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLFloat && bits == 32) {
+            scalar = static_cast<T>(*static_cast<const float*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLInt && bits == 32) {
+            scalar = static_cast<T>(*static_cast<const int32_t*>(fill_managed->dl_tensor.data));
+        } else if (code == kDLInt && bits == 64) {
+            scalar = static_cast<T>(*static_cast<const int64_t*>(fill_managed->dl_tensor.data));
+        } else {
+            if (fill_managed->deleter) fill_managed->deleter(fill_managed);
+            throw Error("unsupported fill_value dtype");
+        }
+        if (fill_managed->deleter) {
+            fill_managed->deleter(fill_managed);
+        }
+
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape), scalar));
     }
 
     void move_data(
@@ -1190,7 +1225,10 @@ public:
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t /*fill_value*/
+    ) const override {
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
 

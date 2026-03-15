@@ -276,10 +276,10 @@ TORCH_LIBRARY(metatensor, m) {
             {torch::arg("selection") = torch::IValue()}
         )
         .def("keys_to_samples", &TensorMapHolder::keys_to_samples, DOCSTRING,
-            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true}
+            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true, torch::arg("fill_value") = 0}
         )
         .def("keys_to_properties", &TensorMapHolder::keys_to_properties, DOCSTRING,
-            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true}
+            {torch::arg("keys_to_move"), torch::arg("sort_samples") = true, torch::arg("fill_value") = 0}
         )
         .def("components_to_properties", &TensorMapHolder::components_to_properties, DOCSTRING,
             {torch::arg("dimensions")}

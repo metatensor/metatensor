@@ -250,11 +250,14 @@ typedef struct mts_array_t {
    * `new_array`. The number of elements in the `shape` array should be given
    * in `shape_count`.
    *
-   * The new array should be filled with zeros.
+   * The new array should be filled with the scalar value from `fill_value`,
+   * which is a CPU `mts_array_t` with shape `(1,)` and the same dtype as
+   * this array.
    */
   mts_status_t (*create)(const void *array,
                          const uintptr_t *shape,
                          uintptr_t shape_count,
+                         struct mts_array_t fill_value,
                          struct mts_array_t *new_array);
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
@@ -952,7 +955,8 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensormap_t *tensor,
                                                          struct mts_labels_t keys_to_move,
-                                                         bool sort_samples);
+                                                         bool sort_samples,
+                                                         struct mts_array_t fill_value);
 
 /**
  * Move the given dimensions from the component labels to the property labels
@@ -1005,7 +1009,8 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap_t *tensor,
                                                       struct mts_labels_t keys_to_move,
-                                                      bool sort_samples);
+                                                      bool sort_samples,
+                                                      struct mts_array_t fill_value);
 
 /**
  * Set or update the info (i.e. global metadata) for `key` to `value` for this

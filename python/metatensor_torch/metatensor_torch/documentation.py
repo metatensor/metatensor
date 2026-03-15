@@ -1093,6 +1093,7 @@ class TensorMap:
         self,
         keys_to_move: Union[StrSequence, Labels],
         sort_samples: bool = True,
+        fill_value: float = 0,
     ) -> "TensorMap":
         """
         Merge blocks along the samples axis, adding ``keys_to_move`` to the end
@@ -1120,6 +1121,8 @@ class TensorMap:
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
         """
 
@@ -1127,6 +1130,7 @@ class TensorMap:
         self,
         keys_to_move: Union[StrSequence, Labels],
         sort_samples: bool = True,
+        fill_value: float = 0,
     ) -> "TensorMap":
         """
         Merge blocks along the properties direction, adding ``keys_to_move`` at
@@ -1155,7 +1159,7 @@ class TensorMap:
         ``keys_to_move``, blocks with properties ``p=1, 2`` will result in
         ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no
         block/missing sample) for a given property in the merged block, then the
-        value will be set to zero.
+        value will be set to the ``fill_value``.
 
         When using a non empty :py:class:`Labels` for ``keys_to_move``, the
         properties labels of all the merged blocks must take the same values.
@@ -1168,6 +1172,8 @@ class TensorMap:
         :param keys_to_move: description of the keys to move
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Defaults to 0.0.
         :return: a new :py:class:`TensorMap` with merged blocks
         """
 

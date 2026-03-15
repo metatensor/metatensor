@@ -17,6 +17,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+
+- Added `fill_value` parameter (default 0.0) to `TensorMap::keys_to_properties`
+  and `TensorMap::keys_to_samples` in both C++ and Python. Missing entries in
+  merged blocks are filled with this value instead of always using zero.
+
 ### Fixed
 
 - Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called

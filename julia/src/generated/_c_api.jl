@@ -87,7 +87,7 @@ struct mts_array_t
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
-    create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, Ptr{mts_array_t}) -> mts_status_t =#
+    create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, mts_array_t, Ptr{mts_array_t}) -> mts_status_t =#
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
     destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
@@ -353,11 +353,11 @@ function mts_tensormap_blocks_matching(tensor::Ptr{mts_tensormap_t}, block_index
     )
 end
 
-function mts_tensormap_keys_to_properties(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, sort_samples::Cbool)
+function mts_tensormap_keys_to_properties(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, sort_samples::Cbool, fill_value::mts_array_t)
     ccall((:mts_tensormap_keys_to_properties, libmetatensor), 
         Ptr{mts_tensormap_t},
-        (Ptr{mts_tensormap_t}, mts_labels_t, Cbool,),
-        tensor, keys_to_move, sort_samples
+        (Ptr{mts_tensormap_t}, mts_labels_t, Cbool, mts_array_t,),
+        tensor, keys_to_move, sort_samples, fill_value
     )
 end
 
@@ -369,11 +369,11 @@ function mts_tensormap_components_to_properties(tensor::Ptr{mts_tensormap_t}, di
     )
 end
 
-function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, sort_samples::Cbool)
+function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, sort_samples::Cbool, fill_value::mts_array_t)
     ccall((:mts_tensormap_keys_to_samples, libmetatensor), 
         Ptr{mts_tensormap_t},
-        (Ptr{mts_tensormap_t}, mts_labels_t, Cbool,),
-        tensor, keys_to_move, sort_samples
+        (Ptr{mts_tensormap_t}, mts_labels_t, Cbool, mts_array_t,),
+        tensor, keys_to_move, sort_samples, fill_value
     )
 end
 

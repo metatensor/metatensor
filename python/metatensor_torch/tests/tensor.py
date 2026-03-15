@@ -610,20 +610,24 @@ class TensorMapWrap:
         self,
         keys_to_move: Union[str, List[str], Labels],
         sort_samples: bool,
+        fill_value: float = 0,
     ) -> TensorMap:
         return self._c.keys_to_samples(
             keys_to_move=keys_to_move,
             sort_samples=sort_samples,
+            fill_value=fill_value,
         )
 
     def keys_to_properties(
         self,
         keys_to_move: Union[str, List[str], Labels],
         sort_samples: bool,
+        fill_value: float = 0,
     ) -> TensorMap:
         return self._c.keys_to_properties(
             keys_to_move=keys_to_move,
             sort_samples=sort_samples,
+            fill_value=fill_value,
         )
 
     def components_to_properties(
@@ -719,3 +723,47 @@ def test_script_variable_scoping(tensor):
     # This segfaults
     scripted = torch.jit.script(problematic)
     assert scripted(tensor).item() == 42.0
+
+
+def test_keys_to_properties_fill_value_nan(tensor):
+    result = tensor.keys_to_properties("key_1", fill_value=float("nan"))
+
+    block = result.block_by_id(0)
+    values = block.values
+
+    expected = torch.tensor(
+        [
+            [[1.0, 2.0, 2.0, 2.0]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+        ]
+    )
+
+    # Check non-NaN positions match
+    nan_mask = torch.isnan(expected)
+    assert torch.all(torch.isnan(values) == nan_mask)
+    assert torch.all(values[~nan_mask] == expected[~nan_mask])
+
+
+def test_keys_to_properties_fill_value_default(tensor):
+    tensor_default = tensor.keys_to_properties("key_1")
+    tensor_explicit = tensor.keys_to_properties("key_1", fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert torch.all(
+            tensor_default.block_by_id(i).values
+            == tensor_explicit.block_by_id(i).values
+        )
+
+
+def test_keys_to_samples_fill_value_default(tensor):
+    tensor_default = tensor.keys_to_samples("key_2", sort_samples=True)
+    tensor_explicit = tensor.keys_to_samples("key_2", sort_samples=True, fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert torch.all(
+            tensor_default.block_by_id(i).values
+            == tensor_explicit.block_by_id(i).values
+        )

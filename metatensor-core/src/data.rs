@@ -177,11 +177,14 @@ pub struct mts_array_t {
     /// `new_array`. The number of elements in the `shape` array should be given
     /// in `shape_count`.
     ///
-    /// The new array should be filled with zeros.
+    /// The new array should be filled with the scalar value from `fill_value`,
+    /// which is a CPU `mts_array_t` with shape `(1,)` and the same dtype as
+    /// this array.
     create: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *const usize,
         shape_count: usize,
+        fill_value: mts_array_t,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
 
@@ -456,8 +459,37 @@ impl mts_array_t {
         return Ok(());
     }
 
-    /// Create a new array with the same settings as this one and the given `shape`
-    pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
+    /// Create a new array with the same settings as this one and the given
+    /// `shape`, filled with the scalar from `fill_value`.
+    ///
+    /// `fill_value` must be a CPU `mts_array_t` with shape `(1,)` and the
+    /// same dtype as this array.
+    pub fn create(&self, shape: &[usize], fill_value: &mts_array_t) -> Result<mts_array_t, Error> {
+        let self_dtype = self.dtype()?;
+        let fill_dtype = fill_value.dtype()?;
+        if self_dtype != fill_dtype {
+            return Err(Error::InvalidParameter(format!(
+                "fill_value dtype (code={}, bits={}, lanes={}) does not match \
+                 array dtype (code={}, bits={}, lanes={})",
+                fill_dtype.code as u32, fill_dtype.bits, fill_dtype.lanes,
+                self_dtype.code as u32, self_dtype.bits, self_dtype.lanes,
+            )));
+        }
+
+        let fill_shape = fill_value.shape()?;
+        if fill_shape != [1] {
+            return Err(Error::InvalidParameter(format!(
+                "fill_value must have shape [1], got {:?}", fill_shape
+            )));
+        }
+
+        let fill_device = fill_value.device()?;
+        if fill_device.device_type != DLDevice::cpu().device_type {
+            return Err(Error::InvalidParameter(
+                "fill_value must be on CPU".into()
+            ));
+        }
+
         let function = self.create.expect("mts_array_t.create function is NULL");
 
         let mut data_storage = mts_array_t::null();
@@ -466,6 +498,9 @@ impl mts_array_t {
                 self.ptr,
                 shape.as_ptr(),
                 shape.len(),
+                // raw_copy() sets destroy to None, so the callback
+                // receives a readable copy without taking ownership
+                fill_value.raw_copy(),
                 &mut data_storage
             )
         };

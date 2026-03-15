@@ -41,15 +41,46 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy() const {
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(this->tensor().clone()));
 }
 
-std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(std::vector<uintptr_t> shape) const {
+std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
+    std::vector<uintptr_t> shape,
+    mts_array_t fill_value
+) const {
     auto sizes = std::vector<int64_t>();
     for (auto size: shape) {
         sizes.push_back(static_cast<int64_t>(size));
     }
 
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    DLManagedTensorVersioned* fill_managed = nullptr;
+    auto status = fill_value.as_dlpack(fill_value.ptr, &fill_managed, cpu_device, nullptr, max_version);
+    if (status != MTS_SUCCESS) {
+        throw std::runtime_error("failed to extract fill_value as DLPack");
+    }
+    
+    c10::Scalar scalar_val;
+    auto code = fill_managed->dl_tensor.dtype.code;
+    auto bits = fill_managed->dl_tensor.dtype.bits;
+    if (code == kDLFloat && bits == 64) {
+        scalar_val = *static_cast<const double*>(fill_managed->dl_tensor.data);
+    } else if (code == kDLFloat && bits == 32) {
+        scalar_val = *static_cast<const float*>(fill_managed->dl_tensor.data);
+    } else if (code == kDLInt && bits == 32) {
+        scalar_val = *static_cast<const int32_t*>(fill_managed->dl_tensor.data);
+    } else if (code == kDLInt && bits == 64) {
+        scalar_val = *static_cast<const int64_t*>(fill_managed->dl_tensor.data);
+    } else {
+        if (fill_managed->deleter) fill_managed->deleter(fill_managed);
+        throw std::runtime_error("unsupported fill_value dtype");
+    }
+    if (fill_managed->deleter) {
+        fill_managed->deleter(fill_managed);
+    }
+
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(
-        torch::zeros(
+        torch::full(
             sizes,
+            scalar_val,
             torch::TensorOptions()
                 .dtype(this->tensor().dtype())
                 .device(this->tensor().device())
