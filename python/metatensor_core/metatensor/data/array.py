@@ -268,8 +268,8 @@ def _extract_scalar_from_mts_array(mts_array):
     not just Python wrappers.
     """
     from .._c_api import DLDevice, DLPackVersion
-    from .extract import DLPackDtypeCode, _DLPACK_TO_NUMPY
     from ..status import _check_status
+    from .extract import _DLPACK_TO_NUMPY
 
     # Get shape to verify it's a scalar
     shape_ptr = ctypes.POINTER(c_uintptr_t)()
@@ -281,7 +281,8 @@ def _extract_scalar_from_mts_array(mts_array):
 
     if shape_count.value != 1:
         raise ValueError(
-            f"fill_value must be a scalar (shape (1,)), got shape with {shape_count.value} dimensions"
+            "fill_value must be a scalar (shape (1,)), "
+            f"got shape with {shape_count.value} dimensions"
         )
 
     # Use as_dlpack to get the data
