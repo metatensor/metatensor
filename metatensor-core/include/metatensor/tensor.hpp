@@ -311,11 +311,8 @@ public:
         auto fv = DataArrayBase::to_mts_array_t(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
         );
-        auto result = keys_to_properties(keys_to_move, sort_samples, fv);
-        if (fv.destroy) {
-            fv.destroy(fv.ptr);
-        }
-        return result;
+        // Ownership of fv transfers to the C API (Rust Drop handles cleanup)
+        return keys_to_properties(keys_to_move, sort_samples, fv);
     }
 
     /// Convenience overload with vector of strings
@@ -409,11 +406,8 @@ public:
         auto fv = DataArrayBase::to_mts_array_t(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
         );
-        auto result = keys_to_samples(keys_to_move, sort_samples, fv);
-        if (fv.destroy) {
-            fv.destroy(fv.ptr);
-        }
-        return result;
+        // Ownership of fv transfers to the C API (Rust Drop handles cleanup)
+        return keys_to_samples(keys_to_move, sort_samples, fv);
     }
 
     /// Convenience overload with vector of strings

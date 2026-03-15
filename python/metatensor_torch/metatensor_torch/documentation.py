@@ -1093,7 +1093,7 @@ class TensorMap:
         self,
         keys_to_move: Union[StrSequence, Labels],
         sort_samples: bool = True,
-        fill_value: Union[int, float, bool] = 0,
+        fill_value: float = 0,
     ) -> "TensorMap":
         """
         Merge blocks along the samples axis, adding ``keys_to_move`` to the end
@@ -1130,7 +1130,7 @@ class TensorMap:
         self,
         keys_to_move: Union[StrSequence, Labels],
         sort_samples: bool = True,
-        fill_value: Union[int, float, bool] = 0,
+        fill_value: float = 0,
     ) -> "TensorMap":
         """
         Merge blocks along the properties direction, adding ``keys_to_move`` at
