@@ -305,8 +305,8 @@ public:
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_properties(
         const Labels& keys_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
         auto fv = DataArrayBase::to_mts_array_t(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
@@ -322,20 +322,20 @@ public:
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_properties(
         const std::vector<std::string>& keys_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
-        return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_properties(Labels(keys_to_move), sort_samples, fill_value);
     }
 
     /// Convenience overload with a single string
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_properties(
         std::string key_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
-        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fill_value);
     }
 
     /// Merge blocks with the same value for selected keys dimensions along the
@@ -403,8 +403,8 @@ public:
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_samples(
         const Labels& keys_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
         auto fv = DataArrayBase::to_mts_array_t(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
@@ -420,20 +420,20 @@ public:
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_samples(
         const std::vector<std::string>& keys_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
-        return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_samples(Labels(keys_to_move), sort_samples, fill_value);
     }
 
     /// Convenience overload with a single string
     template<typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
     TensorMap keys_to_samples(
         std::string key_to_move,
-        T fill_value = T{},
-        bool sort_samples = true
+        bool sort_samples = true,
+        T fill_value = T{}
     ) const {
-        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, sort_samples, fill_value);
     }
 
     /// Move the given `dimensions` from the component labels to the property

@@ -610,7 +610,7 @@ class TensorMapWrap:
         self,
         keys_to_move: Union[str, List[str], Labels],
         sort_samples: bool,
-        fill_value: Union[int, float] = 0,
+        fill_value: Union[int, float, bool] = 0,
     ) -> TensorMap:
         return self._c.keys_to_samples(
             keys_to_move=keys_to_move,
@@ -622,7 +622,7 @@ class TensorMapWrap:
         self,
         keys_to_move: Union[str, List[str], Labels],
         sort_samples: bool,
-        fill_value: Union[int, float] = 0,
+        fill_value: Union[int, float, bool] = 0,
     ) -> TensorMap:
         return self._c.keys_to_properties(
             keys_to_move=keys_to_move,

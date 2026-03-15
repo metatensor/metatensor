@@ -128,13 +128,8 @@ class TensorMap:
         return obj
 
     def __del__(self):
-        if (
-            hasattr(self, "_lib")
-            and self._lib is not None
-            and hasattr(self, "_ptr")
-        ):
-            if self._ptr is not None:
-                self._lib.mts_tensormap_free(self._ptr)
+        if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
+            self._lib.mts_tensormap_free(self._ptr)
 
     def __copy__(self):
         raise ValueError(

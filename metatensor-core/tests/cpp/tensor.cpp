@@ -172,7 +172,7 @@ TEST_CASE("TensorMap") {
         CHECK(gradient_3 == expected);
 
         // unsorted samples
-        tensor = test_tensor_map().keys_to_samples("key_2", 0.0, /*sort_samples*/ false);
+        tensor = test_tensor_map().keys_to_samples("key_2", /*sort_samples*/ false, /*fill_value*/ 0.0);
 
         block = tensor.block_by_id(2);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {
@@ -259,7 +259,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_properties with NaN fill") {
-        auto tensor = test_tensor_map().keys_to_properties("key_1", std::numeric_limits<double>::quiet_NaN());
+        auto tensor = test_tensor_map().keys_to_properties("key_1", /*sort_samples*/ true, std::numeric_limits<double>::quiet_NaN());
 
         auto block = tensor.block_by_id(0);
         auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());

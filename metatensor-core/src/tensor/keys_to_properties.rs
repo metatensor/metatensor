@@ -38,7 +38,7 @@ impl TensorMap {
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool, fill_value: &mts_array_t) -> Result<TensorMap, Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool, fill_value: mts_array_t) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -77,7 +77,7 @@ impl TensorMap {
                 keys_to_move,
                 &names_to_move,
                 sort_samples,
-                fill_value,
+                &fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -110,7 +110,7 @@ impl TensorMap {
                     keys_to_move,
                     &names_to_move,
                     sort_samples,
-                    fill_value,
+                    &fill_value,
                 )?;
                 new_blocks.push(block);
             }
