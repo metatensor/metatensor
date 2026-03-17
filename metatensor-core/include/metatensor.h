@@ -318,6 +318,26 @@ typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     uintptr_t shape_count,
                                                     struct mts_array_t *array);
 
+/**
+ * Function pointer to create a new `mts_array_t` when memory-mapping tensor
+ * maps.
+ *
+ * This function gets the `shape` of the array (containing `shape_count`
+ * elements), the DLPack `dtype`, and a pointer to the raw `data` of length
+ * `data_len` bytes. The `data` pointer is valid only as long as the memory
+ * mapping (passed via `user_data`) is alive.
+ *
+ * The callback should fill `array` with a new valid `mts_array_t` or return
+ * non-zero `mts_status_t`.
+ */
+typedef mts_status_t (*mts_create_mmap_array_callback_t)(const uintptr_t *shape,
+                                                         uintptr_t shape_count,
+                                                         DLDataType dtype,
+                                                         const void *data,
+                                                         uintptr_t data_len,
+                                                         void *mmap_ptr,
+                                                         struct mts_array_t *array);
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1084,6 +1104,12 @@ mts_status_t mts_tensormap_device(const struct mts_tensormap_t *tensor, DLDevice
 mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataType *dtype);
 
 /**
+ * Release a memory mapping pointer previously passed to
+ * `mts_create_mmap_array_callback_t`.
+ */
+void mts_mmap_free(void *mmap_ptr);
+
+/**
  * Load labels from the file at the given path.
  *
  * This function allocates memory which must be released `mts_labels_free` when
@@ -1207,6 +1233,28 @@ struct mts_block_t *mts_block_load(const char *path, mts_create_array_callback_t
 struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
                                           uintptr_t buffer_count,
                                           mts_create_array_callback_t create_array);
+
+/**
+ * Load a tensor block from the file at the given path using memory mapping.
+ *
+ * This provides zero-copy loading: data arrays point directly into the
+ * memory-mapped file, avoiding copies. Labels are still loaded normally.
+ *
+ * The `create_array` callback will be used to create the mmap-backed arrays.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_block_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_block_t *mts_block_load_mmap(const char *path,
+                                        mts_create_mmap_array_callback_t create_array);
 
 /**
  * Save a tensor block to the file at the given path.
@@ -1333,6 +1381,63 @@ struct mts_tensormap_t *mts_tensormap_load(const char *path,
 struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
                                                   uintptr_t buffer_count,
                                                   mts_create_array_callback_t create_array);
+
+/**
+ * Load a tensor map from the file at the given path using memory mapping.
+ *
+ * This provides zero-copy loading: data arrays point directly into the
+ * memory-mapped file, avoiding copies. Labels are still loaded normally.
+ *
+ * The `create_array` callback will be used to create the mmap-backed arrays.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
+                                                mts_create_mmap_array_callback_t create_array);
+
+/**
+ * Load a tensor map from the file at the given path, selecting only a subset
+ * of the data based on keys, samples, and properties.
+ *
+ * This function memory-maps the file for efficient random access: only the
+ * selected rows and columns are copied into the output arrays.
+ *
+ * For each of `keys`, `samples`, and `properties`: if the label has a NULL
+ * `internal_ptr_` and `count == 0`, it is treated as "select all" (no
+ * filtering on that axis). Otherwise the label is converted and used as a
+ * filter via `Labels::select` semantics.
+ *
+ * Arrays for the values and gradient data will be created with the given
+ * `create_array` callback, identical to `mts_tensormap_load`.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param keys label-based filter for which blocks to load
+ * @param samples label-based filter for which samples to keep
+ * @param properties label-based filter for which properties to keep
+ * @param create_array callback function that will be used to create data
+ *                     arrays inside each block
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_tensormap_t *mts_tensormap_load_partial(const char *path,
+                                                   struct mts_labels_t keys,
+                                                   struct mts_labels_t samples,
+                                                   struct mts_labels_t properties,
+                                                   mts_create_array_callback_t create_array);
 
 /**
  * Save a tensor map to the file at the given path.

@@ -48,3 +48,7 @@ harness = false
 [[bench]]
 name = "tensor_map"
 harness = false
+
+[[bench]]
+name = "partial_load"
+harness = false

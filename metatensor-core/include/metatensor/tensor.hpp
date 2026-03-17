@@ -164,7 +164,7 @@ public:
     TensorMap clone() const {
         auto* copy = mts_tensormap_copy(this->tensor_);
         details::check_pointer(copy);
-        return TensorMap(copy);
+        return TensorMap::unsafe_from_ptr(copy);
     }
 
     /// Get a copy of the metadata in this `TensorMap` (i.e. keys, samples,
@@ -268,7 +268,7 @@ public:
         );
 
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
@@ -313,7 +313,7 @@ public:
         );
 
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
@@ -345,7 +345,7 @@ public:
             c_dimensions.size()
         );
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /// Call `components_to_properties` with a single dimension
@@ -357,7 +357,7 @@ public:
             1
         );
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /*!
@@ -411,6 +411,46 @@ public:
         mts_create_array_callback_t create_array = details::default_create_array
     ) {
         return metatensor::io::load_buffer<Buffer>(buffer, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load a previously saved ``TensorMap`` from the given path using
+     * memory-mapped I/O. Data arrays are created internally as read-only
+     * mmap-backed arrays.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_mmap`, and provided
+     * as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_mmap(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array = details::default_create_mmap_array
+    ) {
+        return metatensor::io::load_mmap(path, create_array);
+    }
+
+    /*!
+     * \verbatim embed:rst:leading-asterisk
+     *
+     * Load a previously saved ``TensorMap`` from the given path, selecting
+     * only a subset of the data based on keys, samples, and properties.
+     *
+     * This is identical to :cpp:func:`metatensor::io::load_partial`, and
+     * provided as a convenience API.
+     *
+     * \endverbatim
+     */
+    static TensorMap load_partial(
+        const std::string& path,
+        const Labels& keys = Labels(),
+        const Labels& samples = Labels(),
+        const Labels& properties = Labels(),
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_partial(path, keys, samples, properties, create_array);
     }
 
     /*!
@@ -471,6 +511,11 @@ public:
     }
 
     mts_tensormap_t* as_mts_tensormap_t() && = delete;
+
+    /// Create a new TensorMap taking ownership of a raw `mts_tensormap_t` pointer.
+    static TensorMap unsafe_from_ptr(mts_tensormap_t* ptr) {
+        return TensorMap(ptr);
+    }
 
     /// Create a C++ TensorMap from a C `mts_tensormap_t` pointer. The C++
     /// tensor map takes ownership of the C pointer.

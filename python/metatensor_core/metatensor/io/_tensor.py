@@ -4,12 +4,17 @@ import json
 import pathlib
 import warnings
 import zipfile
-from typing import BinaryIO, Union
+from typing import BinaryIO, Optional, Union
 
 import numpy as np
 
-from .._c_api import mts_create_array_callback_t
+from .._c_api import (
+    mts_create_array_callback_t,
+    mts_create_mmap_array_callback_t,
+    mts_labels_t,
+)
 from .._c_lib import _get_library
+from ..labels import Labels
 from ..tensor import TensorMap
 from ._block import (
     CreateArrayCallback,
@@ -18,6 +23,7 @@ from ._block import (
     create_numpy_array,
 )
 from ._labels import _labels_from_mts, _labels_to_mts
+from ._mmap import _create_mmap_array
 from ._utils import _save_buffer_raw
 
 
@@ -138,6 +144,80 @@ def load_buffer_custom_array(
     ptr = lib.mts_tensormap_load_buffer(
         buffer,
         len(buffer),
+        mts_create_array_callback_t(create_array),
+    )
+
+    return TensorMap._from_ptr(ptr)
+
+
+def load_mmap(path: Union[str, pathlib.Path]) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given path using
+    memory-mapped I/O. Data arrays are lazily mapped from the file for zero-copy
+    loading.
+
+    :param path: path of the file to load
+    """
+    lib = _get_library()
+
+    if isinstance(path, pathlib.Path):
+        path = str(path)
+
+    path = path.encode("utf8")
+
+    ptr = lib.mts_tensormap_load_mmap(
+        path, mts_create_mmap_array_callback_t(_create_mmap_array)
+    )
+
+    return TensorMap._from_ptr(ptr)
+
+
+def load_partial(
+    path: Union[str, pathlib.Path],
+    keys: Optional[Labels] = None,
+    samples: Optional[Labels] = None,
+    properties: Optional[Labels] = None,
+    create_array: "CreateArrayCallback" = create_numpy_array,
+) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given path, selecting
+    only a subset of the data based on keys, samples, and properties.
+
+    This function memory-maps the file for efficient random access: only the
+    selected rows and columns are copied into the output arrays.
+
+    :param path: path of the file to load
+    :param keys: if not ``None``, only blocks whose key matches the selection
+        are loaded. Uses ``Labels.select`` semantics.
+    :param samples: if not ``None``, only rows matching the selection are kept.
+        Uses ``Labels.select`` semantics.
+    :param properties: if not ``None``, only columns matching the selection are
+        kept. Uses ``Labels.select`` semantics.
+    :param create_array: callback used to create arrays as needed. Defaults to
+        creating numpy arrays.
+    """
+    lib = _get_library()
+
+    if isinstance(path, str):
+        path = path.encode("utf8")
+    elif isinstance(path, pathlib.Path):
+        path = bytes(path)
+
+    # Convert Optional[Labels] to mts_labels_t; zeroed struct means "select all"
+    def _labels_or_empty(labels):
+        if labels is None:
+            return mts_labels_t()
+        return labels._as_mts_labels_t()
+
+    keys_raw = _labels_or_empty(keys)
+    samples_raw = _labels_or_empty(samples)
+    properties_raw = _labels_or_empty(properties)
+
+    ptr = lib.mts_tensormap_load_partial(
+        path,
+        keys_raw,
+        samples_raw,
+        properties_raw,
         mts_create_array_callback_t(create_array),
     )
 

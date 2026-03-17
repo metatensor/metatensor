@@ -30,6 +30,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
 - Removed support for PyTorch 2.1 and 2.2
 
+
+- `LabelsView` has been removed, and with it the following functions:
+  `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
+  `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
 ## [Version 0.8.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.4) - 2026-01-26
 
 ### Added

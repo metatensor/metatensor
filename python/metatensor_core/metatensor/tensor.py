@@ -216,6 +216,18 @@ class TensorMap:
 
         return load_buffer(buffer=buffer)
 
+    @staticmethod
+    def load_mmap(path: Union[str, pathlib.Path]) -> "TensorMap":
+        """
+        Load a serialized :py:class:`TensorMap` from a file using memory-mapped I/O,
+        calling :py:func:`metatensor.io.load_mmap`.
+
+        :param path: file path to load from
+        """
+        from .io import load_mmap
+
+        return load_mmap(path=path)
+
     def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
         """
         Save this :py:class:`TensorMap` to a file or a buffer, calling

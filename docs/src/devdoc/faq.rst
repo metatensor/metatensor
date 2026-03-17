@@ -243,3 +243,48 @@ For handling these issues it may be worthwhile to have a local copy of our MSRV,
    Concretely, if *X depends on Y* and **Y needs to be pinned**, use ``cargo
    tree`` to find the **last compatible X and pin that**, setting a pin for Y
    will not pass CI!!
+
+How do I run Rust benchmarks?
+-----------------------------
+
+The ``metatensor`` Rust crate includes `Criterion <https://bheisler.github.io/criterion.rs/book/>`_
+benchmarks gated behind the ``bench`` feature flag. These cover I/O paths
+(``load``, ``load_mmap``, ``load_partial``) and are useful for comparing
+implementation strategies locally.
+
+.. code-block:: bash
+
+    # run all benchmarks
+    cargo bench --package metatensor --features bench
+
+    # run a specific benchmark group
+    cargo bench --package metatensor --features bench -- partial_load
+
+    # use bencher output format (for scripting / comparison)
+    cargo bench --package metatensor --features bench -- --output-format bencher
+
+Criterion stores results in ``target/criterion/`` and generates HTML reports
+that can be viewed in a browser:
+
+.. code-block:: bash
+
+    # open the report for a specific benchmark
+    firefox target/criterion/report/index.html
+
+To compare two implementations, run the baseline first, make your changes, then
+run again:
+
+.. code-block:: bash
+
+    # save a named baseline
+    cargo bench --package metatensor --features bench -- --save-baseline before
+
+    # ... make changes ...
+
+    # compare against the saved baseline
+    cargo bench --package metatensor --features bench -- --baseline before
+
+.. note::
+
+   Benchmarks are not run in CI. They are intended for local development use
+   when evaluating performance of I/O paths or other hot code.

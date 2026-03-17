@@ -16,6 +16,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added `metatensor::io::load_mmap` and `metatensor::io::load_block_mmap` for
+  memory-mapped loading of `.mts` files. Data arrays point directly into the
+  memory-mapped file for zero-copy loading; labels are still loaded normally.
+
 ### Removed
 
 - Removed `Array::data()` trait method and all implementations. Use

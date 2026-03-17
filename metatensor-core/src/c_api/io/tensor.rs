@@ -10,7 +10,8 @@ use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::tensor::mts_tensormap_t;
-use super::mts_create_array_callback_t;
+use super::{mts_create_array_callback_t, mts_create_mmap_array_callback_t};
+use super::super::labels::{mts_labels_t, mts_labels_to_rust};
 
 /// Load a tensor map from the file at the given path.
 ///
@@ -179,6 +180,176 @@ pub unsafe extern "C" fn mts_tensormap_load_buffer(
     }
 
     return result;
+}
+
+/// Load a tensor map from the file at the given path using memory mapping.
+///
+/// This provides zero-copy loading: data arrays point directly into the
+/// memory-mapped file, avoiding copies. Labels are still loaded normally.
+///
+/// The `create_array` callback will be used to create the mmap-backed arrays.
+///
+/// The memory allocated by this function should be released using
+/// `mts_tensormap_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback function that will be used to create data
+///                     arrays inside each block
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_load_mmap(
+    path: *const c_char,
+    create_array: mts_create_mmap_array_callback_t,
+) -> *mut mts_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let create_array = wrap_create_mmap_array(create_array);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let tensor = crate::io::load_mmap(path, create_array)?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+/// Load a tensor map from the file at the given path, selecting only a subset
+/// of the data based on keys, samples, and properties.
+///
+/// This function memory-maps the file for efficient random access: only the
+/// selected rows and columns are copied into the output arrays.
+///
+/// For each of `keys`, `samples`, and `properties`: if the label has a NULL
+/// `internal_ptr_` and `count == 0`, it is treated as "select all" (no
+/// filtering on that axis). Otherwise the label is converted and used as a
+/// filter via `Labels::select` semantics.
+///
+/// Arrays for the values and gradient data will be created with the given
+/// `create_array` callback, identical to `mts_tensormap_load`.
+///
+/// The memory allocated by this function should be released using
+/// `mts_tensormap_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param keys label-based filter for which blocks to load
+/// @param samples label-based filter for which samples to keep
+/// @param properties label-based filter for which properties to keep
+/// @param create_array callback function that will be used to create data
+///                     arrays inside each block
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_load_partial(
+    path: *const c_char,
+    keys: mts_labels_t,
+    samples: mts_labels_t,
+    properties: mts_labels_t,
+    create_array: mts_create_array_callback_t,
+) -> *mut mts_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let create_array = wrap_create_array(&create_array);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+
+        // Convert labels: NULL internal_ptr_ + count==0 → None (select all)
+        let keys_opt = if keys.internal_ptr_.is_null() && keys.count == 0 {
+            None
+        } else {
+            Some(mts_labels_to_rust(&keys)?)
+        };
+
+        let samples_opt = if samples.internal_ptr_.is_null() && samples.count == 0 {
+            None
+        } else {
+            Some(mts_labels_to_rust(&samples)?)
+        };
+
+        let properties_opt = if properties.internal_ptr_.is_null() && properties.count == 0 {
+            None
+        } else {
+            Some(mts_labels_to_rust(&properties)?)
+        };
+
+        let tensor = crate::io::load_partial(
+            path,
+            keys_opt.as_deref(),
+            samples_opt.as_deref(),
+            properties_opt.as_deref(),
+            create_array,
+        )?;
+
+        // force the closure to capture the full unwind_wrapper, not just
+        // unwind_wrapper.0
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+fn wrap_create_mmap_array(
+    create_array: mts_create_mmap_array_callback_t,
+) -> impl Fn(Vec<usize>, dlpk::sys::DLDataType, *const c_void, usize, std::sync::Arc<memmap2::Mmap>) -> Result<mts_array_t, Error> {
+    move |shape, dtype, data, data_len, mmap| {
+        let mut array = mts_array_t::null();
+        let callback = create_array.expect("mts_create_mmap_array_callback_t is NULL");
+
+        // The callback is responsible for the Arc<Mmap> refcount.
+        // We increment it here and pass it as mmap_ptr.
+        let mmap_ptr = std::sync::Arc::into_raw(mmap) as *mut c_void;
+
+        let status = unsafe {
+            callback(
+                shape.as_ptr(),
+                shape.len(),
+                dtype,
+                data,
+                data_len,
+                mmap_ptr,
+                &mut array
+            )
+        };
+
+        if status.is_success() {
+            return Ok(array);
+        } else {
+            // If the callback failed, it might not have taken ownership of
+            // the mmap_ptr. We need to release it here to avoid leak.
+            unsafe {
+                std::sync::Arc::from_raw(mmap_ptr.cast::<memmap2::Mmap>());
+            }
+            return Err(Error::External {
+                status: status,
+                context: "failed to create a new mmap array in mts_tensormap_load_mmap".into()
+            });
+        }
+    }
 }
 
 fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<mts_array_t, Error> + '_ {

@@ -136,7 +136,7 @@ namespace io {
     ) {
         auto* ptr = mts_tensormap_load(path.c_str(), create_array);
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     inline TensorMap load_buffer(
@@ -146,7 +146,7 @@ namespace io {
     ) {
         auto* ptr = mts_tensormap_load_buffer(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
-        return TensorMap(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     template <typename Buffer>
@@ -174,7 +174,7 @@ namespace io {
     ) {
         auto* ptr = mts_block_load(path.c_str(), create_array);
         details::check_pointer(ptr);
-        return TensorBlock(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
     }
 
     inline TensorBlock load_block_buffer(
@@ -184,7 +184,7 @@ namespace io {
     ) {
         auto* ptr = mts_block_load_buffer(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
-        return TensorBlock(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
     }
 
     template <typename Buffer>
@@ -202,6 +202,61 @@ namespace io {
             buffer.size(),
             create_array
         );
+    }
+
+    /**************************************************************************/
+
+    inline TensorMap load_mmap(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load_mmap(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
+    }
+
+    inline TensorBlock load_block_mmap(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array
+    ) {
+        auto* ptr = mts_block_load_mmap(path.c_str(), create_array);
+        details::check_pointer(ptr);
+        return TensorBlock::unsafe_from_ptr(ptr);
+    }
+
+    /**************************************************************************/
+
+    /// Load a previously saved ``TensorMap`` from the given path, selecting
+    /// only a subset of the data based on keys, samples, and properties.
+    ///
+    /// This function memory-maps the file for efficient random access: only the
+    /// selected rows and columns are copied into the output arrays.
+    ///
+    /// For each of ``keys``, ``samples``, and ``properties``: an empty
+    /// ``Labels`` (default) means "select all" on that axis. A non-empty
+    /// ``Labels`` filters using ``Labels::select`` semantics.
+    ///
+    /// @param path path to the file as a UTF-8 string
+    /// @param keys label-based filter for which blocks to load
+    /// @param samples label-based filter for which sample rows to keep
+    /// @param properties label-based filter for which property columns to keep
+    /// @param create_array callback function used to create data arrays
+    inline TensorMap load_partial(
+        const std::string& path,
+        const Labels& keys,
+        const Labels& samples,
+        const Labels& properties,
+        mts_create_array_callback_t create_array
+    ) {
+        auto* ptr = mts_tensormap_load_partial(
+            path.c_str(),
+            keys.as_mts_labels_t(),
+            samples.as_mts_labels_t(),
+            properties.as_mts_labels_t(),
+            create_array
+        );
+        details::check_pointer(ptr);
+        return TensorMap::unsafe_from_ptr(ptr);
     }
 
     /**************************************************************************/

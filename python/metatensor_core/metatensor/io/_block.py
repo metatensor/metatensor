@@ -8,12 +8,18 @@ from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t
+from .._c_api import (
+    c_uintptr_t,
+    mts_array_t,
+    mts_create_array_callback_t,
+    mts_create_mmap_array_callback_t,
+)
 from .._c_lib import _get_library
 from ..block import TensorBlock
 from ..data.array import _is_numpy_array, _is_torch_array, create_mts_array
 from ..utils import catch_exceptions
 from ._labels import _labels_from_mts, _labels_to_mts
+from ._mmap import _create_mmap_array
 from ._utils import _save_buffer_raw
 
 
@@ -174,6 +180,28 @@ def load_block_buffer_custom_array(
         buffer,
         len(buffer),
         mts_create_array_callback_t(create_array),
+    )
+
+    return TensorBlock._from_ptr(ptr, parent=None)
+
+
+def load_block_mmap(path: Union[str, pathlib.Path]) -> TensorBlock:
+    """
+    Load a previously saved :py:class:`TensorBlock` from the given path using
+    memory-mapped I/O. Data arrays are lazily mapped from the file for zero-copy
+    loading.
+
+    :param path: path of the file to load
+    """
+    lib = _get_library()
+
+    if isinstance(path, pathlib.Path):
+        path = str(path)
+
+    path = path.encode("utf8")
+
+    ptr = lib.mts_block_load_mmap(
+        path, mts_create_mmap_array_callback_t(_create_mmap_array)
     )
 
     return TensorBlock._from_ptr(ptr, parent=None)

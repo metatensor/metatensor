@@ -24,6 +24,10 @@ if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
         save_buffer,
         version,
     )
+    from .serialization import (  # noqa: F811, E402
+        load_block_mmap,
+        load_mmap,
+    )
 else:
     _load_library()
     Labels = torch.classes.metatensor.Labels
@@ -41,7 +45,10 @@ else:
 from .serialization import (  # noqa: F401, E402
     load,
     load_block,
+    load_block_mmap,
     load_labels,
+    load_mmap,
+    load_partial,
     save,
 )
 
