@@ -9,11 +9,11 @@ use dlpk::sys::{
 };
 
 use crate::c_api::mts_status_t;
-use crate::data::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, register_data_origin};
+use crate::data::{mts_array_t, mts_data_origin_t, mts_data_movement_t, register_data_origin};
 use crate::Error;
 
 /// Discriminant tag placed at offset 0 of every array struct (`#[repr(C)]`),
-/// so `move_samples_from` can identify the concrete type of an opaque input.
+/// so `move_data` can identify the concrete type of an opaque input.
 #[derive(Clone, Copy, PartialEq)]
 #[repr(u8)]
 enum ArrayTag {
@@ -129,7 +129,8 @@ impl MmapArray {
         mts_array_t {
             ptr: Box::into_raw(boxed).cast(),
             origin: Some(mmap_array_origin),
-            data: None,
+            device: None,
+            dtype: None,
             as_dlpack: Some(mmap_array_as_dlpack),
             shape: Some(mmap_array_shape),
             reshape: None,
@@ -137,7 +138,7 @@ impl MmapArray {
             create: Some(mmap_array_create),
             copy: Some(mmap_array_copy),
             destroy: Some(mmap_array_destroy),
-            move_samples_from: None,
+            move_data: None,
         }
     }
 
@@ -339,7 +340,8 @@ impl MmapCreatedArray {
         mts_array_t {
             ptr: Box::into_raw(self).cast(),
             origin: Some(created_array_origin),
-            data: None,
+            device: None,
+            dtype: None,
             as_dlpack: Some(created_array_as_dlpack),
             shape: Some(created_array_shape),
             reshape: Some(created_array_reshape),
@@ -347,7 +349,7 @@ impl MmapCreatedArray {
             create: Some(created_array_create),
             copy: Some(created_array_copy),
             destroy: Some(created_array_destroy),
-            move_samples_from: Some(created_array_move_samples_from),
+            move_data: Some(created_array_move_data),
         }
     }
 }
@@ -603,23 +605,19 @@ unsafe extern "C" fn created_array_copy(
 // Byte-level sample moving (dtype-generic)
 // ============================================================================
 
-/// Move samples from `input_data` into `output_data` at the byte level.
+/// Move data from `input_data` into `output_data` at the byte level.
 ///
 /// Both input and output are C-contiguous byte buffers. The copy respects the
-/// multi-dimensional layout: for each sample mapping, it copies the property
-/// slice `[property_start..property_end]` across all middle (component)
-/// dimensions.
-unsafe fn move_samples_impl(
+/// multi-dimensional layout: for each movement, it copies the property
+/// slice across all middle (component) dimensions.
+unsafe fn move_data_impl(
     output_data: &mut [u8],
     output_shape: &[usize],
     input_data: *const u8,
     input_shape: &[usize],
     elem: usize,
-    samples: &[mts_sample_mapping_t],
-    property_start: usize,
-    property_end: usize,
+    movements: &[mts_data_movement_t],
 ) -> Result<(), Error> {
-    let n_properties = property_end - property_start;
     let output_n_properties = *output_shape.last().unwrap_or(&0);
     let input_n_properties = *input_shape.last().unwrap_or(&0);
 
@@ -641,14 +639,14 @@ unsafe fn move_samples_impl(
         1
     };
 
-    for sample in samples {
-        let in_row_byte = sample.input * input_row_elements * elem;
-        let out_row_byte = sample.output * output_row_elements * elem;
+    for movement in movements {
+        let in_row_byte = movement.sample_in * input_row_elements * elem;
+        let out_row_byte = movement.sample_out * output_row_elements * elem;
 
         for mid in 0..n_middle {
-            let out_off = out_row_byte + (mid * output_n_properties + property_start) * elem;
-            let in_off = in_row_byte + mid * input_n_properties * elem;
-            let copy_len = n_properties * elem;
+            let out_off = out_row_byte + (mid * output_n_properties + movement.properties_start_out) * elem;
+            let in_off = in_row_byte + (mid * input_n_properties + movement.properties_start_in) * elem;
+            let copy_len = movement.properties_length * elem;
             std::ptr::copy_nonoverlapping(
                 input_data.add(in_off),
                 output_data.as_mut_ptr().add(out_off),
@@ -659,17 +657,15 @@ unsafe fn move_samples_impl(
     Ok(())
 }
 
-unsafe extern "C" fn created_array_move_samples_from(
+unsafe extern "C" fn created_array_move_data(
     output: *mut c_void,
     input: *const c_void,
-    samples: *const mts_sample_mapping_t,
-    samples_count: usize,
-    property_start: usize,
-    property_end: usize,
+    movements: *const mts_data_movement_t,
+    movements_count: usize,
 ) -> mts_status_t {
     crate::c_api::catch_unwind(move || {
         let output = &mut *output.cast::<MmapCreatedArray>();
-        let samples = std::slice::from_raw_parts(samples, samples_count);
+        let movements = std::slice::from_raw_parts(movements, movements_count);
         let elem = element_size(&output.dl_dtype);
 
         // Read the tag at offset 0 to determine the concrete input type.
@@ -686,11 +682,11 @@ unsafe extern "C" fn created_array_move_samples_from(
         };
 
         let data = Arc::make_mut(&mut output.data);
-        move_samples_impl(
+        move_data_impl(
             data.as_mut_slice(), &output.shape,
             input_data, input_shape,
             elem,
-            samples, property_start, property_end,
+            movements,
         )
     })
 }
