@@ -201,9 +201,7 @@ def load_block_mmap(path: Union[str, pathlib.Path]) -> TensorBlock:
 
     path = path.encode("utf8")
 
-    ptr = lib.mts_block_load_mmap(
-        path, mts_create_file_array_callback_t(0), None
-    )
+    ptr = lib.mts_block_load_mmap(path, mts_create_file_array_callback_t(0), None)
 
     return TensorBlock._from_ptr(ptr, parent=None)
 

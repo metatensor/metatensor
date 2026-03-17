@@ -129,8 +129,8 @@ impl MmapArray {
         mts_array_t {
             ptr: Box::into_raw(boxed).cast(),
             origin: Some(mmap_array_origin),
-            device: None,
-            dtype: None,
+            device: Some(mmap_array_device),
+            dtype: Some(mmap_array_dtype),
             as_dlpack: Some(mmap_array_as_dlpack),
             shape: Some(mmap_array_shape),
             reshape: None,
@@ -168,6 +168,23 @@ unsafe extern "C" fn mmap_array_origin(
     origin: *mut mts_data_origin_t,
 ) -> mts_status_t {
     *origin = register_data_origin("metatensor.MmapArray".into());
+    mts_status_t(0)
+}
+
+unsafe extern "C" fn mmap_array_device(
+    _array: *const c_void,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    *device = DLDevice::cpu();
+    mts_status_t(0)
+}
+
+unsafe extern "C" fn mmap_array_dtype(
+    array: *const c_void,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    let array = &*array.cast::<MmapArray>();
+    *dtype = array.dl_dtype;
     mts_status_t(0)
 }
 
@@ -340,8 +357,8 @@ impl MmapCreatedArray {
         mts_array_t {
             ptr: Box::into_raw(self).cast(),
             origin: Some(created_array_origin),
-            device: None,
-            dtype: None,
+            device: Some(created_array_device),
+            dtype: Some(created_array_dtype),
             as_dlpack: Some(created_array_as_dlpack),
             shape: Some(created_array_shape),
             reshape: Some(created_array_reshape),
@@ -375,6 +392,23 @@ unsafe extern "C" fn created_array_origin(
     origin: *mut mts_data_origin_t,
 ) -> mts_status_t {
     *origin = register_data_origin("metatensor.MmapArray".into());
+    mts_status_t(0)
+}
+
+unsafe extern "C" fn created_array_device(
+    _array: *const c_void,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    *device = DLDevice::cpu();
+    mts_status_t(0)
+}
+
+unsafe extern "C" fn created_array_dtype(
+    array: *const c_void,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    let array = &*array.cast::<MmapCreatedArray>();
+    *dtype = array.dl_dtype;
     mts_status_t(0)
 }
 
