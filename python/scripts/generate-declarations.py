@@ -287,7 +287,10 @@ elif arch == "64bit":
         file.write("\n\n")
 
         for name, c_type in data.types.items():
-            if name in ("mts_create_array_callback_t", "mts_create_file_array_callback_t"):
+            if name in (
+                "mts_create_array_callback_t",
+                "mts_create_file_array_callback_t",
+            ):
                 # will be generated below, they depend on the structs
                 continue
             file.write(f"{name} = {type_to_ctypes(c_type)}\n")
@@ -350,7 +353,9 @@ DLManagedTensorVersioned._fields_ = [
         file.write(f"mts_create_array_callback_t = {callback_type}\n")
 
         if "mts_create_file_array_callback_t" in data.types:
-            file_callback_type = type_to_ctypes(data.types["mts_create_file_array_callback_t"])
+            file_callback_type = type_to_ctypes(
+                data.types["mts_create_file_array_callback_t"]
+            )
             file.write(f"mts_create_file_array_callback_t = {file_callback_type}\n")
 
         generate_functions(file, data.functions)
