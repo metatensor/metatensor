@@ -136,7 +136,7 @@ function mts_last_error()
 end
 
 function mts_labels_create(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
-    ccall((:mts_labels_create, libmetatensor),
+    ccall((:mts_labels_create, libmetatensor), 
         Ptr{mts_labels_t},
         (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
         names, names_count, array
@@ -144,7 +144,7 @@ function mts_labels_create(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::
 end
 
 function mts_labels_create_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
-    ccall((:mts_labels_create_assume_unique, libmetatensor),
+    ccall((:mts_labels_create_assume_unique, libmetatensor), 
         Ptr{mts_labels_t},
         (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
         names, names_count, array
@@ -190,7 +190,6 @@ function mts_labels_position(labels::Ptr{mts_labels_t}, values::Ptr{Int32}, valu
         labels, values, values_count, result
     )
 end
-
 
 function mts_labels_clone(labels::Ptr{mts_labels_t})
     ccall((:mts_labels_clone, libmetatensor), 
