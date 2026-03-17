@@ -10,6 +10,18 @@
 
 #include "./utils.hpp"
 
+// Internal metatensor-core functions not in the public C header.
+// These are exported from the shared library but intentionally hidden
+// from the public API.
+extern "C" {
+    mts_status_t mts_labels_values_array(
+        const mts_labels_t* labels, mts_array_t* array
+    );
+    mts_status_t mts_labels_set_cached_values(
+        const mts_labels_t* labels, const int32_t* values, uintptr_t count
+    );
+}
+
 using namespace metatensor_torch;
 
 /// Data backing an mts_array_t that wraps a torch::Tensor for labels values.
@@ -336,7 +348,11 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
     }
 
     // check if the values array is backed by a torch tensor
-    auto array = this->labels_->values_array();
+    mts_array_t array;
+    std::memset(&array, 0, sizeof(array));
+    metatensor::details::check_status(
+        mts_labels_values_array(this->labels_->as_mts_labels_t(), &array)
+    );
     mts_data_origin_t origin = 0;
     if (array.origin != nullptr) {
         array.origin(array.ptr, &origin);
@@ -564,7 +580,11 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         metatensor::details::check_status(
             mts_labels_values(raw, &orig_values_ptr, &orig_count)
         );
-        new_labels.set_cached_values(orig_values_ptr, orig_count);
+        metatensor::details::check_status(
+            mts_labels_set_cached_values(
+                new_labels.as_mts_labels_t(), orig_values_ptr, orig_count
+            )
+        );
 
         return torch::make_intrusive<LabelsHolder>(
             this->names(), std::move(new_values), std::move(new_labels)

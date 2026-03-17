@@ -43,82 +43,20 @@ impl std::ops::Deref for mts_labels_t {
 }
 
 
-/// Internal helper to create Labels from raw C data (names + values arrays)
-unsafe fn create_labels_from_raw(
-    names_ptr: *const *const c_char,
-    names_count: usize,
-    values: *const i32,
-    count: usize,
-    assume_unique: bool,
-) -> Result<Labels, Error> {
-    // Handle empty labels
-    if names_count == 0 {
-        if count > 0 {
-            return Err(Error::InvalidParameter(
-                "can not have count > 0 if names_count is 0".into()
-            ));
-        }
-        let labels = Labels::new(&[], Vec::<LabelValue>::new())?;
-        return Ok(labels);
-    }
-
-    if names_ptr.is_null() {
-        return Err(Error::InvalidParameter(
-            "names can not be NULL".into()
-        ));
-    }
-
-    if values.is_null() && count > 0 {
-        return Err(Error::InvalidParameter(
-            "values is NULL but count is > 0".into()
-        ));
-    }
-
-    // Process label names
-    let mut names = Vec::with_capacity(names_count);
-    for i in 0..names_count {
-        let name = CStr::from_ptr(*(names_ptr.add(i)));
-        let name = name.to_str().expect("invalid UTF-8 in label name");
-        if !crate::labels::is_valid_label_name(name) {
-            return Err(Error::InvalidParameter(format!(
-                "'{}' is not a valid label name", name
-            )));
-        }
-        names.push(name);
-    }
-
-    // Process label values
-    let label_values = if count != 0 && names_count != 0 {
-        assert!(!values.is_null());
-        let slice = std::slice::from_raw_parts(
-            values.cast::<LabelValue>(), count * names_count
-        );
-        slice.to_vec()
-    } else {
-        Vec::new()
-    };
-
-    if assume_unique {
-        unsafe { Labels::new_unchecked_uniqueness(&names, label_values) }
-    } else {
-        Labels::new(&names, label_values)
-    }
-}
-
-
-/// Create a new set of Labels from the given dimension names and values.
+/// Create a new set of Labels from the given dimension names and values
+/// array.
+///
+/// The array must be on a CPU device. This function verifies uniqueness of
+/// the labels entries.
 ///
 /// This function allocates memory which must be released with
 /// `mts_labels_free` when you don't need it anymore.
 ///
 /// @param names array of NULL-terminated UTF-8 strings containing the names
 ///        of each dimension
-/// @param names_count number of entries in the `names` array (i.e. the
-///        number of dimensions)
-/// @param values pointer to the first element of a 2D row-major array of
-///        32-bit signed integers. Each row has `names_count` elements, and
-///        there are `count` rows in total. This can be NULL if `count` is 0.
-/// @param count number of entries (rows) in the labels
+/// @param names_count number of entries in the `names` array
+/// @param array the values array (2D, i32, row-major). The labels take
+///        ownership of this array.
 ///
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
@@ -127,16 +65,14 @@ unsafe fn create_labels_from_raw(
 pub unsafe extern "C" fn mts_labels_create(
     names: *const *const c_char,
     names_count: usize,
-    values: *const i32,
-    count: usize,
+    array: mts_array_t,
 ) -> *mut mts_labels_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        let labels = create_labels_from_raw(
-            names, names_count, values, count, false
-        )?;
+        let names = create_labels_names_from_raw(names, names_count)?;
+        let labels = Labels::from_array(&names, array)?;
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
@@ -151,12 +87,12 @@ pub unsafe extern "C" fn mts_labels_create(
 }
 
 
-/// Create a new set of Labels from the given dimension names and values,
-/// without checking for uniqueness of the entries.
+/// Create a new set of Labels from the given dimension names and values
+/// array, without checking for uniqueness of the entries.
 ///
-/// This function does not check for uniqueness of the labels entries, which
-/// should be enforced by the caller. Calling this function with non-unique
-/// entries is invalid and can lead to crashes or infinite loops.
+/// The array can be on any device (CPU or GPU). The caller must ensure
+/// that the labels entries are unique; passing non-unique entries is
+/// invalid and can lead to crashes or infinite loops.
 ///
 /// This function allocates memory which must be released with
 /// `mts_labels_free` when you don't need it anymore.
@@ -164,9 +100,8 @@ pub unsafe extern "C" fn mts_labels_create(
 /// @param names array of NULL-terminated UTF-8 strings containing the names
 ///        of each dimension
 /// @param names_count number of entries in the `names` array
-/// @param values pointer to the first element of a 2D row-major array of
-///        32-bit signed integers (same layout as `mts_labels_create`)
-/// @param count number of entries (rows) in the labels
+/// @param array the values array (2D, i32, row-major). The labels take
+///        ownership of this array.
 ///
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
@@ -175,16 +110,14 @@ pub unsafe extern "C" fn mts_labels_create(
 pub unsafe extern "C" fn mts_labels_create_assume_unique(
     names: *const *const c_char,
     names_count: usize,
-    values: *const i32,
-    count: usize,
+    array: mts_array_t,
 ) -> *mut mts_labels_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        let labels = create_labels_from_raw(
-            names, names_count, values, count, true
-        )?;
+        let names = create_labels_names_from_raw(names, names_count)?;
+        let labels = Labels::from_array_assume_unique(&names, array)?;
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
@@ -351,16 +284,8 @@ pub unsafe extern "C" fn mts_labels_position(
 }
 
 
-/// Get the values array backing these `labels`.
-///
-/// The returned `mts_array_t` is a non-owning view into the Labels and must
-/// not be freed by the caller.
-///
-/// @param labels pointer to an existing set of labels
-/// @param array on output, will contain the values array
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+// Internal: used by metatensor-torch to recover the backing array.
+// Not part of the public C API (not in metatensor.h).
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_values_array(
     labels: *const mts_labels_t,
@@ -409,106 +334,29 @@ unsafe fn create_labels_names_from_raw(
 }
 
 
-/// Create a new set of labels from the given names and array.
-///
-/// The array must be on a CPU device. This function verifies uniqueness of
-/// the labels entries.
-///
-/// This function allocates memory which must be released with
-/// `mts_labels_free` when you don't need it anymore.
-///
-/// @param names array of NULL-terminated UTF-8 strings containing the names
-///        of each dimension
-/// @param names_count number of entries in the `names` array
-/// @param array the values array. The labels take ownership of this array.
-///
-/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
-///          case of error. In case of error, you can use `mts_last_error()`
-///          to get the error message.
+// Keep old names as aliases for backward compatibility during transition.
+// These are excluded from cbindgen via build.rs.
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_create_from_array(
     names: *const *const c_char,
     names_count: usize,
     array: mts_array_t,
 ) -> *mut mts_labels_t {
-    let mut result = std::ptr::null_mut();
-    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
-
-    let status = catch_unwind(move || {
-        let names = create_labels_names_from_raw(names, names_count)?;
-        let labels = Labels::from_array(&names, array)?;
-
-        let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
-        Ok(())
-    });
-
-    if !status.is_success() {
-        return std::ptr::null_mut();
-    }
-
-    return result;
+    mts_labels_create(names, names_count, array)
 }
 
-
-/// Create a new set of labels from the given names and array, without
-/// checking uniqueness.
-///
-/// The array can be on any device (CPU or GPU). The caller must ensure
-/// that the labels entries are unique; passing non-unique entries is
-/// invalid and can lead to crashes or infinite loops.
-///
-/// This function allocates memory which must be released with
-/// `mts_labels_free` when you don't need it anymore.
-///
-/// @param names array of NULL-terminated UTF-8 strings containing the names
-///        of each dimension
-/// @param names_count number of entries in the `names` array
-/// @param array the values array. The labels take ownership of this array.
-///
-/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
-///          case of error. In case of error, you can use `mts_last_error()`
-///          to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_create_from_array_assume_unique(
     names: *const *const c_char,
     names_count: usize,
     array: mts_array_t,
 ) -> *mut mts_labels_t {
-    let mut result = std::ptr::null_mut();
-    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
-
-    let status = catch_unwind(move || {
-        let names = create_labels_names_from_raw(names, names_count)?;
-        let labels = Labels::from_array_assume_unique(&names, array)?;
-
-        let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
-        Ok(())
-    });
-
-    if !status.is_success() {
-        return std::ptr::null_mut();
-    }
-
-    return result;
+    mts_labels_create_assume_unique(names, names_count, array)
 }
 
 
-/// Pre-fill the cached CPU values for these `labels` without triggering
-/// materialization from the backing array. This is used when the caller
-/// has known-good CPU values (e.g., from a device transfer) and the
-/// backing array is on a device that cannot produce values via DLPack
-/// (such as Meta tensors).
-///
-/// If the values are already cached, this is a no-op.
-///
-/// @param labels pointer to an existing set of labels
-/// @param values pointer to a flat array of int32 values (count * size elements)
-/// @param count number of entries (rows) in the values array
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+// Internal: used by metatensor-torch for Meta device transfers.
+// Not part of the public C API (not in metatensor.h).
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_set_cached_values(
     labels: *const mts_labels_t,

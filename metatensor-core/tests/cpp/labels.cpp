@@ -53,7 +53,7 @@ TEST_CASE("Labels") {
     CHECK(empty.size() == 0);
     CHECK(empty.count() == 0);
 
-    CHECK_THROWS_WITH(Labels({}, {{}, {}, {}}), "invalid parameter: can not have count > 0 if names_count is 0");
+    CHECK_THROWS_WITH(Labels({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
 }
 
 
@@ -182,29 +182,6 @@ TEST_CASE("Set operations") {
     }
 }
 
-TEST_CASE("Values array") {
-    auto labels = Labels({"sample"}, {{0}, {1}, {2}});
-
-    // values_array returns a valid mts_array_t with correct shape
-    auto array = labels.values_array();
-    uintptr_t shape_count = 0;
-    const uintptr_t* shape = nullptr;
-    auto status = array.shape(array.ptr, &shape, &shape_count);
-    REQUIRE(status == MTS_SUCCESS);
-    REQUIRE(shape_count == 2);
-    CHECK(shape[0] == 3);
-    CHECK(shape[1] == 1);
-
-    // values_array has the correct origin
-    mts_data_origin_t origin = 0;
-    status = array.origin(array.ptr, &origin);
-    REQUIRE(status == MTS_SUCCESS);
-
-    char buffer[64] = {0};
-    status = mts_get_data_origin(origin, buffer, sizeof(buffer));
-    REQUIRE(status == MTS_SUCCESS);
-    CHECK(std::string(buffer) == "metatensor.labels");
-}
 
 void check_loaded_labels(metatensor::Labels& labels) {
     CHECK(labels.names().size() == 4);

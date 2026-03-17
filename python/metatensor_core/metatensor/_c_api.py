@@ -165,16 +165,14 @@ def setup_functions(lib):
     lib.mts_labels_create.argtypes = [
         POINTER(ctypes.c_char_p),
         c_uintptr_t,
-        POINTER(ctypes.c_int32),
-        c_uintptr_t,
+        mts_array_t,
     ]
     lib.mts_labels_create.restype = POINTER(mts_labels_t)
 
     lib.mts_labels_create_assume_unique.argtypes = [
         POINTER(ctypes.c_char_p),
         c_uintptr_t,
-        POINTER(ctypes.c_int32),
-        c_uintptr_t,
+        mts_array_t,
     ]
     lib.mts_labels_create_assume_unique.restype = POINTER(mts_labels_t)
 
@@ -211,33 +209,6 @@ def setup_functions(lib):
         POINTER(ctypes.c_int64),
     ]
     lib.mts_labels_position.restype = _check_status
-
-    lib.mts_labels_values_array.argtypes = [
-        POINTER(mts_labels_t),
-        POINTER(mts_array_t),
-    ]
-    lib.mts_labels_values_array.restype = _check_status
-
-    lib.mts_labels_create_from_array.argtypes = [
-        POINTER(ctypes.c_char_p),
-        c_uintptr_t,
-        mts_array_t,
-    ]
-    lib.mts_labels_create_from_array.restype = POINTER(mts_labels_t)
-
-    lib.mts_labels_create_from_array_assume_unique.argtypes = [
-        POINTER(ctypes.c_char_p),
-        c_uintptr_t,
-        mts_array_t,
-    ]
-    lib.mts_labels_create_from_array_assume_unique.restype = POINTER(mts_labels_t)
-
-    lib.mts_labels_set_cached_values.argtypes = [
-        POINTER(mts_labels_t),
-        POINTER(ctypes.c_int32),
-        c_uintptr_t,
-    ]
-    lib.mts_labels_set_cached_values.restype = _check_status
 
     lib.mts_labels_clone.argtypes = [
         POINTER(mts_labels_t),

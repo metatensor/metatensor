@@ -324,36 +324,11 @@ const char *mts_version(void);
 const char *mts_last_error(void);
 
 /**
- * Create a new set of Labels from the given dimension names and values.
+ * Create a new set of Labels from the given dimension names and values
+ * array.
  *
- * This function allocates memory which must be released with
- * `mts_labels_free` when you don't need it anymore.
- *
- * @param names array of NULL-terminated UTF-8 strings containing the names
- *        of each dimension
- * @param names_count number of entries in the `names` array (i.e. the
- *        number of dimensions)
- * @param values pointer to the first element of a 2D row-major array of
- *        32-bit signed integers. Each row has `names_count` elements, and
- *        there are `count` rows in total. This can be NULL if `count` is 0.
- * @param count number of entries (rows) in the labels
- *
- * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
- *          case of error. In case of error, you can use `mts_last_error()`
- *          to get the error message.
- */
-struct mts_labels_t *mts_labels_create(const char *const *names,
-                                       uintptr_t names_count,
-                                       const int32_t *values,
-                                       uintptr_t count);
-
-/**
- * Create a new set of Labels from the given dimension names and values,
- * without checking for uniqueness of the entries.
- *
- * This function does not check for uniqueness of the labels entries, which
- * should be enforced by the caller. Calling this function with non-unique
- * entries is invalid and can lead to crashes or infinite loops.
+ * The array must be on a CPU device. This function verifies uniqueness of
+ * the labels entries.
  *
  * This function allocates memory which must be released with
  * `mts_labels_free` when you don't need it anymore.
@@ -361,9 +336,33 @@ struct mts_labels_t *mts_labels_create(const char *const *names,
  * @param names array of NULL-terminated UTF-8 strings containing the names
  *        of each dimension
  * @param names_count number of entries in the `names` array
- * @param values pointer to the first element of a 2D row-major array of
- *        32-bit signed integers (same layout as `mts_labels_create`)
- * @param count number of entries (rows) in the labels
+ * @param array the values array (2D, i32, row-major). The labels take
+ *        ownership of this array.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_labels_t *mts_labels_create(const char *const *names,
+                                       uintptr_t names_count,
+                                       struct mts_array_t array);
+
+/**
+ * Create a new set of Labels from the given dimension names and values
+ * array, without checking for uniqueness of the entries.
+ *
+ * The array can be on any device (CPU or GPU). The caller must ensure
+ * that the labels entries are unique; passing non-unique entries is
+ * invalid and can lead to crashes or infinite loops.
+ *
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param names array of NULL-terminated UTF-8 strings containing the names
+ *        of each dimension
+ * @param names_count number of entries in the `names` array
+ * @param array the values array (2D, i32, row-major). The labels take
+ *        ownership of this array.
  *
  * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
@@ -371,8 +370,7 @@ struct mts_labels_t *mts_labels_create(const char *const *names,
  */
 struct mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
                                                      uintptr_t names_count,
-                                                     const int32_t *values,
-                                                     uintptr_t count);
+                                                     struct mts_array_t array);
 
 /**
  * Get the dimension names for the given set of `labels`.
@@ -454,86 +452,6 @@ mts_status_t mts_labels_position(const struct mts_labels_t *labels,
                                  const int32_t *values,
                                  uintptr_t values_count,
                                  int64_t *result);
-
-/**
- * Get the values array backing these `labels`.
- *
- * The returned `mts_array_t` is a non-owning view into the Labels and must
- * not be freed by the caller.
- *
- * @param labels pointer to an existing set of labels
- * @param array on output, will contain the values array
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_values_array(const struct mts_labels_t *labels, struct mts_array_t *array);
-
-/**
- * Create a new set of labels from the given names and array.
- *
- * The array must be on a CPU device. This function verifies uniqueness of
- * the labels entries.
- *
- * This function allocates memory which must be released with
- * `mts_labels_free` when you don't need it anymore.
- *
- * @param names array of NULL-terminated UTF-8 strings containing the names
- *        of each dimension
- * @param names_count number of entries in the `names` array
- * @param array the values array. The labels take ownership of this array.
- *
- * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
- *          case of error. In case of error, you can use `mts_last_error()`
- *          to get the error message.
- */
-struct mts_labels_t *mts_labels_create_from_array(const char *const *names,
-                                                  uintptr_t names_count,
-                                                  struct mts_array_t array);
-
-/**
- * Create a new set of labels from the given names and array, without
- * checking uniqueness.
- *
- * The array can be on any device (CPU or GPU). The caller must ensure
- * that the labels entries are unique; passing non-unique entries is
- * invalid and can lead to crashes or infinite loops.
- *
- * This function allocates memory which must be released with
- * `mts_labels_free` when you don't need it anymore.
- *
- * @param names array of NULL-terminated UTF-8 strings containing the names
- *        of each dimension
- * @param names_count number of entries in the `names` array
- * @param array the values array. The labels take ownership of this array.
- *
- * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
- *          case of error. In case of error, you can use `mts_last_error()`
- *          to get the error message.
- */
-struct mts_labels_t *mts_labels_create_from_array_assume_unique(const char *const *names,
-                                                                uintptr_t names_count,
-                                                                struct mts_array_t array);
-
-/**
- * Pre-fill the cached CPU values for these `labels` without triggering
- * materialization from the backing array. This is used when the caller
- * has known-good CPU values (e.g., from a device transfer) and the
- * backing array is on a device that cannot produce values via DLPack
- * (such as Meta tensors).
- *
- * If the values are already cached, this is a no-op.
- *
- * @param labels pointer to an existing set of labels
- * @param values pointer to a flat array of int32 values (count * size elements)
- * @param count number of entries (rows) in the values array
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_set_cached_values(const struct mts_labels_t *labels,
-                                          const int32_t *values,
-                                          uintptr_t count);
 
 /**
  * Make a copy of `labels`, incrementing the internal reference count.

@@ -1123,19 +1123,23 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
 def _create_new_labels(
     lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
 ):
+    from .data.array import create_mts_array
+
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
     for i, n in enumerate(names):
         c_names[i] = n.encode("utf8")
 
-    values_ptr = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-    count = values.shape[0]
+    # Ensure values is 2D int32 C-contiguous for the mts_array_t
+    if values.ndim == 1:
+        values = values.reshape(-1, len(names))
+    values = np.ascontiguousarray(values, dtype=np.int32)
+
+    array = create_mts_array(values)
 
     if assume_unique:
-        ptr = lib.mts_labels_create_assume_unique(
-            c_names, len(names), values_ptr, count
-        )
+        ptr = lib.mts_labels_create_assume_unique(c_names, len(names), array)
     else:
-        ptr = lib.mts_labels_create(c_names, len(names), values_ptr, count)
+        ptr = lib.mts_labels_create(c_names, len(names), array)
 
     _check_pointer(ptr)
     return ptr

@@ -5,10 +5,10 @@ Labels
 
 The following functions operate on :c:type:`mts_labels_t`:
 
-- :c:func:`mts_labels_create`: create new labels from dimension names and values
-- :c:func:`mts_labels_create_assume_unique`: create new labels without verifying uniqueness
-- :c:func:`mts_labels_create_from_array`: create new labels from dimension names and an ``mts_array_t``
-- :c:func:`mts_labels_create_from_array_assume_unique`: create new labels from an array without verifying uniqueness
+- :c:func:`mts_labels_create`: create new labels from dimension names and a
+  values array
+- :c:func:`mts_labels_create_assume_unique`: create new labels from a values
+  array without verifying uniqueness
 - :c:func:`mts_labels_clone`: increment the reference count of the labels
 - :c:func:`mts_labels_free`: decrement the reference count of the labels,
   and free the data when it reaches 0
@@ -16,8 +16,6 @@ The following functions operate on :c:type:`mts_labels_t`:
 - :c:func:`mts_labels_count`: get the number of entries in the labels
 - :c:func:`mts_labels_size`: get the number of dimensions of the labels
 - :c:func:`mts_labels_values`: get the values of the labels as a flat array
-- :c:func:`mts_labels_values_array`: get the backing ``mts_array_t`` of the labels
-- :c:func:`mts_labels_set_cached_values`: set the cached CPU values for the labels
 - :c:func:`mts_labels_position`: get the position of an entry in the labels
 - :c:func:`mts_labels_union`: get the union of two labels
 - :c:func:`mts_labels_intersection`: get the intersection of two labels
@@ -30,10 +28,6 @@ The following functions operate on :c:type:`mts_labels_t`:
 
 .. doxygenfunction:: mts_labels_create_assume_unique
 
-.. doxygenfunction:: mts_labels_create_from_array
-
-.. doxygenfunction:: mts_labels_create_from_array_assume_unique
-
 .. doxygenfunction:: mts_labels_clone
 
 .. doxygenfunction:: mts_labels_free
@@ -45,10 +39,6 @@ The following functions operate on :c:type:`mts_labels_t`:
 .. doxygenfunction:: mts_labels_size
 
 .. doxygenfunction:: mts_labels_values
-
-.. doxygenfunction:: mts_labels_values_array
-
-.. doxygenfunction:: mts_labels_set_cached_values
 
 .. doxygenfunction:: mts_labels_position
 

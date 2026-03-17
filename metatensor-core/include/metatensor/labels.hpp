@@ -86,7 +86,7 @@ public:
             c_names.push_back(name.c_str());
         }
 
-        labels_ = mts_labels_create_from_array_assume_unique(
+        labels_ = mts_labels_create_assume_unique(
             c_names.data(), c_names.size(), array
         );
         if (labels_ == nullptr) {
@@ -94,8 +94,8 @@ public:
         }
         // Only cache names here; the array may be on a non-CPU device
         // (e.g. Meta) where DLPack materialization is impossible.
-        // Values will be cached lazily via set_cached_values() or
-        // when refresh_values_cache() is called explicitly.
+        // Values will be cached lazily when refresh_values_cache() is
+        // called explicitly.
         refresh_names_cache();
     }
 
@@ -113,7 +113,7 @@ public:
             c_names.push_back(name.c_str());
         }
 
-        labels_ = mts_labels_create_from_array(
+        labels_ = mts_labels_create(
             c_names.data(), c_names.size(), array
         );
         if (labels_ == nullptr) {
@@ -203,29 +203,6 @@ public:
     /// Get the underlying `mts_labels_t` pointer
     mts_labels_t* as_mts_labels_t() const {
         return labels_;
-    }
-
-    /// Pre-fill the cached CPU values without triggering materialization
-    /// from the backing array. Used when the caller has values from a
-    /// known-good source (e.g., device transfer where the source Labels
-    /// was validated). If the values are already cached, this is a no-op.
-    void set_cached_values(const int32_t* values, size_t count) const {
-        details::check_status(
-            mts_labels_set_cached_values(labels_, values, count)
-        );
-    }
-
-    /// Get the values array backing these Labels.
-    ///
-    /// The returned `mts_array_t` is a non-owning copy (raw_copy); the caller
-    /// must not call `destroy` on it.
-    mts_array_t values_array() const {
-        assert(labels_ != nullptr);
-
-        mts_array_t array;
-        std::memset(&array, 0, sizeof(array));
-        details::check_status(mts_labels_values_array(labels_, &array));
-        return array;
     }
 
     /// Get the position of the `entry` in this set of Labels, or -1 if the
@@ -665,13 +642,12 @@ private:
         }
 
         // Reset values to empty; they will be populated by
-        // refresh_values_cache() or set_cached_values() later.
+        // refresh_values_cache() later.
         values_ = NDArray<int32_t>(static_cast<const int32_t*>(nullptr), {0, names_count});
     }
 
     /// Refresh cached values from the opaque pointer.
-    /// Requires that values are already materialized (e.g. CPU array or
-    /// set_cached_values was called). Triggers DLPack if not cached.
+    /// Triggers DLPack materialization if values are not yet cached.
     void refresh_values_cache() {
         assert(labels_ != nullptr);
 
@@ -744,20 +720,30 @@ namespace details {
             c_names.push_back(name.c_str());
         }
 
+        // Wrap raw values in a SimpleDataArray<int32_t> to create an mts_array_t
+        auto data = std::vector<int32_t>();
+        size_t n_elements = count * names.size();
+        if (values != nullptr && n_elements > 0) {
+            data.assign(values, values + n_elements);
+        }
+        auto shape = std::vector<uintptr_t>{count, names.size()};
+        auto cxx_array = std::unique_ptr<DataArrayBase>(
+            new SimpleDataArray<int32_t>(std::move(shape), std::move(data))
+        );
+        auto array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
+
         mts_labels_t* labels;
         if (assume_unique) {
             labels = mts_labels_create_assume_unique(
                 c_names.data(),
                 c_names.size(),
-                values,
-                count
+                array
             );
         } else {
             labels = mts_labels_create(
                 c_names.data(),
                 c_names.size(),
-                values,
-                count
+                array
             );
         }
 

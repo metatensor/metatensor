@@ -646,8 +646,7 @@ impl LabelsBuilder {
         creator: unsafe extern "C" fn(
             *const *const std::os::raw::c_char,
             usize,
-            *const i32,
-            usize,
+            crate::c_api::mts_array_t,
         ) -> *mut mts_labels_t
     ) -> Labels {
         let mut raw_names = Vec::new();
@@ -667,12 +666,19 @@ impl LabelsBuilder {
             self.values.len() / names_count
         };
 
+        // Wrap raw values in an ndarray-backed mts_array_t
+        let shape = ndarray::IxDyn(&[count, names_count]);
+        let ndarray_values: ndarray::ArcArray<i32, ndarray::IxDyn> =
+            ndarray::Array::from_shape_vec(shape, self.values)
+                .expect("shape mismatch when creating labels array")
+                .into_shared();
+        let array: crate::c_api::mts_array_t = (Box::new(ndarray_values) as Box<dyn crate::data::Array>).into();
+
         let ptr = unsafe {
             creator(
                 raw_names_ptr.as_ptr(),
                 names_count,
-                self.values.as_ptr().cast(),
-                count,
+                array,
             )
         };
 
