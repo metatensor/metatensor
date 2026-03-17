@@ -12,9 +12,9 @@ from .._c_api import (
     mts_array_t,
     mts_data_origin_t,
 )
-from ._dlpack import make_dlpack_versioned_capsule
 from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
+from ._dlpack import make_dlpack_versioned_capsule
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,

@@ -24,7 +24,6 @@ if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
         save_buffer,
         version,
     )
-
     from .serialization import (  # noqa: F811, E402
         load_block_mmap,
         load_mmap,
