@@ -264,14 +264,12 @@ extern "C" {
     pub fn mts_labels_create(
         names: *const *const ::std::os::raw::c_char,
         names_count: usize,
-        values: *const i32,
-        count: usize,
+        array: mts_array_t,
     ) -> *mut mts_labels_t;
     pub fn mts_labels_create_assume_unique(
         names: *const *const ::std::os::raw::c_char,
         names_count: usize,
-        values: *const i32,
-        count: usize,
+        array: mts_array_t,
     ) -> *mut mts_labels_t;
     #[must_use]
     pub fn mts_labels_names(
@@ -295,27 +293,6 @@ extern "C" {
         values: *const i32,
         values_count: usize,
         result: *mut i64,
-    ) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_values_array(
-        labels: *const mts_labels_t,
-        array: *mut mts_array_t,
-    ) -> mts_status_t;
-    pub fn mts_labels_create_from_array(
-        names: *const *const ::std::os::raw::c_char,
-        names_count: usize,
-        array: mts_array_t,
-    ) -> *mut mts_labels_t;
-    pub fn mts_labels_create_from_array_assume_unique(
-        names: *const *const ::std::os::raw::c_char,
-        names_count: usize,
-        array: mts_array_t,
-    ) -> *mut mts_labels_t;
-    #[must_use]
-    pub fn mts_labels_set_cached_values(
-        labels: *const mts_labels_t,
-        values: *const i32,
-        count: usize,
     ) -> mts_status_t;
     pub fn mts_labels_clone(labels: *const mts_labels_t) -> *mut mts_labels_t;
     #[must_use]

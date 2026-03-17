@@ -116,19 +116,19 @@ function mts_last_error()
     )
 end
 
-function mts_labels_create(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, values::Ptr{Int32}, count::UIntptr)
-    ccall((:mts_labels_create, libmetatensor), 
+function mts_labels_create(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
+    ccall((:mts_labels_create, libmetatensor),
         Ptr{mts_labels_t},
-        (Ptr{Ptr{Cchar}}, UIntptr, Ptr{Int32}, UIntptr,),
-        names, names_count, values, count
+        (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
+        names, names_count, array
     )
 end
 
-function mts_labels_create_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, values::Ptr{Int32}, count::UIntptr)
-    ccall((:mts_labels_create_assume_unique, libmetatensor), 
+function mts_labels_create_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
+    ccall((:mts_labels_create_assume_unique, libmetatensor),
         Ptr{mts_labels_t},
-        (Ptr{Ptr{Cchar}}, UIntptr, Ptr{Int32}, UIntptr,),
-        names, names_count, values, count
+        (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
+        names, names_count, array
     )
 end
 
@@ -172,37 +172,6 @@ function mts_labels_position(labels::Ptr{mts_labels_t}, values::Ptr{Int32}, valu
     )
 end
 
-function mts_labels_values_array(labels::Ptr{mts_labels_t}, array::Ptr{mts_array_t})
-    ccall((:mts_labels_values_array, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{mts_array_t},),
-        labels, array
-    )
-end
-
-function mts_labels_create_from_array(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
-    ccall((:mts_labels_create_from_array, libmetatensor), 
-        Ptr{mts_labels_t},
-        (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
-        names, names_count, array
-    )
-end
-
-function mts_labels_create_from_array_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UIntptr, array::mts_array_t)
-    ccall((:mts_labels_create_from_array_assume_unique, libmetatensor), 
-        Ptr{mts_labels_t},
-        (Ptr{Ptr{Cchar}}, UIntptr, mts_array_t,),
-        names, names_count, array
-    )
-end
-
-function mts_labels_set_cached_values(labels::Ptr{mts_labels_t}, values::Ptr{Int32}, count::UIntptr)
-    ccall((:mts_labels_set_cached_values, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{Int32}, UIntptr,),
-        labels, values, count
-    )
-end
 
 function mts_labels_clone(labels::Ptr{mts_labels_t})
     ccall((:mts_labels_clone, libmetatensor), 
