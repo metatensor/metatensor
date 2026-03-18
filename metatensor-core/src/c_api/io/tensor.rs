@@ -181,6 +181,96 @@ pub unsafe extern "C" fn mts_tensormap_load_buffer(
     return result;
 }
 
+/// Load a tensor map from the file at the given path using memory mapping.
+///
+/// If `create_array` is `NULL`, data arrays are created internally as
+/// read-only memory-mapped arrays (default behavior). If `create_array`
+/// is non-NULL, the callback is called for each data array with the
+/// shape, DLPack dtype, byte offset within the file, and byte length of
+/// the raw data. The callback creates the `mts_array_t` using whatever
+/// I/O strategy it prefers (mmap, GPU Direct Storage, plain reads, etc.).
+/// `user_data` is forwarded to the callback as-is.
+///
+/// Labels are always loaded normally regardless of the callback.
+///
+/// The memory allocated by this function should be released using
+/// `mts_tensormap_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback for creating data arrays, or NULL for default
+/// @param user_data opaque pointer forwarded to create_array
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_load_mmap(
+    path: *const c_char,
+    create_array: super::mts_create_file_array_callback_t,
+    user_data: *mut c_void,
+) -> *mut mts_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let tensor = if let Some(callback) = create_array {
+            let wrapped = wrap_create_file_array(callback, user_data);
+            crate::io::load_mmap_with(path, wrapped)?
+        } else {
+            crate::io::load_mmap(path)?
+        };
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+pub(super) fn wrap_create_file_array(
+    callback: unsafe extern "C" fn(
+        *mut c_void, *const usize, usize,
+        dlpk::sys::DLDataType, usize, usize,
+        *mut mts_array_t,
+    ) -> mts_status_t,
+    user_data: *mut c_void,
+) -> impl Fn(&[usize], dlpk::sys::DLDataType, usize, usize) -> Result<mts_array_t, Error> {
+    // SAFETY: user_data is passed through as an opaque pointer; the
+    // callback contract requires it to be valid for the duration of the
+    // load call.
+    let user_data = user_data as usize; // make it Send
+    move |shape: &[usize], dtype, file_offset, data_len| {
+        let mut array = mts_array_t::null();
+        let status = unsafe {
+            callback(
+                user_data as *mut c_void,
+                shape.as_ptr(),
+                shape.len(),
+                dtype,
+                file_offset,
+                data_len,
+                &mut array,
+            )
+        };
+
+        if status.is_success() {
+            Ok(array)
+        } else {
+            Err(Error::External {
+                status,
+                context: "failed to create a new array in mts_tensormap_load_mmap".into(),
+            })
+        }
+    }
+}
+
 fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<mts_array_t, Error> + '_ {
     |shape: Vec<usize>| {
         let mut array = mts_array_t::null();

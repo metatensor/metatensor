@@ -14,6 +14,7 @@ from .._c_api import (
 )
 from ..status import _check_status
 from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
+from ._dlpack import make_dlpack_versioned_capsule
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
@@ -296,7 +297,6 @@ class ExternalCudaArray:
 
         from ._dlpack import (
             make_dlpack_unversioned_capsule,
-            make_dlpack_versioned_capsule,
             wrap_versioned_as_unversioned,
         )
 
@@ -330,3 +330,104 @@ class ExternalCudaArray:
         tensor._parent = parent
 
         return tensor
+
+
+class MmapCpuArray(np.ndarray):
+    """
+    Wrapper for arrays that expose data via DLPack (e.g. mmap-backed arrays from
+    :py:func:`metatensor.load_mmap`).
+
+    Uses the DLPack protocol (``as_dlpack`` callback) to create a numpy view of the
+    underlying data, keeping a reference to the parent object to prevent premature
+    garbage collection.
+    """
+
+    def __new__(cls, mts_array: mts_array_t, parent: Any):
+        """
+        :param mts_array: raw array to wrap in a Python-compatible class
+        :param parent: owner of the raw array, we will keep a reference to this
+            python object
+        """
+        dl_managed = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(1, 0)  # kDLCPU, device_id=0
+        max_version = DLPackVersion(1, 0)
+
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed),
+            device,
+            None,
+            max_version,
+        )
+        _check_status(status)
+
+        from ._dlpack import (
+            make_dlpack_unversioned_capsule,
+            wrap_versioned_as_unversioned,
+        )
+
+        capsule = make_dlpack_versioned_capsule(dl_managed)
+
+        # np.from_dlpack expects an object with __dlpack__/__dlpack_device__
+        # rather than a raw PyCapsule (PyCapsule support is numpy >= 2.0 only).
+        class _DLPackHolder:
+            def __init__(self, cap):
+                self._capsule = cap
+
+            def __dlpack__(self, *, stream=None):
+                return self._capsule
+
+            def __dlpack_device__(self):
+                return (1, 0)  # kDLCPU
+
+        try:
+            array = np.from_dlpack(_DLPackHolder(capsule))
+        except (ValueError, TypeError):
+            # Older NumPy (< 1.25) does not understand versioned DLPack
+            # capsules. Fall back to unversioned capsule.
+            unversioned = wrap_versioned_as_unversioned(dl_managed)
+            capsule = make_dlpack_unversioned_capsule(unversioned)
+            array = np.from_dlpack(_DLPackHolder(capsule))
+        except Exception:
+            # Some other error -- clean up and re-raise
+            if dl_managed and dl_managed.contents.deleter:
+                dl_managed.contents.deleter(dl_managed)
+            raise
+
+        obj = array.view(cls)
+
+        # keep a reference to the parent object (if any) to prevent it from
+        # being garbage-collected too early.
+        obj._parent = parent
+
+        return obj
+
+    def __array_finalize__(self, obj):
+        # keep the parent around when creating sub-views of this array
+        self._parent = getattr(obj, "_parent", None)
+
+    def __array_wrap__(self, new, context=None, return_scalar=False):
+        self_ptr = self.ctypes.data
+        self_size = self.nbytes
+
+        new_ptr = new.ctypes.data
+
+        if self_ptr <= new_ptr <= self_ptr + self_size:
+            return super().__array_wrap__(new)
+        else:
+            return np.asarray(new)
+
+
+_mmap_origin_registered = False
+
+
+def _ensure_mmap_origin_registered():
+    """Register the MmapCpuArray wrapper for the ``metatensor.MmapArray`` data origin.
+
+    This is called lazily from ``load_mmap`` / ``load_block_mmap`` -- the C library
+    must already be loaded at that point.
+    """
+    global _mmap_origin_registered
+    if not _mmap_origin_registered:
+        register_external_data_wrapper("metatensor.MmapArray", MmapCpuArray)
+        _mmap_origin_registered = True

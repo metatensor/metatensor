@@ -47,6 +47,10 @@ TensorMap metatensor_torch::load_buffer(torch::Tensor buffer) {
 }
 
 
+TensorMap metatensor_torch::load_mmap(const std::string& path) {
+    return TensorMapHolder::load_mmap(path);
+}
+
 void metatensor_torch::save(const std::string& path, TensorMap tensor) {
     tensor->save(path);
 }
@@ -65,6 +69,10 @@ TensorBlock metatensor_torch::load_block_buffer(torch::Tensor buffer) {
     return TensorBlockHolder::load_buffer(buffer);
 }
 
+
+TensorBlock metatensor_torch::load_block_mmap(const std::string& path) {
+    return TensorBlockHolder::load_mmap(path);
+}
 
 void metatensor_torch::save(const std::string& path, TensorBlock block) {
     block->save(path);

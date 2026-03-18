@@ -206,6 +206,28 @@ namespace io {
 
     /**************************************************************************/
 
+    inline TensorMap load_mmap(
+        const std::string& path,
+        mts_create_file_array_callback_t create_array,
+        void* user_data
+    ) {
+        auto* ptr = mts_tensormap_load_mmap(path.c_str(), create_array, user_data);
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
+    }
+
+    inline TensorBlock load_block_mmap(
+        const std::string& path,
+        mts_create_file_array_callback_t create_array,
+        void* user_data
+    ) {
+        auto* ptr = mts_block_load_mmap(path.c_str(), create_array, user_data);
+        details::check_pointer(ptr);
+        return TensorBlock(ptr);
+    }
+
+    /**************************************************************************/
+
     inline Labels load_labels(const std::string& path) {
         mts_labels_t labels;
         std::memset(&labels, 0, sizeof(labels));

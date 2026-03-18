@@ -136,6 +136,66 @@ def load_labels(file: str) -> Labels:
 load_labels.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
+def load_mmap(file: str) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from the given ``file`` using
+    memory-mapped I/O. Arrays are created internally as read-only mmap-backed arrays.
+
+    :param file: path of the file to load.
+
+        .. warning::
+
+            When using this function in TorchScript mode, only ``str`` arguments are
+            supported.
+    """
+    if torch.jit.is_scripting():
+        assert isinstance(file, str)
+        return torch.ops.metatensor.load_mmap(file=file)
+    else:
+        if isinstance(file, str):
+            return torch.ops.metatensor.load_mmap(file=file)
+        elif isinstance(file, pathlib.Path):
+            return torch.ops.metatensor.load_mmap(file=str(file.resolve()))
+        else:
+            raise TypeError(
+                "load_mmap only supports file paths (str or Path), "
+                "not file-like objects"
+            )
+
+
+load_mmap.__annotations__["file"] = Union[str, pathlib.Path]
+
+
+def load_block_mmap(file: str) -> TensorBlock:
+    """
+    Load a previously saved :py:class:`TensorBlock` from the given ``file`` using
+    memory-mapped I/O. Arrays are created internally as read-only mmap-backed arrays.
+
+    :param file: path of the file to load.
+
+        .. warning::
+
+            When using this function in TorchScript mode, only ``str`` arguments are
+            supported.
+    """
+    if torch.jit.is_scripting():
+        assert isinstance(file, str)
+        return torch.ops.metatensor.load_block_mmap(file=file)
+    else:
+        if isinstance(file, str):
+            return torch.ops.metatensor.load_block_mmap(file=file)
+        elif isinstance(file, pathlib.Path):
+            return torch.ops.metatensor.load_block_mmap(file=str(file.resolve()))
+        else:
+            raise TypeError(
+                "load_block_mmap only supports file paths (str or Path), "
+                "not file-like objects"
+            )
+
+
+load_block_mmap.__annotations__["file"] = Union[str, pathlib.Path]
+
+
 def save(file: str, data: Union[TensorMap, TensorBlock, Labels]):
     """
     Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`, or

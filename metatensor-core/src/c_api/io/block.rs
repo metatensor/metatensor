@@ -150,6 +150,55 @@ pub unsafe extern "C" fn mts_block_load_buffer(
     return result;
 }
 
+/// Load a tensor block from the file at the given path using memory mapping.
+///
+/// If `create_array` is `NULL`, data arrays are created internally as
+/// read-only memory-mapped arrays (default behavior). If `create_array`
+/// is non-NULL, the callback is called for each data array with the
+/// shape, DLPack dtype, byte offset within the file, and byte length.
+/// `user_data` is forwarded to the callback as-is.
+///
+/// The memory allocated by this function should be released using
+/// `mts_block_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback for creating data arrays, or NULL for default
+/// @param user_data opaque pointer forwarded to create_array
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_load_mmap(
+    path: *const c_char,
+    create_array: super::mts_create_file_array_callback_t,
+    user_data: *mut c_void,
+) -> *mut mts_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let block = if let Some(callback) = create_array {
+            let wrapped = super::tensor::wrap_create_file_array(callback, user_data);
+            crate::io::load_block_mmap_with(path, wrapped)?
+        } else {
+            crate::io::load_block_mmap(path)?
+        };
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_block_t::into_boxed_raw(block);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
 fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<mts_array_t, Error> + '_ {
     |shape: Vec<usize>| {
         let mut array = mts_array_t::null();

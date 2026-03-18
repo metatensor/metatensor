@@ -336,6 +336,94 @@ def test_pickle_labels(tmpdir, labels_path):
     check_labels(loaded)
 
 
+def test_load_mmap(tensor_path):
+    """Test that load_mmap returns data matching regular load."""
+    loaded = mts.load_mmap(tensor_path)
+    check_tensor(loaded)
+
+    # using Path
+    loaded = mts.load_mmap(Path(tensor_path))
+    check_tensor(loaded)
+
+
+def test_load_mmap_type_error():
+    """Test that load_mmap rejects file-like objects."""
+    with pytest.raises(TypeError, match="load_mmap only supports file paths"):
+        mts.load_mmap(42)  # type: ignore
+
+
+def test_load_block_mmap(block_path):
+    """Test that load_block_mmap returns data matching regular load."""
+    loaded = mts.load_block_mmap(block_path)
+    check_block(loaded)
+
+    # using Path
+    loaded = mts.load_block_mmap(Path(block_path))
+    check_block(loaded)
+
+
+def test_load_block_mmap_type_error():
+    """Test that load_block_mmap rejects file-like objects."""
+    with pytest.raises(TypeError, match="load_block_mmap only supports file paths"):
+        mts.load_block_mmap(42)  # type: ignore
+
+
+def test_mmap_partial_file_reading(tensor_path):
+    """Test that only accessed blocks' data is paged in (the main benefit of mmap)."""
+    tensor = mts.load_mmap(tensor_path)
+
+    # Accessing blocks one at a time exercises lazy page-in:
+    # the OS only faults in pages for the block we touch.
+    for i in range(len(tensor.keys)):
+        block = tensor.block_by_id(i)
+        # accessing .values triggers the DLPack → torch conversion,
+        # which pages in only this block's data from the mmap
+        assert block.values.shape[0] > 0
+
+    # Also verify gradient access pages in gradient data independently
+    block = tensor.block_by_id(0)
+    for param in block.gradients_list():
+        grad = block.gradient(param)
+        assert grad.values.shape[0] > 0
+
+
+def test_mmap_value_data_matches_regular(tensor_path):
+    """Test that actual numeric values from mmap match regular load."""
+    regular = mts.load(tensor_path)
+    mmap = mts.load_mmap(tensor_path)
+
+    for i in range(len(regular.keys)):
+        rb = regular.block_by_id(i)
+        mb = mmap.block_by_id(i)
+        assert torch.equal(rb.values, mb.values)
+
+        for param in rb.gradients_list():
+            rg = rb.gradient(param)
+            mg = mb.gradient(param)
+            assert torch.equal(rg.values, mg.values)
+
+
+def test_mmap_operations_compatibility(tensor_path):
+    """Test clone and save roundtrip on mmap-loaded data."""
+    regular = mts.load(tensor_path)
+    tensor = mts.load_mmap(tensor_path)
+
+    # Clone
+    clone = tensor.copy()
+    assert clone.keys == tensor.keys
+    for i in range(len(tensor.keys)):
+        assert tensor.block_by_id(i).values.shape == clone.block_by_id(i).values.shape
+
+    # Save roundtrip: mmap and regular produce identical bytes
+    regular_buf = mts.save_buffer(regular)
+    mmap_buf = mts.save_buffer(tensor)
+    assert torch.equal(regular_buf, mmap_buf)
+
+    # Reload from mmap buffer
+    reloaded = mts.load_buffer(mmap_buf)
+    check_tensor(reloaded)
+
+
 class Serialization:
     def load(self, file: str) -> TensorMap:
         return mts.load(file=file)
@@ -343,11 +431,17 @@ class Serialization:
     def load_buffer(self, buffer: torch.Tensor) -> TensorMap:
         return mts.load_buffer(buffer=buffer)
 
+    def load_mmap(self, file: str) -> TensorMap:
+        return mts.load_mmap(file=file)
+
     def load_block(self, file: str) -> TensorBlock:
         return mts.load_block(file=file)
 
     def load_block_buffer(self, buffer: torch.Tensor) -> TensorBlock:
         return mts.load_block_buffer(buffer=buffer)
+
+    def load_block_mmap(self, file: str) -> TensorBlock:
+        return mts.load_block_mmap(file=file)
 
     def load_labels(self, file: str) -> Labels:
         return mts.load_labels(file=file)

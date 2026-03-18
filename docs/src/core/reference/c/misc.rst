@@ -58,6 +58,7 @@ Tensors
   to a in-memory buffer
 - :c:func:`mts_tensormap_load_buffer`: load a serialized ``mts_tensormap_t`` from
   an in-memory buffer
+- :c:func:`mts_tensormap_load_mmap`: load a ``mts_tensormap_t`` using memory-mapped I/O
 
 .. doxygenfunction:: mts_tensormap_load
 
@@ -66,6 +67,8 @@ Tensors
 .. doxygenfunction:: mts_tensormap_load_buffer
 
 .. doxygenfunction:: mts_tensormap_save_buffer
+
+.. doxygenfunction:: mts_tensormap_load_mmap
 
 
 .. doxygentypedef:: mts_create_array_callback_t
@@ -82,6 +85,7 @@ Blocks
   to a in-memory buffer
 - :c:func:`mts_block_load_buffer`: load a serialized ``mts_block_t`` from
   a in-memory buffer
+- :c:func:`mts_block_load_mmap`: load a ``mts_block_t`` using memory-mapped I/O
 
 .. doxygenfunction:: mts_block_load
 
@@ -90,6 +94,8 @@ Blocks
 .. doxygenfunction:: mts_block_load_buffer
 
 .. doxygenfunction:: mts_block_save_buffer
+
+.. doxygenfunction:: mts_block_load_mmap
 
 
 Labels

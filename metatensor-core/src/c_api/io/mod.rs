@@ -24,6 +24,28 @@ type mts_create_array_callback_t = unsafe extern "C" fn(
     array: *mut mts_array_t,
 ) -> mts_status_t;
 
+/// Function pointer to create a new `mts_array_t` from file offset data,
+/// used during mmap/file-based loading.
+///
+/// This callback receives the shape, DLPack data type, byte offset within
+/// the file, and byte length of the raw array data. The implementation
+/// creates the `mts_array_t` using whatever I/O strategy it prefers:
+/// memory mapping, GPU Direct Storage, or plain reads.
+///
+/// `user_data` is the pointer passed to `mts_tensormap_load_mmap` /
+/// `mts_block_load_mmap`; it can carry a cached file descriptor, mmap
+/// handle, or GDS context.
+#[allow(non_camel_case_types)]
+pub(crate) type mts_create_file_array_callback_t = Option<unsafe extern "C" fn(
+    user_data: *mut c_void,
+    shape: *const usize,
+    shape_count: usize,
+    dtype: dlpk::sys::DLDataType,
+    file_offset: usize,
+    data_len: usize,
+    array: *mut mts_array_t,
+) -> mts_status_t>;
+
 /// Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
 /// and `mts_labels_save_buffer`.
 ///

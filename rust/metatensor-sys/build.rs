@@ -43,13 +43,15 @@ fn main() {
         println!("cargo:rerun-if-changed={}", metatensor_core.display());
     }
 
-    let install_dir = cmake::Config::new(&metatensor_core)
+    let mut cmake_config = cmake::Config::new(&metatensor_core);
+    cmake_config
         .define("CARGO_EXE", env!("CARGO"))
         .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
         .define("BUILD_SHARED_LIBS", if cfg!(feature="static") { "OFF" } else { "ON" })
         .define("CMAKE_INSTALL_LIBDIR", "lib")
-        .define("METATENSOR_INSTALL_BOTH_STATIC_SHARED", "OFF")
-        .build();
+        .define("METATENSOR_INSTALL_BOTH_STATIC_SHARED", "OFF");
+
+    let install_dir = cmake_config.build();
 
     let lib_install_dir = install_dir.join("lib");
     assert!(lib_install_dir.is_dir(), "installation of metatensor-core failed");

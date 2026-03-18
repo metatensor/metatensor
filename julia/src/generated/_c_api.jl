@@ -18,6 +18,7 @@ mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
+mts_create_file_array_callback_t = Ptr{Cvoid}  # TODO: actual type
 mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
 # DLPack types (matching dlpack.h structs)
@@ -465,6 +466,14 @@ function mts_block_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, create
     )
 end
 
+function mts_block_load_mmap(path::Ptr{Cchar}, create_array::mts_create_file_array_callback_t, user_data::Ptr{Cvoid})
+    ccall((:mts_block_load_mmap, libmetatensor), 
+        Ptr{mts_block_t},
+        (Ptr{Cchar}, mts_create_file_array_callback_t, Ptr{Cvoid},),
+        path, create_array, user_data
+    )
+end
+
 function mts_block_save(path::Ptr{Cchar}, block::Ptr{mts_block_t})
     ccall((:mts_block_save, libmetatensor), 
         mts_status_t,
@@ -494,6 +503,14 @@ function mts_tensormap_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr, cr
         Ptr{mts_tensormap_t},
         (Ptr{UInt8}, UIntptr, mts_create_array_callback_t,),
         buffer, buffer_count, create_array
+    )
+end
+
+function mts_tensormap_load_mmap(path::Ptr{Cchar}, create_array::mts_create_file_array_callback_t, user_data::Ptr{Cvoid})
+    ccall((:mts_tensormap_load_mmap, libmetatensor), 
+        Ptr{mts_tensormap_t},
+        (Ptr{Cchar}, mts_create_file_array_callback_t, Ptr{Cvoid},),
+        path, create_array, user_data
     )
 end
 

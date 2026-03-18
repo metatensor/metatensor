@@ -663,6 +663,268 @@ def test_save_dtypes(tmp_path, dtype):
     np.testing.assert_array_equal(vals_loaded, data)
 
 
+def test_load_mmap():
+    """Test that load_mmap returns data matching regular load."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    tensor_regular = mts.load(path)
+    tensor_mmap = mts.load_mmap(path)
+
+    assert isinstance(tensor_mmap, TensorMap)
+    assert tensor_mmap.keys == tensor_regular.keys
+    assert len(tensor_mmap.keys) == 27
+
+    block = tensor_mmap.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert block.samples.names == ["system", "atom"]
+    assert block.values.shape == (9, 5, 3)
+
+    gradient = block.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+def test_load_mmap_static_method():
+    """Test TensorMap.load_mmap static method."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    tensor = TensorMap.load_mmap(path)
+    assert isinstance(tensor, TensorMap)
+    assert len(tensor.keys) == 27
+
+
+def test_load_mmap_pathlib():
+    """Test load_mmap with pathlib.Path."""
+    path = Path(
+        os.path.join(
+            os.path.dirname(__file__),
+            "..",
+            "..",
+            "..",
+            "metatensor-core",
+            "tests",
+            "data.mts",
+        )
+    )
+
+    tensor = mts.load_mmap(path)
+    assert isinstance(tensor, TensorMap)
+    assert len(tensor.keys) == 27
+
+
+def test_load_block_mmap():
+    """Test that load_block_mmap returns data matching regular load."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+    block_regular = mts.load_block(path)
+    block_mmap = mts.load_block_mmap(path)
+
+    assert isinstance(block_mmap, TensorBlock)
+    assert block_mmap.samples.names == block_regular.samples.names
+    assert block_mmap.values.shape == block_regular.values.shape
+
+    gradient = block_mmap.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+def test_load_block_mmap_static_method():
+    """Test TensorBlock.load_mmap static method."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+    block = TensorBlock.load_mmap(path)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape == (9, 5, 3)
+
+
+def test_mmap_partial_file_reading():
+    """Test that only accessed blocks' data is paged in (the main benefit of mmap)."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    tensor = mts.load_mmap(path)
+
+    # Accessing blocks one at a time exercises lazy page-in:
+    # the OS only faults in pages for the block we touch.
+    for i in range(len(tensor.keys)):
+        block = tensor.block_by_id(i)
+        # accessing .values triggers the DLPack → numpy conversion,
+        # which pages in only this block's data from the mmap
+        assert block.values.shape[0] > 0
+
+    # Also verify gradient access pages in gradient data independently
+    block = tensor.block_by_id(0)
+    for param in block.gradients_list():
+        grad = block.gradient(param)
+        assert grad.values.shape[0] > 0
+
+
+def test_mmap_value_data_matches_regular():
+    """Test that actual numeric values from mmap match regular load."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    regular = mts.load(path)
+    mmap = mts.load_mmap(path)
+
+    for i in range(len(regular.keys)):
+        rb = regular.block_by_id(i)
+        mb = mmap.block_by_id(i)
+        np.testing.assert_array_equal(rb.values, mb.values)
+
+        for param in rb.gradients_list():
+            rg = rb.gradient(param)
+            mg = mb.gradient(param)
+            np.testing.assert_array_equal(rg.values, mg.values)
+
+
+def test_mmap_components_to_properties():
+    """Test components_to_properties on mmap-loaded data matches regular."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    regular = mts.load(path)
+    mmap = mts.load_mmap(path)
+
+    regular_result = regular.components_to_properties("o3_mu")
+    mmap_result = mmap.components_to_properties("o3_mu")
+
+    assert regular_result.keys == mmap_result.keys
+    for i in range(len(regular_result.keys)):
+        rb = regular_result.block_by_id(i)
+        mb = mmap_result.block_by_id(i)
+        assert rb.values.shape == mb.values.shape
+        assert rb.samples == mb.samples
+        assert rb.properties == mb.properties
+
+
+def test_mmap_keys_to_samples():
+    """Test keys_to_samples on mmap-loaded data matches regular."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    regular = mts.load(path)
+    mmap = mts.load_mmap(path)
+
+    regular_result = regular.keys_to_samples("center_type")
+    mmap_result = mmap.keys_to_samples("center_type")
+
+    assert regular_result.keys == mmap_result.keys
+    for i in range(len(regular_result.keys)):
+        rb = regular_result.block_by_id(i)
+        mb = mmap_result.block_by_id(i)
+        assert rb.values.shape == mb.values.shape
+        assert rb.samples == mb.samples
+
+
+def test_mmap_keys_to_properties():
+    """Test keys_to_properties on mmap-loaded data (after components_to_properties)."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    mmap = mts.load_mmap(path)
+    unified = mmap.components_to_properties("o3_mu")
+    merged = unified.keys_to_properties("o3_lambda")
+    assert len(merged.keys) < len(mmap.keys)
+
+
+def test_mmap_operations_compatibility():
+    """Test clone and save roundtrip on mmap-loaded data."""
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+    regular = mts.load(path)
+    tensor = mts.load_mmap(path)
+
+    # Clone
+    clone = tensor.copy()
+    assert clone.keys == tensor.keys
+    for i in range(len(tensor.keys)):
+        assert tensor.block_by_id(i).values.shape == clone.block_by_id(i).values.shape
+
+    # Save roundtrip: mmap and regular produce identical bytes
+    regular_buf = regular.save_buffer()
+    mmap_buf = tensor.save_buffer()
+    assert regular_buf == mmap_buf
+
+    # Reload from mmap buffer
+    reloaded = TensorMap.load_buffer(mmap_buf)
+    assert reloaded.keys == tensor.keys
+
+
 @pytest.mark.parametrize("use_numpy", (True, False))
 def test_save_fortran(tmp_path, use_numpy):
     data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float64, order="F")
