@@ -297,7 +297,6 @@ class ExternalCudaArray:
 
         from ._dlpack import (
             make_dlpack_unversioned_capsule,
-            make_dlpack_versioned_capsule,
             wrap_versioned_as_unversioned,
         )
 
@@ -362,6 +361,11 @@ class MmapCpuArray(np.ndarray):
         )
         _check_status(status)
 
+        from ._dlpack import (
+            make_dlpack_unversioned_capsule,
+            wrap_versioned_as_unversioned,
+        )
+
         capsule = make_dlpack_versioned_capsule(dl_managed)
 
         # np.from_dlpack expects an object with __dlpack__/__dlpack_device__
@@ -378,8 +382,14 @@ class MmapCpuArray(np.ndarray):
 
         try:
             array = np.from_dlpack(_DLPackHolder(capsule))
+        except (ValueError, TypeError):
+            # Older NumPy (< 1.25) does not understand versioned DLPack
+            # capsules. Fall back to unversioned capsule.
+            unversioned = wrap_versioned_as_unversioned(dl_managed)
+            capsule = make_dlpack_unversioned_capsule(unversioned)
+            array = np.from_dlpack(_DLPackHolder(capsule))
         except Exception:
-            # np.from_dlpack failed to consume the DLPack tensor -- clean up
+            # Some other error -- clean up and re-raise
             if dl_managed and dl_managed.contents.deleter:
                 dl_managed.contents.deleter(dl_managed)
             raise
