@@ -1,5 +1,7 @@
 import ctypes
+import functools
 import io
+import operator
 import pathlib
 from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
@@ -8,7 +10,6 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, mts_labels_t
 from ._c_lib import _get_library
-from .utils import _ptr_to_const_ndarray
 
 
 class LabelsValues(np.ndarray):
@@ -1226,3 +1227,15 @@ def _print_labels(
     output = output.getvalue()
     assert output[-1] == "\n"
     return output[:-1]
+
+
+def _ptr_to_const_ndarray(ptr, shape, dtype):
+    if functools.reduce(operator.mul, shape) == 0:
+        return np.empty(shape=shape, dtype=dtype)
+
+    assert ptr is not None
+    array = np.ctypeslib.as_array(ptr, shape=shape)
+    assert array.dtype == dtype
+    assert not array.flags["OWNDATA"]
+    array.flags["WRITEABLE"] = False
+    return array

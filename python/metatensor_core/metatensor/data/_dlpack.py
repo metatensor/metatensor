@@ -1,4 +1,5 @@
 import ctypes
+from typing import Union
 
 from .._c_api import (
     DLManagedTensorVersioned,
@@ -208,3 +209,85 @@ def make_dlpack_unversioned_capsule(dl_managed_ptr):
     if not ptr_value:
         raise ValueError("DLManagedTensor pointer is null")
     return PYTHON_API.PyCapsule_New(ptr_value, DLPACK_NAME, None)
+
+
+class DLPackArray:
+    """
+    A wrapper for raw DLPack pointers (i.e. not even a PyCapsule), implementing the
+    ``__dlpack__`` protocol to allow being consumed by libraries like NumPy or PyTorch
+    via DLPack.
+    """
+
+    def __init__(
+        self,
+        pointer: Union[
+            ctypes.POINTER(DLManagedTensorVersioned),
+            ctypes.POINTER(DLManagedTensor),
+        ],
+    ):
+        self._pointer = pointer
+        if isinstance(pointer, ctypes.POINTER(DLManagedTensorVersioned)):
+            self._versioned = True
+        elif isinstance(pointer, ctypes.POINTER(DLManagedTensor)):
+            self._versioned = False
+        else:
+            raise TypeError(
+                "pointer must be a ctypes pointer to either DLManagedTensorVersioned "
+                "or DLManagedTensor"
+            )
+
+    def get(self):
+        if self._pointer is not None:
+            pointer = self._pointer
+            self._pointer = None
+            return pointer
+        else:
+            raise RuntimeError("DLPack tensor has already been consumed")
+
+    def __del__(self):
+        if self._pointer is not None:
+            if self._pointer[0].deleter is not None:
+                self._pointer[0].deleter(self._pointer)
+                self._pointer = None
+
+    def __dlpack__(
+        self,
+        stream: int | None = None,
+        max_version: tuple[int, int] | None = None,
+        dl_device: tuple[int, int] | None = None,
+        copy: bool | None = None,
+    ):
+        pointer = self._pointer
+        if pointer is None:
+            raise RuntimeError("can not call __dlpack__ twice on DLPackArray")
+
+        if stream is not None:
+            raise RuntimeError("only `stream=None` is supported")
+
+        if self._versioned:
+            version = pointer[0].version
+            version = (version.major, version.minor)
+            if max_version is not None:
+                if version[0] > max_version[0]:
+                    raise RuntimeError(
+                        f"requested DLPack version {max_version}, but tensor has "
+                        f"version {version}"
+                    )
+
+        if dl_device is not None and dl_device != self.__dlpack_device__():
+            raise RuntimeError("device conversion is not supported")
+
+        if copy is not None:
+            raise RuntimeError("only `copy=None` is supported")
+
+        self._pointer = None
+        if self._versioned:
+            capsule = make_dlpack_versioned_capsule(pointer)
+        else:
+            capsule = make_dlpack_unversioned_capsule(pointer)
+
+        return capsule
+
+    def __dlpack_device__(self):
+        device = self._pointer[0].dl_tensor.device
+        return (device.device_type, device.device_id)

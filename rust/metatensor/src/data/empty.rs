@@ -4,7 +4,7 @@ use dlpk::{DLPackTensor};
 use crate::errors::Error;
 use crate::c_api::mts_data_movement_t;
 
-use super::Array;
+use super::{Array, MtsArray};
 
 
 /// An implementation of the [`Array`] trait without any data.
@@ -31,7 +31,7 @@ impl Array for EmptyArray {
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
+    fn create(&self, shape: &[usize], _fill_value: MtsArray) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
