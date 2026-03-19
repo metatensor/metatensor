@@ -43,7 +43,7 @@ fn one_component() {
     assert_eq!(block.properties()[4], [1, 1]);
     assert_eq!(block.properties()[5], [1, 2]);
 
-    assert_eq!(block.values().as_array(), ArcArray::from_elem(vec![3, 6], 1.0));
+    assert_eq!(block.values().as_ndarray(), ArcArray::from_elem(vec![3, 6], 1.0));
 
     let gradient = block.gradient("parameter").unwrap();
     assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
@@ -51,7 +51,7 @@ fn one_component() {
     assert_eq!(gradient.samples()[0], [0, 2]);
     assert_eq!(gradient.samples()[1], [1, 2]);
 
-    assert_eq!(gradient.values().as_array(), ArcArray::from_elem(vec![2, 6], 11.0));
+    assert_eq!(gradient.values().as_ndarray(), ArcArray::from_elem(vec![2, 6], 11.0));
 }
 
 #[test]
@@ -110,7 +110,7 @@ fn multiple_components() {
         1.0, 1.0, 4.0, 4.0, 2.0, 2.0, 5.0, 5.0, 3.0, 3.0, 6.0, 6.0,
         -1.0, 1.0, -4.0, 4.0, -2.0, 2.0, -5.0, 5.0, -3.0, 3.0, -6.0, 6.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     let gradient = block.gradient("parameter").unwrap();
     assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
@@ -119,5 +119,5 @@ fn multiple_components() {
     assert_eq!(gradient.samples()[1], [0, 3]);
     assert_eq!(gradient.samples()[2], [1, 2]);
 
-    assert_eq!(gradient.values().as_array(), ArcArray::from_elem(vec![3, 3, 4], 11.0));
+    assert_eq!(gradient.values().as_ndarray(), ArcArray::from_elem(vec![3, 3, 4], 11.0));
 }
