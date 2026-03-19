@@ -692,3 +692,49 @@ def test_info(tensor):
     assert c2p_tensor.info() == expected_info
 
     assert tensor.get_info("missing") is None
+
+
+def test_keys_to_properties_fill_value_nan(tensor):
+    tensor = tensor.keys_to_properties("key_1", fill_value=float("nan"))
+
+    # The first block merges blocks with different key_1 values.
+    # Missing entries should be NaN instead of 0.0
+    block = tensor.block(0)
+
+    expected = np.array(
+        [
+            [[1.0, 2.0, 2.0, 2.0]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+        ]
+    )
+
+    # Can not use assert_equal for NaN, use element-wise checks
+    values = block.values
+    assert values.shape == expected.shape
+
+    for idx in np.ndindex(values.shape):
+        if np.isnan(expected[idx]):
+            assert np.isnan(values[idx]), f"Expected NaN at {idx}, got {values[idx]}"
+        else:
+            assert values[idx] == expected[idx], f"Mismatch at {idx}"
+
+
+def test_keys_to_properties_fill_value_default_zero(tensor):
+    # Verify that default fill_value=0.0 matches existing behavior
+    tensor_default = tensor.keys_to_properties("key_1")
+    tensor_explicit = tensor.keys_to_properties("key_1", fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert_equal(tensor_default.block(i).values, tensor_explicit.block(i).values)
+
+
+def test_keys_to_samples_fill_value_default(tensor):
+    # keys_to_samples also supports fill_value
+    tensor_default = tensor.keys_to_samples("key_2", sort_samples=True)
+    tensor_explicit = tensor.keys_to_samples("key_2", sort_samples=True, fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert_equal(tensor_default.block(i).values, tensor_explicit.block(i).values)

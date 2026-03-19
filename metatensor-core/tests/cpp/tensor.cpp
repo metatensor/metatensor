@@ -1,4 +1,6 @@
+#include <cmath>
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <cstdlib>
 #include <map>
@@ -63,7 +65,7 @@ TEST_CASE("TensorMap") {
 
         std::set<std::string> expected_keys = {"creator", "description"};
         std::set<std::string> actual_keys;
-        auto k2p_tensor = tensor.keys_to_properties("key_1", /*sort_samples*/ true);
+        auto k2p_tensor = tensor.keys_to_properties("key_1");
         auto k2p_new_info = k2p_tensor.info();
         for (auto [key, value]: k2p_new_info) {
             std::string key_str(key);
@@ -81,7 +83,7 @@ TEST_CASE("TensorMap") {
         REQUIRE(actual_keys == expected_keys);
         actual_keys.clear();
 
-        auto k2s_tensor = tensor.keys_to_samples("key_2", /* sort_samples */ true);
+        auto k2s_tensor = tensor.keys_to_samples("key_2");
         auto k2s_new_info = k2s_tensor.info();
         for (auto [key, value]: k2s_new_info) {
             std::string key_str(key);
@@ -118,7 +120,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_samples") {
-        auto tensor = test_tensor_map().keys_to_samples("key_2", /* sort_samples */ true);
+        auto tensor = test_tensor_map().keys_to_samples("key_2");
 
         CHECK(tensor.keys() == Labels({"key_1"}, {{0}, {1}, {2}}));
 
@@ -170,7 +172,7 @@ TEST_CASE("TensorMap") {
         CHECK(gradient_3 == expected);
 
         // unsorted samples
-        tensor = test_tensor_map().keys_to_samples("key_2", /*sort_samples*/ false);
+        tensor = test_tensor_map().keys_to_samples("key_2", /*fill_value*/ 0.0, /*sort_samples*/ false);
 
         block = tensor.block_by_id(2);
         CHECK(block.samples() == Labels({"samples", "key_2"}, {
@@ -254,6 +256,26 @@ TEST_CASE("TensorMap") {
         CHECK(components.empty());
 
         CHECK(block.properties() == Labels({"component", "properties"}, {{0, 0}}));
+    }
+
+    SECTION("keys_to_properties with NaN fill") {
+        auto tensor = test_tensor_map().keys_to_properties("key_1", /*fill_value*/ std::numeric_limits<double>::quiet_NaN(), /*sort_samples*/ true);
+
+        auto block = tensor.block_by_id(0);
+        auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());
+        auto view = values.view();
+
+        // Sample 0: exists in both key_1=0 (val=1.0) and key_1=1 (val=2.0)
+        CHECK(view(0, 0, 0) == 1.0);
+        CHECK(view(0, 0, 1) == 2.0);
+
+        // Sample 1: only in key_1=1 -> key_1=0 part should be NaN
+        CHECK(std::isnan(view(1, 0, 0)));
+        CHECK(view(1, 0, 1) == 2.0);
+
+        // Sample 2: only in key_1=0 -> key_1=1 part should be NaN
+        CHECK(view(2, 0, 0) == 1.0);
+        CHECK(std::isnan(view(2, 0, 1)));
     }
 
     SECTION("clone") {

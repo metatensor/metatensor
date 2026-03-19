@@ -1,14 +1,14 @@
 use metatensor::{Labels, TensorMap};
 
 mod utils;
-use utils::{example_tensor, example_block};
+use utils::{example_tensor, example_block, make_fill_value};
 
 use ndarray::ArrayD;
 
 #[test]
 fn sorted_samples() {
     let keys_to_move = Labels::empty(vec!["key_2"]);
-    let tensor = example_tensor().keys_to_samples(&keys_to_move, true).unwrap();
+    let tensor = example_tensor().keys_to_samples(&keys_to_move, make_fill_value(0.0), true).unwrap();
 
     assert_eq!(tensor.keys().count(), 3);
     assert_eq!(tensor.keys().names(), ["key_1"]);
@@ -85,7 +85,7 @@ fn sorted_samples() {
 #[test]
 fn unsorted_samples() {
     let keys_to_move = Labels::empty(vec!["key_2"]);
-    let tensor = example_tensor().keys_to_samples(&keys_to_move, false).unwrap();
+    let tensor = example_tensor().keys_to_samples(&keys_to_move, make_fill_value(0.0), false).unwrap();
 
     let block_3 = tensor.block_by_id(2);
     assert_eq!(block_3.samples().names(), ["samples", "key_2"]);
@@ -103,7 +103,7 @@ fn unsorted_samples() {
 #[test]
 fn user_provided_entries() {
     let keys_to_move = Labels::new(["key_2"], &[[3]]);
-    let result = example_tensor().keys_to_samples(&keys_to_move, false);
+    let result = example_tensor().keys_to_samples(&keys_to_move, make_fill_value(0.0), false);
 
     assert_eq!(
         result.unwrap_err().message,
@@ -142,7 +142,7 @@ fn empty_samples() {
     let tensor = TensorMap::new(keys, blocks).unwrap();
 
     let keys_to_move = Labels::empty(vec!["key_1"]);
-    let tensor = tensor.keys_to_samples(&keys_to_move, true).unwrap();
+    let tensor = tensor.keys_to_samples(&keys_to_move, make_fill_value(0.0), true).unwrap();
 
     assert_eq!(
         tensor.block_by_id(0).samples(),

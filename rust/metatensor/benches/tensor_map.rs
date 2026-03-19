@@ -5,7 +5,8 @@ compile_error!("the bench feature is required for bencharks, use `cargo bench --
 mod benchmarks {
     use criterion::{BatchSize, BenchmarkId, Criterion};
     pub use criterion::{criterion_group, criterion_main};
-    use metatensor::{Labels, LabelsBuilder, TensorBlock, TensorMap};
+    use metatensor::{Array, Labels, LabelsBuilder, TensorBlock, TensorMap};
+    use metatensor::c_api::mts_array_t;
     use ndarray::ArcArray;
 
     fn tensor_map(n_blocks: usize, n_samples: usize, n_properties: usize) -> TensorMap {
@@ -42,6 +43,11 @@ mod benchmarks {
         TensorMap::new(keys, blocks).unwrap()
     }
 
+    fn make_fill_value(scalar: f64) -> mts_array_t {
+        let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![1], scalar));
+        mts_array_t::from(data)
+    }
+
     pub fn keys_to_samples(c: &mut Criterion) {
         let mut group = c.benchmark_group("TensorMap::keys_to_samples");
         // reduce sample size for faster benchmark execution during dev/test
@@ -53,7 +59,7 @@ mod benchmarks {
             group.bench_function(BenchmarkId::new("n_blocks", n_blocks), |b| {
                 b.iter_batched(
                     || tensor.try_clone().unwrap(),
-                    |tensor| std::hint::black_box(tensor.keys_to_samples(&keys_to_move, true)),
+                    |tensor| std::hint::black_box(tensor.keys_to_samples(&keys_to_move, make_fill_value(0.0), true)),
                     BatchSize::LargeInput,
                 );
             });
@@ -71,7 +77,7 @@ mod benchmarks {
             group.bench_function(BenchmarkId::new("n_blocks", n_blocks), |b| {
                 b.iter_batched(
                     || tensor.try_clone().unwrap(),
-                    |tensor| std::hint::black_box(tensor.keys_to_properties(&keys_to_move, true)),
+                    |tensor| std::hint::black_box(tensor.keys_to_properties(&keys_to_move, make_fill_value(0.0), true)),
                     BatchSize::LargeInput,
                 );
             });

@@ -41,15 +41,91 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy() const {
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(this->tensor().clone()));
 }
 
-std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(std::vector<uintptr_t> shape) const {
+std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
+    std::vector<uintptr_t> shape,
+    mts_array_t fill_value
+) const {
     auto sizes = std::vector<int64_t>();
     for (auto size: shape) {
         sizes.push_back(static_cast<int64_t>(size));
     }
 
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    DLManagedTensorVersioned* fill_value_dlpack = nullptr;
+    auto status = fill_value.as_dlpack(fill_value.ptr, &fill_value_dlpack, cpu_device, nullptr, max_version);
+    if (status != MTS_SUCCESS) {
+        throw std::runtime_error("failed to extract fill_value as DLPack");
+    }
+
+    // Validate fill_value shape from the DLPack tensor directly
+    if (fill_value_dlpack->dl_tensor.ndim != 1 || fill_value_dlpack->dl_tensor.shape[0] != 1) {
+        if (fill_value_dlpack->deleter != nullptr) {
+            fill_value_dlpack->deleter(fill_value_dlpack);
+        }
+        throw std::runtime_error("fill_value must have shape (1,)");
+    }
+
+    c10::Scalar scalar_val;
+    auto code = fill_value_dlpack->dl_tensor.dtype.code;
+    auto bits = fill_value_dlpack->dl_tensor.dtype.bits;
+    // Account for DLPack byte_offset per spec
+    const auto* data = static_cast<const char*>(fill_value_dlpack->dl_tensor.data);
+    data += fill_value_dlpack->dl_tensor.byte_offset;
+
+    if (code == kDLFloat && bits == 64) {
+        scalar_val = *reinterpret_cast<const double*>(data);
+    } else if (code == kDLFloat && bits == 32) {
+        scalar_val = *reinterpret_cast<const float*>(data);
+    } else if (code == kDLFloat && bits == 16) {
+        scalar_val = *reinterpret_cast<const at::Half*>(data);
+    } else if (code == kDLBfloat && bits == 16) {
+        scalar_val = *reinterpret_cast<const at::BFloat16*>(data);
+    } else if (code == kDLInt && bits == 64) {
+        scalar_val = *reinterpret_cast<const int64_t*>(data);
+    } else if (code == kDLInt && bits == 32) {
+        scalar_val = *reinterpret_cast<const int32_t*>(data);
+    } else if (code == kDLInt && bits == 16) {
+        scalar_val = *reinterpret_cast<const int16_t*>(data);
+    } else if (code == kDLInt && bits == 8) {
+        scalar_val = *reinterpret_cast<const int8_t*>(data);
+    } else if (code == kDLUInt && bits == 8) {
+        scalar_val = *reinterpret_cast<const uint8_t*>(data);
+    } else if (code == kDLBool && bits == 8) {
+        scalar_val = *reinterpret_cast<const bool*>(data);
+    } else if (code == kDLComplex && bits == 128) {
+        auto real = *reinterpret_cast<const double*>(data);
+        auto imag = *reinterpret_cast<const double*>(data + sizeof(double));
+        scalar_val = c10::complex<double>(real, imag);
+    } else if (code == kDLComplex && bits == 64) {
+        auto real = *reinterpret_cast<const float*>(data);
+        auto imag = *reinterpret_cast<const float*>(data + sizeof(float));
+        scalar_val = c10::complex<float>(real, imag);
+    } else if (code == kDLComplex && bits == 32) {
+        auto real = *reinterpret_cast<const at::Half*>(data);
+        auto imag = *reinterpret_cast<const at::Half*>(data + sizeof(at::Half));
+        scalar_val = c10::complex<at::Half>(real, imag);
+    } else {
+        if (fill_value_dlpack->deleter != nullptr) {
+            fill_value_dlpack->deleter(fill_value_dlpack);
+        }
+        throw std::runtime_error(
+            "unsupported fill_value DLPack dtype: code " + std::to_string(code) +
+            " with " + std::to_string(bits) + " bits"
+        );
+    }
+    if (fill_value_dlpack->deleter != nullptr) {
+        fill_value_dlpack->deleter(fill_value_dlpack);
+    }
+
+    if (fill_value.destroy != nullptr) {
+        fill_value.destroy(fill_value.ptr);
+    }
+
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(
-        torch::zeros(
+        torch::full(
             sizes,
+            scalar_val,
             torch::TensorOptions()
                 .dtype(this->tensor().dtype())
                 .device(this->tensor().device())
