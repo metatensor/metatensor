@@ -5,7 +5,7 @@ use indexmap::IndexSet;
 use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
-use crate::data::mts_data_movement_t;
+use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
@@ -38,7 +38,7 @@ impl TensorMap {
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, fill_value: &mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -77,6 +77,7 @@ impl TensorMap {
                 keys_to_move,
                 &names_to_move,
                 sort_samples,
+                fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -109,14 +110,17 @@ impl TensorMap {
                     keys_to_move,
                     &names_to_move,
                     sort_samples,
+                    fill_value,
                 )?;
                 new_blocks.push(block);
             }
         }
+
         let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
+
         return Ok(tensor);
     }
 }
@@ -128,6 +132,7 @@ fn merge_blocks_along_properties(
     keys_to_move: Option<&Labels>,
     extracted_names: &[&str],
     sort_samples: bool,
+    fill_value: &mts_array_t,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
@@ -214,7 +219,7 @@ fn merge_blocks_along_properties(
     new_shape[0] = merged_samples.count();
     let property_axis = new_shape.len() - 1;
     new_shape[property_axis] = new_properties_count;
-    let mut new_data = first_block.values.create(&new_shape)?;
+    let mut new_data = first_block.values.create(&new_shape, fill_value)?;
 
     // compute the property range for each block, i.e. where we want to put
     // the corresponding data
@@ -282,7 +287,7 @@ fn merge_blocks_along_properties(
         let property_axis = new_shape.len() - 1;
         new_shape[property_axis] = new_properties_count;
 
-        let mut new_gradient = first_block.values.create(&new_shape)?;
+        let mut new_gradient = first_block.values.create(&new_shape, fill_value)?;
         let new_components = first_gradient.components.to_vec();
 
         for ((KeyAndBlock{block, ..}, samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {

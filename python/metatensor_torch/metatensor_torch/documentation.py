@@ -1092,6 +1092,7 @@ class TensorMap:
     def keys_to_samples(
         self,
         keys_to_move: Union[StrSequence, Labels],
+        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1118,6 +1119,9 @@ class TensorMap:
         properties values.
 
         :param keys_to_move: description of the keys to move
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Accepts any numeric type (int, float, bool).
+            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks
@@ -1126,6 +1130,7 @@ class TensorMap:
     def keys_to_properties(
         self,
         keys_to_move: Union[StrSequence, Labels],
+        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1155,7 +1160,7 @@ class TensorMap:
         ``keys_to_move``, blocks with properties ``p=1, 2`` will result in
         ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no
         block/missing sample) for a given property in the merged block, then the
-        value will be set to zero.
+        value will be set to the ``fill_value``.
 
         When using a non empty :py:class:`Labels` for ``keys_to_move``, the
         properties labels of all the merged blocks must take the same values.
@@ -1166,6 +1171,9 @@ class TensorMap:
         kept in the order in which they appear in the blocks.
 
         :param keys_to_move: description of the keys to move
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Accepts any numeric type (int, float, bool).
+            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks

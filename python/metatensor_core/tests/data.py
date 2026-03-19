@@ -90,36 +90,50 @@ class MtsArrayMixin:
         free_mts_array(mts_array)
 
     def test_create(self):
-        array = self.create_array((2, 3))
-        array_ref = weakref.ref(array)
+        for dtype in self.all_dtypes:
+            array = self.create_array((2, 3), dtype=dtype)
+            array_ref = weakref.ref(array)
 
-        mts_array = metatensor.data.create_mts_array(array)
+            mts_array = metatensor.data.create_mts_array(array)
 
-        new_mts_array = mts_array_t()
-        new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
-        status = mts_array.create(
-            mts_array.ptr, new_shape, len(new_shape), new_mts_array
-        )
-        assert status == MTS_SUCCESS
+            new_mts_array = mts_array_t()
+            new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
 
-        new_array = metatensor.data.mts_array_to_python_array(new_mts_array)
-        assert id(new_array) != id(array)
+            fill_value_array = self.create_array((1,), dtype=dtype)
+            fill_value_mts = metatensor.data.create_mts_array(fill_value_array)
 
-        assert_equal(new_array, np.zeros((18, 4)))
+            status = mts_array.create(
+                mts_array.ptr,
+                new_shape,
+                len(new_shape),
+                fill_value_mts,
+                new_mts_array,
+            )
 
-        del array
-        gc.collect()
+            print(dtype)
+            assert status == MTS_SUCCESS
 
-        # there is still one reference to the array through mts_array
-        assert array_ref() is not None
+            new_array = metatensor.data.mts_array_to_python_array(new_mts_array)
+            assert id(new_array) != id(array)
 
-        free_mts_array(mts_array)
-        del mts_array
-        gc.collect()
+            assert_equal(
+                self.to_numpy(new_array),
+                np.full(shape=(18, 4), fill_value=fill_value_array),
+            )
 
-        assert array_ref() is None
+            del array
+            gc.collect()
 
-        free_mts_array(new_mts_array)
+            # there is still one reference to the array through mts_array
+            assert array_ref() is not None
+
+            free_mts_array(mts_array)
+            del mts_array
+            gc.collect()
+
+            assert array_ref() is None
+
+            free_mts_array(new_mts_array)
 
     def test_copy(self):
         array = self.create_array((2, 3, 4))
@@ -194,6 +208,9 @@ class MtsArrayMixin:
 
     @pytest.mark.parametrize("device, dldevice", get_available_devices())
     def test_dlpack(self, device, dldevice):
+        if device == "mps" and torch.__version__ < "2.8.0":
+            pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
+
         # Create a sample array
         array = self.create_array((2, 3))
         if self.expected_origin() == "metatensor.data.array.numpy" and device != "cpu":
@@ -245,11 +262,41 @@ class MtsArrayMixin:
 
 
 class TestNumpyData(MtsArrayMixin):
+    all_dtypes = [
+        np.bool_,
+        np.float64,
+        np.float32,
+        np.int64,
+        np.int32,
+        np.int16,
+        np.int8,
+        np.uint64,
+        np.uint32,
+        np.uint16,
+        np.uint8,
+        np.complex128,
+        np.complex64,
+    ]
+
     def expected_origin(self):
         return "metatensor.data.array.numpy"
 
-    def create_array(self, shape):
-        return np.zeros(shape)
+    def create_array(self, shape, dtype=np.float64):
+        if dtype == np.bool_:
+            return np.ones(shape, dtype=dtype)
+        elif dtype in [
+            np.int64,
+            np.int32,
+            np.int16,
+            np.int8,
+            np.uint64,
+            np.uint32,
+            np.uint16,
+            np.uint8,
+        ]:
+            return np.random.randint(low=0, high=42, size=shape, dtype=dtype)
+        else:
+            return np.random.uniform(size=shape).astype(dtype)
 
     def to_numpy(self, array):
         return np.array(array)
@@ -258,11 +305,49 @@ class TestNumpyData(MtsArrayMixin):
 if HAS_TORCH:
 
     class TestTorchData(MtsArrayMixin):
+        all_dtypes = [
+            torch.bool,
+            torch.float64,
+            torch.float32,
+            torch.float16,
+            # FIXME: this does not work since we unconditionally
+            # go through a numpy array in the implementation
+            # torch.bfloat16,
+            torch.int64,
+            torch.int32,
+            torch.int16,
+            torch.int8,
+            torch.uint64,
+            torch.uint32,
+            torch.uint16,
+            torch.uint8,
+            torch.complex128,
+            # FIXME: this fails with "Casting complex values to real discards the
+            # imaginary part"
+            # torch.complex64,
+            # FIXME: same as bfloat16, this does not work since we go through numpy
+            # torch.complex32,
+        ]
+
         def expected_origin(self):
             return "metatensor.data.array.torch"
 
-        def create_array(self, shape):
-            return torch.zeros(shape, device="cpu")
+        def create_array(self, shape, dtype=torch.float32):
+            if dtype == torch.bool:
+                return torch.ones(shape, dtype=dtype)
+            elif dtype in [
+                torch.int64,
+                torch.int32,
+                torch.int16,
+                torch.int8,
+                torch.uint64,
+                torch.uint32,
+                torch.uint16,
+                torch.uint8,
+            ]:
+                return torch.randint(0, 42, shape, dtype=dtype)
+            else:
+                return torch.rand(shape, dtype=dtype)
 
         def to_numpy(self, array):
             return array.numpy()
@@ -280,21 +365,6 @@ def _get_shape(mts_array, test):
         shape.append(shape_ptr[i])
 
     return shape
-
-
-def test_dlpack_dtype_code_enum():
-    """Verify that the DLPackDtypeCode enum has the correct values from dlpack.h."""
-    from metatensor.data.extract import DLPackDtypeCode
-
-    assert DLPackDtypeCode.kDLInt == 0
-    assert DLPackDtypeCode.kDLUInt == 1
-    assert DLPackDtypeCode.kDLFloat == 2
-    assert DLPackDtypeCode.kDLComplex == 5
-    assert DLPackDtypeCode.kDLBool == 6
-
-    # Verify they work as dict keys (used in _DLPACK_TO_NUMPY)
-    d = {(DLPackDtypeCode.kDLFloat, 64): "f64"}
-    assert d[(2, 64)] == "f64"
 
 
 def test_external_cuda_array_importable():

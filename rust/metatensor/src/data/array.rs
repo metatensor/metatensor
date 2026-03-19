@@ -8,6 +8,8 @@ use dlpk::DLPackTensor;
 use crate::errors::Error;
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
 
+use super::MtsArray;
+
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
 /// manipulate the data through the functions on this trait.
@@ -23,8 +25,10 @@ pub trait Array: std::any::Any + Send + Sync {
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    fn create(&self, shape: &[usize]) -> Box<dyn Array>;
+    /// The new array should be filled with the scalar value from `fill_value`,
+    /// which must be an `MtsArray` with shape `(1,)` and the same dtype as
+    /// this array.
+    fn create(&self, shape: &[usize], fill_value: MtsArray) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
@@ -226,6 +230,7 @@ unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
+    fill_value: mts_array_t,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
@@ -235,7 +240,7 @@ unsafe extern "C" fn rust_array_create(
         let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        let new_array = (*array).create(shape);
+        let new_array = (*array).create(shape, MtsArray::from_raw(fill_value));
 
         *array_storage = new_array.into();
 

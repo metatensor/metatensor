@@ -56,11 +56,60 @@ TEST_CASE("Arrays") {
         CHECK((copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4}));
         CHECK(copy_ptr->tensor().dtype() == torch::kF64);
 
-        auto created = array.create({5, 6});
+        auto fill_value = metatensor::DataArrayBase::to_mts_array_t(
+            std::make_unique<TorchDataArray>(torch::zeros({1}, torch::kF64))
+        );
+        auto created = array.create({5, 6}, fill_value);
         auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
 
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));
         CHECK(created_ptr->tensor().dtype() == torch::kF64);
+    }
+
+    SECTION("create with any dtype") {
+        auto ALL_DTYPES = std::array<torch::ScalarType, 14>{
+            torch::kBool,
+            torch::kF64,
+            torch::kF32,
+            torch::kF16,
+            torch::kBFloat16,
+            torch::kInt64,
+            torch::kInt32,
+            torch::kInt16,
+            torch::kInt8,
+            torch::kUInt8,
+            torch::kBool,
+            torch::kComplexDouble,
+            torch::kComplexFloat,
+            torch::kComplexHalf,
+        };
+        for (auto dtype: ALL_DTYPES) {
+            auto options = torch::TensorOptions().dtype(dtype);
+            auto dtype_array = TorchDataArray(torch::zeros({1, 2}, options));
+
+            torch::Tensor fill_value;
+            if (dtype == torch::kBool) {
+                fill_value = torch::ones({1}, options);
+            } else if (
+                dtype == torch::kInt64 || dtype == torch::kInt32 || dtype == torch::kInt16 ||
+                dtype == torch::kInt8 || dtype == torch::kUInt64 || dtype == torch::kUInt32 ||
+                dtype == torch::kUInt16 || dtype == torch::kUInt8
+            ) {
+                fill_value = torch::randint(0, 42, {1}, options);
+            } else {
+                fill_value = torch::rand({1}, options);
+            }
+
+            auto fill_value_mts = metatensor::DataArrayBase::to_mts_array_t(
+                std::make_unique<TorchDataArray>(fill_value)
+            );
+
+            auto created = dtype_array.create({3, 4}, fill_value_mts);
+            auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
+
+            CHECK(created_ptr->tensor().dtype() == dtype);
+            CHECK(torch::all(created_ptr->tensor() == torch::full({3, 4}, fill_value.item(), options)).item<bool>());
+        }
     }
 }
 
