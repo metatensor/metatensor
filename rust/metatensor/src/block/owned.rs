@@ -200,7 +200,7 @@ mod tests {
             &Labels::new(["properties"], &[[-2], [0], [1]]),
         ).unwrap();
 
-        assert_eq!(block.values().as_array(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.values().as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
         assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));

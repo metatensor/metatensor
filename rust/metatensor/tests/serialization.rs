@@ -73,7 +73,7 @@ mod tensor {
 
         let block = tensor.block_by_id(13);
 
-        assert_eq!(block.values().as_array().shape(), [9, 3, 3]);
+        assert_eq!(block.values().as_ndarray().shape(), [9, 3, 3]);
         assert_eq!(block.samples().names(), ["system", "atom"]);
         assert_eq!(block.components().len(), 1);
         assert_eq!(block.components()[0].names(), ["o3_mu"]);
@@ -81,7 +81,7 @@ mod tensor {
 
         assert_eq!(block.gradient_list(), ["positions"]);
         let gradient = block.gradient("positions").unwrap();
-        assert_eq!(gradient.values().as_array().shape(), [27, 3, 3, 3]);
+        assert_eq!(gradient.values().as_ndarray().shape(), [27, 3, 3, 3]);
         assert_eq!(gradient.samples().names(), ["sample", "system", "atom"]);
         assert_eq!(gradient.components().len(), 2);
         assert_eq!(gradient.components()[0].names(), ["xyz"]);
@@ -161,7 +161,7 @@ mod block {
 
 
     fn check_block(block: TensorBlockRef) {
-        assert_eq!(block.values().as_array().shape(), [9, 5, 3]);
+        assert_eq!(block.values().as_ndarray().shape(), [9, 5, 3]);
         assert_eq!(block.samples().names(), ["system", "atom"]);
         assert_eq!(block.components().len(), 1);
         assert_eq!(block.components()[0].names(), ["o3_mu"]);
@@ -169,7 +169,7 @@ mod block {
 
         assert_eq!(block.gradient_list(), ["positions"]);
         let gradient = block.gradient("positions").unwrap();
-        assert_eq!(gradient.values().as_array().shape(), [59, 3, 5, 3]);
+        assert_eq!(gradient.values().as_ndarray().shape(), [59, 3, 5, 3]);
         assert_eq!(gradient.samples().names(), ["sample", "system", "atom"]);
         assert_eq!(gradient.components().len(), 2);
         assert_eq!(gradient.components()[0].names(), ["xyz"]);
@@ -247,8 +247,8 @@ mod dtype_serialization {
 
         let loaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_array().shape(),
-            loaded.values().as_array().shape(),
+            block.values().as_ndarray().shape(),
+            loaded.values().as_ndarray().shape(),
         );
     }
 
@@ -268,8 +268,8 @@ mod dtype_serialization {
 
         let loaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_array().shape(),
-            loaded.values().as_array().shape(),
+            block.values().as_ndarray().shape(),
+            loaded.values().as_ndarray().shape(),
         );
     }
 }
@@ -399,8 +399,8 @@ mod error_paths {
         // re-load from buffer
         let reloaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_array().shape(),
-            reloaded.values().as_array().shape(),
+            block.values().as_ndarray().shape(),
+            reloaded.values().as_ndarray().shape(),
         );
     }
 
@@ -498,13 +498,13 @@ mod device {
 
         let data = ndarray::ArcArray::<f64, _>::zeros(vec![1, 2]);
         let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
-        assert_eq!(block.values().as_array().device(), DLDevice::cpu());
+        assert_eq!(block.values().as_ndarray().device(), DLDevice::cpu());
     }
 
     #[test]
     fn loaded_block_device() {
         let block = metatensor::io::load_block("../../metatensor-core/tests/block.mts").unwrap();
-        assert_eq!(block.values().as_array().device(), DLDevice::cpu());
+        assert_eq!(block.values().as_ndarray().device(), DLDevice::cpu());
     }
 
     #[test]
