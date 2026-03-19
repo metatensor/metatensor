@@ -39,7 +39,7 @@ fn sorted_samples() {
         0.0, 2.0, 2.0, 2.0,
         1.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     let gradient_1 = block.gradient("parameter").unwrap();
     assert_eq!(
@@ -53,11 +53,11 @@ fn sorted_samples() {
         0.0, 12.0, 12.0, 12.0,
         11.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(gradient_1.values().as_array(), expected);
+    assert_eq!(gradient_1.values().as_ndarray(), expected);
 
     // The new second block contains the old third block
     let block = tensor.block_by_id(1);
-    assert_eq!(block.values().as_array(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
+    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
 
     assert_eq!(
         block.properties(),
@@ -66,7 +66,7 @@ fn sorted_samples() {
 
     // The new third block contains the old fourth block
     let block = tensor.block_by_id(2);
-    assert_eq!(block.values().as_array(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
+    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
     assert_eq!(
         block.properties(),
         example_labels(vec!["key_1", "properties"], vec![[2, 0]])
@@ -261,7 +261,7 @@ fn user_provided_entries() {
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     // second block also contains the new property chanel even if it was not
     // merged with another block
@@ -271,7 +271,7 @@ fn user_provided_entries() {
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     assert_eq!(
         block.properties(),
@@ -314,11 +314,11 @@ fn user_provided_entries() {
         0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     // second block stayed the same, only properties labels changed
     let block = tensor.block_by_id(1);
-    assert_eq!(block.values().as_array(), ArrayD::from_elem(vec![3, 1, 4], 3.0));
+    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![3, 1, 4], 3.0));
 
     assert_eq!(
         block.properties(),
@@ -360,7 +360,7 @@ fn user_provided_entries() {
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     // Second block
     let block = tensor.block_by_id(1);
@@ -369,7 +369,7 @@ fn user_provided_entries() {
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_array(), expected);
+    assert_eq!(block.values().as_ndarray(), expected);
 
     assert_eq!(
         block.properties(),

@@ -16,6 +16,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- Renamed `ArrayRef{Mut}::{as,to}_array` to `ArrayRef{Mut}::{as,to}_ndarray`
+
 ### Removed
 
 - Removed `Array::data()` trait method and all implementations. Use

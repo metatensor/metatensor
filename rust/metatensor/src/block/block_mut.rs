@@ -255,10 +255,10 @@ mod tests {
 
         let mut block = block.as_ref_mut();
         let gradient = block.gradient_mut("g").unwrap();
-        assert_eq!(gradient.values().as_array()[[0, 0]], -1.0);
+        assert_eq!(gradient.values().as_ndarray()[[0, 0]], -1.0);
 
         let gradient = block.gradient_mut("f").unwrap();
-        assert_eq!(gradient.values().as_array()[[0, 0]], -2.0);
+        assert_eq!(gradient.values().as_ndarray()[[0, 0]], -2.0);
 
         assert!(block.gradient_mut("h").is_none());
 
@@ -280,13 +280,13 @@ mod tests {
         ).unwrap();
         let mut block = block.as_ref_mut();
 
-        assert_eq!(block.values().as_array(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.values().as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
         assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
 
         let block = block.data_mut();
-        assert_eq!(block.values.as_array(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.values.as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
         assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
