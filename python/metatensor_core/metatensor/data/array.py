@@ -617,20 +617,39 @@ _MTS_ARRAY_DTYPE_NUMPY = _cast_to_ctype_functype(_mts_array_dtype_numpy, "dtype"
 _MTS_ARRAY_DTYPE_PYTORCH = _cast_to_ctype_functype(_mts_array_dtype_pytorch, "dtype")
 
 
+@catch_exceptions
+def _mts_array_dummy_origin(this, origin_ptr):
+    raise RuntimeError("this is a dummy function that should never be called")
+
+
+@catch_exceptions
+def _mts_array_dummy_dtype(this, dtype_ptr):
+    raise RuntimeError("this is a dummy function that should never be called")
+
+
+@catch_exceptions
+def _mts_array_dummy_device(this, device_ptr):
+    raise RuntimeError("this is a dummy function that should never be called")
+
+
+_MTS_ARRAY_DUMMY_ORIGIN = _cast_to_ctype_functype(_mts_array_dummy_origin, "origin")
+_MTS_ARRAY_DUMMY_DTYPE = _cast_to_ctype_functype(_mts_array_dummy_dtype, "dtype")
+_MTS_ARRAY_DUMMY_DEVICE = _cast_to_ctype_functype(_mts_array_dummy_device, "device")
+
 # The default value for all Python-provided `mts_array_t`. Only the first two members
 # will change, having a pre-allocated instance will make it faster to create new ones
 # with `mts_array_t.from_buffer_copy`.
 _DEFAULT_MTS_ARRAY = mts_array_t(
     ptr=0,
-    origin=_cast_to_ctype_functype(lambda u: u, "origin"),
-    device=_cast_to_ctype_functype(lambda u, d: None, "device"),
-    dtype=_cast_to_ctype_functype(lambda u, d: None, "dtype"),
+    destroy=_MTS_ARRAY_DESTROY,
+    origin=_MTS_ARRAY_DUMMY_ORIGIN,
+    device=_MTS_ARRAY_DUMMY_DEVICE,
+    dtype=_MTS_ARRAY_DUMMY_DTYPE,
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,
     swap_axes=_MTS_ARRAY_SWAP_AXES,
     create=_MTS_ARRAY_CREATE,
     copy=_MTS_ARRAY_COPY,
-    destroy=_MTS_ARRAY_DESTROY,
     move_data=_MTS_ARRAY_MOVE_DATA,
 )

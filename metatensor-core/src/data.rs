@@ -77,6 +77,10 @@ pub struct mts_array_t {
     /// first parameter to all function pointers below.
     pub ptr: *mut c_void,
 
+    /// Remove this array and free the associated memory. This function can be
+    /// set to `NULL` if there is no memory management to do.
+    destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
+
     /// This function needs to store the "data origin" for this array in
     /// `origin`. Users of `mts_array_t` should register a single data
     /// origin with `mts_register_data_origin`, and use it for all compatible
@@ -193,10 +197,6 @@ pub struct mts_array_t {
         array: *const c_void,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
-
-    /// Remove this array and free the associated memory. This function can be
-    /// set to `NULL` is there is no memory management to do.
-    destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
 
     /// Set entries in the `output` array (the current array) taking data from
     /// the `input` array. The `output` array is guaranteed to be created by

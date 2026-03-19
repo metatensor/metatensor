@@ -140,6 +140,7 @@ fn bindgen_test_layout_mts_data_movement_t() {
 #[derive(Debug, Copy, Clone)]
 pub struct mts_array_t {
     pub ptr: *mut ::std::os::raw::c_void,
+    pub destroy: ::std::option::Option<unsafe extern "C" fn(array: *mut ::std::os::raw::c_void)>,
     pub origin: ::std::option::Option<
         unsafe extern "C" fn(
             array: *const ::std::os::raw::c_void,
@@ -202,7 +203,6 @@ pub struct mts_array_t {
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,
-    pub destroy: ::std::option::Option<unsafe extern "C" fn(array: *mut ::std::os::raw::c_void)>,
     pub move_data: ::std::option::Option<
         unsafe extern "C" fn(
             output: *mut ::std::os::raw::c_void,
@@ -232,54 +232,54 @@ fn bindgen_test_layout_mts_array_t() {
         "Offset of field: mts_array_t::ptr"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
         8usize,
+        "Offset of field: mts_array_t::destroy"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
+        16usize,
         "Offset of field: mts_array_t::origin"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).device) as usize - ptr as usize },
-        16usize,
+        24usize,
         "Offset of field: mts_array_t::device"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).dtype) as usize - ptr as usize },
-        24usize,
+        32usize,
         "Offset of field: mts_array_t::dtype"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).as_dlpack) as usize - ptr as usize },
-        32usize,
+        40usize,
         "Offset of field: mts_array_t::as_dlpack"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
-        40usize,
+        48usize,
         "Offset of field: mts_array_t::shape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
-        48usize,
+        56usize,
         "Offset of field: mts_array_t::reshape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
-        56usize,
+        64usize,
         "Offset of field: mts_array_t::swap_axes"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
-        64usize,
+        72usize,
         "Offset of field: mts_array_t::create"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
-        72usize,
-        "Offset of field: mts_array_t::copy"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
         80usize,
-        "Offset of field: mts_array_t::destroy"
+        "Offset of field: mts_array_t::copy"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).move_data) as usize - ptr as usize },

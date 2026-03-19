@@ -764,31 +764,31 @@ mod tests {
         let mut tensor = test_tensor();
 
         let block = tensor.block_by_id(1);
-        assert_eq!(block.values().as_ndarray().shape(), [1, 1]);
+        assert_eq!(block.values().shape().unwrap(), [1, 1]);
 
         let block = tensor.block_mut_by_id(2);
-        assert_eq!(block.values().as_ndarray().shape(), [3, 2]);
+        assert_eq!(block.values().shape().unwrap(), [3, 2]);
 
         let selection = Labels::new(["key"], &[[1]]);
         assert_eq!(tensor.block_matching(&selection).unwrap(), 0);
         assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0]);
 
         let block = tensor.block(&selection).unwrap();
-        assert_eq!(block.values().as_ndarray().shape(), [2, 3]);
+        assert_eq!(block.values().shape().unwrap(), [2, 3]);
 
         let selection = Labels::new(["other"], &[[0]]);
         assert!(tensor.block_matching(&selection).is_err());
         assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0, 2]);
 
         let blocks = tensor.blocks();
-        assert_eq!(blocks[0].values().as_ndarray().shape(), [2, 3]);
-        assert_eq!(blocks[1].values().as_ndarray().shape(), [1, 1]);
-        assert_eq!(blocks[2].values().as_ndarray().shape(), [3, 2]);
+        assert_eq!(blocks[0].values().shape().unwrap(), [2, 3]);
+        assert_eq!(blocks[1].values().shape().unwrap(), [1, 1]);
+        assert_eq!(blocks[2].values().shape().unwrap(), [3, 2]);
 
         let blocks = tensor.blocks_mut();
-        assert_eq!(blocks[0].values().as_ndarray().shape(), [2, 3]);
-        assert_eq!(blocks[1].values().as_ndarray().shape(), [1, 1]);
-        assert_eq!(blocks[2].values().as_ndarray().shape(), [3, 2]);
+        assert_eq!(blocks[0].values().shape().unwrap(), [2, 3]);
+        assert_eq!(blocks[1].values().shape().unwrap(), [1, 1]);
+        assert_eq!(blocks[2].values().shape().unwrap(), [3, 2]);
     }
 
     #[test]
@@ -797,12 +797,12 @@ mod tests {
 
         // iterate over keys & blocks
         for (key, block) in &tensor {
-            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in &mut tensor {
-            let array = block.values_mut().to_array_mut();
+            let array = block.values_mut().to_ndarray_mut();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         }
@@ -817,12 +817,12 @@ mod tests {
 
         // iterate over keys & blocks
         tensor.par_iter().for_each(|(key, block)| {
-            assert_eq!(block.values().to_array()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
         });
 
         // iterate over keys & blocks mutably
         tensor.par_iter_mut().for_each(|(key, mut block)| {
-            let array = block.values_mut().to_array_mut();
+            let array = block.values_mut().to_ndarray_mut();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         });
