@@ -4,18 +4,15 @@ mod c_api;
 
 pub use c_api::*;
 
-
-impl mts_labels_t {
-    /// Create an `mts_labels_t` with all members set to null pointers/zero
-    pub fn null() -> mts_labels_t {
-        mts_labels_t {
-            internal_ptr_: std::ptr::null_mut(),
-            names: std::ptr::null(),
-            values: std::ptr::null(),
-            size: 0,
-            count: 0,
-        }
-    }
+// Internal function not in the public C header -- raw i32 pointer access
+// for the Rust wrapper's labels values access.
+extern "C" {
+    pub fn mts_labels_values_raw(
+        labels: *const mts_labels_t,
+        values: *mut *const i32,
+        count: *mut usize,
+        size: *mut usize,
+    ) -> mts_status_t;
 }
 
 /// Error type used in metatensor

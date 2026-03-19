@@ -26,6 +26,14 @@ fn main() {
     config.includes.push("metatensor/dlpack/dlpack.h".into());
     config.after_includes = Some("typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;".into());
 
+    // Internal functions used by metatensor-torch but not part of the public C API
+    config.export.exclude.push("mts_labels_values_array".into());
+    config.export.exclude.push("mts_labels_values_raw".into());
+    config.export.exclude.push("mts_labels_set_cached_values".into());
+    // Backward-compat aliases, replaced by mts_labels_create / mts_labels_create_assume_unique
+    config.export.exclude.push("mts_labels_create_from_array".into());
+    config.export.exclude.push("mts_labels_create_from_array_assume_unique".into());
+
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
         .with_config(config)
@@ -39,6 +47,7 @@ fn main() {
     // if not ok, rerun the build script unconditionally
     if result.is_ok() {
         println!("cargo:rerun-if-changed=src");
+    println!("cargo:rerun-if-changed=build.rs");
     }
 
     if std::env::var("METATENSOR_FULL_VERSION").is_err() {
@@ -47,3 +56,5 @@ fn main() {
     }
     println!("cargo:rerun-if-env-changed=METATENSOR_FULL_VERSION");
 }
+// Force rebuild: 1773394365
+// Rebuild trigger: 1773394852

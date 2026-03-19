@@ -10,30 +10,27 @@ use crate::Error;
 use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
-use super::super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
+use super::super::labels::mts_labels_t;
 
 /// Load labels from the file at the given path.
 ///
-/// This function allocates memory which must be released `mts_labels_free` when
-/// you don't need it anymore.
+/// This function allocates memory which must be released with
+/// `mts_labels_free` when you don't need it anymore.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
-/// @param labels pointer to empty Labels
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+///
+/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_load(
     path: *const c_char,
-    labels: *mut mts_labels_t,
-) -> mts_status_t {
-    catch_unwind(move || {
-        check_pointers_non_null!(path, labels);
-        if (*labels).is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels already correspond to rust labels".into()
-            ));
-        }
+) -> *mut mts_labels_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
 
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let file = BufReader::new(File::open(path)?);
@@ -58,36 +55,40 @@ pub unsafe extern "C" fn mts_labels_load(
                 err => return err,
             })?;
 
-        *labels = rust_to_mts_labels(Arc::new(rust_labels));
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(rust_labels));
 
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 /// Load labels from the given in-memory buffer.
 ///
-/// This function allocates memory which must be released `mts_labels_free` when
-/// you don't need it anymore.
+/// This function allocates memory which must be released with
+/// `mts_labels_free` when you don't need it anymore.
 ///
 /// @param buffer buffer containing a previously serialized `mts_labels_t`
 /// @param buffer_count number of elements in the buffer
-/// @param labels pointer to empty Labels
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+///
+/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
-    labels: *mut mts_labels_t,
-) -> mts_status_t {
-    catch_unwind(move || {
-        check_pointers_non_null!(buffer, labels);
-        if (*labels).is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels already correspond to rust labels".into()
-            ));
-        }
+) -> *mut mts_labels_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(buffer);
 
         let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
         let cursor = std::io::Cursor::new(slice);
@@ -117,10 +118,17 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
                 err => return err,
             })?;
 
-        *labels = rust_to_mts_labels(Arc::new(rust_labels));
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(rust_labels));
 
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 /// Save labels to the file at the given path.
@@ -129,7 +137,7 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
 /// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
-/// @param labels Labels to save to the file
+/// @param labels pointer to labels to save to the file
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
@@ -137,22 +145,16 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_save(
     path: *const c_char,
-    labels: mts_labels_t,
+    labels: *const mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(move || {
-        check_pointers_non_null!(path);
-        if !labels.is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels do not support calling mts_labels_save, \
-                call mts_labels_create first".into()
-            ));
-        }
+        check_pointers_non_null!(path, labels);
 
         let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
         let mut file = BufWriter::new(File::create(path)?);
 
-        let labels = mts_labels_to_rust(&labels)?;
-        crate::io::save_labels(&mut file, &labels)?;
+        let labels_ref: &crate::Labels = &*labels;
+        crate::io::save_labels(&mut file, labels_ref)?;
 
         Ok(())
     })
@@ -179,7 +181,7 @@ pub unsafe extern "C" fn mts_labels_save(
 /// @param realloc_user_data custom data for the `realloc` callback. This will
 ///        be passed as the first argument to `realloc` as-is.
 /// @param realloc function that allows to grow the buffer allocation
-/// @param labels Labels that will saved to the buffer
+/// @param labels pointer to labels that will saved to the buffer
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
@@ -191,15 +193,10 @@ pub unsafe extern "C" fn mts_labels_save_buffer(
     buffer_count: *mut usize,
     realloc_user_data: *mut c_void,
     realloc: mts_realloc_buffer_t,
-    labels: mts_labels_t,
+    labels: *const mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(move || {
-        if !labels.is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels do not support calling mts_labels_save_buffer, \
-                call mts_labels_create first".into()
-            ));
-        }
+        check_pointers_non_null!(labels);
 
         if realloc.is_none() {
             return Err(Error::InvalidParameter(
@@ -220,8 +217,8 @@ pub unsafe extern "C" fn mts_labels_save_buffer(
             current: 0,
         };
 
-        let labels = mts_labels_to_rust(&labels)?;
-        crate::io::save_labels(&mut external_buffer, &labels)?;
+        let labels_ref: &crate::Labels = &*labels;
+        crate::io::save_labels(&mut external_buffer, labels_ref)?;
 
         *buffer_count = external_buffer.current as usize;
 
