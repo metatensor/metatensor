@@ -93,7 +93,7 @@ public:
     ///
     /// The input `torch::IValue` can be a single string, a list/tuple of
     /// strings, or a `Labels` instance.
-    TensorMap keys_to_properties(torch::IValue keys_to_move, bool sort_samples) const;
+    TensorMap keys_to_properties(torch::IValue keys_to_move, torch::Scalar fill_value = 0, bool sort_samples = true) const;
 
     /// Merge blocks with the same value for selected keys dimensions along the
     /// sample axis.
@@ -103,7 +103,7 @@ public:
     ///
     /// The input `torch::IValue` can be a single string, a list/tuple of
     /// strings, or a `Labels` instance.
-    TensorMap keys_to_samples(torch::IValue keys_to_move, bool sort_samples) const;
+    TensorMap keys_to_samples(torch::IValue keys_to_move, torch::Scalar fill_value = 0, bool sort_samples = true) const;
 
     /// Move the given `dimensions` from the component labels to the property
     /// labels for each block.

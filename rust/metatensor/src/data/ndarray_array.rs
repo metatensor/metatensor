@@ -1,14 +1,14 @@
 use dlpk::sys::{DLDevice, DLPackVersion, DLDataType};
-use dlpk::{DLPackTensor, GetDLPackDataType};
+use dlpk::{DLPackTensor, GetDLPackDataType, DLPackPointerCast};
 
 use crate::errors::Error;
 use crate::c_api::mts_data_movement_t;
 
-use super::Array;
+use super::{Array, MtsArray};
 
 impl<T> Array for ndarray::ArcArray<T, ndarray::IxDyn>
 where
-    T: 'static + Send + Sync + Clone + Default + GetDLPackDataType,
+    T: 'static + Send + Sync + Clone + Default + GetDLPackDataType + DLPackPointerCast,
 {
     fn as_any(&self) -> &dyn std::any::Any {
         self
@@ -18,8 +18,19 @@ where
         self
     }
 
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::ArcArray::from_elem(shape, T::default()));
+    fn create(&self, shape: &[usize], fill_value: MtsArray) -> Box<dyn Array> {
+        let cpu_device = DLDevice::cpu();
+        let max_version = DLPackVersion::current();
+        let fill_value_dlpack = fill_value.as_dlpack(cpu_device, None, max_version)
+            .expect("failed to extract fill_value as DLPack");
+
+        // Validate fill_value shape from the DLPack tensor directly
+        assert_eq!(fill_value_dlpack.shape(), [1], "fill_value must have shape (1,)");
+
+        let fill_value_ptr = fill_value_dlpack.data_ptr::<T>().expect("dtype mismatch between array and fill_value");
+        let fill_value_scalar = unsafe { std::ptr::read(fill_value_ptr) };
+
+        Box::new(ndarray::ArcArray::from_elem(shape, fill_value_scalar))
     }
 
     fn copy(&self) -> Box<dyn Array> {
@@ -205,7 +216,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use dlpk::sys::{DLDevice, DLPackVersion, DLDataTypeCode};
+    use dlpk::{DLPackPointerCast, GetDLPackDataType, sys::{DLDataTypeCode, DLDevice, DLPackVersion}};
     use crate::MtsArray;
 
     #[test]
@@ -215,7 +226,9 @@ mod tests {
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
 
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
+        let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![1], 42.0));
+
+        let created = mts_array.create(&[2, 3, 4], fill_value.as_ref()).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
     }
 
@@ -235,26 +248,42 @@ mod tests {
     }
 
     #[test]
-    fn ndarray_generic_support() {
-        let data = ndarray::ArcArray::<i32, _>::from_elem(vec![2, 2], 42);
-        let mts_array = MtsArray::new(data);
+    fn ndarray_all_dtypes() {
+        fn test_for_dtype<T>(code: DLDataTypeCode, bits: u8) where T: Send + Sync + Clone + Default + GetDLPackDataType + DLPackPointerCast + 'static {
+            let data = ndarray::ArcArray::<T, _>::from_elem(vec![2, 2], T::default());
+            let mts_array = MtsArray::new(data);
 
-        assert_eq!(mts_array.shape().unwrap(), [2, 2]);
+            assert_eq!(mts_array.shape().unwrap(), [2, 2]);
 
-        // Should be able to export as DLPack
-        let dl_managed = mts_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
-        assert_eq!(dl_managed.dtype().code, DLDataTypeCode::kDLInt);
-        assert_eq!(dl_managed.dtype().bits, 32);
-        assert_eq!(dl_managed.dtype().lanes, 1);
+            // Should be able to export as DLPack
+            let dl_managed = mts_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+            assert_eq!(dl_managed.dtype().code, code);
+            assert_eq!(dl_managed.dtype().bits, bits);
+            assert_eq!(dl_managed.dtype().lanes, 1);
 
 
-        // And `create` should make an array of the same type (i32)
-        let created = mts_array.create(&[1, 1]).unwrap();
-        let dl_managed = created.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+            // And `create` should make an array of the same type (i32)
+            let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![1], T::default()));
 
-        assert_eq!(dl_managed.dtype().code, DLDataTypeCode::kDLInt);
-        assert_eq!(dl_managed.dtype().bits, 32);
-        assert_eq!(dl_managed.dtype().lanes, 1);
+            let created = mts_array.create(&[1, 1], fill_value.as_ref()).unwrap();
+            let dl_managed = created.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+
+            assert_eq!(dl_managed.dtype().code, code);
+            assert_eq!(dl_managed.dtype().bits, bits);
+            assert_eq!(dl_managed.dtype().lanes, 1);
+        }
+
+        test_for_dtype::<bool>(DLDataTypeCode::kDLBool, 8);
+        test_for_dtype::<f64>(DLDataTypeCode::kDLFloat, 64);
+        test_for_dtype::<f32>(DLDataTypeCode::kDLFloat, 32);
+        test_for_dtype::<i8>(DLDataTypeCode::kDLInt, 8);
+        test_for_dtype::<i16>(DLDataTypeCode::kDLInt, 16);
+        test_for_dtype::<i32>(DLDataTypeCode::kDLInt, 32);
+        test_for_dtype::<i64>(DLDataTypeCode::kDLInt, 64);
+        test_for_dtype::<u8>(DLDataTypeCode::kDLUInt, 8);
+        test_for_dtype::<u16>(DLDataTypeCode::kDLUInt, 16);
+        test_for_dtype::<u32>(DLDataTypeCode::kDLUInt, 32);
+        test_for_dtype::<u64>(DLDataTypeCode::kDLUInt, 64);
     }
 
     #[test]

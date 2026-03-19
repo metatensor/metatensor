@@ -56,17 +56,19 @@ mod tests {
         assert_eq!(get_data_origin(array.origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
         assert_eq!(array.as_ndarray(), ArcArray::from_elem(vec![4, 2], 1.0));
 
-        let other = array.create(&[5, 3, 7, 12]).unwrap();
+        let fill_value = MtsArray::new(ArcArray::from_elem(vec![1], 42.0));
+        let other = array.create(&[5, 3, 7, 12], fill_value.as_ref()).unwrap();
         assert_eq!(other.shape().unwrap(), [5, 3, 7, 12]);
         assert_eq!(get_data_origin(other.origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
-        assert_eq!(other.as_ndarray(), ArcArray::from_elem(vec![5, 3, 7, 12], 0.0));
+        assert_eq!(other.as_ndarray(), ArcArray::from_elem(vec![5, 3, 7, 12], 42.0));
     }
 
     #[test]
     fn move_data() {
         let array = MtsArray::new(ArcArray::from_elem(vec![3, 2, 2, 4], 1.0));
 
-        let mut other = array.create(&[1, 2, 2, 8]).unwrap();
+        let fill_value = MtsArray::new(ArcArray::from_elem(vec![1], 0.0));
+        let mut other = array.create(&[1, 2, 2, 8], fill_value.as_ref()).unwrap();
         assert_eq!(other.as_ndarray(), ArcArray::from_elem(vec![1, 2, 2, 8], 0.0));
 
         let mapping = mts_data_movement_t {

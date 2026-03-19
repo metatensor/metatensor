@@ -211,13 +211,19 @@ impl<'a> ArrayRef<'a> {
     /// Create a new array with the same data as this array, but with a different shape.
     ///
     /// This corresponds to `mts_array_t.create`, but with a more convenient API.
-    pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
+    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<mts_array_t, Error> {
         let function = self.array.create.expect("mts_array_t.create function is NULL");
 
         let mut new_array = mts_array_t::null();
         unsafe {
             check_status_external(
-                function(self.array.ptr, shape.as_ptr(), shape.len(), &mut new_array),
+                function(
+                    self.array.ptr,
+                    shape.as_ptr(),
+                    shape.len(),
+                    *fill_value.as_raw(),
+                    &mut new_array
+                ),
                 "mts_array_t.create",
             )?;
         }
@@ -538,13 +544,19 @@ impl<'a> ArrayRefMut<'a> {
     /// Create a new array with the same data as this array, but with a different shape.
     ///
     /// This corresponds to `mts_array_t.create`, but with a more convenient API.
-    pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
+    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<mts_array_t, Error> {
         let function = self.array.create.expect("mts_array_t.create function is NULL");
 
         let mut new_array = mts_array_t::null();
         unsafe {
             check_status_external(
-                function(self.array.ptr, shape.as_ptr(), shape.len(), &mut new_array),
+                function(
+                    self.array.ptr,
+                    shape.as_ptr(),
+                    shape.len(),
+                    *fill_value.as_raw(),
+                    &mut new_array
+                ),
                 "mts_array_t.create",
             )?;
         }

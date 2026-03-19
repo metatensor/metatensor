@@ -79,7 +79,10 @@ TEST_CASE("Data Array") {
 
         uintptr_t new_shape[] = {1, 2, 3, 4};
         shape_count = 4;
-        status = array.create(array.ptr, new_shape, shape_count, &new_array);
+        auto fill_value = DataArrayBase::to_mts_array_t(
+            std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, 0.0)
+        );
+        status = array.create(array.ptr, new_shape, shape_count, fill_value, &new_array);
         CHECK(status == MTS_SUCCESS);
 
         status = new_array.shape(new_array.ptr, &shape, &shape_count);
@@ -108,7 +111,7 @@ TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
 
     // as_dlpack -> check dtype and data
     {
-        auto s = static_cast<SimpleDataArray<double>*>(array.ptr);
+        auto *s = static_cast<SimpleDataArray<double>*>(array.ptr);
         DLDevice cpu_device = {kDLCPU, 0};
         DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
@@ -128,8 +131,8 @@ TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
         CHECK(t.strides[2] == 1);
 
         CHECK(t.dtype.code == kDLFloat);
-        CHECK(t.dtype.bits == 64u);
-        CHECK(t.dtype.lanes == 1u);
+        CHECK(t.dtype.bits == 64);
+        CHECK(t.dtype.lanes == 1);
 
         REQUIRE(t.data != nullptr);
         double* pdata = static_cast<double*>(t.data);
@@ -149,9 +152,9 @@ TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
 
     // as_dlpack should provide a valid float-typed DLPack view
     {
-        auto s = static_cast<SimpleDataArray<float>*>(array.ptr);
+        auto *s = static_cast<SimpleDataArray<float>*>(array.ptr);
         auto view = s->view();
-        view(1, 1, 0) = 3.1415f;
+        view(1, 1, 0) = static_cast<float>(3.1415);
 
         DLDevice cpu_device = {kDLCPU, 0};
         DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
@@ -160,12 +163,12 @@ TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
 
         const DLTensor& t = managed->dl_tensor;
         CHECK(t.dtype.code == kDLFloat);
-        CHECK(t.dtype.bits == 32u);
-        CHECK(t.dtype.lanes == 1u);
+        CHECK(t.dtype.bits == 32);
+        CHECK(t.dtype.lanes == 1);
 
         REQUIRE(t.data != nullptr);
-        float* pdata = static_cast<float*>(t.data);
-        CHECK(pdata[16] == Approx(3.1415f));
+        auto* pdata = static_cast<float*>(t.data);
+        CHECK(pdata[16] == static_cast<float>(3.1415));
 
         managed->deleter(managed);
     }
@@ -179,7 +182,7 @@ TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
 
     // DLPack view should be int32
     {
-        auto s = static_cast<SimpleDataArray<int32_t>*>(array.ptr);
+        auto *s = static_cast<SimpleDataArray<int32_t>*>(array.ptr);
         auto view = s->view();
         view(1, 1, 0) = 42;
 
@@ -190,11 +193,11 @@ TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
 
         const DLTensor& t = managed->dl_tensor;
         CHECK(t.dtype.code == kDLInt);
-        CHECK(t.dtype.bits == 32u);
-        CHECK(t.dtype.lanes == 1u);
+        CHECK(t.dtype.bits == 32);
+        CHECK(t.dtype.lanes == 1);
 
         REQUIRE(t.data != nullptr);
-        int32_t* pdata = static_cast<int32_t*>(t.data);
+        auto* pdata = static_cast<int32_t*>(t.data);
         CHECK(pdata[16] == 42);
 
         managed->deleter(managed);
@@ -403,7 +406,7 @@ TEST_CASE("TensorBlock::values() with device parameter") {
 TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 2}));
     auto array = DataArrayBase::to_mts_array_t(std::move(data));
-    auto s = static_cast<SimpleDataArray<double>*>(array.ptr);
+    auto *s = static_cast<SimpleDataArray<double>*>(array.ptr);
 
     DLDevice cpu_device = {kDLCPU, 0};
 
@@ -411,7 +414,7 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     // The implementation supports 1.1, so this must fail.
     DLPackVersion old_version = {0, 1};
     CHECK_THROWS_WITH(
-        s->as_dlpack(cpu_device, nullptr, old_version), 
+        s->as_dlpack(cpu_device, nullptr, old_version),
         Catch::Matchers::Contains("SimpleDataArray supports DLPack version")
     );
 
@@ -425,11 +428,11 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     // Succeed because 1.5 is compatible with 1.0
     DLPackVersion too_new_version = {2, 0};
     CHECK_THROWS_WITH(
-        s->as_dlpack(cpu_device, nullptr, too_new_version), 
+        s->as_dlpack(cpu_device, nullptr, too_new_version),
         Catch::Matchers::Contains("Caller requested incompatible version")
     );
-    
-    // Verify we got back the implementation version, not the requested one 
+
+    // Verify we got back the implementation version, not the requested one
     REQUIRE(managed != nullptr);
     CHECK(managed->version.major == DLPACK_MAJOR_VERSION);
     CHECK(managed->version.minor <= 3);
