@@ -3,7 +3,7 @@ use std::os::raw::c_void;
 use once_cell::sync::Lazy;
 
 use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion, DLDataType};
-use dlpk::{DLPackTensor, GetDLPackDataType};
+use dlpk::DLPackTensor;
 
 use crate::errors::Error;
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
@@ -134,6 +134,8 @@ unsafe extern "C" fn rust_array_origin(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, origin);
         *origin = *RUST_DATA_ORIGIN;
+
+        Ok(())
     })
 }
 
@@ -146,6 +148,8 @@ unsafe extern "C" fn rust_array_device(
         check_pointers!(array, device);
         let array = array.cast::<Box<dyn Array>>();
         *device = (*array).device();
+
+        Ok(())
     })
 }
 
@@ -158,6 +162,8 @@ unsafe extern "C" fn rust_array_dtype(
         check_pointers!(array, dtype);
         let array = array.cast::<Box<dyn Array>>();
         *dtype = (*array).dtype();
+
+        Ok(())
     })
 }
 
@@ -174,6 +180,8 @@ unsafe extern "C" fn rust_array_shape(
 
         *shape = rust_shape.as_ptr();
         *shape_count = rust_shape.len();
+
+        Ok(())
     })
 }
 
@@ -191,6 +199,8 @@ unsafe extern "C" fn rust_array_reshape(
         let array = array.cast::<Box<dyn Array>>();
         let shape = std::slice::from_raw_parts(shape, shape_count);
         (*array).reshape(shape);
+
+        Ok(())
     })
 }
 
@@ -205,6 +215,8 @@ unsafe extern "C" fn rust_array_swap_axes(
         check_pointers!(array);
         let array = array.cast::<Box<dyn Array>>();
         (*array).swap_axes(axis_1, axis_2);
+
+        Ok(())
     })
 }
 
@@ -226,6 +238,8 @@ unsafe extern "C" fn rust_array_create(
         let new_array = (*array).create(shape);
 
         *array_storage = new_array.into();
+
+        Ok(())
     })
 }
 
@@ -238,6 +252,8 @@ unsafe extern "C" fn rust_array_copy(
         check_pointers!(array, array_storage);
         let array = array.cast::<Box<dyn Array>>();
         *array_storage = (*array).copy().into();
+
+        Ok(())
     })
 }
 
@@ -273,6 +289,8 @@ unsafe extern "C" fn rust_array_move_data(
         };
 
         (*output).move_data(&**input, movements);
+
+        Ok(())
     })
 }
 
@@ -288,410 +306,11 @@ unsafe extern "C" fn rust_array_as_dlpack(
         check_pointers!(array, out);
         let array = array.cast::<Box<dyn Array>>();
         let stream_opt = stream.as_ref().copied();
-        let tensor = (*array).as_dlpack(device, stream_opt, max_version).expect("failed to create DLPack tensor");
+        let tensor = (*array).as_dlpack(device, stream_opt, max_version)?;
 
         let raw_ptr = tensor.into_raw();
         *out = raw_ptr.as_ptr();
+
+        Ok(())
     })
-}
-
-impl<T> Array for ndarray::ArcArray<T, ndarray::IxDyn>
-where
-    T: 'static + Send + Sync + Clone + Default + GetDLPackDataType,
-{
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::ArcArray::from_elem(shape, T::default()));
-    }
-
-    fn copy(&self) -> Box<dyn Array> {
-        return Box::new(self.clone());
-    }
-
-    fn shape(&self) -> &[usize] {
-        return self.shape();
-    }
-
-    fn reshape(&mut self, shape: &[usize]) {
-        *self = self.to_shape(shape).expect("invalid shape").to_shared();
-    }
-
-    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-        self.swap_axes(axis_1, axis_2);
-    }
-
-    fn move_data(
-        &mut self,
-        input: &dyn Array,
-        movements: &[mts_data_movement_t],
-    ) {
-        use ndarray::{Axis, Slice};
-
-        let input = input.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>().expect("input must be a ndarray of the same type");
-
-        if movements.is_empty() {
-            return;
-        }
-
-        // Check if we can use the optimized path (all moves have same property structure)
-        let first_prop_start_in = movements[0].properties_start_in;
-        let first_prop_start_out = movements[0].properties_start_out;
-        let first_prop_len = movements[0].properties_length;
-
-        let mut constant_properties = true;
-        let mut contiguous_input_samples = true;
-        let mut contiguous_output_samples = true;
-
-        for w in movements.windows(2) {
-            if w[0].properties_start_in != first_prop_start_in ||
-               w[0].properties_start_out != first_prop_start_out ||
-               w[0].properties_length != first_prop_len {
-                constant_properties = false;
-                break;
-            }
-
-            if w[1].sample_in != w[0].sample_in + 1 {
-                contiguous_input_samples = false;
-            }
-
-            if w[1].sample_out != w[0].sample_out + 1 {
-                contiguous_output_samples = false;
-            }
-        }
-
-        if constant_properties {
-            let last = movements.last().unwrap();
-            if last.properties_start_in != first_prop_start_in ||
-               last.properties_start_out != first_prop_start_out ||
-               last.properties_length != first_prop_len {
-                constant_properties = false;
-            }
-        }
-
-        let property_axis = self.shape().len() - 1;
-
-        if constant_properties {
-            let input_slice_info = Slice::from(first_prop_start_in..(first_prop_start_in + first_prop_len));
-            let output_slice_info = Slice::from(first_prop_start_out..(first_prop_start_out + first_prop_len));
-
-            if contiguous_input_samples && contiguous_output_samples {
-                let sample_start_in = movements[0].sample_in;
-                let sample_start_out = movements[0].sample_out;
-                let sample_count = movements.len();
-
-                let input_samples = input.slice_axis(
-                    Axis(0),
-                    Slice::from(sample_start_in..(sample_start_in + sample_count))
-                );
-                let mut output_samples = self.slice_axis_mut(
-                    Axis(0),
-                    Slice::from(sample_start_out..(sample_start_out + sample_count))
-                );
-
-                let value = input_samples.slice_axis(Axis(property_axis), input_slice_info);
-                let mut output_location = output_samples.slice_axis_mut(Axis(property_axis), output_slice_info);
-
-                output_location.assign(&value);
-            } else {
-                for move_item in movements {
-                    let input_sample = input.index_axis(Axis(0), move_item.sample_in);
-                    let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
-
-                    let value = input_sample.slice_axis(
-                        // property_axis - 1 because we are slicing the sample
-                        // axis out, so the property axis is now one less
-                        Axis(property_axis - 1),
-                        input_slice_info
-                    );
-                    let mut output_location = output_sample.slice_axis_mut(
-                        Axis(property_axis - 1),
-                        output_slice_info
-                    );
-                    output_location.assign(&value);
-                }
-            }
-        } else {
-            // fallback to the general case
-            for move_item in movements {
-                let input_sample = input.index_axis(Axis(0), move_item.sample_in);
-                let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
-
-                let value = input_sample.slice_axis(
-                    // see above for property_axis - 1 explanation
-                    Axis(property_axis - 1),
-                    Slice::from(move_item.properties_start_in..(move_item.properties_start_in + move_item.properties_length))
-                );
-                let mut output_location = output_sample.slice_axis_mut(
-                    Axis(property_axis - 1),
-                    Slice::from(move_item.properties_start_out..(move_item.properties_start_out + move_item.properties_length))
-                );
-                output_location.assign(&value);
-            }
-        }
-    }
-
-    fn device(&self) -> DLDevice {
-        DLDevice::cpu()
-    }
-
-    fn dtype(&self) -> DLDataType {
-        T::get_dlpack_data_type()
-    }
-
-    fn as_dlpack(
-        &self,
-        device: DLDevice,
-        stream: Option<i64>,
-        max_version: DLPackVersion,
-    ) -> Result<DLPackTensor, Error> {
-        if stream.is_some() {
-            // we only support CPU for now
-            return Err(Error {
-                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
-                message: "CPU arrays can not be used with a stream".into(),
-            });
-        }
-        let vendored_version = DLPackVersion::current();
-        let major_mismatch = max_version.major != vendored_version.major;
-        let minor_too_high = max_version.minor < vendored_version.minor;
-        if major_mismatch || minor_too_high {
-            return Err(Error {
-                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
-                message: format!(
-                    "Metatensor supports DLPack version {}.{}. Caller requested incompatible version {}.{}",
-                    vendored_version.major, vendored_version.minor, max_version.major, max_version.minor
-                ),
-            });
-        }
-
-        let ndarray_device = DLDevice::cpu();
-
-        if device.device_type != ndarray_device.device_type || device.device_id != ndarray_device.device_id {
-            return Err(Error {
-                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
-                message: format!(
-                    "Requested DLPack device ({}) does not match array device ({})",
-                    device, ndarray_device
-                ),
-            });
-        }
-
-        let tensor: DLPackTensor = self.try_into().map_err(|e| Error {
-            code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
-            message: format!("failed to convert ndarray to DLPack: {:?}", e),
-        })?;
-
-        Ok(tensor)
-    }
-}
-
-/******************************************************************************/
-
-/// An implementation of the [`Array`] trait without any data.
-///
-/// This only tracks the shape of the array.
-#[derive(Debug, Clone)]
-pub struct EmptyArray {
-    shape: Vec<usize>,
-}
-
-impl EmptyArray {
-    /// Create a new `EmptyArray` with the given shape.
-    pub fn new(shape: Vec<usize>) -> EmptyArray {
-        EmptyArray { shape }
-    }
-}
-
-impl Array for EmptyArray {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        Box::new(EmptyArray { shape: shape.to_vec() })
-    }
-
-    fn copy(&self) -> Box<dyn Array> {
-        Box::new(EmptyArray { shape: self.shape.clone() })
-    }
-
-    fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-
-    fn reshape(&mut self, shape: &[usize]) {
-        self.shape = shape.to_vec();
-    }
-
-    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-        self.shape.swap(axis_1, axis_2);
-    }
-
-    fn move_data(&mut self, _: &dyn Array, _: &[mts_data_movement_t]) {
-        panic!("can not call Array::move_data() for EmptyArray");
-    }
-
-    fn device(&self) -> DLDevice {
-        DLDevice::cpu()
-    }
-
-    fn dtype(&self) -> DLDataType {
-        // Default to f64, consistent with metatensor-core's EmptyDataArray
-        DLDataType {
-            code: dlpk::sys::DLDataTypeCode::kDLFloat,
-            bits: 64,
-            lanes: 1,
-        }
-    }
-
-    fn as_dlpack(
-        &self,
-        _device: DLDevice,
-        _stream: Option<i64>,
-        _max_version: DLPackVersion
-    ) -> Result<DLPackTensor, Error> {
-        panic!("can not call Array::as_dlpack() for EmptyArray");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use metatensor_sys::{MTS_SUCCESS, mts_array_t};
-    use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion, DLDataTypeCode};
-    use crate::Array;
-
-
-    #[test]
-    fn ndarray_as_mts_array() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3, 4]);
-        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
-
-        assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
-
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
-        assert_eq!(created.shape().unwrap(), [2, 3, 4]);
-    }
-
-    #[test]
-    fn ndarray_as_mts_array_dlpack() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![4, 5, 6]);
-        // Wrap it in the C-API struct
-        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
-        unsafe {
-            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
-            let device = DLDevice::cpu();
-            // max_version is the consumer's maximum supported version; it must
-            // be strictly >= the library's version, so use current + 1 minor
-            let current = DLPackVersion::current();
-            let max_version = DLPackVersion { major: current.major, minor: current.minor + 1 };
-            let status = (mts_array.as_dlpack.unwrap())(
-                mts_array.ptr,
-                &mut dl_managed,
-                device,
-                std::ptr::null_mut(),
-                max_version
-            );
-
-            assert_eq!(status, MTS_SUCCESS);
-            assert!(!dl_managed.is_null());
-            let tensor = &(*dl_managed).dl_tensor;
-            assert_eq!(tensor.ndim, 3);
-            assert_eq!(*tensor.shape.offset(0), 4);
-            assert_eq!(*tensor.shape.offset(1), 5);
-            assert_eq!(*tensor.shape.offset(2), 6);
-            // The dtype for f64 is kDLFloat (2) with 64 bits
-            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLFloat);
-            assert_eq!(tensor.dtype.bits, 64);
-            // Clean up using the provided deleter
-            if let Some(deleter) = (*dl_managed).deleter {
-                deleter(dl_managed);
-            }
-        }
-    }
-
-    #[test]
-    fn ndarray_generic_support() {
-        let data = ndarray::ArcArray::<i32, _>::from_elem(vec![2, 2], 42);
-        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
-
-        assert_eq!(mts_array.shape().unwrap(), [2, 2]);
-
-        // Should be able to export as DLPack
-        unsafe {
-            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
-            let status = (mts_array.as_dlpack.unwrap())(
-                mts_array.ptr,
-                &mut dl_managed,
-                DLDevice::cpu(),
-                std::ptr::null_mut(),
-                DLPackVersion::current()
-            );
-            assert_eq!(status, MTS_SUCCESS);
-
-            let tensor = &(*dl_managed).dl_tensor;
-            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLInt);
-            assert_eq!(tensor.dtype.bits, 32);
-
-            if let Some(deleter) = (*dl_managed).deleter {
-                deleter(dl_managed);
-            }
-        }
-
-        // And creation should make an array of the same type (i32)
-        let created = mts_array.create(&[1, 1]).unwrap();
-        unsafe {
-            let mut dl_managed: *mut DLManagedTensorVersioned = std::ptr::null_mut();
-            let status = (created.as_dlpack.unwrap())(
-                created.ptr,
-                &mut dl_managed,
-                DLDevice::cpu(),
-                std::ptr::null_mut(),
-                DLPackVersion::current()
-            );
-            assert_eq!(status, MTS_SUCCESS);
-            let tensor = &(*dl_managed).dl_tensor;
-            assert_eq!(tensor.dtype.code, DLDataTypeCode::kDLInt);
-
-             if let Some(deleter) = (*dl_managed).deleter {
-                deleter(dl_managed);
-            }
-        }
-    }
-
-    #[test]
-    fn ndarray_device() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
-
-        // Test via the device function pointer
-        unsafe {
-            let device_fn = mts_array.device.expect("device function should be set");
-            let mut device = DLDevice::cpu();
-            device.device_id = 99; // sentinel to confirm it's overwritten
-            let status = device_fn(mts_array.ptr, &mut device);
-            assert_eq!(status, MTS_SUCCESS);
-            assert_eq!(device.device_type, DLDevice::cpu().device_type);
-            assert_eq!(device.device_id, 0);
-        }
-    }
-
-    #[test]
-    fn empty_array_device() {
-        use crate::data::EmptyArray;
-        let arr = EmptyArray::new(vec![2, 3]);
-        let dev = arr.device();
-        assert_eq!(dev.device_type, DLDevice::cpu().device_type);
-        assert_eq!(dev.device_id, 0);
-    }
 }
