@@ -157,7 +157,7 @@ impl<'a> TensorBlockRef<'a> {
     #[inline]
     pub fn components(&self) -> Vec<Labels> {
         let values = self.values();
-        let shape = values.as_raw().shape().expect("failed to get the data shape");
+        let shape = values.shape().expect("failed to get the data shape");
 
         let mut result = Vec::new();
         for i in 1..(shape.len() - 1) {
@@ -170,7 +170,7 @@ impl<'a> TensorBlockRef<'a> {
     #[inline]
     pub fn properties(&self) -> Labels {
         let values = self.values();
-        let shape = values.as_raw().shape().expect("failed to get the data shape");
+        let shape = values.shape().expect("failed to get the data shape");
 
         return self.labels(shape.len() - 1);
     }

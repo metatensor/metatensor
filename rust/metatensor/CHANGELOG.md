@@ -16,6 +16,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- Added `MtsArray` as a safe wrapper around an owned `mts_array_t`
+
 ### Changed
 
 - Renamed `ArrayRef{Mut}::{as,to}_array` to `ArrayRef{Mut}::{as,to}_ndarray`

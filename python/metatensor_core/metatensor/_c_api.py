@@ -116,6 +116,7 @@ class mts_array_t(ctypes.Structure):
 
 mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
+    ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
     ("origin", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_data_origin_t))),
     ("device", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDevice))),
     ("dtype", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDataType))),
@@ -125,7 +126,6 @@ mts_array_t._fields_ = [
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
     ("create", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, POINTER(mts_array_t))),
     ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
-    ("destroy", CFUNCTYPE(None, ctypes.c_void_p)),
     ("move_data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_data_movement_t), c_uintptr_t)),
 ]
 

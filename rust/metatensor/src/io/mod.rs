@@ -29,6 +29,8 @@ unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
         *(unwind_wrapper.0) = vector.as_mut_ptr();
+
+        Ok(())
     });
 
     if status != MTS_SUCCESS {
@@ -49,5 +51,7 @@ unsafe extern "C" fn create_ndarray(
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
         let array = ndarray::ArcArray::from_elem(shape, 0.0);
         *c_array = (Box::new(array) as Box<dyn Array>).into();
+
+        Ok(())
     })
 }
