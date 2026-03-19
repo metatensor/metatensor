@@ -80,6 +80,7 @@ end
 
 struct mts_array_t
     ptr :: Ptr{Cvoid}
+    destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     origin :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_data_origin_t}) -> mts_status_t =#
     device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDevice}) -> mts_status_t =#
     dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDataType}) -> mts_status_t =#
@@ -89,7 +90,6 @@ struct mts_array_t
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
     create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, Ptr{mts_array_t}) -> mts_status_t =#
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
-    destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
 

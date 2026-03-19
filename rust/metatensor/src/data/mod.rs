@@ -1,11 +1,18 @@
 mod origin;
 
-mod array_ref;
-pub use self::array_ref::{ArrayRef, ArrayRefMut};
-
 mod array;
 pub use self::array::Array;
-pub use self::array::EmptyArray;
+
+mod empty;
+pub use self::empty::EmptyArray;
+
+mod ndarray_array;
+
+mod external;
+pub use self::external::MtsArray;
+
+mod array_ref;
+pub use self::array_ref::{ArrayRef, ArrayRefMut};
 
 
 #[cfg(test)]
@@ -18,40 +25,49 @@ mod tests {
 
     #[test]
     fn shape() {
-        let array = Box::new(ArcArray::from_elem(vec![3, 4, 2], 1.0)) as Box<dyn Array>;
-        let mut array = unsafe { ArrayRefMut::new(array.into()) };
+        let mut array = MtsArray::new(ArcArray::from_elem(vec![3, 4, 2], 1.0));
 
-        assert_eq!(array.as_raw().shape().unwrap(), [3, 4, 2]);
-        array.as_raw_mut().reshape(&[12, 2]).unwrap();
-        assert_eq!(array.as_raw().shape().unwrap(), [12, 2]);
+        assert_eq!(array.shape().unwrap(), [3, 4, 2]);
+        array.reshape(&[12, 2]).unwrap();
+        assert_eq!(array.shape().unwrap(), [12, 2]);
         assert_eq!(array.as_ndarray(), ArcArray::from_elem(vec![12, 2], 1.0));
 
-        array.as_raw_mut().swap_axes(0, 1).unwrap();
-        assert_eq!(array.as_raw().shape().unwrap(), [2, 12]);
+        array.swap_axes(0, 1).unwrap();
+        assert_eq!(array.shape().unwrap(), [2, 12]);
+
+        let array_ref = array.as_ref();
+        assert_eq!(array_ref.shape().unwrap(), [2, 12]);
+        assert_eq!(array_ref.as_ndarray(), ArcArray::from_elem(vec![2, 12], 1.0));
+        assert_eq!(array_ref.to_ndarray(), ArcArray::from_elem(vec![2, 12], 1.0));
+
+        let mut array_ref_mut = array.as_mut();
+        assert_eq!(array_ref_mut.shape().unwrap(), [2, 12]);
+
+        array_ref_mut.reshape(&[6, 4]).unwrap();
+        assert_eq!(array_ref_mut.shape().unwrap(), [6, 4]);
+        assert_eq!(array_ref_mut.as_ndarray(), ArcArray::from_elem(vec![6, 4], 1.0));
+        assert_eq!(array_ref_mut.to_ndarray(), ArcArray::from_elem(vec![6, 4], 1.0));
     }
 
     #[test]
     fn create() {
-        let array = Box::new(ArcArray::from_elem(vec![4, 2], 1.0)) as Box<dyn Array>;
-        let array = unsafe { ArrayRef::from_raw(array.into()) };
+        let array = MtsArray::new(ArcArray::from_elem(vec![4, 2], 1.0));
 
-        assert_eq!(get_data_origin(array.as_raw().origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
+        assert_eq!(get_data_origin(array.origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
         assert_eq!(array.as_ndarray(), ArcArray::from_elem(vec![4, 2], 1.0));
 
-        let other = unsafe { ArrayRef::from_raw(array.as_raw().create(&[5, 3, 7, 12]).unwrap()) };
-        assert_eq!(other.as_raw().shape().unwrap(), [5, 3, 7, 12]);
-        assert_eq!(get_data_origin(other.as_raw().origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
+        let other = array.create(&[5, 3, 7, 12]).unwrap();
+        assert_eq!(other.shape().unwrap(), [5, 3, 7, 12]);
+        assert_eq!(get_data_origin(other.origin().unwrap()).unwrap(), "rust.Box<dyn Array>");
         assert_eq!(other.as_ndarray(), ArcArray::from_elem(vec![5, 3, 7, 12], 0.0));
     }
 
     #[test]
     fn move_data() {
-        let array = ArcArray::from_elem(vec![3, 2, 2, 4], 1.0);
-        let array = unsafe { ArrayRefMut::new((Box::new(array) as Box<dyn Array>).into()) };
+        let array = MtsArray::new(ArcArray::from_elem(vec![3, 2, 2, 4], 1.0));
 
-        let mut other = unsafe { ArrayRefMut::new(array.as_raw().create(&[1, 2, 2, 8]).unwrap()) };
-        let expected = ArcArray::from_elem(vec![1, 2, 2, 8], 0.0);
-        assert_eq!(other.as_ndarray(), expected);
+        let mut other = array.create(&[1, 2, 2, 8]).unwrap();
+        assert_eq!(other.as_ndarray(), ArcArray::from_elem(vec![1, 2, 2, 8], 0.0));
 
         let mapping = mts_data_movement_t {
             sample_in: 1,
@@ -60,7 +76,7 @@ mod tests {
             properties_start_out: 2,
             properties_length: 4,
         };
-        other.as_raw_mut().move_data(array.as_raw(), &[mapping]).unwrap();
+        other.move_data(&array, &[mapping]).unwrap();
         let expected = ArcArray::from_shape_vec(vec![1, 2, 2, 8], vec![
                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
                 0.0, 0.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0,
