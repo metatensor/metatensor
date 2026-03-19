@@ -37,7 +37,7 @@ pub use self::errors::Error;
 
 mod data;
 pub use self::data::{ArrayRef, ArrayRefMut};
-pub use self::data::{Array, EmptyArray};
+pub use self::data::{Array, EmptyArray, MtsArray};
 
 mod labels;
 pub use self::labels::{Labels, LabelsBuilder, LabelValue};

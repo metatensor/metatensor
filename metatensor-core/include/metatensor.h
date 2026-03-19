@@ -166,6 +166,11 @@ typedef struct mts_array_t {
    */
   void *ptr;
   /**
+   * Remove this array and free the associated memory. This function can be
+   * set to `NULL` if there is no memory management to do.
+   */
+  void (*destroy)(void *array);
+  /**
    * This function needs to store the "data origin" for this array in
    * `origin`. Users of `mts_array_t` should register a single data
    * origin with `mts_register_data_origin`, and use it for all compatible
@@ -263,11 +268,6 @@ typedef struct mts_array_t {
    * (data type, data location, etc.)
    */
   mts_status_t (*copy)(const void *array, struct mts_array_t *new_array);
-  /**
-   * Remove this array and free the associated memory. This function can be
-   * set to `NULL` is there is no memory management to do.
-   */
-  void (*destroy)(void *array);
   /**
    * Set entries in the `output` array (the current array) taking data from
    * the `input` array. The `output` array is guaranteed to be created by

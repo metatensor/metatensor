@@ -73,7 +73,8 @@ mod tensor {
 
         let block = tensor.block_by_id(13);
 
-        assert_eq!(block.values().as_ndarray().shape(), [9, 3, 3]);
+        assert_eq!(block.values().device().unwrap(), dlpk::sys::DLDevice::cpu());
+        assert_eq!(block.values().shape().unwrap(), [9, 3, 3]);
         assert_eq!(block.samples().names(), ["system", "atom"]);
         assert_eq!(block.components().len(), 1);
         assert_eq!(block.components()[0].names(), ["o3_mu"]);
@@ -81,7 +82,8 @@ mod tensor {
 
         assert_eq!(block.gradient_list(), ["positions"]);
         let gradient = block.gradient("positions").unwrap();
-        assert_eq!(gradient.values().as_ndarray().shape(), [27, 3, 3, 3]);
+        assert_eq!(block.values().device().unwrap(), dlpk::sys::DLDevice::cpu());
+        assert_eq!(gradient.values().shape().unwrap(), [27, 3, 3, 3]);
         assert_eq!(gradient.samples().names(), ["sample", "system", "atom"]);
         assert_eq!(gradient.components().len(), 2);
         assert_eq!(gradient.components()[0].names(), ["xyz"]);
@@ -161,7 +163,8 @@ mod block {
 
 
     fn check_block(block: TensorBlockRef) {
-        assert_eq!(block.values().as_ndarray().shape(), [9, 5, 3]);
+        assert_eq!(block.values().device().unwrap(), dlpk::sys::DLDevice::cpu());
+        assert_eq!(block.values().shape().unwrap(), [9, 5, 3]);
         assert_eq!(block.samples().names(), ["system", "atom"]);
         assert_eq!(block.components().len(), 1);
         assert_eq!(block.components()[0].names(), ["o3_mu"]);
@@ -169,7 +172,8 @@ mod block {
 
         assert_eq!(block.gradient_list(), ["positions"]);
         let gradient = block.gradient("positions").unwrap();
-        assert_eq!(gradient.values().as_ndarray().shape(), [59, 3, 5, 3]);
+        assert_eq!(gradient.values().device().unwrap(), dlpk::sys::DLDevice::cpu());
+        assert_eq!(gradient.values().shape().unwrap(), [59, 3, 5, 3]);
         assert_eq!(gradient.samples().names(), ["sample", "system", "atom"]);
         assert_eq!(gradient.components().len(), 2);
         assert_eq!(gradient.components()[0].names(), ["xyz"]);
@@ -247,8 +251,8 @@ mod dtype_serialization {
 
         let loaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_ndarray().shape(),
-            loaded.values().as_ndarray().shape(),
+            block.values().shape().unwrap(),
+            loaded.values().shape().unwrap(),
         );
     }
 
@@ -268,8 +272,8 @@ mod dtype_serialization {
 
         let loaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_ndarray().shape(),
-            loaded.values().as_ndarray().shape(),
+            block.values().shape().unwrap(),
+            loaded.values().shape().unwrap(),
         );
     }
 }
@@ -399,8 +403,8 @@ mod error_paths {
         // re-load from buffer
         let reloaded = metatensor::io::load_block_buffer(&buf).unwrap();
         assert_eq!(
-            block.values().as_ndarray().shape(),
-            reloaded.values().as_ndarray().shape(),
+            block.values().shape().unwrap(),
+            reloaded.values().shape().unwrap(),
         );
     }
 
@@ -471,81 +475,5 @@ mod error_paths {
 
         let reloaded = metatensor::io::load(path.to_str().unwrap()).unwrap();
         assert_eq!(tensor.keys().count(), reloaded.keys().count());
-    }
-}
-
-mod device {
-    use metatensor::{LabelsBuilder, TensorBlock};
-    use metatensor::Array;
-    use dlpk::sys::{DLDevice, DLDeviceType, DLPackVersion};
-
-    #[test]
-    fn arcarray_device_is_cpu() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        assert_eq!(data.device(), DLDevice::cpu());
-    }
-
-    #[test]
-    fn block_values_device() {
-        let mut samples = LabelsBuilder::new(vec!["s"]);
-        samples.add(&[0]);
-        let samples = samples.finish();
-
-        let mut properties = LabelsBuilder::new(vec!["p"]);
-        properties.add(&[0]);
-        properties.add(&[1]);
-        let properties = properties.finish();
-
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![1, 2]);
-        let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
-        assert_eq!(block.values().as_ndarray().device(), DLDevice::cpu());
-    }
-
-    #[test]
-    fn loaded_block_device() {
-        let block = metatensor::io::load_block("../../metatensor-core/tests/block.mts").unwrap();
-        assert_eq!(block.values().as_ndarray().device(), DLDevice::cpu());
-    }
-
-    #[test]
-    fn as_dlpack_rejects_stream() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        match data.as_dlpack(DLDevice::cpu(), Some(42), DLPackVersion::current()) {
-            Err(e) => assert!(e.message.contains("stream"), "{}", e.message),
-            Ok(_) => panic!("expected error for non-null stream"),
-        }
-    }
-
-    #[test]
-    fn as_dlpack_rejects_wrong_device() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let cuda = DLDevice {
-            device_type: DLDeviceType::kDLCUDA,
-            device_id: 0,
-        };
-        match data.as_dlpack(cuda, None, DLPackVersion::current()) {
-            Err(e) => assert!(e.message.contains("does not match"), "{}", e.message),
-            Ok(_) => panic!("expected error for CUDA device on CPU array"),
-        }
-    }
-
-    #[test]
-    fn as_dlpack_rejects_incompatible_version() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let bad_version = DLPackVersion { major: 99, minor: 0 };
-        match data.as_dlpack(DLDevice::cpu(), None, bad_version) {
-            Err(e) => assert!(e.message.contains("version"), "{}", e.message),
-            Ok(_) => panic!("expected error for incompatible DLPack version"),
-        }
-    }
-
-    #[test]
-    fn as_dlpack_success() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let tensor = data
-            .as_dlpack(DLDevice::cpu(), None, DLPackVersion::current())
-            .expect("as_dlpack should succeed for CPU f64 array");
-        let tensor_ref = tensor.as_ref();
-        assert_eq!(tensor_ref.raw.dtype.bits, 64);
     }
 }

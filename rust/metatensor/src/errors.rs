@@ -5,7 +5,7 @@ use std::cell::RefCell;
 use crate::c_api::{mts_status_t, MTS_SUCCESS, mts_last_error};
 
 /// Error code used to indicate failure of a Rust function
-const RUST_FUNCTION_FAILED_ERROR_CODE: i32 = -4242;
+pub const RUST_FUNCTION_FAILED_ERROR_CODE: i32 = -4242;
 
 thread_local! {
     /// Storage for the last error coming from a Rust function
@@ -49,9 +49,19 @@ pub fn check_ptr<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
 
 /// An alternative to `std::panic::catch_unwind` that automatically transform
 /// the error into `mts_status_t`.
-pub(crate) fn catch_unwind<F>(function: F) -> mts_status_t where F: FnOnce() + std::panic::UnwindSafe {
+pub(crate) fn catch_unwind<F>(function: F) -> mts_status_t where F: FnOnce() -> Result<(), Error> + std::panic::UnwindSafe {
     match std::panic::catch_unwind(function) {
-        Ok(()) => MTS_SUCCESS,
+        Ok(Ok(())) => MTS_SUCCESS,
+        Ok(Err(e)) => {
+            // Store the error in LAST_RUST_ERROR, we will extract it later
+            // in `check_status`
+            LAST_RUST_ERROR.with(|last_error| {
+                let mut last_error = last_error.borrow_mut();
+                *last_error = e;
+            });
+
+            RUST_FUNCTION_FAILED_ERROR_CODE
+        },
         Err(e) => {
             // Store the error in LAST_RUST_ERROR, we will extract it later
             // in `check_status`

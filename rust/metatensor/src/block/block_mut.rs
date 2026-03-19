@@ -124,7 +124,7 @@ impl<'a> TensorBlockRefMut<'a> {
         };
 
         // SAFETY: we are returning an `ArrayRefMut` mutably borrowing from `self`
-        unsafe { ArrayRefMut::new(array) }
+        unsafe { ArrayRefMut::from_raw(array) }
     }
 
     /// Get the array for the values in this block
