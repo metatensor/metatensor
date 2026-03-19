@@ -324,10 +324,10 @@ mod tests {
 
         let block = block.as_ref();
         let gradient = block.gradient("g").unwrap();
-        assert_eq!(gradient.values().as_array()[[0, 0]], -1.0);
+        assert_eq!(gradient.values().as_ndarray()[[0, 0]], -1.0);
 
         let gradient = block.gradient("f").unwrap();
-        assert_eq!(gradient.values().as_array()[[0, 0]], -2.0);
+        assert_eq!(gradient.values().as_ndarray()[[0, 0]], -2.0);
 
         assert!(block.gradient("h").is_none());
 
@@ -349,13 +349,13 @@ mod tests {
         ).unwrap();
         let block = block.as_ref();
 
-        assert_eq!(block.values().as_array(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.values().as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
         assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
 
         let block = block.data();
-        assert_eq!(block.values.as_array(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        assert_eq!(block.values.as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
         assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
