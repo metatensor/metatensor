@@ -71,7 +71,7 @@ impl<'a> ArrayRef<'a> {
     /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
     /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_array(&self) -> &ArcArray<f64, IxDyn> {
+    pub fn as_ndarray(&self) -> &ArcArray<f64, IxDyn> {
         self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
@@ -200,7 +200,7 @@ impl<'a> ArrayRefMut<'a> {
     /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
     /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_array(&self) -> &ArcArray<f64, IxDyn> {
+    pub fn as_ndarray(&self) -> &ArcArray<f64, IxDyn> {
         self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
     }
 
