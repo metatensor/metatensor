@@ -282,7 +282,9 @@ public:
     }
 
     template<typename ...Args>
-    T operator()(Args... args) && = delete;
+    T operator()(Args... args) && {
+        return data_[details::linear_index(shape_, {static_cast<size_t>(args)...})];
+    }
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
@@ -290,14 +292,14 @@ public:
         return data_;
     }
 
-    const T* data() && = delete;
+    const T* data() && { return data_; }
 
     /// Get the shape of this array
     const std::vector<size_t>& shape() const & {
         return shape_;
     }
 
-    const std::vector<size_t>& shape() && = delete;
+    std::vector<size_t> shape() && { return std::move(shape_); }
 
     /// Check if this array is empty, i.e. if at least one of the shape element
     /// is 0.
@@ -448,7 +450,9 @@ public:
     }
 
     template<typename ...Args>
-    T& operator()(Args... args) && = delete;
+    T operator()(Args... args) && {
+        return data_[details::linear_index(shape_, {static_cast<size_t>(args)...})];
+    }
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
@@ -465,14 +469,14 @@ public:
         return data_;
     }
 
-    const T* data() && = delete;
+    const T* data() && { return data_; }
 
     /// Get the shape of this array
     const std::vector<size_t>& shape() const & {
         return shape_;
     }
 
-    const std::vector<size_t>& shape() && = delete;
+    std::vector<size_t> shape() && { return std::move(shape_); }
 
     /// Check if this array is empty, i.e. if at least one of the shape element
     /// is 0.

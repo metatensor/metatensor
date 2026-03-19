@@ -132,35 +132,19 @@ function mts_labels_create_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UI
     )
 end
 
-function mts_labels_names(labels::Ptr{mts_labels_t}, names::Ptr{Ptr{Ptr{Cchar}}}, count::Ptr{UIntptr})
-    ccall((:mts_labels_names, libmetatensor), 
+function mts_labels_dimensions(labels::Ptr{mts_labels_t}, names::Ptr{Ptr{Ptr{Cchar}}}, count::Ptr{UIntptr})
+    ccall((:mts_labels_dimensions, libmetatensor), 
         mts_status_t,
         (Ptr{mts_labels_t}, Ptr{Ptr{Ptr{Cchar}}}, Ptr{UIntptr},),
         labels, names, count
     )
 end
 
-function mts_labels_count(labels::Ptr{mts_labels_t}, count::Ptr{UIntptr})
-    ccall((:mts_labels_count, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{UIntptr},),
-        labels, count
-    )
-end
-
-function mts_labels_size(labels::Ptr{mts_labels_t}, size::Ptr{UIntptr})
-    ccall((:mts_labels_size, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{UIntptr},),
-        labels, size
-    )
-end
-
-function mts_labels_values(labels::Ptr{mts_labels_t}, values::Ptr{Ptr{Int32}}, count::Ptr{UIntptr})
+function mts_labels_values(labels::Ptr{mts_labels_t}, array::Ptr{mts_array_t})
     ccall((:mts_labels_values, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{Ptr{Int32}}, Ptr{UIntptr},),
-        labels, values, count
+        (Ptr{mts_labels_t}, Ptr{mts_array_t},),
+        labels, array
     )
 end
 

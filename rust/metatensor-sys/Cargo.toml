@@ -26,7 +26,7 @@ default = []
 static = []
 
 [dependencies]
-dlpk = {git = "https://github.com/metatensor/dlpk", branch = "vec-slice"}
+dlpk = {git = "https://github.com/metatensor/dlpk", branch = "main"}
 
 [build-dependencies]
 cmake = "0.1"

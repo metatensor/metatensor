@@ -272,21 +272,13 @@ extern "C" {
         array: mts_array_t,
     ) -> *mut mts_labels_t;
     #[must_use]
-    pub fn mts_labels_names(
+    pub fn mts_labels_dimensions(
         labels: *const mts_labels_t,
         names: *mut *const *const ::std::os::raw::c_char,
         count: *mut usize,
     ) -> mts_status_t;
     #[must_use]
-    pub fn mts_labels_count(labels: *const mts_labels_t, count: *mut usize) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_size(labels: *const mts_labels_t, size: *mut usize) -> mts_status_t;
-    #[must_use]
-    pub fn mts_labels_values(
-        labels: *const mts_labels_t,
-        values: *mut *const i32,
-        count: *mut usize,
-    ) -> mts_status_t;
+    pub fn mts_labels_values(labels: *const mts_labels_t, array: *mut mts_array_t) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_position(
         labels: *const mts_labels_t,

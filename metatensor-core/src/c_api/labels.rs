@@ -144,7 +144,7 @@ pub unsafe extern "C" fn mts_labels_create_assume_unique(
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
 #[no_mangle]
-pub unsafe extern "C" fn mts_labels_names(
+pub unsafe extern "C" fn mts_labels_dimensions(
     labels: *const mts_labels_t,
     names: *mut *const *const c_char,
     count: *mut usize,
@@ -165,59 +165,17 @@ pub unsafe extern "C" fn mts_labels_names(
 }
 
 
-/// Get the number of entries in the given set of `labels`.
+
+/// Get the values for the given set of `labels` as an `mts_array_t`.
+///
+/// The returned array is a 2D i32 array with shape `(count, size)`, where
+/// `count` is the number of entries and `size` is the number of dimensions.
+/// The caller can extract `count` and `size` from the array's shape.
 ///
 /// @param labels pointer to an existing set of labels
-/// @param count on output, will be set to the number of entries
-///
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_count(
-    labels: *const mts_labels_t,
-    count: *mut usize,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(labels, count);
-        *count = (*labels).count();
-        Ok(())
-    })
-}
-
-
-/// Get the number of dimensions in the given set of `labels`.
-///
-/// @param labels pointer to an existing set of labels
-/// @param size on output, will be set to the number of dimensions
-///
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_size(
-    labels: *const mts_labels_t,
-    size: *mut usize,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(labels, size);
-        *size = (*labels).size();
-        Ok(())
-    })
-}
-
-
-/// Get the values for the given set of `labels`.
-///
-/// The values are returned as a pointer to a row-major 2D array of shape
-/// `(count, size)`, where `count` is the number of entries and `size` is the
-/// number of dimensions.
-///
-/// @param labels pointer to an existing set of labels
-/// @param values on output, will be set to a pointer to the first element of
-///        the values array. The pointer is valid as long as the labels are
-///        alive. Will be NULL if the labels are empty.
-/// @param count on output, will be set to the number of entries
+/// @param array on output, will be set to the values array. This is a
+///        non-owning view (destroy is NULL) valid as long as the labels
+///        are alive.
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
@@ -225,14 +183,35 @@ pub unsafe extern "C" fn mts_labels_size(
 #[no_mangle]
 pub unsafe extern "C" fn mts_labels_values(
     labels: *const mts_labels_t,
-    values: *mut *const i32,
-    count: *mut usize,
+    array: *mut mts_array_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers_non_null!(labels, values, count);
+        check_pointers_non_null!(labels, array);
+        let labels = &*labels;
+
+        let values_array = labels.values_array();
+        *array = values_array.raw_copy();
+
+        Ok(())
+    })
+}
+
+
+// Internal: raw i32 pointer access for Rust wrapper and C++ labels.
+// Not in the public C header (excluded from cbindgen via build.rs).
+#[no_mangle]
+pub unsafe extern "C" fn mts_labels_values_raw(
+    labels: *const mts_labels_t,
+    values: *mut *const i32,
+    count: *mut usize,
+    size: *mut usize,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(labels, values, count, size);
         let labels = &*labels;
 
         *count = labels.count();
+        *size = labels.size();
         if labels.count() == 0 || labels.size() == 0 {
             *values = std::ptr::null();
         } else {
@@ -283,24 +262,6 @@ pub unsafe extern "C" fn mts_labels_position(
     })
 }
 
-
-// Internal: used by metatensor-torch to recover the backing array.
-// Not part of the public C API (not in metatensor.h).
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_values_array(
-    labels: *const mts_labels_t,
-    array: *mut mts_array_t,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(labels, array);
-        let labels = &*labels;
-
-        let values_array = labels.values_array();
-        *array = values_array.raw_copy();
-
-        Ok(())
-    })
-}
 
 
 /// Internal helper to create Labels from names array and mts_array_t

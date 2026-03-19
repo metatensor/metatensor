@@ -23,10 +23,8 @@ class LabelsValues(np.ndarray):
         lib = _get_library()
         values_ptr = ctypes.POINTER(ctypes.c_int32)()
         count = c_uintptr_t()
-        lib.mts_labels_values(labels._labels, values_ptr, count)
-
         size = c_uintptr_t()
-        lib.mts_labels_size(labels._labels, size)
+        lib.mts_labels_values_raw(labels._labels, values_ptr, count, size)
 
         array = _ptr_to_const_ndarray(
             ptr=values_ptr,
@@ -364,7 +362,7 @@ class Labels:
 
         names_ptr = ctypes.POINTER(ctypes.c_char_p)()
         names_count = c_uintptr_t()
-        obj._lib.mts_labels_names(labels, names_ptr, names_count)
+        obj._lib.mts_labels_dimensions(labels, names_ptr, names_count)
 
         names = []
         for i in range(names_count.value):

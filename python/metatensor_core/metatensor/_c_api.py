@@ -154,29 +154,16 @@ def setup_functions(lib):
     ]
     lib.mts_labels_create_assume_unique.restype = POINTER(mts_labels_t)
 
-    lib.mts_labels_names.argtypes = [
+    lib.mts_labels_dimensions.argtypes = [
         POINTER(mts_labels_t),
         POINTER(POINTER(ctypes.c_char_p)),
         POINTER(c_uintptr_t),
     ]
-    lib.mts_labels_names.restype = _check_status
-
-    lib.mts_labels_count.argtypes = [
-        POINTER(mts_labels_t),
-        POINTER(c_uintptr_t),
-    ]
-    lib.mts_labels_count.restype = _check_status
-
-    lib.mts_labels_size.argtypes = [
-        POINTER(mts_labels_t),
-        POINTER(c_uintptr_t),
-    ]
-    lib.mts_labels_size.restype = _check_status
+    lib.mts_labels_dimensions.restype = _check_status
 
     lib.mts_labels_values.argtypes = [
         POINTER(mts_labels_t),
-        POINTER(POINTER(ctypes.c_int32)),
-        POINTER(c_uintptr_t),
+        POINTER(mts_array_t),
     ]
     lib.mts_labels_values.restype = _check_status
 
@@ -486,3 +473,13 @@ def setup_functions(lib):
         POINTER(mts_tensormap_t),
     ]
     lib.mts_tensormap_save_buffer.restype = _check_status
+
+    # Internal: raw i32 pointer access for labels values
+    # (not in public C header, excluded from cbindgen)
+    lib.mts_labels_values_raw.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(POINTER(ctypes.c_int32)),
+        POINTER(c_uintptr_t),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_values_raw.restype = _check_status

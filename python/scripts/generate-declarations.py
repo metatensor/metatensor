@@ -349,6 +349,19 @@ DLManagedTensorVersioned._fields_ = [
 
         generate_functions(file, data.functions)
 
+        # Internal functions not in the public C header but needed by Python
+        file.write("""
+    # Internal: raw i32 pointer access for labels values
+    # (not in public C header, excluded from cbindgen)
+    lib.mts_labels_values_raw.argtypes = [
+        POINTER(mts_labels_t),
+        POINTER(POINTER(ctypes.c_int32)),
+        POINTER(c_uintptr_t),
+        POINTER(c_uintptr_t),
+    ]
+    lib.mts_labels_values_raw.restype = _check_status
+""")
+
 
 if __name__ == "__main__":
     generate_declarations()
