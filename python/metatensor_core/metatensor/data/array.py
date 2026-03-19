@@ -7,11 +7,13 @@ from .._c_api import (
     DLDataType,
     DLDevice,
     DLManagedTensorVersioned,
+    DLPackVersion,
     c_uintptr_t,
     mts_array_t,
     mts_data_movement_t,
     mts_data_origin_t,
 )
+from ..status import _check_status
 from ..utils import catch_exceptions
 from ._dlpack import (
     DLPACK_NAME,
@@ -20,6 +22,7 @@ from ._dlpack import (
     USED_DLPACK_NAME,
     USED_DLPACK_VERSIONED_NAME,
     DLManagedTensor,
+    DLPackArray,
     wrap_unversioned_as_versioned,
 )
 
@@ -260,8 +263,51 @@ def _mts_array_swap_axes(this, axis_1, axis_2):
     wrapper.c_shape[:] = shape
 
 
+def _extract_scalar_from_mts_array(mts_array):
+    """
+    Extract a scalar value from an mts_array_t using as_dlpack.
+
+    This is the generic, safe way to get data from any array implementation,
+    not just Python wrappers.
+    """
+    # Get shape to verify it's a scalar
+    shape_ptr = ctypes.POINTER(c_uintptr_t)()
+    shape_count = c_uintptr_t()
+    status = mts_array.shape(
+        mts_array.ptr, ctypes.byref(shape_ptr), ctypes.byref(shape_count)
+    )
+    _check_status(status)
+
+    if shape_count.value != 1:
+        raise ValueError(
+            "fill_value must be a scalar (shape (1,)), "
+            f"got shape with {shape_count.value} dimensions"
+        )
+
+    if shape_ptr[0] != 1:
+        raise ValueError(
+            f"fill_value must be a scalar (shape (1,)), got shape ({shape_ptr[0]},)"
+        )
+
+    # Use as_dlpack to get the data
+    dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+    version = DLPackVersion(major=1, minor=0)
+    status = mts_array.as_dlpack(
+        mts_array.ptr,
+        ctypes.byref(dl_managed_ptr),
+        device,
+        None,
+        version,
+    )
+    _check_status(status)
+
+    array = np.from_dlpack(DLPackArray(dl_managed_ptr))
+    return array[0]
+
+
 @catch_exceptions
-def _mts_array_create(this, shape_ptr, shape_count, new_array):
+def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     shape = []
@@ -269,10 +315,16 @@ def _mts_array_create(this, shape_ptr, shape_count, new_array):
         shape.append(shape_ptr[i])
     dtype = wrapper.array.dtype
 
+    # Extract the scalar fill value from the fill_value mts_array_t using as_dlpack
+    scalar = _extract_scalar_from_mts_array(fill_value)
+
     if _is_numpy_array(wrapper.array):
-        array = np.zeros(shape, dtype=dtype)
+        array = np.full(shape, scalar, dtype=dtype)
     elif _is_torch_array(wrapper.array):
-        array = torch.zeros(shape, dtype=dtype, device=wrapper.array.device)
+        array = torch.full(shape, scalar, dtype=dtype, device=wrapper.array.device)
+
+    if ctypes.cast(fill_value.destroy, ctypes.c_void_p).value is not None:
+        fill_value.destroy(fill_value.ptr)
 
     new_array[0] = create_mts_array(array)
 
