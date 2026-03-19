@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
-use crate::data::mts_data_movement_t;
+use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
@@ -28,8 +28,8 @@ impl TensorMap {
     ///
     /// If the blocks have different property labels, the resulting block will
     /// have the union of all property labels, and values will be padded with
-    /// zeros where appropriate.
-    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    /// the given `fill_value`.
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, fill_value: &mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -68,6 +68,7 @@ impl TensorMap {
                 &blocks_to_merge,
                 &names_to_move,
                 sort_samples,
+                fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -98,13 +99,16 @@ impl TensorMap {
                     &blocks_to_merge,
                     &names_to_move,
                     sort_samples,
+                    fill_value,
                 )?);
             }
         }
+
         let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
+
         return Ok(tensor);
     }
 }
@@ -114,6 +118,7 @@ fn merge_blocks_along_samples(
     blocks_to_merge: &[KeyAndBlock],
     extracted_names: &[&str],
     sort_samples: bool,
+    fill_value: &mts_array_t,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
@@ -163,6 +168,7 @@ fn merge_blocks_along_samples(
         &property_mappings,
         &samples_mappings,
         &blocks_to_merge.iter().map(|b| &b.block.values).collect::<Vec<_>>(),
+        fill_value,
     )?;
 
     let mut new_block = TensorBlock::new(
@@ -214,6 +220,7 @@ fn merge_blocks_along_samples(
             &property_mappings,
             &gradient_samples_mappings,
             &gradients_to_merge,
+            fill_value,
         )?;
 
         let new_gradient = TensorBlock::new(
@@ -280,13 +287,14 @@ fn merge_data(
     property_mappings: &[Vec<usize>],
     samples_mappings: &[Vec<usize>],
     blocks: &[&crate::data::mts_array_t],
+    fill_value: &crate::data::mts_array_t,
 ) -> Result<crate::data::mts_array_t, Error> {
     let mut new_shape = prototype_array.shape()?.to_vec();
     new_shape[0] = samples_count;
     let len = new_shape.len();
     new_shape[len - 1] = properties_count;
 
-    let mut output = prototype_array.create(&new_shape)?;
+    let mut output = prototype_array.create(&new_shape, fill_value)?;
 
     for (i, (block, samples_mapping)) in blocks.iter().zip(samples_mappings).enumerate() {
         let property_mapping = &property_mappings[i];

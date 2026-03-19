@@ -1,9 +1,16 @@
 #![allow(dead_code)]
 #![allow(clippy::needless_return)]
 
-use metatensor::{LabelsBuilder, Labels, TensorBlock, TensorMap};
+use metatensor::{LabelsBuilder, Labels, TensorBlock, TensorMap, Array};
+use metatensor::c_api::mts_array_t;
 
 use ndarray::ArcArray;
+
+/// Create an mts_array_t fill value with the given scalar (shape (1,), f64)
+pub fn make_fill_value(scalar: f64) -> mts_array_t {
+    let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![1], scalar));
+    mts_array_t::from(data)
+}
 
 pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
     let mut builder = LabelsBuilder::new(names);

@@ -6,6 +6,7 @@
 #include <string>
 #include <type_traits>
 #include <cassert>
+#include <cmath>
 #include <cstring>
 #include <functional>
 #include <memory>
@@ -671,11 +672,12 @@ public:
             }, array, new_array);
         };
 
-        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t* new_array) {
+        array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t fill_value, mts_array_t* new_array) {
             return details::catch_exceptions([](
                 const void* array,
                 const uintptr_t* shape,
                 uintptr_t shape_count,
+                mts_array_t fill_value,
                 mts_array_t* new_array
             ) {
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
@@ -683,9 +685,9 @@ public:
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape));
+                auto copy = cxx_array->create(std::move(cxx_shape), fill_value);
                 *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
-            }, array, shape, shape_count, new_array);
+            }, array, shape, shape_count, fill_value, new_array);
         };
 
         array.as_dlpack = [](
@@ -795,8 +797,14 @@ public:
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    virtual std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const = 0;
+    /// The new array should be filled with the scalar value from `fill_value`,
+    /// which must be an `mts_array_t` with shape `(1,)` and the same dtype as
+    /// this array. This function should call `fill_value.destroy` if the
+    /// function pointer is not null when `fill_value` is no longer needed.
+    virtual std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t fill_value
+    ) const = 0;
 
     /// Get the shape of this array
     virtual const std::vector<uintptr_t>& shape() const & = 0;
@@ -909,8 +917,94 @@ public:
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
-        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape)));
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t fill_value
+    ) const override {
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        DLManagedTensorVersioned* fill_value_dlpack = nullptr;
+        auto status = fill_value.as_dlpack(fill_value.ptr, &fill_value_dlpack, cpu_device, nullptr, max_version);
+        if (status != MTS_SUCCESS) {
+            throw Error("failed to extract fill_value as DLPack");
+        }
+
+        // Validate fill_value shape from the DLPack tensor directly
+        if (fill_value_dlpack->dl_tensor.ndim != 1 || fill_value_dlpack->dl_tensor.shape[0] != 1) {
+            if (fill_value_dlpack->deleter != nullptr) {
+                fill_value_dlpack->deleter(fill_value_dlpack);
+            }
+            throw Error("fill_value must have shape (1,)");
+        }
+
+        T scalar;
+        auto code = fill_value_dlpack->dl_tensor.dtype.code;
+        auto bits = fill_value_dlpack->dl_tensor.dtype.bits;
+
+        // Account for DLPack byte_offset per spec
+        const auto* data = static_cast<const char*>(fill_value_dlpack->dl_tensor.data);
+        data += fill_value_dlpack->dl_tensor.byte_offset;
+
+        if (code == kDLFloat && bits == 64) {
+            scalar = static_cast<T>(*reinterpret_cast<const double*>(data));
+        } else if (code == kDLFloat && bits == 32) {
+            scalar = static_cast<T>(*reinterpret_cast<const float*>(data));
+        } else if (code == kDLFloat && bits == 16) {
+            // f16: read as uint16_t and convert (no native C++ f16 type)
+            auto raw = *reinterpret_cast<const uint16_t*>(data);
+            // IEEE 754 f16->f32 conversion
+            uint32_t sign = (raw >> 15) & 0x1;
+            uint32_t exp = (raw >> 10) & 0x1F;
+            uint32_t frac = raw & 0x3FF;
+            float val;
+            if (exp == 0) {
+                // zero and subnormals: value = (-1)^sign * 2^(-14) * (frac/1024)
+                val = std::ldexp(static_cast<float>(frac), -24);
+                if (sign != 0) {
+                    val = -val;
+                }
+            } else if (exp == 0x1F) {
+                uint32_t f32 = (sign << 31) | 0x7F800000 | (frac << 13);
+                std::memcpy(&val, &f32, sizeof(float));
+            } else {
+                uint32_t f32 = (sign << 31) | ((exp + 112) << 23) | (frac << 13);
+                std::memcpy(&val, &f32, sizeof(float));
+            }
+            scalar = static_cast<T>(val);
+        } else if (code == kDLInt && bits == 64) {
+            scalar = static_cast<T>(*reinterpret_cast<const int64_t*>(data));
+        } else if (code == kDLInt && bits == 32) {
+            scalar = static_cast<T>(*reinterpret_cast<const int32_t*>(data));
+        } else if (code == kDLInt && bits == 16) {
+            scalar = static_cast<T>(*reinterpret_cast<const int16_t*>(data));
+        } else if (code == kDLInt && bits == 8) {
+            scalar = static_cast<T>(*reinterpret_cast<const int8_t*>(data));
+        } else if (code == kDLUInt && bits == 64) {
+            scalar = static_cast<T>(*reinterpret_cast<const uint64_t*>(data));
+        } else if (code == kDLUInt && bits == 32) {
+            scalar = static_cast<T>(*reinterpret_cast<const uint32_t*>(data));
+        } else if (code == kDLUInt && bits == 16) {
+            scalar = static_cast<T>(*reinterpret_cast<const uint16_t*>(data));
+        } else if (code == kDLUInt && bits == 8) {
+            scalar = static_cast<T>(*reinterpret_cast<const uint8_t*>(data));
+        } else if (code == kDLBool && bits == 8) {
+            scalar = static_cast<T>(*reinterpret_cast<const bool*>(data));
+        } else {
+            if (fill_value_dlpack->deleter != nullptr) {
+                fill_value_dlpack->deleter(fill_value_dlpack);
+            }
+            throw Error("unsupported fill_value dtype");
+        }
+
+        if (fill_value_dlpack->deleter != nullptr) {
+            fill_value_dlpack->deleter(fill_value_dlpack);
+        }
+
+        if (fill_value.destroy != nullptr) {
+            fill_value.destroy(fill_value.ptr);
+        }
+
+        return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape), scalar));
     }
 
     void move_data(
@@ -1190,7 +1284,10 @@ public:
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
     }
 
-    std::unique_ptr<DataArrayBase> create(std::vector<uintptr_t> shape) const override {
+    std::unique_ptr<DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t /*fill_value*/
+    ) const override {
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
 

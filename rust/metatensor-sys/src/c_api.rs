@@ -194,6 +194,7 @@ pub struct mts_array_t {
             array: *const ::std::os::raw::c_void,
             shape: *const usize,
             shape_count: usize,
+            fill_value: mts_array_t,
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,
@@ -448,6 +449,7 @@ extern "C" {
     pub fn mts_tensormap_keys_to_properties(
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
+        fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_components_to_properties(
@@ -458,6 +460,7 @@ extern "C" {
     pub fn mts_tensormap_keys_to_samples(
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
+        fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     #[must_use]
