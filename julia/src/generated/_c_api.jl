@@ -151,35 +151,19 @@ function mts_labels_create_assume_unique(names::Ptr{Ptr{Cchar}}, names_count::UI
     )
 end
 
-function mts_labels_names(labels::Ptr{mts_labels_t}, names::Ptr{Ptr{Ptr{Cchar}}}, count::Ptr{UIntptr})
-    ccall((:mts_labels_names, libmetatensor), 
+function mts_labels_dimensions(labels::Ptr{mts_labels_t}, names::Ptr{Ptr{Ptr{Cchar}}}, count::Ptr{UIntptr})
+    ccall((:mts_labels_dimensions, libmetatensor), 
         mts_status_t,
         (Ptr{mts_labels_t}, Ptr{Ptr{Ptr{Cchar}}}, Ptr{UIntptr},),
         labels, names, count
     )
 end
 
-function mts_labels_count(labels::Ptr{mts_labels_t}, count::Ptr{UIntptr})
-    ccall((:mts_labels_count, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{UIntptr},),
-        labels, count
-    )
-end
-
-function mts_labels_size(labels::Ptr{mts_labels_t}, size::Ptr{UIntptr})
-    ccall((:mts_labels_size, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{UIntptr},),
-        labels, size
-    )
-end
-
-function mts_labels_values(labels::Ptr{mts_labels_t}, values::Ptr{Ptr{Int32}}, count::Ptr{UIntptr})
+function mts_labels_values(labels::Ptr{mts_labels_t}, array::Ptr{mts_array_t})
     ccall((:mts_labels_values, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{Ptr{Int32}}, Ptr{UIntptr},),
-        labels, values, count
+        (Ptr{mts_labels_t}, Ptr{mts_array_t},),
+        labels, array
     )
 end
 
@@ -383,10 +367,10 @@ function mts_tensormap_blocks_matching(tensor::Ptr{mts_tensormap_t}, block_index
     )
 end
 
-function mts_tensormap_keys_to_properties(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, fill_value::mts_array_t, sort_samples::Cbool)
-    ccall((:mts_tensormap_keys_to_properties, libmetatensor),
+function mts_tensormap_keys_to_properties(tensor::Ptr{mts_tensormap_t}, keys_to_move::Ptr{mts_labels_t}, fill_value::mts_array_t, sort_samples::Cbool)
+    ccall((:mts_tensormap_keys_to_properties, libmetatensor), 
         Ptr{mts_tensormap_t},
-        (Ptr{mts_tensormap_t}, mts_labels_t, mts_array_t, Cbool,),
+        (Ptr{mts_tensormap_t}, Ptr{mts_labels_t}, mts_array_t, Cbool,),
         tensor, keys_to_move, fill_value, sort_samples
     )
 end
@@ -399,10 +383,10 @@ function mts_tensormap_components_to_properties(tensor::Ptr{mts_tensormap_t}, di
     )
 end
 
-function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_move::mts_labels_t, fill_value::mts_array_t, sort_samples::Cbool)
-    ccall((:mts_tensormap_keys_to_samples, libmetatensor),
+function mts_tensormap_keys_to_samples(tensor::Ptr{mts_tensormap_t}, keys_to_move::Ptr{mts_labels_t}, fill_value::mts_array_t, sort_samples::Cbool)
+    ccall((:mts_tensormap_keys_to_samples, libmetatensor), 
         Ptr{mts_tensormap_t},
-        (Ptr{mts_tensormap_t}, mts_labels_t, mts_array_t, Cbool,),
+        (Ptr{mts_tensormap_t}, Ptr{mts_labels_t}, mts_array_t, Cbool,),
         tensor, keys_to_move, fill_value, sort_samples
     )
 end

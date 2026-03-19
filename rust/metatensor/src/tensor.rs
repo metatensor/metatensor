@@ -795,7 +795,7 @@ mod tests {
 
         // iterate over keys & blocks
         for (key, block) in &tensor {
-            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0]));
         }
 
         // iterate over keys & blocks mutably
@@ -815,7 +815,7 @@ mod tests {
 
         // iterate over keys & blocks
         tensor.par_iter().for_each(|(key, block)| {
-            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0]));
         });
 
         // iterate over keys & blocks mutably

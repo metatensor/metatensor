@@ -14,11 +14,12 @@
 // These are exported from the shared library but intentionally hidden
 // from the public API.
 extern "C" {
-    mts_status_t mts_labels_values_array(
-        const mts_labels_t* labels, mts_array_t* array
-    );
     mts_status_t mts_labels_set_cached_values(
         const mts_labels_t* labels, const int32_t* values, uintptr_t count
+    );
+    mts_status_t mts_labels_values_raw(
+        const mts_labels_t* labels, const int32_t** values,
+        uintptr_t* count, uintptr_t* size
     );
 }
 
@@ -351,7 +352,7 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
     mts_array_t array;
     std::memset(&array, 0, sizeof(array));
     metatensor::details::check_status(
-        mts_labels_values_array(this->labels_->as_mts_labels_t(), &array)
+        mts_labels_values(this->labels_->as_mts_labels_t(), &array)
     );
     mts_data_origin_t origin = 0;
     if (array.origin != nullptr) {
@@ -577,8 +578,9 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         auto raw = orig.as_mts_labels_t();
         const int32_t* orig_values_ptr = nullptr;
         size_t orig_count = 0;
+        size_t orig_size = 0;
         metatensor::details::check_status(
-            mts_labels_values(raw, &orig_values_ptr, &orig_count)
+            mts_labels_values_raw(raw, &orig_values_ptr, &orig_count, &orig_size)
         );
         metatensor::details::check_status(
             mts_labels_set_cached_values(

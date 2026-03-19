@@ -12,10 +12,8 @@ The following functions operate on :c:type:`mts_labels_t`:
 - :c:func:`mts_labels_clone`: increment the reference count of the labels
 - :c:func:`mts_labels_free`: decrement the reference count of the labels,
   and free the data when it reaches 0
-- :c:func:`mts_labels_names`: get the dimension names of the labels
-- :c:func:`mts_labels_count`: get the number of entries in the labels
-- :c:func:`mts_labels_size`: get the number of dimensions of the labels
-- :c:func:`mts_labels_values`: get the values of the labels as a flat array
+- :c:func:`mts_labels_dimensions`: get the dimension names of the labels
+- :c:func:`mts_labels_values`: get the values of the labels as an array
 - :c:func:`mts_labels_position`: get the position of an entry in the labels
 - :c:func:`mts_labels_union`: get the union of two labels
 - :c:func:`mts_labels_intersection`: get the intersection of two labels
@@ -32,11 +30,7 @@ The following functions operate on :c:type:`mts_labels_t`:
 
 .. doxygenfunction:: mts_labels_free
 
-.. doxygenfunction:: mts_labels_names
-
-.. doxygenfunction:: mts_labels_count
-
-.. doxygenfunction:: mts_labels_size
+.. doxygenfunction:: mts_labels_dimensions
 
 .. doxygenfunction:: mts_labels_values
 

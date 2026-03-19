@@ -9,6 +9,16 @@
 
 #include <metatensor.h>
 
+// Internal function not in the public C header, exported from the shared library
+extern "C" {
+    mts_status_t mts_labels_values_raw(
+        const mts_labels_t* labels,
+        const int32_t** values,
+        uintptr_t* count,
+        uintptr_t* size
+    );
+}
+
 #include "./errors.hpp"
 #include "./arrays.hpp"
 #include "./io_fwd.hpp"
@@ -77,8 +87,7 @@ public:
     ///
     /// The Labels take ownership of the array.
     Labels(const std::vector<std::string>& names, mts_array_t array, assume_unique):
-        labels_(nullptr),
-        values_(static_cast<const int32_t*>(nullptr), {0, 0})
+        labels_(nullptr)
     {
         auto c_names = std::vector<const char*>();
         c_names.reserve(names.size());
@@ -92,11 +101,6 @@ public:
         if (labels_ == nullptr) {
             throw Error(mts_last_error());
         }
-        // Only cache names here; the array may be on a non-CPU device
-        // (e.g. Meta) where DLPack materialization is impossible.
-        // Values will be cached lazily when refresh_values_cache() is
-        // called explicitly.
-        refresh_names_cache();
     }
 
     /// Create Labels from the given names and a backing mts_array_t.
@@ -104,8 +108,7 @@ public:
     /// The array must be on CPU and entries are verified for uniqueness.
     /// The Labels take ownership of the array.
     Labels(const std::vector<std::string>& names, mts_array_t array, from_array):
-        labels_(nullptr),
-        values_(static_cast<const int32_t*>(nullptr), {0, 0})
+        labels_(nullptr)
     {
         auto c_names = std::vector<const char*>();
         c_names.reserve(names.size());
@@ -119,7 +122,6 @@ public:
         if (labels_ == nullptr) {
             throw Error(mts_last_error());
         }
-        refresh_cache();
     }
 
     /// Create labels with the given `names` and `values`. `values` must be an
@@ -154,7 +156,6 @@ public:
         if (labels_ == nullptr) {
             throw Error(mts_last_error());
         }
-        refresh_cache();
         return *this;
     }
 
@@ -170,34 +171,36 @@ public:
         }
         this->labels_ = other.labels_;
         other.labels_ = nullptr;
-
-        this->values_ = std::move(other.values_);
-        this->names_ = std::move(other.names_);
-
         return *this;
     }
 
     /// Get the names of the dimensions used in these `Labels`.
-    const std::vector<const char*>& names() const {
-        return names_;
+    std::vector<const char*> names() const {
+        if (labels_ == nullptr) return {};
+        const char* const* names_ptr = nullptr;
+        size_t names_count = 0;
+        details::check_status(mts_labels_dimensions(labels_, &names_ptr, &names_count));
+        return std::vector<const char*>(names_ptr, names_ptr + names_count);
     }
 
     /// Get the number of entries in this set of Labels.
     ///
-    /// This is the same as `shape()[0]` for the corresponding values array
+    /// This is the same as `shape()[0]` for the corresponding values array.
+    /// Uses the internal raw accessor so it works even before values are cached
+    /// (e.g. for labels on Meta device).
     size_t count() const {
-        size_t result = 0;
-        details::check_status(mts_labels_count(labels_, &result));
-        return result;
+        if (labels_ == nullptr) return 0;
+        const int32_t* v = nullptr;
+        size_t c = 0, s = 0;
+        details::check_status(mts_labels_values_raw(labels_, &v, &c, &s));
+        return c;
     }
 
     /// Get the number of dimensions in this set of Labels.
     ///
     /// This is the same as `shape()[1]` for the corresponding values array
     size_t size() const {
-        size_t result = 0;
-        details::check_status(mts_labels_size(labels_, &result));
-        return result;
+        return this->names().size();
     }
 
     /// Get the underlying `mts_labels_t` pointer
@@ -232,22 +235,15 @@ public:
     }
 
     /// Get the array of values for these Labels.
-    ///
-    /// If values have not been materialized yet (e.g. for labels created
-    /// from a non-CPU array), this triggers materialization via DLPack.
-    const NDArray<int32_t>& values() const & {
-        // Check if values cache needs populating (count > 0 but values_ empty)
-        if (values_.shape()[0] == 0 && this->count() > 0) {
-            // materialize values on demand
-            const int32_t* v = nullptr;
-            size_t c = 0;
-            details::check_status(mts_labels_values(labels_, &v, &c));
-            values_ = NDArray<int32_t>(v, {c, this->size()});
+    NDArray<int32_t> values() const {
+        if (labels_ == nullptr) {
+            return NDArray<int32_t>(static_cast<const int32_t*>(nullptr), {0, 0});
         }
-        return values_;
+        const int32_t* v = nullptr;
+        size_t c = 0, s = 0;
+        details::check_status(mts_labels_values_raw(labels_, &v, &c, &s));
+        return NDArray<int32_t>(v, {c, s});
     }
-
-    const NDArray<int32_t>& values() && = delete;
 
     /// Take the union of these `Labels` with `other`.
     ///
@@ -610,13 +606,10 @@ private:
     /// Construct from an owning raw pointer (takes ownership)
     explicit Labels(mts_labels_t* ptr): labels_(ptr) {
         assert(labels_ != nullptr);
-        refresh_cache();
     }
 
     /// Default constructor (null pointer, used internally)
-    explicit Labels(): labels_(nullptr),
-        values_(static_cast<const int32_t*>(nullptr), {0, 0})
-    {}
+    explicit Labels(): labels_(nullptr) {}
 
     // the constructor below is ambiguous with the public constructor taking
     // `std::initializer_list`, so we use a private dummy struct argument to
@@ -628,45 +621,6 @@ private:
     Labels(const std::vector<std::string>& names, const NDArray<int32_t>& values, assume_unique, InternalConstructor):
         Labels(names, values.data(), values.shape()[0], assume_unique{}) {}
 
-    /// Refresh only the cached names from the opaque pointer.
-    /// Safe to call on non-CPU labels (does not trigger DLPack).
-    void refresh_names_cache() {
-        assert(labels_ != nullptr);
-
-        const char* const* names_ptr = nullptr;
-        size_t names_count = 0;
-        details::check_status(mts_labels_names(labels_, &names_ptr, &names_count));
-        names_.clear();
-        for (size_t i = 0; i < names_count; i++) {
-            names_.push_back(names_ptr[i]);
-        }
-
-        // Reset values to empty; they will be populated by
-        // refresh_values_cache() later.
-        values_ = NDArray<int32_t>(static_cast<const int32_t*>(nullptr), {0, names_count});
-    }
-
-    /// Refresh cached values from the opaque pointer.
-    /// Triggers DLPack materialization if values are not yet cached.
-    void refresh_values_cache() {
-        assert(labels_ != nullptr);
-
-        const int32_t* values_ptr = nullptr;
-        size_t count = 0;
-        details::check_status(mts_labels_values(labels_, &values_ptr, &count));
-
-        size_t names_count = names_.size();
-        values_ = NDArray<int32_t>(values_ptr, {count, names_count});
-    }
-
-    /// Refresh cached names and values from the opaque pointer.
-    /// Only safe for labels whose values can be materialized (CPU arrays
-    /// or labels with pre-filled cached values).
-    void refresh_cache() {
-        refresh_names_cache();
-        refresh_values_cache();
-    }
-
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
     friend Labels io::load_labels(const std::string &path);
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
@@ -677,10 +631,6 @@ private:
 
     /// Owning pointer to the opaque labels
     mts_labels_t* labels_;
-    /// Cached names (pointers into labels_ data)
-    std::vector<const char*> names_;
-    /// Cached values (view into labels_ data)
-    mutable NDArray<int32_t> values_;
 
     friend bool operator==(const Labels& lhs, const Labels& rhs);
 };
@@ -688,12 +638,14 @@ private:
 /// Two Labels compare equal only if they have the same names and values in the
 /// same order.
 inline bool operator==(const Labels& lhs, const Labels& rhs) {
-    if (lhs.names_.size() != rhs.names_.size()) {
+    auto lhs_names = lhs.names();
+    auto rhs_names = rhs.names();
+    if (lhs_names.size() != rhs_names.size()) {
         return false;
     }
 
-    for (size_t i=0; i<lhs.names_.size(); i++) {
-        if (std::strcmp(lhs.names_[i], rhs.names_[i]) != 0) {
+    for (size_t i=0; i<lhs_names.size(); i++) {
+        if (std::strcmp(lhs_names[i], rhs_names[i]) != 0) {
             return false;
         }
     }

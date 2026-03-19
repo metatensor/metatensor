@@ -28,6 +28,7 @@ fn main() {
 
     // Internal functions used by metatensor-torch but not part of the public C API
     config.export.exclude.push("mts_labels_values_array".into());
+    config.export.exclude.push("mts_labels_values_raw".into());
     config.export.exclude.push("mts_labels_set_cached_values".into());
     // Backward-compat aliases, replaced by mts_labels_create / mts_labels_create_assume_unique
     config.export.exclude.push("mts_labels_create_from_array".into());

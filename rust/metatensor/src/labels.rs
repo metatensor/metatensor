@@ -150,12 +150,7 @@ impl Labels {
     /// Get the number of entries/named values in a single label
     #[inline]
     pub fn size(&self) -> usize {
-        let mut size = 0;
-        unsafe {
-            check_status(crate::c_api::mts_labels_size(self.ptr, &mut size))
-                .expect("failed to get labels size");
-        }
-        size
+        self.names().len()
     }
 
     /// Get the names of the entries/columns in this set of labels
@@ -164,8 +159,8 @@ impl Labels {
         let mut names_ptr = std::ptr::null();
         let mut count = 0;
         unsafe {
-            check_status(crate::c_api::mts_labels_names(self.ptr, &mut names_ptr, &mut count))
-                .expect("failed to get labels names");
+            check_status(crate::c_api::mts_labels_dimensions(self.ptr, &mut names_ptr, &mut count))
+                .expect("failed to get labels dimensions");
         }
 
         if count == 0 {
@@ -183,10 +178,13 @@ impl Labels {
     /// Get the total number of entries in this set of labels
     #[inline]
     pub fn count(&self) -> usize {
+        let mut values_ptr = std::ptr::null();
         let mut count = 0;
+        let mut size = 0;
         unsafe {
-            check_status(crate::c_api::mts_labels_count(self.ptr, &mut count))
-                .expect("failed to get labels count");
+            check_status(crate::c_api::mts_labels_values_raw(
+                self.ptr, &mut values_ptr, &mut count, &mut size,
+            )).expect("failed to get labels count");
         }
         count
     }
@@ -414,10 +412,12 @@ impl Labels {
         } else {
             let mut values_ptr = std::ptr::null();
             let mut count = 0;
+            let mut size = 0;
             unsafe {
-                check_status(crate::c_api::mts_labels_values(self.ptr, &mut values_ptr, &mut count))
-                    .expect("failed to get labels values");
-                std::slice::from_raw_parts(values_ptr.cast(), count * self.size())
+                check_status(crate::c_api::mts_labels_values_raw(
+                    self.ptr, &mut values_ptr, &mut count, &mut size,
+                )).expect("failed to get labels values");
+                std::slice::from_raw_parts(values_ptr.cast(), count * size)
             }
         }
     }

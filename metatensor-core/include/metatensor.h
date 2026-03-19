@@ -385,54 +385,27 @@ struct mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_names(const struct mts_labels_t *labels,
-                              const char *const **names,
-                              uintptr_t *count);
+mts_status_t mts_labels_dimensions(const struct mts_labels_t *labels,
+                                   const char *const **names,
+                                   uintptr_t *count);
 
 /**
- * Get the number of entries in the given set of `labels`.
+ * Get the values for the given set of `labels` as an `mts_array_t`.
+ *
+ * The returned array is a 2D i32 array with shape `(count, size)`, where
+ * `count` is the number of entries and `size` is the number of dimensions.
+ * The caller can extract `count` and `size` from the array's shape.
  *
  * @param labels pointer to an existing set of labels
- * @param count on output, will be set to the number of entries
+ * @param array on output, will be set to the values array. This is a
+ *        non-owning view (destroy is NULL) valid as long as the labels
+ *        are alive.
  *
  * @returns The status code of this operation. If the status is not
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_count(const struct mts_labels_t *labels, uintptr_t *count);
-
-/**
- * Get the number of dimensions in the given set of `labels`.
- *
- * @param labels pointer to an existing set of labels
- * @param size on output, will be set to the number of dimensions
- *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_size(const struct mts_labels_t *labels, uintptr_t *size);
-
-/**
- * Get the values for the given set of `labels`.
- *
- * The values are returned as a pointer to a row-major 2D array of shape
- * `(count, size)`, where `count` is the number of entries and `size` is the
- * number of dimensions.
- *
- * @param labels pointer to an existing set of labels
- * @param values on output, will be set to a pointer to the first element of
- *        the values array. The pointer is valid as long as the labels are
- *        alive. Will be NULL if the labels are empty.
- * @param count on output, will be set to the number of entries
- *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_labels_values(const struct mts_labels_t *labels,
-                               const int32_t **values,
-                               uintptr_t *count);
+mts_status_t mts_labels_values(const struct mts_labels_t *labels, struct mts_array_t *array);
 
 /**
  * Get the position of the entry defined by the `values` array in the given set
