@@ -30,7 +30,6 @@ Python interpreter. You can use ``tox`` within a specific Python environment:
 
     # Use the -x flag to override the base_python for the environment
     METATENSOR_TESTS_TORCH_VERSION="2.2" \
-    METATENSOR_TESTS_NUMPY_VERSION_PIN="<2.0" \
     tox -e core-tests -x testenv:core-tests.base_python=python3.11
 
 How do I run the full CI suite locally?
