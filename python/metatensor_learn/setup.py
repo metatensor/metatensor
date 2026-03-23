@@ -1,4 +1,5 @@
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -8,11 +9,9 @@ from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.sdist import sdist
 
 
-ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.realpath(os.path.join(ROOT, "..", "metatensor_core"))
-METATENSOR_OPERATIONS = os.path.realpath(
-    os.path.join(ROOT, "..", "metatensor_operations")
-)
+ROOT = pathlib.Path(__file__).parent.resolve()
+METATENSOR_CORE = (ROOT / ".." / "metatensor_core").resolve()
+METATENSOR_OPERATIONS = (ROOT / ".." / "metatensor_operations").resolve()
 
 METATENSOR_LEARN_VERSION = "0.4.0"
 
@@ -56,15 +55,15 @@ def git_version_info():
     """
     TAG_PREFIX = "metatensor-learn-v"
 
-    if os.path.exists("git_version_info"):
+    if pathlib.Path("git_version_info").exists():
         # we are building from a sdist, without git available, but the git
         # version was recorded in the `git_version_info` file
         with open("git_version_info") as fd:
             n_commits = int(fd.readline().strip())
             git_hash = fd.readline().strip()
     else:
-        script = os.path.join(ROOT, "..", "..", "scripts", "git-version-info.py")
-        assert os.path.exists(script)
+        script = ROOT / ".." / ".." / "scripts" / "git-version-info.py"
+        assert script.exists()
 
         output = subprocess.run(
             [sys.executable, script, TAG_PREFIX],
@@ -121,12 +120,12 @@ def create_version_number(version):
 
 
 if __name__ == "__main__":
-    with open(os.path.join(ROOT, "AUTHORS")) as fd:
+    with open(ROOT / "AUTHORS") as fd:
         authors = fd.read().splitlines()
 
     if authors[0].startswith(".."):
         # handle "raw" symlink files (on Windows or from full repo tarball)
-        with open(os.path.join(ROOT, authors[0])) as fd:
+        with open(ROOT / authors[0]) as fd:
             authors = fd.read().splitlines()
 
     install_requires = []
@@ -134,13 +133,13 @@ if __name__ == "__main__":
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
 
-    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
-        assert os.path.exists(METATENSOR_OPERATIONS)
+    if not METATENSOR_NO_LOCAL_DEPS and METATENSOR_CORE.exists():
+        assert METATENSOR_OPERATIONS.exists()
         # we are building from a git checkout or full repo archive
         install_requires.append(
-            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}"
+            f"metatensor-operations @ {METATENSOR_OPERATIONS.as_uri()}"
         )
-        install_requires.append(f"metatensor-core @ file://{METATENSOR_CORE}")
+        install_requires.append(f"metatensor-core @ {METATENSOR_CORE.as_uri()}")
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("metatensor-operations >=0.4.0,<0.5.0")

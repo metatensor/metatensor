@@ -1,4 +1,5 @@
 import os
+import pathlib
 import subprocess
 import sys
 
@@ -8,11 +9,11 @@ from setuptools.command.bdist_egg import bdist_egg
 from setuptools.command.sdist import sdist
 
 
-ROOT = os.path.realpath(os.path.dirname(__file__))
-METATENSOR_CORE = os.path.join(ROOT, "python", "metatensor_core")
-METATENSOR_OPERATIONS = os.path.join(ROOT, "python", "metatensor_operations")
-METATENSOR_TORCH = os.path.join(ROOT, "python", "metatensor_torch")
-METATENSOR_LEARN = os.path.join(ROOT, "python", "metatensor_learn")
+ROOT = pathlib.Path(__file__).parent.resolve()
+METATENSOR_CORE = ROOT / "python" / "metatensor_core"
+METATENSOR_OPERATIONS = ROOT / "python" / "metatensor_operations"
+METATENSOR_TORCH = ROOT / "python" / "metatensor_torch"
+METATENSOR_LEARN = ROOT / "python" / "metatensor_learn"
 
 METATENSOR_VERSION = "0.2.0"
 
@@ -53,8 +54,8 @@ def n_commits_since_last_tag():
     If git is available and we are building from a checkout, get the number of commits
     since the last tag. Otherwise, this always returns 0.
     """
-    script = os.path.join(ROOT, "scripts", "n-commits-since-last-tag.py")
-    if not os.path.exists(script):
+    script = ROOT / "scripts" / "n-commits-since-last-tag.py"
+    if not script.exists():
         return 0
 
     TAG_PREFIX = "metatensor-python-v"
@@ -76,7 +77,7 @@ def n_commits_since_last_tag():
 def create_version_number(version):
     version = packaging.version.parse(version)
 
-    if os.path.exists("n_commits_since_last_tag"):
+    if pathlib.Path("n_commits_since_last_tag").exists():
         # we are building from a sdist, without git available, but the git
         # version was recorded in the `n_commits_since_last_tag` file
         with open("n_commits_since_last_tag") as fd:
@@ -114,22 +115,22 @@ if __name__ == "__main__":
     # when packaging a sdist for release, we should never use local dependencies
     METATENSOR_NO_LOCAL_DEPS = os.environ.get("METATENSOR_NO_LOCAL_DEPS", "0") == "1"
 
-    if not METATENSOR_NO_LOCAL_DEPS and os.path.exists(METATENSOR_CORE):
+    if not METATENSOR_NO_LOCAL_DEPS and METATENSOR_CORE.exists():
         # we are building from a git checkout
-        assert os.path.exists(METATENSOR_OPERATIONS)
-        assert os.path.exists(METATENSOR_TORCH)
-        assert os.path.exists(METATENSOR_LEARN)
+        assert METATENSOR_OPERATIONS.exists()
+        assert METATENSOR_TORCH.exists()
+        assert METATENSOR_LEARN.exists()
 
         install_requires.append(
-            f"metatensor-core @ file://{METATENSOR_CORE}",
+            f"metatensor-core @ {METATENSOR_CORE.as_uri()}",
         )
         install_requires.append(
-            f"metatensor-operations @ file://{METATENSOR_OPERATIONS}",
+            f"metatensor-operations @ {METATENSOR_OPERATIONS.as_uri()}",
         )
         install_requires.append(
-            f"metatensor-learn @ file://{METATENSOR_LEARN}",
+            f"metatensor-learn @ {METATENSOR_LEARN.as_uri()}",
         )
-        extras_require["torch"] = f"metatensor-torch @ file://{METATENSOR_TORCH}"
+        extras_require["torch"] = f"metatensor-torch @ {METATENSOR_TORCH.as_uri()}"
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("metatensor-core")
