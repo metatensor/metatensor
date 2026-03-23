@@ -437,18 +437,16 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
     array = wrapper.array
 
-    if device.device_type == 1:  # kDLCPU must have stream=None
-        stream = None
-
-    dl_device = (device.device_type, device.device_id) if device else None
-    version_tuple = (max_version.major, max_version.minor) if max_version else None
+    dl_device = (device.device_type, device.device_id)
+    stream = stream.contents if stream else None
+    max_version = (max_version.major, max_version.minor)
 
     capsule = None
 
     try:
         # Try requesting versioned DLPack
         capsule = array.__dlpack__(
-            stream=stream, max_version=version_tuple, dl_device=dl_device
+            stream=stream, max_version=max_version, dl_device=dl_device
         )
     except Exception as _:
         # Fallback to legacy signatures. Each fallback drops one parameter.
