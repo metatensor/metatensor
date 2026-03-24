@@ -3,8 +3,8 @@
 
 use std::os::raw::c_void;
 
+use crate::MtsArray;
 use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
-use crate::Array;
 
 mod tensor;
 pub use self::tensor::{load, save, load_buffer, save_buffer};
@@ -49,8 +49,8 @@ unsafe extern "C" fn create_ndarray(
     crate::errors::catch_unwind(|| {
         assert!(shape_count != 0);
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
-        let array = ndarray::ArcArray::from_elem(shape, 0.0);
-        *c_array = (Box::new(array) as Box<dyn Array>).into();
+        let array = ndarray::Array::from_elem(shape, 0.0);
+        *c_array = MtsArray::from(array).into_raw();
 
         Ok(())
     })
