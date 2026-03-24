@@ -3,8 +3,6 @@ use metatensor::{Labels, TensorMap};
 mod utils;
 use utils::{example_tensor, example_block, make_fill_value};
 
-use ndarray::ArrayD;
-
 #[test]
 fn sorted_samples() {
     let keys_to_move = Labels::empty(vec!["key_2"]);
@@ -18,14 +16,14 @@ fn sorted_samples() {
 
     // The first two blocks are not modified
     let block_1 = tensor.block_by_id(0);
-    assert_eq!(block_1.values().as_ndarray(), ArrayD::from_elem(vec![3, 1, 1], 1.0));
+    assert_eq!(*block_1.values().as_ndarray::<f64>(), ndarray::Array::from_elem(vec![3, 1, 1], 1.0));
     assert_eq!(block_1.samples().count(), 3);
     assert_eq!(block_1.samples()[0], [0, 0]);
     assert_eq!(block_1.samples()[1], [2, 0]);
     assert_eq!(block_1.samples()[2], [4, 0]);
 
     let block_2 = tensor.block_by_id(1);
-    assert_eq!(block_2.values().as_ndarray(), ArrayD::from_elem(vec![3, 1, 3], 2.0));
+    assert_eq!(*block_2.values().as_ndarray::<f64>(), ndarray::Array::from_elem(vec![3, 1, 3], 2.0));
     assert_eq!(block_2.samples().count(), 3);
     assert_eq!(block_2.samples()[0], [0, 0]);
     assert_eq!(block_2.samples()[1], [1, 0]);
@@ -55,7 +53,7 @@ fn sorted_samples() {
     assert_eq!(block_3.properties().count(), 1);
     assert_eq!(block_3.properties()[0], [0]);
 
-    let expected = ArrayD::from_shape_vec(vec![8, 3, 1], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![8, 3, 1], vec![
         3.0, 3.0, 3.0,
         4.0, 4.0, 4.0,
         4.0, 4.0, 4.0,
@@ -65,7 +63,7 @@ fn sorted_samples() {
         3.0, 3.0, 3.0,
         3.0, 3.0, 3.0,
     ]).unwrap();
-    assert_eq!(block_3.values().as_ndarray(), expected);
+    assert_eq!(*block_3.values().as_ndarray::<f64>(), expected);
 
     let gradient_3 = block_3.gradient("parameter").unwrap();
     assert_eq!(gradient_3.samples().names(), ["sample", "parameter"]);
@@ -74,12 +72,12 @@ fn sorted_samples() {
     assert_eq!(gradient_3.samples()[1], [4, -2]);
     assert_eq!(gradient_3.samples()[2], [5, 3]);
 
-    let expected = ArrayD::from_shape_vec(vec![3, 3, 1], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![3, 3, 1], vec![
         14.0, 14.0, 14.0,
         13.0, 13.0, 13.0,
         14.0, 14.0, 14.0,
     ]).unwrap();
-    assert_eq!(gradient_3.values().as_ndarray(), expected);
+    assert_eq!(*gradient_3.values().as_ndarray::<f64>(), expected);
 }
 
 #[test]

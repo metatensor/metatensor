@@ -26,7 +26,8 @@ default = []
 static = []
 
 [dependencies]
-dlpk = "0.1.3"
+# dlpk = "0.1.3"
+dlpk = { git = "https://github.com/metatensor/dlpk", rev="7e09bead" }
 
 [build-dependencies]
 cmake = "0.1"

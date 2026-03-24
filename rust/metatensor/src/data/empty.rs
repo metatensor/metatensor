@@ -27,9 +27,6 @@ impl Array for EmptyArray {
         self
     }
 
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
 
     fn create(&self, shape: &[usize], _fill_value: MtsArray) -> Box<dyn Array> {
         Box::new(EmptyArray { shape: shape.to_vec() })
@@ -39,8 +36,8 @@ impl Array for EmptyArray {
         Box::new(EmptyArray { shape: self.shape.clone() })
     }
 
-    fn shape(&self) -> &[usize] {
-        &self.shape
+    fn shape(&self) -> Vec<usize> {
+        self.shape.clone()
     }
 
     fn reshape(&mut self, shape: &[usize]) {

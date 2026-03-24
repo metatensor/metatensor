@@ -2,10 +2,10 @@ use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
-use crate::c_api::{mts_tensormap_t, mts_labels_t, mts_array_t};
+use crate::c_api::{mts_tensormap_t, mts_labels_t};
 
 use crate::errors::{check_status, check_ptr};
-use crate::{Error, TensorBlock, TensorBlockRef, Labels, LabelValue};
+use crate::{Error, LabelValue, Labels, MtsArray, TensorBlock, TensorBlockRef};
 
 /// [`TensorMap`] is the main user-facing struct of this library, and can
 /// store any kind of data used in atomistic machine learning.
@@ -327,12 +327,12 @@ impl TensorMap {
     /// This function is only implemented if all merged block have the same
     /// property labels.
     #[inline]
-    pub fn keys_to_samples(&self, keys_to_move: &Labels, fill_value: mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, fill_value: MtsArray, sort_samples: bool) -> Result<TensorMap, Error> {
         let ptr = unsafe {
             crate::c_api::mts_tensormap_keys_to_samples(
                 self.ptr,
                 keys_to_move.as_mts_labels_t(),
-                fill_value,
+                fill_value.into_raw(),
                 sort_samples,
             )
         };
@@ -368,12 +368,12 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     #[inline]
-    pub fn keys_to_properties(&self, keys_to_move: &Labels, fill_value: mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, fill_value: MtsArray, sort_samples: bool) -> Result<TensorMap, Error> {
         let ptr = unsafe {
             crate::c_api::mts_tensormap_keys_to_properties(
                 self.ptr,
                 keys_to_move.as_mts_labels_t(),
-                fill_value,
+                fill_value.into_raw(),
                 sort_samples,
             )
         };
@@ -735,21 +735,21 @@ mod tests {
 
     fn test_tensor() -> TensorMap {
         let block_1 = TensorBlock::new(
-            ndarray::ArcArray::from_elem(vec![2, 3], 1.0),
+            ndarray::Array::from_elem(vec![2, 3], 1.0),
             &Labels::new(["samples"], &[[0], [1]]),
             &[],
             &Labels::new(["properties"], &[[-2], [0], [1]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
-            ndarray::ArcArray::from_elem(vec![1, 1], 3.0),
+            ndarray::Array::from_elem(vec![1, 1], 3.0),
             &Labels::new(["samples"], &[[1]]),
             &[],
             &Labels::new(["properties"], &[[1]]),
         ).unwrap();
 
         let block_3 = TensorBlock::new(
-            ndarray::ArcArray::from_elem(vec![3, 2], -4.0),
+            ndarray::Array::from_elem(vec![3, 2], -4.0),
             &Labels::new(["samples"], &[[0], [1], [3]]),
             &[],
             &Labels::new(["properties"], &[[-2], [1]]),
@@ -776,7 +776,7 @@ mod tests {
         assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0]);
 
         let block = tensor.block(&selection).unwrap();
-        assert_eq!(block.values().shape().unwrap(), [2, 3]);
+        assert_eq!(block.values().as_ndarray::<f64>().shape(), [2, 3]);
 
         let selection = Labels::new(["other"], &[[0]]);
         assert!(tensor.block_matching(&selection).is_err());
@@ -799,12 +799,13 @@ mod tests {
 
         // iterate over keys & blocks
         for (key, block) in &tensor {
-            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().as_ndarray::<f64>()[[0, 0]], f64::from(key[0].i32()));
         }
 
         // iterate over keys & blocks mutably
         for (key, mut block) in &mut tensor {
-            let array = block.values_mut().to_ndarray_mut();
+            let mut values = block.values_mut();
+            let mut array = values.as_ndarray_mut::<f64>();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         }
@@ -819,12 +820,13 @@ mod tests {
 
         // iterate over keys & blocks
         tensor.par_iter().for_each(|(key, block)| {
-            assert_eq!(block.values().to_ndarray()[[0, 0]], f64::from(key[0].i32()));
+            assert_eq!(block.values().as_ndarray::<f64>()[[0, 0]], f64::from(key[0].i32()));
         });
 
         // iterate over keys & blocks mutably
         tensor.par_iter_mut().for_each(|(key, mut block)| {
-            let array = block.values_mut().to_ndarray_mut();
+            let mut values = block.values_mut();
+            let mut array = values.as_ndarray_mut::<f64>();
             *array *= 2.0;
             assert_eq!(array[[0, 0]], 2.0 * f64::from(key[0].i32()));
         });

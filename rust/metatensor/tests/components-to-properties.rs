@@ -1,21 +1,19 @@
 use metatensor::{TensorBlock, TensorMap, Labels};
 
-use ndarray::ArcArray;
-
 mod utils;
 use utils::example_labels;
 
 #[test]
 fn one_component() {
     let mut block = TensorBlock::new(
-        ArcArray::from_elem(vec![3, 2, 3], 1.0),
+        ndarray::Array::from_elem(vec![3, 2, 3], 1.0),
         &example_labels(vec!["samples"], vec![[0], [1], [2]]),
         &[example_labels(vec!["components"], vec![[0], [1]])],
         &example_labels(vec!["properties"], vec![[0], [1], [2]]),
     ).unwrap();
 
     let gradient = TensorBlock::new(
-        ArcArray::from_elem(vec![2, 2, 3], 11.0),
+        ndarray::Array::from_elem(vec![2, 2, 3], 11.0),
         &example_labels(vec!["sample", "parameter"], vec![[0, 2], [1, 2]]),
         &[example_labels(vec!["components"], vec![[0], [1]])],
         &example_labels(vec!["properties"], vec![[0], [1], [2]]),
@@ -43,7 +41,7 @@ fn one_component() {
     assert_eq!(block.properties()[4], [1, 1]);
     assert_eq!(block.properties()[5], [1, 2]);
 
-    assert_eq!(block.values().as_ndarray(), ArcArray::from_elem(vec![3, 6], 1.0));
+    assert_eq!(*block.values().as_ndarray::<f64>(), ndarray::Array::from_elem(vec![3, 6], 1.0));
 
     let gradient = block.gradient("parameter").unwrap();
     assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
@@ -51,12 +49,12 @@ fn one_component() {
     assert_eq!(gradient.samples()[0], [0, 2]);
     assert_eq!(gradient.samples()[1], [1, 2]);
 
-    assert_eq!(gradient.values().as_ndarray(), ArcArray::from_elem(vec![2, 6], 11.0));
+    assert_eq!(*gradient.values().as_ndarray::<f64>(), ndarray::Array::from_elem(vec![2, 6], 11.0));
 }
 
 #[test]
 fn multiple_components() {
-    let data = ArcArray::from_shape_vec(vec![2, 2, 3, 2], vec![
+    let data = ndarray::Array::from_shape_vec(vec![2, 2, 3, 2], vec![
         1.0, 1.0, 2.0, 2.0, 3.0, 3.0, 4.0, 4.0, 5.0, 5.0, 6.0, 6.0,
         -1.0, 1.0, -2.0, 2.0, -3.0, 3.0, -4.0, 4.0, -5.0, 5.0, -6.0, 6.0,
     ]).unwrap();
@@ -75,7 +73,7 @@ fn multiple_components() {
     ).unwrap();
 
     let gradient = TensorBlock::new(
-        ArcArray::from_elem(vec![3, 2, 3, 2], 11.0),
+        ndarray::Array::from_elem(vec![3, 2, 3, 2], 11.0),
         &example_labels(vec!["sample", "parameter"], vec![[0, 2], [0, 3], [1, 2]]),
         &components,
         &properties,
@@ -106,11 +104,11 @@ fn multiple_components() {
     assert_eq!(block.properties()[2], [1, 0]);
     assert_eq!(block.properties()[3], [1, 1]);
 
-    let expected = ArcArray::from_shape_vec(vec![2, 3, 4], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![2, 3, 4], vec![
         1.0, 1.0, 4.0, 4.0, 2.0, 2.0, 5.0, 5.0, 3.0, 3.0, 6.0, 6.0,
         -1.0, 1.0, -4.0, 4.0, -2.0, 2.0, -5.0, 5.0, -3.0, 3.0, -6.0, 6.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    assert_eq!(*block.values().as_ndarray::<f64>(), expected);
 
     let gradient = block.gradient("parameter").unwrap();
     assert_eq!(gradient.samples().names(), ["sample", "parameter"]);
@@ -119,5 +117,5 @@ fn multiple_components() {
     assert_eq!(gradient.samples()[1], [0, 3]);
     assert_eq!(gradient.samples()[2], [1, 2]);
 
-    assert_eq!(gradient.values().as_ndarray(), ArcArray::from_elem(vec![3, 3, 4], 11.0));
+    assert_eq!(*gradient.values().as_ndarray::<f64>(), ndarray::Array::from_elem(vec![3, 3, 4], 11.0));
 }
