@@ -75,6 +75,7 @@ jobs:
       - name: install tests dependencies
         run: |
           uv tool install tox --with tox-uv
+          uv pip install coverage[toml]
 
       - name: run tests
         run: tox
@@ -82,3 +83,15 @@ jobs:
           PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
           METATENSOR_TESTS_TORCH_VERSION: ${{ matrix.torch-version }}
           METATENSOR_TESTS_NUMPY_VERSION_PIN:  ${{ matrix.numpy-version-pin }}
+
+      - name: combine coverage files
+        run: |
+            coverage combine .tox/*/.coverage
+            coverage xml
+
+      - name: upload to codecov.io
+        uses: codecov/codecov-action@v5
+        with:
+          fail_ci_if_error: true
+          files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
