@@ -73,6 +73,7 @@ namespace details {
     mts_status_t default_create_array(
         const uintptr_t* shape_ptr,
         uintptr_t shape_count,
+        DLDataType dtype,
         mts_array_t* array
     );
 
@@ -1299,24 +1300,53 @@ private:
     std::vector<uintptr_t> shape_;
 };
 
-/// Default callback for data array creating in `TensorMap::load`, which
-/// will create a `SimpleDataArray<double>`.
+/// Default callback for data array creating in `TensorMap::load`.
+/// Dispatches on the `dtype` parameter to create the appropriate
+/// `SimpleDataArray<T>`.
 inline mts_status_t details::default_create_array(
     const uintptr_t* shape_ptr,
     uintptr_t shape_count,
+    DLDataType dtype,
     mts_array_t* array
 ) {
-    return details::catch_exceptions([](const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t* array){
+    return details::catch_exceptions([](const uintptr_t* shape_ptr, uintptr_t shape_count, DLDataType dtype, mts_array_t* array){
         auto shape = std::vector<size_t>();
         for (size_t i=0; i<shape_count; i++) {
             shape.push_back(static_cast<size_t>(shape_ptr[i]));
         }
 
-        auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray<double>(shape));
+        std::unique_ptr<DataArrayBase> cxx_array;
+        if (dtype.code == kDLFloat && dtype.bits == 64) {
+            cxx_array.reset(new SimpleDataArray<double>(shape));
+        } else if (dtype.code == kDLFloat && dtype.bits == 32) {
+            cxx_array.reset(new SimpleDataArray<float>(shape));
+        } else if (dtype.code == kDLInt && dtype.bits == 8) {
+            cxx_array.reset(new SimpleDataArray<int8_t>(shape));
+        } else if (dtype.code == kDLInt && dtype.bits == 16) {
+            cxx_array.reset(new SimpleDataArray<int16_t>(shape));
+        } else if (dtype.code == kDLInt && dtype.bits == 32) {
+            cxx_array.reset(new SimpleDataArray<int32_t>(shape));
+        } else if (dtype.code == kDLInt && dtype.bits == 64) {
+            cxx_array.reset(new SimpleDataArray<int64_t>(shape));
+        } else if (dtype.code == kDLUInt && dtype.bits == 8) {
+            cxx_array.reset(new SimpleDataArray<uint8_t>(shape));
+        } else if (dtype.code == kDLUInt && dtype.bits == 16) {
+            cxx_array.reset(new SimpleDataArray<uint16_t>(shape));
+        } else if (dtype.code == kDLUInt && dtype.bits == 32) {
+            cxx_array.reset(new SimpleDataArray<uint32_t>(shape));
+        } else if (dtype.code == kDLUInt && dtype.bits == 64) {
+            cxx_array.reset(new SimpleDataArray<uint64_t>(shape));
+        } else {
+            throw metatensor::Error(
+                "unsupported DLDataType in default_create_array: code="
+                + std::to_string(dtype.code) + " bits=" + std::to_string(dtype.bits)
+            );
+        }
+
         *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
 
         return MTS_SUCCESS;
-    }, shape_ptr, shape_count, array);
+    }, shape_ptr, shape_count, dtype, array);
 }
 
 } // namespace metatensor
