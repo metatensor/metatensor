@@ -605,6 +605,7 @@ def test_save_load_info(tensor, use_numpy):
         assert loaded.get_info("test") == "value"
 
 
+@pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize(
     "dtype",
     [
@@ -627,7 +628,7 @@ def test_save_load_info(tensor, use_numpy):
         np.complex128,
     ],
 )
-def test_save_dtypes(tmp_path, dtype):
+def test_save_dtypes(tmp_path, dtype, use_numpy):
     data = np.arange(6).reshape(2, 3).astype(dtype)
     if np.issubdtype(dtype, np.floating):
         data += 0.1
@@ -648,15 +649,14 @@ def test_save_dtypes(tmp_path, dtype):
     # Python -> C-API -> Rust -> DLPack -> serialization
     mts.save(file_path, tensor, use_numpy=False)
 
-    # Verify full round-trip
-    loaded_tensor = mts.load(file_path, use_numpy=True)
+    # Verify full round-trip via both native (use_numpy=False) and numpy path
+    loaded_tensor = mts.load(file_path, use_numpy=use_numpy)
     vals_loaded = loaded_tensor.block(0).values
 
     assert vals_loaded.dtype == dtype
     np.testing.assert_array_equal(vals_loaded, data)
 
-    # Verify with NumPy
-    # .mts files are ZIP archives of .npy files.
+    # Verify with NumPy directly (ZIP archive of .npy files)
     archive = np.load(file_path)
     vals_loaded = archive["blocks/0/values"]
     assert vals_loaded.dtype == dtype
