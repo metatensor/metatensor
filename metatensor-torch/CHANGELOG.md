@@ -17,6 +17,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Added
+- Added support for PyTorch v2.11
+
 ### Fixed
 
 - Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called

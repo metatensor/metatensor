@@ -23,18 +23,18 @@ jobs:
             numpy-version-pin: "<2.0"
           - os: ubuntu-24.04
             python-version: "3.10"
-            torch-version: "2.10"
+            torch-version: "2.11"
           - os: ubuntu-24.04
             # TorchScript is no longer supported in Python 3.14
             # so we keep a test with 3.13 to make sure this doesn't break
             python-version: "3.13"
-            torch-version: "2.10"
+            torch-version: "2.11"
           - os: ubuntu-24.04
             python-version: "3.14"
-            torch-version: "2.10"
+            torch-version: "2.11"
           - os: macos-15
             python-version: "3.14"
-            torch-version: "2.10"
+            torch-version: "2.11"
           - os: windows-2022
             python-version: "3.14"
             torch-version: "2.10"
