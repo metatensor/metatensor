@@ -17,18 +17,21 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.8.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.5) - 2026-03-27
+
 ### Added
+
 - Added support for PyTorch v2.11
-
-### Fixed
-
-- Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called
 
 ## [Version 0.8.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.4) - 2026-01-26
 
 ### Added
 
 - Added support for PyTorch v2.10
+
+### Fixed
+
+- Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called
 
 ## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.3) - 2025-12-05
 
