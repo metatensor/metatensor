@@ -51,6 +51,4 @@ python_files = ["*.py"]
 testpaths = ["tests"]
 filterwarnings = [
     "error",
-    "ignore:`torch\\.jit.*` is deprecated.*:DeprecationWarning",
-    "ignore:`torch\\.jit.*` is not supported in Python 3.14.*:DeprecationWarning",
 ]
