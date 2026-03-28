@@ -221,7 +221,8 @@ impl MtsArray {
         return Ok(());
     }
 
-    /// Create a new array with the same data as this array, but with a different shape.
+    /// Create a new array with the same options as this one (dtype, device)
+    /// and the given shape, filled with zeros.
     ///
     /// This corresponds to `mts_array_t.create`, but with a more convenient API.
     pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<MtsArray, Error> {
@@ -247,7 +248,7 @@ impl MtsArray {
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<mts_array_t, Error> {
+    pub fn copy(&self) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
@@ -257,7 +258,7 @@ impl MtsArray {
             )?;
         }
 
-        return Ok(new_array);
+        return Ok(MtsArray::from_raw(new_array));
     }
 
     /// Move the data in this array to another array, if supported by the underlying data.
