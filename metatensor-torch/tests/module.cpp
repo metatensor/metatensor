@@ -162,7 +162,10 @@ static void check_dtype_device(const torch::jit::Module& module, torch::Device d
         "b", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
         "block",
         "c", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
-        "labels", "tensor", "tuple"
+        "d", "d.test",
+        "e", "e.test",
+        "labels", "tensor", "tuple",
+
     };
 
     std::sort(std::begin(all_fields), std::end(all_fields));
