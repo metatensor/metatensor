@@ -12,7 +12,7 @@
 using namespace metatensor;
 
 static TensorMap test_tensor_map();
-static mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t *array);
+static mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, DLDataType dtype, mts_array_t *array);
 static void check_loaded_tensor(metatensor::TensorMap& tensor);
 
 static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
@@ -503,7 +503,7 @@ TensorMap test_tensor_map() {
 }
 
 
-mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, mts_array_t *array) {
+mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, DLDataType dtype, mts_array_t *array) {
     auto shape = std::vector<size_t>();
     for (size_t i=0; i<shape_count; i++) {
         shape.push_back(static_cast<size_t>(shape_ptr[i]));
@@ -511,10 +511,8 @@ mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_cou
 
     CUSTOM_CREATE_ARRAY_CALL_COUNT += 1;
 
-    auto cxx_array = std::unique_ptr<DataArrayBase>(new SimpleDataArray<double>(shape));
-    *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
-
-    return MTS_SUCCESS;
+    // Delegate to default_create_array which handles dtype dispatch
+    return metatensor::details::default_create_array(shape_ptr, shape_count, dtype, array);
 }
 
 void check_loaded_tensor(metatensor::TensorMap& tensor) {

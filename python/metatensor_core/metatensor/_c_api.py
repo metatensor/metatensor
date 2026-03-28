@@ -130,7 +130,7 @@ mts_array_t._fields_ = [
 ]
 
 
-mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, POINTER(mts_array_t))
+mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
 
 
 def setup_functions(lib):
