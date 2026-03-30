@@ -40,4 +40,9 @@ We always welcome new contributors. If you want to help us take a look at our
 open issue marked as [good first
 issue](https://github.com/metatensor/metatensor/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22).
 
-This project is [maintained](https://github.com/lab-cosmo/.github/blob/main/Maintainers.md) by @Luthaf and @HaoZeke, who will reply to issues and pull requests opened on this repository as soon as possible. You can mention them directly if you did not receive an answer after a couple of days.
+This project is
+[maintained](https://github.com/lab-cosmo/.github/blob/main/Maintainers.md) by
+[@Luthaf](https://github.com/Luthaf) and [@HaoZeke](https://github.com/HaoZeke),
+who will reply to issues and pull requests opened on this repository as soon as
+possible. You can mention them directly if you did not receive an answer after a
+couple of days.
