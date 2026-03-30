@@ -60,14 +60,15 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not (node.name.startswith("mts_") or node.name.startswith("DL")):
+        if not (node.name.startswith("mts_") or node.name == "DLDataTypeCode"):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
             # Get name and value for enum
             enum = Enum(node.name)
             for enumerator in node.type.type.values.enumerators:
-                enum.add_value(enumerator.name, enumerator.value.value)
+                value = enumerator.value.value.rstrip("UuLl")
+                enum.add_value(enumerator.name, value)
             self.enums.append(enum)
 
         elif isinstance(node.type.type, c_ast.Struct):
@@ -104,7 +105,15 @@ def parse(file):
 
 
 def c_type_name(name):
-    if name.startswith("mts_") or name.startswith("DL"):
+    if name.startswith("mts_"):
+        return name
+    elif name in (
+        "DLDevice",
+        "DLPackVersion",
+        "DLDataType",
+        "DLDataTypeCode",
+        "DLManagedTensorVersioned",
+    ):
         return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
@@ -289,6 +298,55 @@ elif arch == "64bit":
             file.write(f"{name} = {type_to_ctypes(c_type)}\n")
 
         generate_enums(file, data.enums)
+
+        # --- Manual definitions for the DLPack structs (ala pydlpack) ---
+        file.write("""
+
+class DLPackVersion(ctypes.Structure):
+    _fields_ = [
+        ("major", ctypes.c_uint32),
+        ("minor", ctypes.c_uint32),
+    ]
+
+class DLDevice(ctypes.Structure):
+    _fields_ = [
+        ("device_type", ctypes.c_int32),
+        ("device_id", ctypes.c_int32),
+    ]
+
+class DLDataType(ctypes.Structure):
+    _fields_ = [
+        ("code", ctypes.c_uint8),
+        ("bits", ctypes.c_uint8),
+        ("lanes", ctypes.c_uint16),
+    ]
+
+class DLTensor(ctypes.Structure):
+    _fields_ = [
+        ("data", ctypes.c_void_p),
+        ("device", DLDevice),
+        ("ndim", ctypes.c_int32),
+        ("dtype", DLDataType),
+        ("shape", POINTER(ctypes.c_int64)),
+        ("strides", POINTER(ctypes.c_int64)),
+        ("byte_offset", ctypes.c_uint64),
+    ]
+
+class DLManagedTensorVersioned(ctypes.Structure):
+    pass
+
+_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))
+
+DLManagedTensorVersioned._fields_ = [
+    ("version", DLPackVersion),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", _DLManagedTensorVersionedDeleter),
+    ("flags", ctypes.c_uint64),
+    ("dl_tensor", DLTensor),
+]
+""")
+        # -----------------------------------------------------
+
         generate_structs(file, data.structs)
 
         file.write("\n\n")

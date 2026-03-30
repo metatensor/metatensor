@@ -10,6 +10,7 @@ import numpy as np
 
 from .._c_api import (
     DLDataType,
+    DLDataTypeCode,
     c_uintptr_t,
     mts_array_t,
     mts_create_array_callback_t,
@@ -22,29 +23,21 @@ from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 
 
-# DLDataTypeCode values from dlpack.h
-_kDLInt = 0
-_kDLUInt = 1
-_kDLFloat = 2
-_kDLBfloat = 4
-_kDLComplex = 5
-_kDLBool = 6
-
 _DLPACK_TO_NUMPY = {
-    (_kDLFloat, 16): np.float16,
-    (_kDLFloat, 32): np.float32,
-    (_kDLFloat, 64): np.float64,
-    (_kDLInt, 8): np.int8,
-    (_kDLInt, 16): np.int16,
-    (_kDLInt, 32): np.int32,
-    (_kDLInt, 64): np.int64,
-    (_kDLUInt, 8): np.uint8,
-    (_kDLUInt, 16): np.uint16,
-    (_kDLUInt, 32): np.uint32,
-    (_kDLUInt, 64): np.uint64,
-    (_kDLBool, 8): np.bool_,
-    (_kDLComplex, 64): np.complex64,
-    (_kDLComplex, 128): np.complex128,
+    (DLDataTypeCode.kDLFloat.value, 16): np.float16,
+    (DLDataTypeCode.kDLFloat.value, 32): np.float32,
+    (DLDataTypeCode.kDLFloat.value, 64): np.float64,
+    (DLDataTypeCode.kDLInt.value, 8): np.int8,
+    (DLDataTypeCode.kDLInt.value, 16): np.int16,
+    (DLDataTypeCode.kDLInt.value, 32): np.int32,
+    (DLDataTypeCode.kDLInt.value, 64): np.int64,
+    (DLDataTypeCode.kDLUInt.value, 8): np.uint8,
+    (DLDataTypeCode.kDLUInt.value, 16): np.uint16,
+    (DLDataTypeCode.kDLUInt.value, 32): np.uint32,
+    (DLDataTypeCode.kDLUInt.value, 64): np.uint64,
+    (DLDataTypeCode.kDLBool.value, 8): np.bool_,
+    (DLDataTypeCode.kDLComplex.value, 64): np.complex64,
+    (DLDataTypeCode.kDLComplex.value, 128): np.complex128,
 }
 
 
@@ -63,17 +56,17 @@ def _dlpack_dtype_to_torch(dtype):
     import torch
 
     _MAP = {
-        (_kDLFloat, 16): torch.float16,
-        (_kDLFloat, 32): torch.float32,
-        (_kDLFloat, 64): torch.float64,
-        (_kDLInt, 8): torch.int8,
-        (_kDLInt, 16): torch.int16,
-        (_kDLInt, 32): torch.int32,
-        (_kDLInt, 64): torch.int64,
-        (_kDLUInt, 8): torch.uint8,
-        (_kDLBool, 8): torch.bool,
-        (_kDLComplex, 64): torch.complex64,
-        (_kDLComplex, 128): torch.complex128,
+        (DLDataTypeCode.kDLFloat.value, 16): torch.float16,
+        (DLDataTypeCode.kDLFloat.value, 32): torch.float32,
+        (DLDataTypeCode.kDLFloat.value, 64): torch.float64,
+        (DLDataTypeCode.kDLInt.value, 8): torch.int8,
+        (DLDataTypeCode.kDLInt.value, 16): torch.int16,
+        (DLDataTypeCode.kDLInt.value, 32): torch.int32,
+        (DLDataTypeCode.kDLInt.value, 64): torch.int64,
+        (DLDataTypeCode.kDLUInt.value, 8): torch.uint8,
+        (DLDataTypeCode.kDLBool.value, 8): torch.bool,
+        (DLDataTypeCode.kDLComplex.value, 64): torch.complex64,
+        (DLDataTypeCode.kDLComplex.value, 128): torch.complex128,
     }
     result = _MAP.get((dtype.code, dtype.bits))
     if result is None:
