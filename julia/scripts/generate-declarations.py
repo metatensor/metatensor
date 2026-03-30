@@ -60,14 +60,15 @@ class AstVisitor(c_ast.NodeVisitor):
         self.functions.append(function)
 
     def visit_Typedef(self, node):
-        if not (node.name.startswith("mts_") or node.name.startswith("DL")):
+        if not node.name.startswith("mts_"):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
             # Get name and value for enum
             enum = Enum(node.name)
             for enumerator in node.type.type.values.enumerators:
-                enum.add_value(enumerator.name, enumerator.value.value)
+                value = enumerator.value.value.rstrip("UuLl")
+                enum.add_value(enumerator.name, value)
             self.enums.append(enum)
 
         elif isinstance(node.type.type, c_ast.Struct):
@@ -117,7 +118,10 @@ CTYPES_TO_JULIA = {
 
 
 def c_type_name(name):
-    if name.startswith("mts_") or name.startswith("DL"):
+    if name.startswith("mts_"):
+        return name
+    if name in ("DLDevice", "DLPackVersion", "DLDataType",
+                "DLDataTypeCode", "DLManagedTensorVersioned"):
         return name
     if name in CTYPES_TO_JULIA:
         return CTYPES_TO_JULIA[name]
