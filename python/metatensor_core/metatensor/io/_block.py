@@ -43,6 +43,8 @@ _DLPACK_TO_NUMPY = {
 
 def _dlpack_dtype_to_numpy(dtype):
     """Convert a DLDataType to a numpy dtype."""
+    if dtype.lanes != 1:
+        raise ValueError(f"unsupported DLDataType: lanes={dtype.lanes} (expected 1)")
     result = _DLPACK_TO_NUMPY.get((dtype.code, dtype.bits))
     if result is None:
         raise ValueError(
@@ -53,6 +55,10 @@ def _dlpack_dtype_to_numpy(dtype):
 
 def _dlpack_dtype_to_torch(dtype):
     """Convert a DLDataType to a torch dtype."""
+    if dtype.lanes != 1:
+        raise ValueError(
+            f"unsupported DLDataType for torch: lanes={dtype.lanes} (expected 1)"
+        )
     import torch
 
     _MAP = {
