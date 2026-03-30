@@ -8,8 +8,7 @@ use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t};
 use crate::Error;
 
 use super::Array;
-
-use super::external::check_status_external;
+use super::external::{check_status_external, MtsArray};
 use super::origin::get_data_origin;
 
 /// Reference to a data array in metatensor-core
@@ -33,7 +32,7 @@ impl<'a> ArrayRef<'a> {
     pub unsafe fn from_raw(array: mts_array_t) -> ArrayRef<'a> {
         ArrayRef {
             array: mts_array_t {
-                // remove the destructor if any, since we only have a refernce
+                // remove the destructor if any, since we only have a reference
                 // to the array, and it should not be dropped when passed back
                 // to C through `as_raw()`.
                 destroy: None,
@@ -208,10 +207,11 @@ impl<'a> ArrayRef<'a> {
         return Ok(shape);
     }
 
-    /// Create a new array with the same data as this array, but with a different shape.
+    /// Create a new array with the same options as this one (dtype, device)
+    /// and the given shape, filled with zeros.
     ///
     /// This corresponds to `mts_array_t.create`, but with a more convenient API.
-    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<mts_array_t, Error> {
+    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<MtsArray, Error> {
         let function = self.array.create.expect("mts_array_t.create function is NULL");
 
         let mut new_array = mts_array_t::null();
@@ -228,13 +228,13 @@ impl<'a> ArrayRef<'a> {
             )?;
         }
 
-        return Ok(new_array);
+        return Ok(MtsArray::from_raw(new_array));
     }
 
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<mts_array_t, Error> {
+    pub fn copy(&self) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
@@ -244,7 +244,7 @@ impl<'a> ArrayRef<'a> {
             )?;
         }
 
-        return Ok(new_array);
+        return Ok(MtsArray::from_raw(new_array));
     }
 }
 
@@ -272,7 +272,7 @@ impl<'a> ArrayRefMut<'a> {
     pub unsafe fn from_raw(array: mts_array_t) -> ArrayRefMut<'a> {
         ArrayRefMut {
             array: mts_array_t {
-                // remove the destructor if any, since we only have a refernce
+                // remove the destructor if any, since we only have a reference
                 // to the array, and it should not be dropped when passed back
                 // to C through `as_raw()`.
                 destroy: None,
@@ -541,10 +541,11 @@ impl<'a> ArrayRefMut<'a> {
         return Ok(());
     }
 
-    /// Create a new array with the same data as this array, but with a different shape.
+    /// Create a new array with the same options as this one (dtype, device)
+    /// and the given shape, filled with zeros.
     ///
     /// This corresponds to `mts_array_t.create`, but with a more convenient API.
-    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<mts_array_t, Error> {
+    pub fn create(&self, shape: &[usize], fill_value: ArrayRef<'_>) -> Result<MtsArray, Error> {
         let function = self.array.create.expect("mts_array_t.create function is NULL");
 
         let mut new_array = mts_array_t::null();
@@ -561,13 +562,13 @@ impl<'a> ArrayRefMut<'a> {
             )?;
         }
 
-        return Ok(new_array);
+        return Ok(MtsArray::from_raw(new_array));
     }
 
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<mts_array_t, Error> {
+    pub fn copy(&self) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
@@ -577,7 +578,7 @@ impl<'a> ArrayRefMut<'a> {
             )?;
         }
 
-        return Ok(new_array);
+        return Ok(MtsArray::from_raw(new_array));
     }
 
     /// Move the data in this array to another array, if supported by the underlying data.
