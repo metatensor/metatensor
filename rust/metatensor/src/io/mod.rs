@@ -61,6 +61,16 @@ unsafe extern "C" fn create_ndarray(
         assert!(shape_count != 0);
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
 
+        if dtype.lanes != 1 {
+            return Err(crate::Error {
+                code: None,
+                message: format!(
+                    "unsupported dtype in create_ndarray: lanes={} (expected 1)",
+                    dtype.lanes
+                ),
+            });
+        }
+
         match (dtype.code, dtype.bits) {
             (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
             (DLDataTypeCode::kDLFloat, 64) => create_typed_array!(shape, c_array, f64),

@@ -14,6 +14,12 @@ std::string metatensor_torch::version() {
 }
 
 static torch::ScalarType dlpack_dtype_to_torch(DLDataType dtype) {
+    if (dtype.lanes != 1) {
+        throw metatensor::Error(
+            "unsupported DLDataType for torch: lanes=" +
+            std::to_string(dtype.lanes) + " (expected 1)"
+        );
+    }
     if (dtype.code == kDLFloat && dtype.bits == 16) return torch::kFloat16;
     if (dtype.code == kDLFloat && dtype.bits == 32) return torch::kFloat32;
     if (dtype.code == kDLFloat && dtype.bits == 64) return torch::kFloat64;

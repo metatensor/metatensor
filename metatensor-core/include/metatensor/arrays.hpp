@@ -1315,6 +1315,13 @@ inline mts_status_t details::default_create_array(
             shape.push_back(static_cast<size_t>(shape_ptr[i]));
         }
 
+        if (dtype.lanes != 1) {
+            throw metatensor::Error(
+                "unsupported DLDataType in default_create_array: lanes=" +
+                std::to_string(dtype.lanes) + " (expected 1)"
+            );
+        }
+
         std::unique_ptr<DataArrayBase> cxx_array;
         if (dtype.code == kDLFloat && dtype.bits == 64) {
             cxx_array.reset(new SimpleDataArray<double>(shape));

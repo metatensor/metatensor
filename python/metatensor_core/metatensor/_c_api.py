@@ -28,55 +28,144 @@ MTS_BUFFER_SIZE_ERROR = 254
 MTS_INTERNAL_ERROR = 255
 
 
+DLPackManagedTensorAllocator = CFUNCTYPE(ctypes.c_int, POINTER(DLTensor), POINTER(POINTER(DLManagedTensorVersioned)), ctypes.c_void_p, CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p))
+DLPackManagedTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)))
+DLPackDLTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(DLTensor))
+DLPackCurrentWorkStream = CFUNCTYPE(ctypes.c_int, DLDeviceType, ctypes.c_int32, POINTER(POINTER(None)))
+DLPackManagedTensorToPyObjectNoSync = CFUNCTYPE(ctypes.c_int, POINTER(DLManagedTensorVersioned), POINTER(POINTER(None)))
 mts_status_t = ctypes.c_int32
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
-# ============================================================================ #
-# DLPack types
-# ============================================================================ #
+
+class DLDeviceType(enum.Enum):
+    kDLCPU = 1
+    kDLCUDA = 2
+    kDLCUDAHost = 3
+    kDLOpenCL = 4
+    kDLVulkan = 7
+    kDLMetal = 8
+    kDLVPI = 9
+    kDLROCM = 10
+    kDLROCMHost = 11
+    kDLExtDev = 12
+    kDLCUDAManaged = 13
+    kDLOneAPI = 14
+    kDLWebGPU = 15
+    kDLHexagon = 16
+    kDLMAIA = 17
+    kDLTrn = 18
+
+
+class DLDataTypeCode(enum.Enum):
+    kDLInt = 0U
+    kDLUInt = 1U
+    kDLFloat = 2U
+    kDLOpaqueHandle = 3U
+    kDLBfloat = 4U
+    kDLComplex = 5U
+    kDLBool = 6U
+    kDLFloat8_e3m4 = 7U
+    kDLFloat8_e4m3 = 8U
+    kDLFloat8_e4m3b11fnuz = 9U
+    kDLFloat8_e4m3fn = 10U
+    kDLFloat8_e4m3fnuz = 11U
+    kDLFloat8_e5m2 = 12U
+    kDLFloat8_e5m2fnuz = 13U
+    kDLFloat8_e8m0fnu = 14U
+    kDLFloat6_e2m3fn = 15U
+    kDLFloat6_e3m2fn = 16U
+    kDLFloat4_e2m1fn = 17U
+
+
 class DLPackVersion(ctypes.Structure):
-    _fields_ = [
-        ("major", ctypes.c_uint32),
-        ("minor", ctypes.c_uint32),
-    ]
+    pass
+
+DLPackVersion._fields_ = [
+    ("major", ctypes.c_uint32),
+    ("minor", ctypes.c_uint32),
+]
+
 
 class DLDevice(ctypes.Structure):
-    _fields_ = [
-        ("device_type", ctypes.c_int32),
-        ("device_id", ctypes.c_int32),
-    ]
+    pass
+
+DLDevice._fields_ = [
+    ("device_type", DLDeviceType),
+    ("device_id", ctypes.c_int32),
+]
+
 
 class DLDataType(ctypes.Structure):
-    _fields_ = [
-        ("code", ctypes.c_uint8),
-        ("bits", ctypes.c_uint8),
-        ("lanes", ctypes.c_uint16),
-    ]
+    pass
+
+DLDataType._fields_ = [
+    ("code", ctypes.c_uint8),
+    ("bits", ctypes.c_uint8),
+    ("lanes", ctypes.c_uint16),
+]
+
 
 class DLTensor(ctypes.Structure):
-    _fields_ = [
-        ("data", ctypes.c_void_p),
-        ("device", DLDevice),
-        ("ndim", ctypes.c_int32),
-        ("dtype", DLDataType),
-        ("shape", POINTER(ctypes.c_int64)),
-        ("strides", POINTER(ctypes.c_int64)),
-        ("byte_offset", ctypes.c_uint64),
-    ]
+    pass
+
+DLTensor._fields_ = [
+    ("data", ctypes.c_void_p),
+    ("device", DLDevice),
+    ("ndim", ctypes.c_int32),
+    ("dtype", DLDataType),
+    ("shape", POINTER(ctypes.c_int64)),
+    ("strides", POINTER(ctypes.c_int64)),
+    ("byte_offset", ctypes.c_uint64),
+]
+
+
+class DLManagedTensor(ctypes.Structure):
+    pass
+
+DLManagedTensor._fields_ = [
+    ("dl_tensor", DLTensor),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensor))),
+]
+
 
 class DLManagedTensorVersioned(ctypes.Structure):
     pass
 
-_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))
-
 DLManagedTensorVersioned._fields_ = [
     ("version", DLPackVersion),
     ("manager_ctx", ctypes.c_void_p),
-    ("deleter", _DLManagedTensorVersionedDeleter),
+    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))),
     ("flags", ctypes.c_uint64),
     ("dl_tensor", DLTensor),
 ]
+
+
+class DLPackExchangeAPIHeader(ctypes.Structure):
+    pass
+
+DLPackExchangeAPIHeader._fields_ = [
+    ("version", DLPackVersion),
+    ("prev_api", POINTER(DLPackExchangeAPIHeader)),
+]
+
+
+class DLPackExchangeAPI(ctypes.Structure):
+    pass
+
+DLPackExchangeAPI._fields_ = [
+    ("header", DLPackExchangeAPIHeader),
+    ("managed_tensor_allocator", DLPackManagedTensorAllocator),
+    ("managed_tensor_from_py_object_no_sync", DLPackManagedTensorFromPyObjectNoSync),
+    ("managed_tensor_to_py_object_no_sync", DLPackManagedTensorToPyObjectNoSync),
+    ("dltensor_from_py_object_no_sync", DLPackDLTensorFromPyObjectNoSync),
+    ("current_work_stream", DLPackCurrentWorkStream),
+]
+
+
+class DLManagedTensorVersioned(ctypes.Structure):
+    pass
 
 
 class mts_block_t(ctypes.Structure):
