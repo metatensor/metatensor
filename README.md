@@ -25,11 +25,11 @@ operations to make working with TensorMaps more convenient.
 If you use metatensor for your work, please read and cite our preprint available on
 [arXiv](http://arxiv.org/abs/2508.15704).
 
-## Documentation
+# Documentation
 
 For details, tutorials, and examples, please have a look at our [documentation](https://docs.metatensor.org/).
 
-## Contributors
+# Contributors
 
 Thanks goes to all people that make metatensor possible:
 
@@ -46,3 +46,31 @@ This project is
 who will reply to issues and pull requests opened on this repository as soon as
 possible. You can mention them directly if you did not receive an answer after a
 couple of days.
+
+<!-- marker-cite -->
+
+# Citing metatensor
+
+If you found metatensor useful for your work, please cite the corresponding article:
+
+F. Bigi, J.W. Abbott, P. Loche et. al.<br>
+Metatensor and metatomic: foundational libraries for interoperable atomistic machine learning, (2026).<br>
+[https://doi.org/10.1063/5.0304911](https://doi.org/10.1063/5.0304911)
+
+```bibtex
+@article{bigi_metatensor_2026,
+  title = {Metatensor and Metatomic: {{Foundational}} Libraries for Interoperable Atomistic Machine Learning},
+  shorttitle = {Metatensor and Metatomic},
+  author = {Bigi, Filippo and Abbott, Joseph W. and Loche, Philip and Mazitov, Arslan and Tisi, Davide and Langer, Marcel F. and Goscinski, Alexander and Pegolo, Paolo and Chong, Sanggyu and Goswami, Rohit and Febrer, Pol and Chorna, Sofiia and Kellner, Matthias and Ceriotti, Michele and Fraux, Guillaume},
+  year = 2026,
+  month = feb,
+  journal = {J. Chem. Phys.},
+  volume = {164},
+  number = {6},
+  pages = {064113},
+  issn = {0021-9606},
+  doi = {10.1063/5.0304911},
+}
+```
+
+<!-- marker-end -->
