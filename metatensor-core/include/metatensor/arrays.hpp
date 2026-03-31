@@ -267,7 +267,7 @@ public:
     /// double value = array(2, 3, 1);
     /// ```
     template<typename ...Args>
-    T operator()(Args... args) const & {
+    T operator()(Args... args) const {
         if (managed_ != nullptr && managed_->dl_tensor.device.device_type != kDLCPU) {
             throw Error(
                 "can not index into a DLPackArray on a non-CPU device"
@@ -283,25 +283,16 @@ public:
         return data_[details::linear_index(shape_, index)];
     }
 
-    template<typename ...Args>
-    T operator()(Args... args) && {
-        return data_[details::linear_index(shape_, {static_cast<size_t>(args)...})];
-    }
-
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    const T* data() const & {
+    const T* data() const {
         return data_;
     }
 
-    const T* data() && { return data_; }
-
     /// Get the shape of this array
-    const std::vector<size_t>& shape() const & {
+    const std::vector<size_t>& shape() const {
         return shape_;
     }
-
-    std::vector<size_t> shape() && { return std::move(shape_); }
 
     /// Check if this array is empty, i.e. if at least one of the shape element
     /// is 0.
@@ -417,7 +408,7 @@ public:
     /// double value = array(2, 3, 1);
     /// ```
     template<typename ...Args>
-    T operator()(Args... args) const & {
+    T operator()(Args... args) const {
         auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
         if (index.size() != shape_.size()) {
             throw Error(
@@ -436,7 +427,7 @@ public:
     /// array(2, 3, 1) = 5.2;
     /// ```
     template<typename ...Args>
-    T& operator()(Args... args) & {
+    T& operator()(Args... args) {
         if (is_const_) {
             throw Error("This NDArray is const, can not get non const access to it");
         }
@@ -451,34 +442,25 @@ public:
         return data_[details::linear_index(shape_, index)];
     }
 
-    template<typename ...Args>
-    T operator()(Args... args) && {
-        return data_[details::linear_index(shape_, {static_cast<size_t>(args)...})];
-    }
-
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    const T* data() const & {
+    const T* data() const {
         return data_;
     }
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    T* data() & {
+    T* data() {
         if (is_const_) {
             throw Error("This NDArray is const, can not get non const access to it");
         }
         return data_;
     }
 
-    const T* data() && { return data_; }
-
     /// Get the shape of this array
-    const std::vector<size_t>& shape() const & {
+    const std::vector<size_t>& shape() const {
         return shape_;
     }
-
-    std::vector<size_t> shape() && { return std::move(shape_); }
 
     /// Check if this array is empty, i.e. if at least one of the shape element
     /// is 0.
@@ -812,9 +794,7 @@ public:
     ) const = 0;
 
     /// Get the shape of this array
-    virtual const std::vector<uintptr_t>& shape() const & = 0;
-
-    const std::vector<uintptr_t>& shape() && = delete;
+    virtual const std::vector<uintptr_t>& shape() const = 0;
 
     /// Set the shape of this array to the given `shape`
     virtual void reshape(std::vector<uintptr_t> shape) = 0;
@@ -891,7 +871,7 @@ public:
         return details::dtype_of<T>();
     }
 
-    const std::vector<uintptr_t>& shape() const & override {
+    const std::vector<uintptr_t>& shape() const override {
         return shape_;
     }
 
@@ -1270,7 +1250,7 @@ public:
         throw metatensor::Error("can not call `as_dlpack` for an EmtpyDataArray");
     }
 
-    const std::vector<uintptr_t>& shape() const & override {
+    const std::vector<uintptr_t>& shape() const override {
         return shape_;
     }
 

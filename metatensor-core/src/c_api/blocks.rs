@@ -61,13 +61,13 @@ impl mts_block_t {
 /// @param data array handle containing the data for this block. The block takes
 ///             ownership of the array, and will release it with
 ///             `array.destroy(array.ptr)` when it no longer needs it.
-/// @param samples pointer to sample labels corresponding to the first
-///                dimension of the data
-/// @param components array of pointers to component labels corresponding to
-///                   intermediary dimensions of the data
+/// @param samples pointer to sample labels. The block takes ownership of
+///                these labels.
+/// @param components array of pointers to component labels. The block takes
+///                   ownership of these labels.
 /// @param components_count number of entries in the `components` array
-/// @param properties pointer to property labels corresponding to the last
-///                   dimension of the data
+/// @param properties pointer to property labels. The block takes ownership
+///                   of these labels.
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`

@@ -257,7 +257,7 @@ mod tests {
     #[test]
     fn labels_values_array_shape() {
         let labels = Labels::new(&["x", "y"], vec![1.into(), 2.into(), 3.into(), 4.into()]).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let shape = arr.shape().unwrap();
         assert_eq!(shape, &[2, 2]);
@@ -266,7 +266,7 @@ mod tests {
     #[test]
     fn labels_values_array_origin() {
         let labels = Labels::new(&["a"], vec![10.into()]).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let origin = arr.origin().unwrap();
         let name = crate::data::get_data_origin(origin);
@@ -276,7 +276,7 @@ mod tests {
     #[test]
     fn labels_values_array_copy() {
         let labels = Labels::new(&["a"], vec![10.into(), 20.into()]).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let cloned = arr.try_clone().unwrap();
         let shape = cloned.shape().unwrap();
@@ -286,7 +286,7 @@ mod tests {
     #[test]
     fn empty_labels_values_array() {
         let labels = Labels::new(&["a", "b"], Vec::new()).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let shape = arr.shape().unwrap();
         assert_eq!(shape, &[0, 2]);
@@ -295,7 +295,7 @@ mod tests {
     #[test]
     fn labels_values_array_device() {
         let labels = Labels::new(&["x"], vec![1.into(), 2.into()]).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let device = arr.device().unwrap();
         let cpu = DLDevice::cpu();
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn labels_values_array_as_dlpack() {
         let labels = Labels::new(&["a", "b"], vec![1.into(), 2.into(), 3.into(), 4.into()]).unwrap();
-        let arr = labels.values_array();
+        let arr = labels.values();
 
         let cpu = DLDevice::cpu();
         let version = DLPackVersion::current();

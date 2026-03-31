@@ -18,7 +18,6 @@ extern "C" {
         uintptr_t* size
     );
 }
-
 #include "./errors.hpp"
 #include "./arrays.hpp"
 #include "./io_fwd.hpp"
@@ -250,7 +249,7 @@ public:
     /// If requested, this function can also give the positions in the union
     /// where each entry of the input `Labels` ended up.
     ///
-    /// No values array is set on the output, even if the inputs have one.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the union with
     /// @param first_mapping if you want the mapping from the positions of

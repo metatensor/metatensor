@@ -22,7 +22,6 @@ extern "C" {
         uintptr_t* count, uintptr_t* size
     );
 }
-
 using namespace metatensor_torch;
 
 /// Data backing an mts_array_t that wraps a torch::Tensor for labels values.

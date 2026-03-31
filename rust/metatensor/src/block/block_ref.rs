@@ -139,8 +139,9 @@ impl<'a> TensorBlockRef<'a> {
         let ptr = unsafe {
             crate::c_api::mts_block_labels(self.as_ptr(), dimension)
         };
-        assert!(!ptr.is_null(), "failed to get labels");
-        unsafe { Labels::from_raw(ptr) }
+        let ptr = crate::errors::check_ptr(ptr)
+            .expect("failed to get labels");
+        unsafe { Labels::from_raw(ptr.as_ptr()) }
     }
 
     /// Get the samples for this block

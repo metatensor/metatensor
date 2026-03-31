@@ -50,14 +50,16 @@ impl std::ops::DerefMut for mts_tensormap_t {
 /// Create a new `mts_tensormap_t` with the given `keys` and `blocks`.
 /// `blocks_count` must be set to the number of entries in the blocks array.
 ///
-/// The new tensor map takes ownership of the blocks, which should not be
-/// released separately.
+/// The new tensor map takes ownership of the blocks and keys, which should
+/// not be released separately.
 ///
 /// The memory allocated by this function and the blocks should be released
 /// using `mts_tensormap_free`.
 ///
-/// @param keys pointer to labels containing the keys associated with each block
-/// @param blocks pointer to the first element of an array of blocks
+/// @param keys pointer to labels containing the keys associated with each
+///             block. The tensor map takes ownership of the keys.
+/// @param blocks pointer to the first element of an array of blocks. The
+///               tensor map takes ownership of the blocks.
 /// @param blocks_count number of elements in the `blocks` array
 ///
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
@@ -282,8 +284,7 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
             )));
         }
 
-        let selection_ref: &crate::Labels = &*selection;
-        let rust_blocks = (*tensor).blocks_matching(selection_ref)?;
+        let rust_blocks = (*tensor).blocks_matching(&*selection)?;
 		*count = rust_blocks.len();
 
         if (*tensor).keys().is_empty() {

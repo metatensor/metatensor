@@ -1,4 +1,3 @@
-// Cache bust: $(date +%Y%m%d-%H%M%S)
 use std::os::raw::c_char;
 use std::ffi::CStr;
 use std::sync::Arc;
@@ -189,7 +188,7 @@ pub unsafe extern "C" fn mts_labels_values(
         check_pointers_non_null!(labels, array);
         let labels = &*labels;
 
-        let values_array = labels.values_array();
+        let values_array = labels.values();
         *array = values_array.raw_copy();
 
         Ok(())

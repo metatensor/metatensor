@@ -76,7 +76,7 @@ pub struct Labels {
 
 impl PartialEq for Labels {
     fn eq(&self, other: &Self) -> bool {
-        self.names == other.names && self.count == other.count && self.values() == other.values()
+        self.names == other.names && self.count == other.count && self.values_cpu() == other.values_cpu()
     }
 }
 
@@ -89,7 +89,7 @@ impl std::fmt::Debug for Labels {
         writeln!(f, "    {}", self.names().join(", "))?;
 
         let widths = self.names().iter().map(|s| s.len()).collect::<Vec<_>>();
-        let values = self.values();
+        let values = self.values_cpu();
         for entry in values.chunks_exact(self.size()) {
             write!(f, "    ")?;
             for (value, width) in entry.iter().zip(&widths) {
@@ -364,7 +364,7 @@ impl Labels {
     }
 
     /// Lazily get the CPU values, materializing from the array if needed
-    pub(crate) fn values(&self) -> &[LabelValue] {
+    pub(crate) fn values_cpu(&self) -> &[LabelValue] {
         self.values.get_or_init(|| {
             crate::labels_array::materialize_values_from_array(&self.array, self.size())
         })
@@ -398,11 +398,11 @@ impl Labels {
     /// Check whether entries in these Labels are sorted in lexicographic order,
     /// and cache the result.
     pub fn is_sorted(&self) -> bool {
-        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values().chunks_exact(self.size())))
+        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values_cpu().chunks_exact(self.size())))
     }
 
     /// Get the backing `mts_array_t` for the label values.
-    pub fn values_array(&self) -> &mts_array_t {
+    pub fn values(&self) -> &mts_array_t {
         &self.array
     }
 
@@ -418,7 +418,7 @@ impl Labels {
 
     /// Check whether the given `label` is part of this set of labels
     pub fn contains(&self, label: &[LabelValue]) -> bool {
-        let positions = self.positions.get_or_init(|| init_positions(self.values(), self.size()));
+        let positions = self.positions.get_or_init(|| init_positions(self.values_cpu(), self.size()));
         positions.contains_key(label)
     }
 
@@ -431,12 +431,12 @@ impl Labels {
     }
 
     fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, LabelsHasher> {
-        return self.positions.get_or_init(|| init_positions(self.values(), self.size()));
+        return self.positions.get_or_init(|| init_positions(self.values_cpu(), self.size()));
     }
 
     /// Iterate over the entries in these Labels
     pub fn iter(&self) -> Iter<'_> {
-        let values = self.values();
+        let values = self.values_cpu();
         debug_assert!(values.len() % self.names.len().max(1) == 0);
         return Iter {
             ptr: values.as_ptr(),
@@ -460,7 +460,7 @@ impl Labels {
         }
 
         let mut positions = self.get_or_init_positions().clone();
-        let mut values = self.values().to_vec();
+        let mut values = self.values_cpu().to_vec();
 
         if !first_mapping.is_empty() {
             assert!(first_mapping.len() == self.count());
@@ -759,7 +759,7 @@ impl std::ops::Index<usize> for Labels {
     fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
-        &self.values()[start..stop]
+        &self.values_cpu()[start..stop]
     }
 }
 
@@ -812,7 +812,7 @@ mod tests {
 
         let union = first.union(&second, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values(), &[0, 1, 1, 2, 2, 3, 4, 5]);
+        assert_eq!(union.values_cpu(), &[0, 1, 1, 2, 2, 3, 4, 5]);
         assert_eq!(first_mapping, &[0, 1]);
         assert_eq!(second_mapping, &[2, 1, 3]);
 
@@ -821,7 +821,7 @@ mod tests {
 
         let union = second.union(&first, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values(), &[2, 3, 1, 2, 4, 5, 0, 1]);
+        assert_eq!(union.values_cpu(), &[2, 3, 1, 2, 4, 5, 0, 1]);
         assert_eq!(first_mapping, &[0, 1, 2]);
         assert_eq!(second_mapping, &[3, 1]);
 
@@ -839,7 +839,7 @@ mod tests {
 
         let union = first.union(&empty, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values(), &[0, 1, 1, 2]);
+        assert_eq!(union.values_cpu(), &[0, 1, 1, 2]);
         assert_eq!(first_mapping, &[0, 1]);
         assert_eq!(second_mapping, &Vec::<i64>::new());
     }
@@ -861,7 +861,7 @@ mod tests {
 
         let intersection = first.intersection(&second, first_mapping, second_mapping).unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
-        assert_eq!(intersection.values(), &[1, 2]);
+        assert_eq!(intersection.values_cpu(), &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0]);
         assert_eq!(second_mapping, &[-1, 0, -1]);
 
@@ -870,7 +870,7 @@ mod tests {
 
         let intersection = second.intersection(&first, first_mapping, second_mapping).unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
-        assert_eq!(intersection.values(), &[1, 2]);
+        assert_eq!(intersection.values_cpu(), &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0, -1]);
         assert_eq!(second_mapping, &[-1, 0]);
 
@@ -902,14 +902,14 @@ mod tests {
 
         let difference = first.difference(&second, first_mapping).unwrap();
         assert_eq!(difference.names(), ["aa", "bb"]);
-        assert_eq!(difference.values(), &[0, 1]);
+        assert_eq!(difference.values_cpu(), &[0, 1]);
         assert_eq!(first_mapping, &[0, -1]);
 
         let first_mapping = &mut vec![0; second.count()];
 
         let difference = second.difference(&first, first_mapping).unwrap();
         assert_eq!(difference.names(), ["aa", "bb"]);
-        assert_eq!(difference.values(), &[2, 3, /**/ 4, 5]);
+        assert_eq!(difference.values_cpu(), &[2, 3, /**/ 4, 5]);
         assert_eq!(first_mapping, &[0, -1, 1]);
 
         let labels = Labels::new(&["aa"], Vec::<LabelValue>::new()).unwrap();
@@ -945,7 +945,7 @@ mod tests {
         let labels = Labels::new_i32(&["x"], vec![1, 2, 3]).unwrap();
 
         // Array is always present (primary data)
-        let arr = labels.values_array();
+        let arr = labels.values();
         let shape = arr.shape().unwrap();
         assert_eq!(shape, &[3, 1]);
     }
@@ -954,7 +954,7 @@ mod tests {
     fn from_array_lazy_values() {
         // Create a labels array, then build Labels from it
         let original = Labels::new_i32(&["x", "y"], vec![1, 2, 3, 4]).unwrap();
-        let array = original.values_array().try_clone().unwrap();
+        let array = original.values().try_clone().unwrap();
 
         let labels = Labels::from_array(&["x", "y"], array).unwrap();
         assert_eq!(labels.count(), 2);
