@@ -8,7 +8,13 @@ from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, mts_array_t, mts_create_array_callback_t
+from .._c_api import (
+    DLDataType,
+    DLDataTypeCode,
+    c_uintptr_t,
+    mts_array_t,
+    mts_create_array_callback_t,
+)
 from .._c_lib import _get_library
 from ..block import TensorBlock
 from ..data.array import _is_numpy_array, _is_torch_array, create_mts_array
@@ -17,16 +23,76 @@ from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 
 
+_DLPACK_TO_NUMPY = {
+    (DLDataTypeCode.kDLFloat.value, 16): np.float16,
+    (DLDataTypeCode.kDLFloat.value, 32): np.float32,
+    (DLDataTypeCode.kDLFloat.value, 64): np.float64,
+    (DLDataTypeCode.kDLInt.value, 8): np.int8,
+    (DLDataTypeCode.kDLInt.value, 16): np.int16,
+    (DLDataTypeCode.kDLInt.value, 32): np.int32,
+    (DLDataTypeCode.kDLInt.value, 64): np.int64,
+    (DLDataTypeCode.kDLUInt.value, 8): np.uint8,
+    (DLDataTypeCode.kDLUInt.value, 16): np.uint16,
+    (DLDataTypeCode.kDLUInt.value, 32): np.uint32,
+    (DLDataTypeCode.kDLUInt.value, 64): np.uint64,
+    (DLDataTypeCode.kDLBool.value, 8): np.bool_,
+    (DLDataTypeCode.kDLComplex.value, 64): np.complex64,
+    (DLDataTypeCode.kDLComplex.value, 128): np.complex128,
+}
+
+
+def _dlpack_dtype_to_numpy(dtype):
+    """Convert a DLDataType to a numpy dtype."""
+    if dtype.lanes != 1:
+        raise ValueError(f"unsupported DLDataType: lanes={dtype.lanes} (expected 1)")
+    result = _DLPACK_TO_NUMPY.get((dtype.code, dtype.bits))
+    if result is None:
+        raise ValueError(
+            f"unsupported DLDataType: code={dtype.code}, bits={dtype.bits}"
+        )
+    return result
+
+
+def _dlpack_dtype_to_torch(dtype):
+    """Convert a DLDataType to a torch dtype."""
+    if dtype.lanes != 1:
+        raise ValueError(
+            f"unsupported DLDataType for torch: lanes={dtype.lanes} (expected 1)"
+        )
+    import torch
+
+    _MAP = {
+        (DLDataTypeCode.kDLFloat.value, 16): torch.float16,
+        (DLDataTypeCode.kDLFloat.value, 32): torch.float32,
+        (DLDataTypeCode.kDLFloat.value, 64): torch.float64,
+        (DLDataTypeCode.kDLInt.value, 8): torch.int8,
+        (DLDataTypeCode.kDLInt.value, 16): torch.int16,
+        (DLDataTypeCode.kDLInt.value, 32): torch.int32,
+        (DLDataTypeCode.kDLInt.value, 64): torch.int64,
+        (DLDataTypeCode.kDLUInt.value, 8): torch.uint8,
+        (DLDataTypeCode.kDLBool.value, 8): torch.bool,
+        (DLDataTypeCode.kDLComplex.value, 64): torch.complex64,
+        (DLDataTypeCode.kDLComplex.value, 128): torch.complex128,
+    }
+    result = _MAP.get((dtype.code, dtype.bits))
+    if result is None:
+        raise ValueError(
+            f"unsupported DLDataType for torch: code={dtype.code}, bits={dtype.bits}"
+        )
+    return result
+
+
 # TODO: use a proper type alias when we drop support for Python <3.10; and remove the
 # quotes around the type annotations using this.
 # https://stackoverflow.com/a/73223518/4692076
 CreateArrayCallback = Callable[
-    [ctypes.POINTER(c_uintptr_t), c_uintptr_t, ctypes.POINTER(mts_array_t)], None
+    [ctypes.POINTER(c_uintptr_t), c_uintptr_t, DLDataType, ctypes.POINTER(mts_array_t)],
+    None,
 ]
 
 
 @catch_exceptions
-def create_numpy_array(shape_ptr, shape_count, array):
+def create_numpy_array(shape_ptr, shape_count, dtype, array):
     """
     Callback function that can be used with
     :py:func:`metatensor.io.load_custom_array` to load data in numpy arrays.
@@ -35,17 +101,17 @@ def create_numpy_array(shape_ptr, shape_count, array):
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
-    data = np.empty(shape, dtype=np.float64)
+    np_dtype = _dlpack_dtype_to_numpy(dtype)
+    data = np.empty(shape, dtype=np_dtype)
     array[0] = create_mts_array(data)
 
 
 @catch_exceptions
-def create_torch_array(shape_ptr, shape_count, array):
+def create_torch_array(shape_ptr, shape_count, dtype, array):
     """
     Callback function that can be used with
     :py:func:`metatensor.io.load_custom_array` to load data in torch
-    tensors. The resulting tensors are stored on CPU, and their dtype is
-    ``torch.float64``.
+    tensors. The resulting tensors are stored on CPU.
     """
     import torch
 
@@ -53,7 +119,8 @@ def create_torch_array(shape_ptr, shape_count, array):
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
-    data = torch.empty(shape, dtype=torch.float64, device="cpu")
+    torch_dtype = _dlpack_dtype_to_torch(dtype)
+    data = torch.empty(shape, dtype=torch_dtype, device="cpu")
     array[0] = create_mts_array(data)
 
 
