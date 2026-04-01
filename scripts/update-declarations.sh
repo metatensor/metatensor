@@ -2,7 +2,7 @@
 
 # This script update the declaration corresponding to metatensor-core C-API
 # in the metatensor Rust sources (`bindgen` below) and the metatensor-core
-# Python package
+# Python and Julia packages
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")"/.. && pwd)
 set -eux
@@ -40,8 +40,5 @@ mv "$ROOT_DIR/rustfmt.toml" "$ROOT_DIR/.no_op.rustfmt.toml"
 rustfmt rust/metatensor-sys/src/c_api.rs
 mv "$ROOT_DIR/.no_op.rustfmt.toml" "$ROOT_DIR/rustfmt.toml"
 
-# Regenerate Python bindings to the C API
-./python/scripts/generate-declarations.py
-
-# Regenerate Julia bindings to the C API
-./julia/scripts/generate-declarations.py
+# Regenerate Python and Julia bindings to the C API
+./scripts/update-declarations.py python julia

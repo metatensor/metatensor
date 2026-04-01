@@ -299,6 +299,7 @@ pub type mts_create_array_callback_t = ::std::option::Option<
     unsafe extern "C" fn(
         shape: *const usize,
         shape_count: usize,
+        dtype: DLDataType,
         array: *mut mts_array_t,
     ) -> mts_status_t,
 >;

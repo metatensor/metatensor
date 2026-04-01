@@ -19,6 +19,7 @@ namespace details {
     METATENSOR_TORCH_EXPORT mts_status_t create_torch_array(
         const uintptr_t* shape_ptr,
         uintptr_t shape_count,
+        DLDataType dtype,
         mts_array_t* array
     );
 }
