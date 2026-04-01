@@ -5,6 +5,8 @@ use std::ffi::CString;
 use zip::{ZipArchive, ZipWriter};
 
 use crate::utils::ConstCString;
+use dlpk::sys::DLDataType;
+
 use crate::{TensorMap, Error, mts_array_t};
 
 use super::PathOrBuffer;
@@ -48,7 +50,7 @@ pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
 /// See the C API documentation for more information on the file format.
 pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     where R: std::io::Read + std::io::Seek,
-          F: Fn(Vec<usize>) -> Result<mts_array_t, Error>
+          F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>
 {
     let mut archive = ZipArchive::new(reader).map_err(|e| ("<root>".into(), e))?;
 
