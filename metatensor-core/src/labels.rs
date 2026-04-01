@@ -142,9 +142,9 @@ impl Labels {
 
     /// Create new Labels from an existing `mts_array_t`.
     ///
-    /// If the array is on CPU, values are materialized and uniqueness is
-    /// verified. If the array is on a non-CPU device, this returns an error
-    /// (use `from_array_assume_unique` for GPU arrays).
+    /// Values are materialized on CPU (via DLPack) and uniqueness is verified
+    /// regardless of the original device. The array itself is kept as-is (it
+    /// may live on GPU); only the uniqueness check needs CPU data.
     pub fn from_array(names: &[&str], array: mts_array_t) -> Result<Labels, Error> {
         let names_vec = Labels::validate_names(names)?;
 
@@ -169,17 +169,9 @@ impl Labels {
             ));
         }
 
-        // check if data lives on CPU
-        let device = array.device()?;
-        let cpu = dlpk::sys::DLDevice::cpu();
-        if device.device_type != cpu.device_type || device.device_id != cpu.device_id {
-            return Err(Error::InvalidParameter(
-                "can not verify uniqueness of labels on non-CPU device, \
-                use Labels::from_array_assume_unique instead".into()
-            ));
-        }
-
-        // CPU array: materialize values and check uniqueness
+        // Materialize values on CPU for uniqueness verification.
+        // This works regardless of the array's device -- the array's
+        // as_dlpack callback handles the device->CPU transfer.
         let values = crate::labels_array::materialize_values_from_array(&array, names_vec.len());
 
         // check uniqueness

@@ -40,7 +40,9 @@ namespace metatensor {
 
 /// Tag for the creation of Labels without uniqueness checks
 struct assume_unique {};
-/// Tag for the creation of Labels from an mts_array_t (with uniqueness checks)
+/// Tag for the creation of Labels from an mts_array_t with uniqueness checks.
+/// Needed for disambiguation: without the tag, `Labels(names, {{0}})` is
+/// ambiguous between the initializer_list and mts_array_t constructors.
 struct from_array {};
 
 /// A set of labels used to carry metadata associated with a tensor map.
@@ -104,7 +106,7 @@ public:
 
     /// Create Labels from the given names and a backing mts_array_t.
     ///
-    /// The array must be on CPU and entries are verified for uniqueness.
+    /// Entries are verified for uniqueness (data is moved to CPU if needed).
     /// The Labels take ownership of the array.
     Labels(const std::vector<std::string>& names, mts_array_t array, from_array):
         labels_(nullptr)

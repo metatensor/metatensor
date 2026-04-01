@@ -53,8 +53,7 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 
 
 TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
-    tensor_(keys->as_metatensor(), blocks_from_torch(blocks)),
-    keys_cache_(keys)
+    tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
 {
     // Block-vs-block device/dtype consistency is enforced by metatensor-core.
     // The torch-specific check below ensures keys (which may live on GPU) are
@@ -72,14 +71,10 @@ TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& bl
 
 TensorMap TensorMapHolder::copy() const {
     auto result = TensorMapHolder(this->tensor_.clone());
-    result.keys_cache_ = this->keys_cache_;
     return torch::make_intrusive<TensorMapHolder>(std::move(result));
 }
 
 Labels TensorMapHolder::keys() const {
-    if (keys_cache_.has_value()) {
-        return keys_cache_.value();
-    }
     return torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
 }
 

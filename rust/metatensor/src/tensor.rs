@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
-use crate::c_api::{mts_tensormap_t, mts_labels_t, mts_array_t};
+use crate::c_api::{mts_tensormap_t, mts_array_t};
 
 use crate::errors::{check_status, check_ptr};
 use crate::{Error, TensorBlock, TensorBlockRef, Labels, LabelValue};

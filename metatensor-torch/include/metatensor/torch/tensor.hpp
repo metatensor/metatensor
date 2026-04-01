@@ -198,15 +198,9 @@ private:
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;
 
-    /// Cached keys for device preservation across round-trips through Rust.
-    /// Set in the public constructor (which receives a torch Labels with
-    /// device info); absent for intermediate results from Rust operations.
-    torch::optional<Labels> keys_cache_;
-
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
     explicit TensorMapHolder(metatensor::TensorMap tensor):
-        tensor_(std::move(tensor)),
-        keys_cache_(torch::nullopt) {}
+        tensor_(std::move(tensor)) {}
 };
 
 

@@ -311,11 +311,9 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     }
 
     auto array = torch_tensor_to_labels_mts_array(values_);
-    if (values_.is_cpu()) {
-        labels_ = metatensor::Labels(names_, std::move(array), metatensor::from_array{});
-    } else {
-        labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
-    }
+    // Always verify uniqueness: from_array{} moves data to CPU internally
+    // if needed. Only the explicit assume_unique constructor skips this.
+    labels_ = metatensor::Labels(names_, std::move(array), metatensor::from_array{});
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):

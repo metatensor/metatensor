@@ -497,13 +497,3 @@ def setup_functions(lib):
         POINTER(mts_tensormap_t),
     ]
     lib.mts_tensormap_save_buffer.restype = _check_status
-
-    # Internal: raw i32 pointer access for labels values
-    # (not in public C header, excluded from cbindgen)
-    lib.mts_labels_values_raw.argtypes = [
-        POINTER(mts_labels_t),
-        POINTER(POINTER(ctypes.c_int32)),
-        POINTER(c_uintptr_t),
-        POINTER(c_uintptr_t),
-    ]
-    lib.mts_labels_values_raw.restype = _check_status
