@@ -13,24 +13,36 @@ use super::status::{mts_status_t, catch_unwind};
 /// of shape `(count, size)`, with a set of names associated with the columns of
 /// this array (often called *dimensions*). Each row/entry in this array is
 /// unique, and they are often (but not always) sorted in lexicographic order.
+///
+/// Internally, this is a raw `Arc<Labels>` pointer (via `Arc::into_raw`),
+/// avoiding a `Box` indirection. The `#[repr(transparent)]` wrapper allows
+/// safe casting between `*const mts_labels_t` and `*const Labels`.
+#[repr(transparent)]
 #[allow(non_camel_case_types)]
-pub struct mts_labels_t(Arc<Labels>);
+pub struct mts_labels_t(Labels);
 
 impl mts_labels_t {
-    /// Create a raw pointer to `mts_labels_t` using a rust Box wrapping an Arc
+    /// Create a raw pointer to `mts_labels_t` from an `Arc<Labels>`.
+    ///
+    /// Uses `Arc::into_raw` directly, avoiding a `Box` indirection.
+    /// The caller is responsible for eventually calling `from_raw` or
+    /// `mts_labels_free` to release the Arc.
     pub fn into_raw(labels: Arc<Labels>) -> *mut mts_labels_t {
-        Box::into_raw(Box::new(mts_labels_t(labels)))
+        Arc::into_raw(labels) as *mut mts_labels_t
     }
 
-    /// Take a raw pointer created by `into_raw` and extract the Arc<Labels>.
+    /// Take a raw pointer created by `into_raw` and extract the `Arc<Labels>`.
     /// The pointer is consumed by this function and no longer valid.
     pub unsafe fn from_raw(ptr: *mut mts_labels_t) -> Arc<Labels> {
-        Box::from_raw(ptr).0
+        Arc::from_raw(ptr as *const Labels)
     }
 
-    /// Clone the inner Arc without consuming the pointer
-    pub fn arc_clone(&self) -> Arc<Labels> {
-        Arc::clone(&self.0)
+    /// Clone the `Arc` from a raw pointer without consuming it.
+    ///
+    /// Increments the strong reference count and returns a new `Arc<Labels>`.
+    pub unsafe fn arc_clone(ptr: *const mts_labels_t) -> Arc<Labels> {
+        Arc::increment_strong_count(ptr as *const Labels);
+        Arc::from_raw(ptr as *const Labels)
     }
 }
 
@@ -373,7 +385,7 @@ pub unsafe extern "C" fn mts_labels_clone(
     let status = catch_unwind(move || {
         check_pointers_non_null!(labels);
 
-        let arc = (*labels).arc_clone();
+        let arc = mts_labels_t::arc_clone(labels);
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(arc);

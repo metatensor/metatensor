@@ -28,12 +28,12 @@ pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
 pub const MTS_INTERNAL_ERROR: i32 = 255;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct mts_block_t {
+pub struct mts_labels_t {
     _unused: [u8; 0],
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct mts_labels_t {
+pub struct mts_block_t {
     _unused: [u8; 0],
 }
 #[repr(C)]

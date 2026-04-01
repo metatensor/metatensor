@@ -85,7 +85,7 @@ pub unsafe extern "C" fn mts_block(
     let status = catch_unwind(move || {
         check_pointers_non_null!(samples, properties);
 
-        let samples = (*samples).arc_clone();
+        let samples = mts_labels_t::arc_clone(samples);
 
         let mut rust_components = Vec::new();
         if components_count != 0 {
@@ -93,11 +93,11 @@ pub unsafe extern "C" fn mts_block(
             for i in 0..components_count {
                 let component = *components.add(i);
                 check_pointers_non_null!(component);
-                rust_components.push((*component).arc_clone());
+                rust_components.push(mts_labels_t::arc_clone(component));
             }
         }
 
-        let properties = (*properties).arc_clone();
+        let properties = mts_labels_t::arc_clone(properties);
 
         let block = TensorBlock::new(data, samples, rust_components, properties)?;
 

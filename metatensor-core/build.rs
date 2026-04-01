@@ -24,8 +24,16 @@ fn main() {
     config.autogen_warning = Some(generated_comment.into());
     config.includes.push("metatensor/version.h".into());
     config.includes.push("metatensor/dlpack/dlpack.h".into());
-    config.after_includes = Some("typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;".into());
+    config.after_includes = Some(
+        "typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;\n\
+         typedef struct mts_labels_t mts_labels_t;".into()
+    );
 
+    // mts_labels_t is repr(transparent) over Labels for Arc::into_raw, but
+    // cbindgen would resolve it to `typedef struct Labels mts_labels_t` which
+    // clashes with the C++ metatensor::Labels class. Exclude the type and use
+    // the manual forward declaration above instead.
+    config.export.exclude.push("mts_labels_t".into());
     // Internal functions used by metatensor-torch but not part of the public C API
     config.export.exclude.push("mts_labels_values_raw".into());
     config.export.exclude.push("mts_labels_set_cached_values".into());

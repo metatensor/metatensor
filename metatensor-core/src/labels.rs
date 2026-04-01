@@ -57,9 +57,8 @@ pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
     /// with the C API
     names: Vec<ConstCString>,
-    /// Number of entries (rows), cached from array shape or values len
-    count: usize,
-    /// Always-present backing array (primary data source)
+    /// Always-present backing array (primary data source).
+    /// Count (number of rows) is derived from `array.shape()[0]`.
     array: mts_array_t,
     /// CPU values, lazily materialized from array via DLPack
     values: OnceCell<Vec<LabelValue>>,
@@ -76,7 +75,7 @@ pub struct Labels {
 
 impl PartialEq for Labels {
     fn eq(&self, other: &Self) -> bool {
-        self.names == other.names && self.count == other.count && self.values_cpu() == other.values_cpu()
+        self.names == other.names && self.count() == other.count() && self.values_cpu() == other.values_cpu()
     }
 }
 
@@ -200,7 +199,6 @@ impl Labels {
 
         Ok(Labels {
             names: names_vec,
-            count,
             array,
             values: OnceCell::with_value(values),
             sorted: OnceCell::new(),
@@ -263,7 +261,6 @@ impl Labels {
 
                 return Ok(Labels {
                     names: names_vec,
-                    count,
                     array,
                     values: OnceCell::with_value(values),
                     sorted: OnceCell::new(),
@@ -274,7 +271,6 @@ impl Labels {
 
         Ok(Labels {
             names: names_vec,
-            count,
             array,
             values: OnceCell::new(),
             sorted: OnceCell::new(),
@@ -324,7 +320,6 @@ impl Labels {
             );
             return Ok(Labels {
                 names: Vec::new(),
-                count: 0,
                 array,
                 values: OnceCell::with_value(Vec::new()),
                 sorted: OnceCell::with_value(true),
@@ -355,7 +350,6 @@ impl Labels {
 
         Ok(Labels {
             names,
-            count,
             array,
             values: OnceCell::with_value(values),
             sorted: OnceCell::new(),
@@ -406,14 +400,16 @@ impl Labels {
         &self.array
     }
 
-    /// Get the total number of entries in this set of labels
+    /// Get the total number of entries in this set of labels.
+    ///
+    /// Derived from `array.shape()[0]` -- no cached field.
     pub fn count(&self) -> usize {
-        self.count
+        self.array.shape().expect("labels array shape must be available")[0]
     }
 
     /// Check if this set of Labels is empty (contains no entry)
     pub fn is_empty(&self) -> bool {
-        self.count == 0
+        self.count() == 0
     }
 
     /// Check whether the given `label` is part of this set of labels
@@ -441,7 +437,7 @@ impl Labels {
         return Iter {
             ptr: values.as_ptr(),
             cur: 0,
-            len: self.count,
+            len: self.count(),
             chunk_len: self.size(),
             phantom: std::marker::PhantomData,
         };
@@ -497,7 +493,6 @@ impl Labels {
 
         return Ok(Labels {
             names: self.names.clone(),
-            count,
             array,
             values: OnceCell::with_value(values),
             sorted: OnceCell::new(),
@@ -570,7 +565,6 @@ impl Labels {
 
         return Ok(Labels {
             names: self.names.clone(),
-            count,
             array,
             values: OnceCell::with_value(values),
             sorted,
@@ -633,7 +627,6 @@ impl Labels {
 
         return Ok(Labels {
             names: self.names.clone(),
-            count,
             array,
             values: OnceCell::with_value(values),
             sorted,

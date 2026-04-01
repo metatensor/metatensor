@@ -98,7 +98,7 @@ pub unsafe extern "C" fn mts_tensormap(
             }
         }
 
-        let keys = (*keys).arc_clone();
+        let keys = mts_labels_t::arc_clone(keys);
         let tensor = TensorMap::new(keys, blocks_vec)?;
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -354,7 +354,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = (*keys_to_move).arc_clone();
+        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
 
         let moved = (*tensor).keys_to_properties(&keys_to_move, &fill_value, sort_samples)?;
 
@@ -466,7 +466,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = (*keys_to_move).arc_clone();
+        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
 
         let moved = (*tensor).keys_to_samples(&keys_to_move, &fill_value, sort_samples)?;
 

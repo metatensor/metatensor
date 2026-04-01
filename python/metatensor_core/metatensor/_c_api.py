@@ -101,11 +101,11 @@ DLManagedTensorVersioned._fields_ = [
 ]
 
 
-class mts_block_t(ctypes.Structure):
+class mts_labels_t(ctypes.Structure):
     pass
 
 
-class mts_labels_t(ctypes.Structure):
+class mts_block_t(ctypes.Structure):
     pass
 
 

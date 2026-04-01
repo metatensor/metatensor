@@ -75,10 +75,10 @@ const kDLFloat4_e2m1fn = DLDataTypeCode(17)
 
 
 # ===== Struct definitions
-struct mts_block_t
+struct mts_labels_t
 end
 
-struct mts_labels_t
+struct mts_block_t
 end
 
 struct mts_tensormap_t

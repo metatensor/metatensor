@@ -15,6 +15,7 @@
 #include "metatensor/version.h"
 #include "metatensor/dlpack/dlpack.h"
 typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
+typedef struct mts_labels_t mts_labels_t;
 
 /**
  * Status code used when a function succeeded
@@ -57,17 +58,6 @@ typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
  * and component labels but share the property labels with the values.
  */
 typedef struct mts_block_t mts_block_t;
-
-/**
- * Opaque type representing a set of labels used to carry metadata associated
- * with a tensor map.
- *
- * This is similar to a list of `count` named tuples, but stored as a 2D array
- * of shape `(count, size)`, with a set of names associated with the columns of
- * this array (often called *dimensions*). Each row/entry in this array is
- * unique, and they are often (but not always) sorted in lexicographic order.
- */
-typedef struct mts_labels_t mts_labels_t;
 
 /**
  * Opaque type representing a `TensorMap`.
@@ -343,9 +333,9 @@ const char *mts_last_error(void);
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_labels_t *mts_labels_create(const char *const *names,
-                                       uintptr_t names_count,
-                                       struct mts_array_t array);
+mts_labels_t *mts_labels_create(const char *const *names,
+                                uintptr_t names_count,
+                                struct mts_array_t array);
 
 /**
  * Create a new set of Labels from the given dimension names and values
@@ -368,9 +358,9 @@ struct mts_labels_t *mts_labels_create(const char *const *names,
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
-                                                     uintptr_t names_count,
-                                                     struct mts_array_t array);
+mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
+                                              uintptr_t names_count,
+                                              struct mts_array_t array);
 
 /**
  * Get the dimension names for the given set of `labels`.
@@ -385,7 +375,7 @@ struct mts_labels_t *mts_labels_create_assume_unique(const char *const *names,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_dimensions(const struct mts_labels_t *labels,
+mts_status_t mts_labels_dimensions(const mts_labels_t *labels,
                                    const char *const **names,
                                    uintptr_t *count);
 
@@ -405,7 +395,7 @@ mts_status_t mts_labels_dimensions(const struct mts_labels_t *labels,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_values(const struct mts_labels_t *labels, struct mts_array_t *array);
+mts_status_t mts_labels_values(const mts_labels_t *labels, struct mts_array_t *array);
 
 /**
  * Get the position of the entry defined by the `values` array in the given set
@@ -421,7 +411,7 @@ mts_status_t mts_labels_values(const struct mts_labels_t *labels, struct mts_arr
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_position(const struct mts_labels_t *labels,
+mts_status_t mts_labels_position(const mts_labels_t *labels,
                                  const int32_t *values,
                                  uintptr_t values_count,
                                  int64_t *result);
@@ -441,7 +431,7 @@ mts_status_t mts_labels_position(const struct mts_labels_t *labels,
  *          pointer in case of error. In case of error, you can use
  *          `mts_last_error()` to get the error message.
  */
-struct mts_labels_t *mts_labels_clone(const struct mts_labels_t *labels);
+mts_labels_t *mts_labels_clone(const mts_labels_t *labels);
 
 /**
  * Take the union of two sets of labels.
@@ -470,9 +460,9 @@ struct mts_labels_t *mts_labels_clone(const struct mts_labels_t *labels);
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_union(const struct mts_labels_t *first,
-                              const struct mts_labels_t *second,
-                              struct mts_labels_t **result,
+mts_status_t mts_labels_union(const mts_labels_t *first,
+                              const mts_labels_t *second,
+                              mts_labels_t **result,
                               int64_t *first_mapping,
                               uintptr_t first_mapping_count,
                               int64_t *second_mapping,
@@ -507,9 +497,9 @@ mts_status_t mts_labels_union(const struct mts_labels_t *first,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_intersection(const struct mts_labels_t *first,
-                                     const struct mts_labels_t *second,
-                                     struct mts_labels_t **result,
+mts_status_t mts_labels_intersection(const mts_labels_t *first,
+                                     const mts_labels_t *second,
+                                     mts_labels_t **result,
                                      int64_t *first_mapping,
                                      uintptr_t first_mapping_count,
                                      int64_t *second_mapping,
@@ -538,9 +528,9 @@ mts_status_t mts_labels_intersection(const struct mts_labels_t *first,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_difference(const struct mts_labels_t *first,
-                                   const struct mts_labels_t *second,
-                                   struct mts_labels_t **result,
+mts_status_t mts_labels_difference(const mts_labels_t *first,
+                                   const mts_labels_t *second,
+                                   mts_labels_t **result,
                                    int64_t *first_mapping,
                                    uintptr_t first_mapping_count);
 
@@ -565,8 +555,8 @@ mts_status_t mts_labels_difference(const struct mts_labels_t *first,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_select(const struct mts_labels_t *labels,
-                               const struct mts_labels_t *selection,
+mts_status_t mts_labels_select(const mts_labels_t *labels,
+                               const mts_labels_t *selection,
                                int64_t *selected,
                                uintptr_t *selected_count);
 
@@ -579,7 +569,7 @@ mts_status_t mts_labels_select(const struct mts_labels_t *labels,
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_free(struct mts_labels_t *labels);
+mts_status_t mts_labels_free(mts_labels_t *labels);
 
 /**
  * Register a new data origin with the given `name`. Calling this function
@@ -631,10 +621,10 @@ mts_status_t mts_get_data_origin(mts_data_origin_t origin, char *buffer, uintptr
  *          to get the error message.
  */
 struct mts_block_t *mts_block(struct mts_array_t data,
-                              const struct mts_labels_t *samples,
-                              const struct mts_labels_t *const *components,
+                              const mts_labels_t *samples,
+                              const mts_labels_t *const *components,
                               uintptr_t components_count,
-                              const struct mts_labels_t *properties);
+                              const mts_labels_t *properties);
 
 /**
  * Free the memory associated with a `block` previously created with
@@ -677,7 +667,7 @@ struct mts_block_t *mts_block_copy(const struct mts_block_t *block);
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_labels_t *mts_block_labels(const struct mts_block_t *block, uintptr_t axis);
+mts_labels_t *mts_block_labels(const struct mts_block_t *block, uintptr_t axis);
 
 /**
  * Get one of the gradients in this `block`.
@@ -802,7 +792,7 @@ mts_status_t mts_block_dtype(const struct mts_block_t *block, DLDataType *dtype)
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_tensormap_t *mts_tensormap(const struct mts_labels_t *keys,
+struct mts_tensormap_t *mts_tensormap(const mts_labels_t *keys,
                                       struct mts_block_t **blocks,
                                       uintptr_t blocks_count);
 
@@ -846,7 +836,7 @@ struct mts_tensormap_t *mts_tensormap_copy(const struct mts_tensormap_t *tensor)
  *          `NULL` pointer in case of error. In case of error, you can use
  *          `mts_last_error()` to get the error message.
  */
-struct mts_labels_t *mts_tensormap_keys(const struct mts_tensormap_t *tensor);
+mts_labels_t *mts_tensormap_keys(const struct mts_tensormap_t *tensor);
 
 /**
  * Get a pointer to the `index`-th block in this tensor map.
@@ -893,7 +883,7 @@ mts_status_t mts_tensormap_block_by_id(struct mts_tensormap_t *tensor,
 mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
                                            uintptr_t *block_indexes,
                                            uintptr_t *count,
-                                           const struct mts_labels_t *selection);
+                                           const mts_labels_t *selection);
 
 /**
  * Merge blocks with the same value for selected keys dimensions along the
@@ -937,7 +927,7 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  *          to get the error message.
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensormap_t *tensor,
-                                                         const struct mts_labels_t *keys_to_move,
+                                                         const mts_labels_t *keys_to_move,
                                                          struct mts_array_t fill_value,
                                                          bool sort_samples);
 
@@ -993,7 +983,7 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  *          error message.
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap_t *tensor,
-                                                      const struct mts_labels_t *keys_to_move,
+                                                      const mts_labels_t *keys_to_move,
                                                       struct mts_array_t fill_value,
                                                       bool sort_samples);
 
@@ -1085,7 +1075,7 @@ mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataTyp
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_labels_t *mts_labels_load(const char *path);
+mts_labels_t *mts_labels_load(const char *path);
 
 /**
  * Load labels from the given in-memory buffer.
@@ -1100,7 +1090,7 @@ struct mts_labels_t *mts_labels_load(const char *path);
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
  */
-struct mts_labels_t *mts_labels_load_buffer(const uint8_t *buffer, uintptr_t buffer_count);
+mts_labels_t *mts_labels_load_buffer(const uint8_t *buffer, uintptr_t buffer_count);
 
 /**
  * Save labels to the file at the given path.
@@ -1115,7 +1105,7 @@ struct mts_labels_t *mts_labels_load_buffer(const uint8_t *buffer, uintptr_t buf
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-mts_status_t mts_labels_save(const char *path, const struct mts_labels_t *labels);
+mts_status_t mts_labels_save(const char *path, const mts_labels_t *labels);
 
 /**
  * Save labels to an in-memory buffer.
@@ -1148,7 +1138,7 @@ mts_status_t mts_labels_save_buffer(uint8_t **buffer,
                                     uintptr_t *buffer_count,
                                     void *realloc_user_data,
                                     mts_realloc_buffer_t realloc,
-                                    const struct mts_labels_t *labels);
+                                    const mts_labels_t *labels);
 
 /**
  * Load a tensor block from the file at the given path.
