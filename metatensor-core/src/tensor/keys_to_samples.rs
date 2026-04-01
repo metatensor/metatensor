@@ -3,7 +3,7 @@ use std::sync::Arc;
 use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
-use crate::data::mts_sample_mapping_t;
+use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
@@ -26,9 +26,10 @@ impl TensorMap {
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     ///
-    /// This function is only implemented if all merged block have the same
-    /// property labels.
-    pub fn keys_to_samples(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    /// If the blocks have different property labels, the resulting block will
+    /// have the union of all property labels, and values will be padded with
+    /// the given `fill_value`.
+    pub fn keys_to_samples(&self, keys_to_move: &Labels, fill_value: &mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -67,6 +68,7 @@ impl TensorMap {
                 &blocks_to_merge,
                 &names_to_move,
                 sort_samples,
+                fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -97,13 +99,16 @@ impl TensorMap {
                     &blocks_to_merge,
                     &names_to_move,
                     sort_samples,
+                    fill_value,
                 )?);
             }
         }
+
         let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
+
         return Ok(tensor);
     }
 }
@@ -113,6 +118,7 @@ fn merge_blocks_along_samples(
     blocks_to_merge: &[KeyAndBlock],
     extracted_names: &[&str],
     sort_samples: bool,
+    fill_value: &mts_array_t,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
@@ -126,20 +132,12 @@ fn merge_blocks_along_samples(
     }
 
     let first_components_label = &first_block.components;
-    let first_properties_label = &first_block.properties;
 
     for KeyAndBlock{block, ..} in blocks_to_merge {
         if &block.components != first_components_label {
             return Err(Error::InvalidParameter(
                 "can not move keys to samples if the blocks have \
                 different components labels, call components_to_properties first".into()
-            ))
-        }
-
-        if &block.properties != first_properties_label {
-            return Err(Error::InvalidParameter(
-                "can not move keys to samples if the blocks have \
-                different property labels".into() // TODO: this might be possible
             ))
         }
     }
@@ -156,28 +154,28 @@ fn merge_blocks_along_samples(
     );
 
     let new_components = first_block.components.to_vec();
-    let new_properties = Arc::clone(&first_block.properties);
 
-    let mut new_shape = first_block.values.shape()?.to_vec();
-    new_shape[0] = merged_samples.count();
-    let mut new_data = first_block.values.create(&new_shape)?;
-
-    let property_range = 0..new_properties.count();
+    // merge properties across the blocks
+    let (new_properties, property_mappings) = merge_properties(blocks_to_merge)?;
 
     debug_assert_eq!(blocks_to_merge.len(), samples_mappings.len());
-    for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
-        new_data.move_samples_from(
-            &block.values,
-            samples_mapping,
-            property_range.clone(),
-        )?;
-    }
+    debug_assert_eq!(blocks_to_merge.len(), property_mappings.len());
+
+    let new_data = merge_data(
+        &first_block.values,
+        merged_samples.count(),
+        new_properties.count(),
+        &property_mappings,
+        &samples_mappings,
+        &blocks_to_merge.iter().map(|b| &b.block.values).collect::<Vec<_>>(),
+        fill_value,
+    )?;
 
     let mut new_block = TensorBlock::new(
         new_data,
         merged_samples,
         new_components,
-        new_properties
+        new_properties.clone()
     ).expect("invalid block");
 
     // now collect & merge the different gradients
@@ -186,37 +184,44 @@ fn merge_blocks_along_samples(
             blocks_to_merge, parameter, &samples_mappings
         );
 
-        let mut new_shape = first_gradient.values.shape()?.to_vec();
-        new_shape[0] = new_gradient_samples.count();
-        let mut new_gradient = first_block.values.create(&new_shape)?;
         let new_components = first_gradient.components.to_vec();
+
+        let mut gradient_samples_mappings = Vec::new();
+        let mut gradients_to_merge = Vec::new();
 
         for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
             let gradient = block.gradient(parameter).expect("missing gradient");
             debug_assert!(*gradient.components == *new_components);
 
-            let mut samples_to_move = Vec::new();
-            for (sample_i, grad_sample) in gradient.samples.iter().enumerate() {
+            gradients_to_merge.push(&gradient.values);
+
+            // Gradients share the same properties as the values, so we reuse property_mappings[i]
+            // which is handled inside merge_data
+            let mut gradient_mapping = Vec::new();
+            for grad_sample in gradient.samples.iter() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
-                let old_sample_i = grad_sample[0].usize();
+                let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");
 
-                let mapping = &samples_mapping[old_sample_i];
-                debug_assert_eq!(mapping.input, old_sample_i);
-                grad_sample[0] = mapping.output.into();
+                let new_sample_i = samples_mapping[old_sample_i];
+                grad_sample[0] = i32::try_from(new_sample_i).expect("could not convert to i32");
 
-                let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                samples_to_move.push(mts_sample_mapping_t {
-                    input: sample_i,
-                    output: new_sample_i,
-                });
+                let new_grad_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
+
+                gradient_mapping.push(new_grad_sample_i);
             }
-            new_gradient.move_samples_from(
-                &gradient.values,
-                &samples_to_move,
-                property_range.clone(),
-            )?;
+            gradient_samples_mappings.push(gradient_mapping);
         }
+
+        let new_gradient = merge_data(
+            &first_gradient.values,
+            new_gradient_samples.count(),
+            new_properties.count(),
+            &property_mappings,
+            &gradient_samples_mappings,
+            &gradients_to_merge,
+            fill_value,
+        )?;
 
         let new_gradient = TensorBlock::new(
             new_gradient,
@@ -229,4 +234,100 @@ fn merge_blocks_along_samples(
     }
 
     return Ok(new_block);
+}
+
+fn merge_properties(
+    blocks_to_merge: &[KeyAndBlock],
+) -> Result<(Arc<Labels>, Vec<Vec<usize>>), Error> {
+    let first_block = blocks_to_merge[0].block;
+    let mut new_properties = Arc::clone(&first_block.properties);
+    let mut property_mappings = Vec::with_capacity(blocks_to_merge.len());
+
+    // mapping for the first block (identity, since new_properties starts as first_block.properties)
+    let first_mapping = (0..new_properties.count()).collect::<Vec<_>>();
+    property_mappings.push(first_mapping);
+
+    for KeyAndBlock{block, ..} in &blocks_to_merge[1..] {
+        let mut mapping_for_current_union = vec![0; new_properties.count()];
+        let mut mapping_for_new_block = vec![0; block.properties.count()];
+
+        let next_properties = new_properties.union(
+            &block.properties,
+            &mut mapping_for_current_union,
+            &mut mapping_for_new_block
+        )?;
+
+        let mapping_for_current_union = mapping_for_current_union.into_iter()
+            .map(|i| usize::try_from(i).expect("mapping contains negative value") )
+            .collect::<Vec<_>>();
+        let mapping_for_new_block = mapping_for_new_block.into_iter()
+            .map(|i| usize::try_from(i).expect("mapping contains negative value") )
+            .collect::<Vec<_>>();
+
+        // update existing mappings to point to the new positions in next_properties
+        for mapping in &mut property_mappings {
+            for entry in mapping.iter_mut() {
+                *entry = mapping_for_current_union[*entry];
+            }
+        }
+
+        // add mapping for the new block
+        property_mappings.push(mapping_for_new_block);
+
+        new_properties = Arc::new(next_properties);
+    }
+
+    Ok((new_properties, property_mappings))
+}
+
+fn merge_data(
+    prototype_array: &crate::data::mts_array_t,
+    samples_count: usize,
+    properties_count: usize,
+    property_mappings: &[Vec<usize>],
+    samples_mappings: &[Vec<usize>],
+    blocks: &[&crate::data::mts_array_t],
+    fill_value: &crate::data::mts_array_t,
+) -> Result<crate::data::mts_array_t, Error> {
+    let mut new_shape = prototype_array.shape()?.to_vec();
+    new_shape[0] = samples_count;
+    let len = new_shape.len();
+    new_shape[len - 1] = properties_count;
+
+    let mut output = prototype_array.create(&new_shape, fill_value)?;
+
+    for (i, (block, samples_mapping)) in blocks.iter().zip(samples_mappings).enumerate() {
+        let property_mapping = &property_mappings[i];
+        let mut movements = Vec::new();
+
+        for (sample_i, &new_sample_i) in samples_mapping.iter().enumerate() {
+            // we need to decompose the property mapping into contiguous chunks
+            let mut prop_i = 0;
+            while prop_i < property_mapping.len() {
+                let start_in = prop_i;
+                let start_out = property_mapping[prop_i];
+
+                let mut length = 1;
+                while prop_i + length < property_mapping.len() {
+                    if property_mapping[prop_i + length] == start_out + length {
+                        length += 1;
+                    } else {
+                        break;
+                    }
+                }
+
+                movements.push(mts_data_movement_t {
+                    sample_in: sample_i,
+                    sample_out: new_sample_i,
+                    properties_start_in: start_in,
+                    properties_start_out: start_out,
+                    properties_length: length,
+                });
+
+                prop_i += length;
+            }
+        }
+        output.move_data(block, &movements)?;
+    }
+    Ok(output)
 }

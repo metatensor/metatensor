@@ -55,26 +55,15 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
     tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
 {
-    if (blocks.empty()) {
-        // nothing to check
-        return;
-    }
-
-    auto device = keys->values().device();
-    auto scalar_type = blocks[0]->values().scalar_type();
-
-    for (const auto& block : blocks) {
-        if (block->values().device() != device) {
+    // Block-vs-block device/dtype consistency is enforced by metatensor-core.
+    // The torch-specific check below ensures keys (which may live on GPU) are
+    // on the same device as the blocks.
+    if (!blocks.empty()) {
+        auto device = keys->values().device();
+        if (blocks[0]->values().device() != device) {
             C10_THROW_ERROR(ValueError,
                 "cannot create TensorMap: keys and blocks must be on the same device, "
-                "got " + block->values().device().str() + " and " + device.str()
-            );
-        }
-        if (block->values().scalar_type() != scalar_type) {
-            C10_THROW_ERROR(ValueError,
-                "cannot create TensorMap: all blocks must have the same dtype, "
-                "got " + scalar_type_name(block->values().scalar_type()) +
-                " and " + scalar_type_name(scalar_type)
+                "got " + blocks[0]->values().device().str() + " and " + device.str()
             );
         }
     }
@@ -343,16 +332,30 @@ static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_mo
     }
 }
 
-TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool sort_samples) const {
+TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
     auto device = this->keys()->values().device();
+
+    // Create a fill_value mts_array_t matching the tensor's dtype.
+    // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
+    ::mts_array_t fv_array = ::mts_array_t{};
+    if (this->keys()->count() > 0) {
+        auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+        auto first_block = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+        auto values_dtype = first_block->values().scalar_type();
+        auto fv_tensor = torch::full({1}, fill_value, torch::TensorOptions().dtype(values_dtype));
+        fv_array = metatensor::DataArrayBase::to_mts_array_t(
+            std::make_unique<TorchDataArray>(std::move(fv_tensor))
+        );
+    }
+
     if (keys_to_move.isString() || keys_to_move.isList() || keys_to_move.isTuple()) {
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_properties first argument");
-        auto tensor = tensor_.keys_to_properties(selection, sort_samples);
+        auto tensor = tensor_.keys_to_properties(selection, fv_array, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
         return result->to(torch::nullopt, device);
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
-        auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), sort_samples);
+        auto tensor = tensor_.keys_to_properties(selection->as_metatensor(), fv_array, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
         return result->to(torch::nullopt, device);
     } else {
@@ -362,16 +365,30 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, bool s
     }
 }
 
-TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, bool sort_samples) const {
+TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
     auto device = this->keys()->values().device();
+
+    // Create a fill_value mts_array_t matching the tensor's dtype.
+    // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
+    ::mts_array_t fv_array = ::mts_array_t{};
+    if (this->keys()->count() > 0) {
+        auto block_s = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+        auto first_block_s = torch::make_intrusive<TensorBlockHolder>(std::move(block_s), torch::IValue());
+        auto values_dtype = first_block_s->values().scalar_type();
+        auto fv_tensor = torch::full({1}, fill_value, torch::TensorOptions().dtype(values_dtype));
+        fv_array = metatensor::DataArrayBase::to_mts_array_t(
+            std::make_unique<TorchDataArray>(std::move(fv_tensor))
+        );
+    }
+
     if (keys_to_move.isString() || keys_to_move.isList() || keys_to_move.isTuple()) {
         auto selection = extract_list_str(keys_to_move, "TensorMap::keys_to_samples first argument");
-        auto tensor = tensor_.keys_to_samples(selection, sort_samples);
+        auto tensor = tensor_.keys_to_samples(selection, fv_array, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
         return result->to(torch::nullopt, device);
     } else if (keys_to_move.isCustomClass()) {
         auto selection = keys_to_move.toCustomClass<LabelsHolder>();
-        auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), sort_samples);
+        auto tensor = tensor_.keys_to_samples(selection->as_metatensor(), fv_array, sort_samples);
         auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
         return result->to(torch::nullopt, device);
     } else {

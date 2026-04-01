@@ -48,11 +48,18 @@ public:
 
     mts_data_origin_t origin() const override;
 
+    DLDevice device() const override;
+
+    DLDataType dtype() const override;
+
     std::unique_ptr<metatensor::DataArrayBase> copy() const override;
 
-    std::unique_ptr<metatensor::DataArrayBase> create(std::vector<uintptr_t> shape) const override;
+    std::unique_ptr<metatensor::DataArrayBase> create(
+        std::vector<uintptr_t> shape,
+        mts_array_t fill_value
+    ) const override;
 
-    double* data() & override;
+    DLManagedTensorVersioned* as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) override;
 
     const std::vector<uintptr_t>& shape() const & override;
 
@@ -60,11 +67,9 @@ public:
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override;
 
-    void move_samples_from(
+    void move_data(
         const metatensor::DataArrayBase& input,
-        std::vector<mts_sample_mapping_t> samples,
-        uintptr_t property_start,
-        uintptr_t property_end
+        std::vector<mts_data_movement_t> moves
     ) override;
 
 private:

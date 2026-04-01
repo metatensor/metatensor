@@ -603,3 +603,102 @@ def test_save_load_info(tensor, use_numpy):
     for use_numpy_load in (False, True):
         loaded = mts.io.load_buffer(buffer, use_numpy=use_numpy_load)
         assert loaded.get_info("test") == "value"
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        # Standard Numeric
+        np.int8,
+        np.int16,
+        np.int32,
+        np.int64,
+        np.uint8,
+        np.uint16,
+        np.uint32,
+        np.uint64,
+        np.float16,  # aka np.half
+        np.float32,
+        np.float64,
+        # Boolean
+        np.bool_,
+        # Complex
+        np.complex64,
+        np.complex128,
+    ],
+)
+def test_save_dtypes(tmp_path, dtype, use_numpy):
+    data = np.arange(6).reshape(2, 3).astype(dtype)
+    if np.issubdtype(dtype, np.floating):
+        data += 0.1
+
+    block = TensorBlock(
+        values=data,
+        samples=Labels(["s"], np.array([[0], [1]], dtype=np.int32)),
+        components=[],
+        properties=Labels(
+            ["p"], np.arange(data.shape[1], dtype=np.int32).reshape(-1, 1)
+        ),
+    )
+    keys = Labels(["key"], np.array([[0]], dtype=np.int32))
+    tensor = TensorMap(keys, [block])
+
+    file_path = tmp_path / f"test_dtype_{dtype.__name__}.mts"
+
+    # Python -> C-API -> Rust -> DLPack -> serialization
+    mts.save(file_path, tensor, use_numpy=False)
+
+    # Verify full round-trip via both native (use_numpy=False) and numpy path
+    loaded_tensor = mts.load(file_path, use_numpy=use_numpy)
+    vals_loaded = loaded_tensor.block(0).values
+
+    assert vals_loaded.dtype == dtype
+    np.testing.assert_array_equal(vals_loaded, data)
+
+    # Verify with NumPy directly (ZIP archive of .npy files)
+    archive = np.load(file_path)
+    vals_loaded = archive["blocks/0/values"]
+    assert vals_loaded.dtype == dtype
+    np.testing.assert_array_equal(vals_loaded, data)
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_save_fortran(tmp_path, use_numpy):
+    data = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.float64, order="F")
+
+    block = TensorBlock(
+        values=data,
+        samples=Labels.range("s", 2),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+    tensor = TensorMap(Labels.single(), [block])
+
+    file_path = tmp_path / "strided_test.mts"
+
+    mts.save(file_path, tensor, use_numpy=use_numpy)
+
+    loaded = mts.load(file_path, use_numpy=True)
+
+    np.testing.assert_array_equal(loaded.block(0).values, data)
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_save_strided(tmp_path, use_numpy):
+    data = np.arange(20, dtype=np.float64).reshape(4, 5)[:, ::2]
+
+    block = TensorBlock(
+        values=data,
+        samples=Labels.range("s", 4),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+    tensor = TensorMap(Labels.single(), [block])
+
+    file_path = tmp_path / "strided_test.mts"
+
+    mts.save(file_path, tensor, use_numpy=use_numpy)
+    loaded = mts.load(file_path, use_numpy=True)
+
+    np.testing.assert_array_equal(loaded.block(0).values, data)

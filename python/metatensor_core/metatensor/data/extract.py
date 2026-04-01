@@ -3,9 +3,17 @@ from typing import Any, NewType, Union
 
 import numpy as np
 
-from .._c_api import c_uintptr_t, mts_array_t, mts_data_origin_t
+from .._c_api import (
+    DLDevice,
+    DLManagedTensorVersioned,
+    DLPackVersion,
+    c_uintptr_t,
+    mts_array_t,
+    mts_data_origin_t,
+)
 from ..status import _check_status
-from ..utils import _call_with_growing_buffer, _ptr_to_ndarray
+from ..utils import _call_with_growing_buffer
+from ._dlpack import DLPackArray, wrap_versioned_as_unversioned
 from .array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
@@ -139,7 +147,6 @@ class ExternalCpuArray(np.ndarray):
         :param parent: owner of the raw array, we will keep a reference to this
             python object
         """
-
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
         status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
@@ -149,22 +156,34 @@ class ExternalCpuArray(np.ndarray):
         for i in range(shape_count.value):
             shape.append(shape_ptr[i])
 
-        data = ctypes.POINTER(ctypes.c_double)()
-        status = mts_array.data(mts_array.ptr, data)
+        # Use as_dlpack to get data pointer and dtype
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+        version = DLPackVersion(major=1, minor=0)
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            device,
+            None,
+            version,
+        )
         _check_status(status)
 
-        array = _ptr_to_ndarray(data, shape, np.float64)
+        array = np.from_dlpack(DLPackArray(dl_managed_ptr))
         obj = array.view(cls)
 
         # keep a reference to the parent object (if any) to prevent it from
         # being garbage-collected too early.
         obj._parent = parent
+        # prevent the DLPack tensor from being freed while we hold a view
+        obj._dl_managed_ptr = dl_managed_ptr
 
         return obj
 
     def __array_finalize__(self, obj):
         # keep the parent around when creating sub-views of this array
         self._parent = getattr(obj, "_parent", None)
+        self._dl_managed_ptr = getattr(obj, "_dl_managed_ptr", None)
 
     def __array_wrap__(self, new, context=None, return_scalar=False):
         self_ptr = self.ctypes.data
@@ -179,3 +198,82 @@ class ExternalCpuArray(np.ndarray):
         else:
             # return the ndarray straight away
             return np.asarray(new)
+
+
+class ExternalCudaArray:
+    """
+    Factory that wraps non-Python data on a CUDA device as a ``torch.Tensor`` via
+    DLPack, keeping a reference to a parent Python object to prevent use-after-free.
+
+    This is the CUDA counterpart to :py:class:`ExternalCpuArray`, intended for data that
+    lives in CUDA memory. Requires PyTorch.
+
+    For CUDA data (``device_type=2``), we go through CuPy when available for true
+    zero-copy import, then convert to a ``torch.Tensor``. If CuPy is not installed we
+    fall back to ``torch.from_dlpack`` directly.
+    """
+
+    def __new__(
+        cls,
+        mts_array: mts_array_t,
+        parent: Any,
+        *,
+        device_type: int = 2,
+        device_id: int = 0,
+    ):
+        """
+        :param mts_array: raw array to wrap in a Python-compatible class
+        :param parent: owner of the raw array, we will keep a reference to this
+            python object
+        :param device_type: DLPack device type (default: 2 = kDLCUDA)
+        :param device_id: device index (default: 0)
+        """
+        try:
+            import torch  # noqa: F811
+        except ImportError as e:
+            raise ImportError(
+                "ExternalCudaArray requires PyTorch; "
+                "install it with `pip install torch`"
+            ) from e
+
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=device_type, device_id=device_id)
+        version = DLPackVersion(major=1, minor=0)
+        status = mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            device,
+            None,
+            version,
+        )
+        _check_status(status)
+
+        dlpack_array = DLPackArray(dl_managed_ptr)
+
+        # For CUDA data, prefer CuPy for true zero-copy import of external
+        # GPU memory, then convert to a torch.Tensor (also zero-copy via
+        # __cuda_array_interface__).
+        tensor = None
+        if device_type == 2:  # kDLCUDA
+            try:
+                import cupy
+
+                cupy_array = cupy.from_dlpack(dlpack_array)
+                tensor = torch.as_tensor(cupy_array)
+            except ImportError:
+                pass
+
+        if tensor is None:
+            try:
+                tensor = torch.from_dlpack(dlpack_array)
+            except RuntimeError:
+                # Older PyTorch (< 2.4) doesn't understand versioned
+                # DLPack capsules. Fall back to an unversioned capsule.
+                unversioned = wrap_versioned_as_unversioned(dl_managed_ptr)
+                tensor = torch.from_dlpack(DLPackArray(unversioned))
+
+        # keep a reference to the parent object to prevent it from being
+        # garbage-collected while the tensor is alive
+        tensor._parent = parent
+
+        return tensor

@@ -3,6 +3,8 @@
 
 use std::os::raw::c_void;
 
+use dlpk::sys::{DLDataType, DLDataTypeCode};
+
 use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
 use crate::Array;
 
@@ -29,6 +31,8 @@ unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
         *(unwind_wrapper.0) = vector.as_mut_ptr();
+
+        Ok(())
     });
 
     if status != MTS_SUCCESS {
@@ -38,16 +42,61 @@ unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size
     return result;
 }
 
-/// callback used to create `ndarray::ArrayD` when loading a `TensorMap`
+/// Create a typed `ndarray::ArcArray<T>` and box it as `dyn Array`.
+macro_rules! create_typed_array {
+    ($shape:expr, $c_array:expr, $T:ty) => {{
+        let array = ndarray::ArcArray::<$T, _>::from_elem($shape, <$T>::default());
+        *$c_array = (Box::new(array) as Box<dyn Array>).into();
+    }};
+}
+
+/// callback used to create `ndarray::ArcArray` when loading a `TensorMap`
 unsafe extern "C" fn create_ndarray(
     shape_ptr: *const usize,
     shape_count: usize,
+    dtype: DLDataType,
     c_array: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         assert!(shape_count != 0);
         let shape = std::slice::from_raw_parts(shape_ptr, shape_count);
-        let array = ndarray::ArrayD::from_elem(shape, 0.0);
-        *c_array = (Box::new(array) as Box<dyn Array>).into();
+
+        if dtype.lanes != 1 {
+            return Err(crate::Error {
+                code: None,
+                message: format!(
+                    "unsupported dtype in create_ndarray: lanes={} (expected 1)",
+                    dtype.lanes
+                ),
+            });
+        }
+
+        match (dtype.code, dtype.bits) {
+            (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
+            (DLDataTypeCode::kDLFloat, 64) => create_typed_array!(shape, c_array, f64),
+            (DLDataTypeCode::kDLInt, 8) => create_typed_array!(shape, c_array, i8),
+            (DLDataTypeCode::kDLInt, 16) => create_typed_array!(shape, c_array, i16),
+            (DLDataTypeCode::kDLInt, 32) => create_typed_array!(shape, c_array, i32),
+            (DLDataTypeCode::kDLInt, 64) => create_typed_array!(shape, c_array, i64),
+            (DLDataTypeCode::kDLUInt, 8) => create_typed_array!(shape, c_array, u8),
+            (DLDataTypeCode::kDLUInt, 16) => create_typed_array!(shape, c_array, u16),
+            (DLDataTypeCode::kDLUInt, 32) => create_typed_array!(shape, c_array, u32),
+            (DLDataTypeCode::kDLUInt, 64) => create_typed_array!(shape, c_array, u64),
+            (DLDataTypeCode::kDLBool, 8) => create_typed_array!(shape, c_array, bool),
+            (DLDataTypeCode::kDLFloat, 16) => create_typed_array!(shape, c_array, half::f16),
+            (DLDataTypeCode::kDLComplex, 64) => create_typed_array!(shape, c_array, [f32; 2]),
+            (DLDataTypeCode::kDLComplex, 128) => create_typed_array!(shape, c_array, [f64; 2]),
+            _ => {
+                return Err(crate::Error {
+                    code: None,
+                    message: format!(
+                        "unsupported dtype in create_ndarray: code={:?} bits={}",
+                        dtype.code, dtype.bits
+                    ),
+                });
+            }
+        }
+
+        Ok(())
     })
 }

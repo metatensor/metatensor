@@ -13,6 +13,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include "metatensor/version.h"
+#include "metatensor/dlpack/dlpack.h"
+typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
  * Status code used when a function succeeded
@@ -117,18 +119,30 @@ typedef struct mts_labels_t {
 typedef uint64_t mts_data_origin_t;
 
 /**
- * Representation of a single sample moved from an array to another one
+ * Information about a block of data to be moved from an array to another.
  */
-typedef struct mts_sample_mapping_t {
+typedef struct mts_data_movement_t {
   /**
-   * index of the moved sample in the input array
+   * index of the sample in the input array
    */
-  uintptr_t input;
+  uintptr_t sample_in;
   /**
-   * index of the moved sample in the output array
+   * index of the sample in the output array
    */
-  uintptr_t output;
-} mts_sample_mapping_t;
+  uintptr_t sample_out;
+  /**
+   * index of the start of the property in the input array
+   */
+  uintptr_t properties_start_in;
+  /**
+   * index of the start of the property in the output array
+   */
+  uintptr_t properties_start_out;
+  /**
+   * number of properties to move
+   */
+  uintptr_t properties_length;
+} mts_data_movement_t;
 
 /**
  * `mts_array_t` manages n-dimensional arrays used as data in a block or tensor
@@ -152,6 +166,11 @@ typedef struct mts_array_t {
    */
   void *ptr;
   /**
+   * Remove this array and free the associated memory. This function can be
+   * set to `NULL` if there is no memory management to do.
+   */
+  void (*destroy)(void *array);
+  /**
    * This function needs to store the "data origin" for this array in
    * `origin`. Users of `mts_array_t` should register a single data
    * origin with `mts_register_data_origin`, and use it for all compatible
@@ -159,13 +178,61 @@ typedef struct mts_array_t {
    */
   mts_status_t (*origin)(const void *array, mts_data_origin_t *origin);
   /**
-   * Get a pointer to the underlying data storage.
+   * Query the device where this array's data resides without exporting
+   * via DLPack.
    *
-   * This function is allowed to fail if the data is not accessible in RAM,
-   * not stored as 64-bit floating point values, or not stored as a
-   * C-contiguous array.
+   * The implementation must store the device information in `*device`.
    */
-  mts_status_t (*data)(void *array, double **data);
+  mts_status_t (*device)(const void *array, DLDevice *device);
+  /**
+   * Query the data type of this array without a full DLPack export.
+   *
+   * The implementation must store the data type in `*dtype`.
+   */
+  mts_status_t (*dtype)(const void *array, DLDataType *dtype);
+  /**
+   * Get a DLPack representation of the underlying data.
+   *
+   * This function exports the array as a `DLManagedTensorVersioned` struct
+   * into `*dl_managed_tensor`, following the DLPack data interchange
+   * standard.
+   *
+   * The `device` parameter specifies the desired DLPack device type. If this
+   * differs from the array's current device, the implementation should
+   * attempt to make the data accessible on the requested device (e.g., by
+   * copying).
+   *
+   * The `stream` parameter is a pointer to an integer representing a
+   * device-specific stream or queue. If this is `NULL`, the implementation
+   * should use the default stream for the specified device. If this is `-1`,
+   * no synchronization should be performed. Some devices have specific
+   * stream values:
+   * - For CUDA devices, `1` represents the legacy default stream, `2` the
+   *   per-thread default stream. Any value above `2` indicates the stream
+   *   number. `0` is not allowed as it could mean the same as `NULL`, `1` or
+   *   `2`.
+   * - For ROCm devices, `0` represents the default stream, any value above
+   *   `2` indicates the stream number. `1` and `2` are not allowed.
+   *
+   * See also the documentation of `__dlpack__` for more information about
+   * streams:
+   * <https://data-apis.org/array-api/latest/API_specification/generated/array_api.array.__dlpack__.html>
+   *
+   * `max_version` specifies the maximum DLPack API version the caller
+   * supports. The implementation should try to return a tensor compatible
+   * with this version, but this is not guaranteed, and the caller should
+   * check the returned tensor's version.
+   *
+   * The returned `DLManagedTensorVersioned` is owned by the caller, who is
+   * responsible for calling its `deleter` function when the tensor is no
+   * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
+   * exceed the lifetime of the `mts_array_t` it was created from.
+   */
+  mts_status_t (*as_dlpack)(void *array,
+                            DLManagedTensorVersioned **dl_managed_tensor,
+                            DLDevice device,
+                            const int64_t *stream,
+                            DLPackVersion max_version);
   /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
@@ -188,11 +255,15 @@ typedef struct mts_array_t {
    * `new_array`. The number of elements in the `shape` array should be given
    * in `shape_count`.
    *
-   * The new array should be filled with zeros.
+   * The new array should be filled with the scalar value from `fill_value`,
+   * which must be an `mts_array_t` with shape `(1,)` and the same dtype as
+   * this array. This function should call `fill_value.destroy` if the
+   * function pointer is not null when `fill_value` is no longer needed.
    */
   mts_status_t (*create)(const void *array,
                          const uintptr_t *shape,
                          uintptr_t shape_count,
+                         struct mts_array_t fill_value,
                          struct mts_array_t *new_array);
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
@@ -202,29 +273,24 @@ typedef struct mts_array_t {
    */
   mts_status_t (*copy)(const void *array, struct mts_array_t *new_array);
   /**
-   * Remove this array and free the associated memory. This function can be
-   * set to `NULL` is there is no memory management to do.
-   */
-  void (*destroy)(void *array);
-  /**
    * Set entries in the `output` array (the current array) taking data from
    * the `input` array. The `output` array is guaranteed to be created by
    * calling `mts_array_t::create` with one of the arrays in the same block
    * or tensor map as the `input`.
    *
-   * The `samples` array of size `samples_count` indicate where the data
+   * The `movements` array of size `movements_count` indicate where the data
    * should be moved from `input` to `output`.
    *
-   * This function should copy data from `input[samples[i].input, ..., :]` to
-   * `array[samples[i].output, ..., property_start:property_end]` for `i` up
-   * to `samples_count`. All indexes are 0-based.
+   * This function should copy data from `input[movements[i].sample_in, ...,
+   * movements[i].properties_start_in + x]` to
+   * `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+   * x]` for `i` up to `movements_count` and `x` up to
+   * `movements[i].properties_length`. All indexes are 0-based.
    */
-  mts_status_t (*move_samples_from)(void *output,
-                                    const void *input,
-                                    const struct mts_sample_mapping_t *samples,
-                                    uintptr_t samples_count,
-                                    uintptr_t property_start,
-                                    uintptr_t property_end);
+  mts_status_t (*move_data)(void *output,
+                            const void *input,
+                            const struct mts_data_movement_t *movements,
+                            uintptr_t movements_count);
 } mts_array_t;
 
 /**
@@ -245,15 +311,16 @@ typedef uint8_t *(*mts_realloc_buffer_t)(void *user_data, uint8_t *ptr, uintptr_
  * maps.
  *
  * This function gets the `shape` of the array (the `shape` contains
- * `shape_count` elements) and should fill `array` with a new valid
- * `mts_array_t` or return non-zero `mts_status_t`.
+ * `shape_count` elements) and the `dtype` (a `DLDataType` describing the
+ * element type), and should fill `array` with a new valid `mts_array_t` or
+ * return non-zero `mts_status_t`.
  *
- * The newly created array should contains 64-bit floating points (`double`)
- * data, and live on CPU, since metatensor will use `mts_array_t.data` to get
- * the data pointer and write to it.
+ * The newly created array should live on CPU, since metatensor will use
+ * `mts_array_t.data` to get the data pointer and write to it.
  */
 typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     uintptr_t shape_count,
+                                                    DLDataType dtype,
                                                     struct mts_array_t *array);
 
 #ifdef __cplusplus
@@ -715,6 +782,30 @@ mts_status_t mts_block_gradients_list(const struct mts_block_t *block,
                                       uintptr_t *parameters_count);
 
 /**
+ * Get the device of this `block`'s values array.
+ *
+ * @param block pointer to an existing block
+ * @param device pointer to a `DLDevice` that will be set to the block's device
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_block_device(const struct mts_block_t *block, DLDevice *device);
+
+/**
+ * Get the data type of this `block`'s values array.
+ *
+ * @param block pointer to an existing block
+ * @param dtype pointer to a `DLDataType` that will be set to the block's dtype
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_block_dtype(const struct mts_block_t *block, DLDataType *dtype);
+
+/**
  * Create a new `mts_tensormap_t` with the given `keys` and `blocks`.
  * `blocks_count` must be set to the number of entries in the blocks array.
  *
@@ -857,6 +948,8 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  *
  * @param tensor pointer to an existing tensor map
  * @param keys_to_move description of the keys to move
+ * @param fill_value an mts_array_t with shape (1,) and the same dtype as the
+ *                   data, used to fill missing entries when merging blocks
  * @param sort_samples whether to sort the samples lexicographically after
  *                     merging blocks
  *
@@ -866,6 +959,7 @@ mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensormap_t *tensor,
                                                          struct mts_labels_t keys_to_move,
+                                                         struct mts_array_t fill_value,
                                                          bool sort_samples);
 
 /**
@@ -910,6 +1004,8 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  *
  * @param tensor pointer to an existing tensor map
  * @param keys_to_move description of the keys to move
+ * @param fill_value an mts_array_t with shape (1,) and the same dtype as the
+ *                   data, used to fill missing entries when merging blocks
  * @param sort_samples whether to sort the samples lexicographically after
  *                     merging blocks or not
  *
@@ -919,6 +1015,7 @@ struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensor
  */
 struct mts_tensormap_t *mts_tensormap_keys_to_samples(const struct mts_tensormap_t *tensor,
                                                       struct mts_labels_t keys_to_move,
+                                                      struct mts_array_t fill_value,
                                                       bool sort_samples);
 
 /**
@@ -968,6 +1065,34 @@ mts_status_t mts_tensormap_get_info(const struct mts_tensormap_t *tensor,
 mts_status_t mts_tensormap_info_keys(const struct mts_tensormap_t *tensor,
                                      const char *const **keys,
                                      uintptr_t *keys_count);
+
+/**
+ * Get the device of the first block in this tensor map.
+ *
+ * For an empty tensor map (no blocks), the device is set to CPU.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param device pointer to a `DLDevice` that will be set to the tensor's device
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_device(const struct mts_tensormap_t *tensor, DLDevice *device);
+
+/**
+ * Get the data type of the first block in this tensor map.
+ *
+ * For an empty tensor map (no blocks), the dtype is set to float64.
+ *
+ * @param tensor pointer to an existing tensor map
+ * @param dtype pointer to a `DLDataType` that will be set to the tensor's dtype
+ *
+ * @returns The status code of this operation. If the status is not
+ *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
+ *          error message.
+ */
+mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataType *dtype);
 
 /**
  * Load labels from the file at the given path.

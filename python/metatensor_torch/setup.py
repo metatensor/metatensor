@@ -48,7 +48,7 @@ class cmake_ext(build_ext):
 
         source_dir = ROOT
         build_dir = ROOT / "build" / "cmake-build"
-        install_dir = pathlib.Path(self.build_lib).resolve() / "metatensor" / "torch"
+        install_dir = pathlib.Path(self.build_lib).resolve() / "metatensor_torch"
 
         build_dir.mkdir(parents=True, exist_ok=True)
 
@@ -312,7 +312,7 @@ if __name__ == "__main__":
         torch_version = f"== {torch_v_major}.{torch_v_minor}.*"
     except ImportError:
         # otherwise we are building a sdist
-        torch_version = ">= 2.1"
+        torch_version = ">= 2.3"
 
     install_requires = [f"torch {torch_version}"]
 
@@ -340,10 +340,10 @@ if __name__ == "__main__":
             "sdist": sdist_generate_data,
         },
         package_data={
-            "metatensor-torch": [
-                "metatensor/torch*/bin/*",
-                "metatensor/torch*/lib/*",
-                "metatensor/torch*/include/*",
+            "metatensor_torch": [
+                "torch-*/bin/*",
+                "torch-*/lib/*",
+                "torch-*/include/*",
             ]
         },
     )

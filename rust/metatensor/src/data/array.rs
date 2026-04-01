@@ -1,9 +1,14 @@
-use std::ops::Range;
 use std::os::raw::c_void;
 
 use once_cell::sync::Lazy;
 
-use crate::c_api::{mts_array_t, mts_data_origin_t, mts_sample_mapping_t, mts_status_t};
+use dlpk::sys::{DLDevice, DLManagedTensorVersioned, DLPackVersion, DLDataType};
+use dlpk::DLPackTensor;
+
+use crate::errors::Error;
+use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
+
+use super::MtsArray;
 
 /// The Array trait is used by metatensor to manage different kind of data array
 /// with a single API. Metatensor only knows about `Box<dyn Array>`, and
@@ -20,21 +25,16 @@ pub trait Array: std::any::Any + Send + Sync {
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
     ///
-    /// The new array should be filled with zeros.
-    fn create(&self, shape: &[usize]) -> Box<dyn Array>;
+    /// The new array should be filled with the scalar value from `fill_value`,
+    /// which must be an `MtsArray` with shape `(1,)` and the same dtype as
+    /// this array.
+    fn create(&self, shape: &[usize], fill_value: MtsArray) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
     fn copy(&self) -> Box<dyn Array>;
-
-    /// Get the underlying data storage as a contiguous slice
-    ///
-    /// This function is allowed to panic if the data is not accessible in RAM,
-    /// not stored as 64-bit floating point values, or not stored as a
-    /// C-contiguous array.
-    fn data(&mut self) -> &mut [f64];
 
     /// Get the shape of the array
     fn shape(&self) -> &[usize];
@@ -51,18 +51,40 @@ pub trait Array: std::any::Any + Send + Sync {
     /// `mts_array_t::create` with one of the arrays in the same block or tensor
     /// map as the `input`.
     ///
-    /// The `samples` indicate where the data should be moved from `input` to
+    /// The `movements` indicate where the data should be moved from `input` to
     /// `output`.
     ///
-    /// This function should copy data from `input[sample.input, ..., :]` to
-    /// `array[sample.output, ..., properties]` for each sample in `samples`.
-    /// All indexes are 0-based.
-    fn move_samples_from(
+    /// This function should copy data from `input[movements[i].sample_in, ...,
+    /// movements[i].properties_start_in + x]` to
+    /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
+    /// x]` for `i` up to `movements_count` and `x` up to
+    /// `movements[i].properties_length`. All indexes are 0-based.
+    fn move_data(
         &mut self,
         input: &dyn Array,
-        samples: &[mts_sample_mapping_t],
-        properties: Range<usize>,
+        movements: &[mts_data_movement_t],
     );
+
+    /// Get the device where this array's data resides.
+    ///
+    /// For CPU arrays this should return `DLDevice::cpu()`.
+    fn device(&self) -> DLDevice;
+
+    /// Get the data type of this array.
+    ///
+    /// This populates the `dtype` vtable slot for fast dtype queries.
+    /// Implementations should return the appropriate `DLDataType` for their
+    /// element type (e.g. float64 = `DLDataType { code: kDLFloat, bits: 64, lanes: 1 }`).
+    fn dtype(&self) -> DLDataType;
+
+    /// Convert the array to a `DLPack` tensor.
+    /// The returned pointer is owned by the caller (and cleaned up via its deleter).
+    fn as_dlpack(
+        &self,
+        device: DLDevice,
+        stream: Option<i64>,
+        max_version: DLPackVersion
+    ) -> Result<DLPackTensor, Error>;
 }
 
 impl From<Box<dyn Array>> for mts_array_t {
@@ -75,14 +97,16 @@ impl From<Box<dyn Array>> for mts_array_t {
         return mts_array_t {
             ptr: Box::into_raw(array).cast(),
             origin: Some(rust_array_origin),
-            data: Some(rust_array_data),
+            device: Some(rust_array_device),
+            dtype: Some(rust_array_dtype),
+            as_dlpack: Some(rust_array_as_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
             swap_axes: Some(rust_array_swap_axes),
             create: Some(rust_array_create),
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
-            move_samples_from: Some(rust_array_move_samples_from),
+            move_data: Some(rust_array_move_data),
         }
     }
 }
@@ -105,6 +129,7 @@ pub(super) static RUST_DATA_ORIGIN: Lazy<mts_data_origin_t> = Lazy::new(|| {
     super::origin::register_data_origin("rust.Box<dyn Array>".into()).expect("failed to register a new origin")
 });
 
+/******************************************************************************/
 /// Implementation of `mts_array_t.origin` using `Box<dyn Array>`
 unsafe extern "C" fn rust_array_origin(
     array: *const c_void,
@@ -113,6 +138,36 @@ unsafe extern "C" fn rust_array_origin(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, origin);
         *origin = *RUST_DATA_ORIGIN;
+
+        Ok(())
+    })
+}
+
+/// Implementation of `mts_array_t.device` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_device(
+    array: *const c_void,
+    device: *mut DLDevice,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, device);
+        let array = array.cast::<Box<dyn Array>>();
+        *device = (*array).device();
+
+        Ok(())
+    })
+}
+
+/// Implementation of `mts_array_t.dtype` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_dtype(
+    array: *const c_void,
+    dtype: *mut DLDataType,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, dtype);
+        let array = array.cast::<Box<dyn Array>>();
+        *dtype = (*array).dtype();
+
+        Ok(())
     })
 }
 
@@ -129,6 +184,8 @@ unsafe extern "C" fn rust_array_shape(
 
         *shape = rust_shape.as_ptr();
         *shape_count = rust_shape.len();
+
+        Ok(())
     })
 }
 
@@ -146,6 +203,8 @@ unsafe extern "C" fn rust_array_reshape(
         let array = array.cast::<Box<dyn Array>>();
         let shape = std::slice::from_raw_parts(shape, shape_count);
         (*array).reshape(shape);
+
+        Ok(())
     })
 }
 
@@ -160,6 +219,8 @@ unsafe extern "C" fn rust_array_swap_axes(
         check_pointers!(array);
         let array = array.cast::<Box<dyn Array>>();
         (*array).swap_axes(axis_1, axis_2);
+
+        Ok(())
     })
 }
 
@@ -169,6 +230,7 @@ unsafe extern "C" fn rust_array_create(
     array: *const c_void,
     shape: *const usize,
     shape_count: usize,
+    fill_value: mts_array_t,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
@@ -178,24 +240,13 @@ unsafe extern "C" fn rust_array_create(
         let array = array.cast::<Box<dyn Array>>();
 
         let shape = std::slice::from_raw_parts(shape, shape_count);
-        let new_array = (*array).create(shape);
+        let new_array = (*array).create(shape, MtsArray::from_raw(fill_value));
 
         *array_storage = new_array.into();
+
+        Ok(())
     })
 }
-
-/// Implementation of `mts_array_t.data` for `Box<dyn Array>`
-unsafe extern "C" fn rust_array_data(
-    array: *mut c_void,
-    data: *mut *mut f64,
-) -> mts_status_t {
-    crate::errors::catch_unwind(|| {
-        check_pointers!(array, data);
-        let array = array.cast::<Box<dyn Array>>();
-        *data = (*array).data().as_mut_ptr();
-    })
-}
-
 
 /// Implementation of `mts_array_t.copy` using `Box<dyn Array>`
 unsafe extern "C" fn rust_array_copy(
@@ -206,6 +257,8 @@ unsafe extern "C" fn rust_array_copy(
         check_pointers!(array, array_storage);
         let array = array.cast::<Box<dyn Array>>();
         *array_storage = (*array).copy().into();
+
+        Ok(())
     })
 }
 
@@ -222,186 +275,47 @@ unsafe extern "C" fn rust_array_destroy(
 
 /// Implementation of `mts_array_t.move_sample` using `Box<dyn Array>`
 #[allow(clippy::cast_possible_truncation)]
-unsafe extern "C" fn rust_array_move_samples_from(
+unsafe extern "C" fn rust_array_move_data(
     output: *mut c_void,
     input: *const c_void,
-    samples: *const mts_sample_mapping_t,
-    samples_count: usize,
-    property_start: usize,
-    property_end: usize,
+    movements: *const mts_data_movement_t,
+    movements_count: usize,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(output, input);
         let output = output.cast::<Box<dyn Array>>();
         let input = input.cast::<Box<dyn Array>>();
 
-        let samples = if samples_count == 0 {
+        let movements = if movements_count == 0 {
             &[]
         } else {
-            check_pointers!(samples);
-            std::slice::from_raw_parts(samples, samples_count)
+            check_pointers!(movements);
+            std::slice::from_raw_parts(movements, movements_count)
         };
 
-        (*output).move_samples_from(&**input, samples, property_start..property_end);
+        (*output).move_data(&**input, movements);
+
+        Ok(())
     })
 }
 
-/******************************************************************************/
+/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+unsafe extern "C" fn rust_array_as_dlpack(
+    array: *mut c_void,
+    out: *mut *mut DLManagedTensorVersioned,
+    device: DLDevice,
+    stream: *const i64,
+    max_version: DLPackVersion,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, out);
+        let array = array.cast::<Box<dyn Array>>();
+        let stream_opt = stream.as_ref().copied();
+        let tensor = (*array).as_dlpack(device, stream_opt, max_version)?;
 
-impl Array for ndarray::ArrayD<f64> {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
+        let raw_ptr = tensor.into_raw();
+        *out = raw_ptr.as_ptr();
 
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        return Box::new(ndarray::Array::from_elem(shape, 0.0));
-    }
-
-    fn copy(&self) -> Box<dyn Array> {
-        return Box::new(self.clone());
-    }
-
-    fn data(&mut self) -> &mut [f64] {
-        return self.as_slice_mut().expect("array is not contiguous")
-    }
-
-    fn shape(&self) -> &[usize] {
-        return self.shape();
-    }
-
-    fn reshape(&mut self, shape: &[usize]) {
-        let mut array = std::mem::take(self);
-        array = array.to_shape(shape).expect("invalid shape").to_owned();
-        std::mem::swap(self, &mut array);
-    }
-
-    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-        self.swap_axes(axis_1, axis_2);
-    }
-
-    fn move_samples_from(
-        &mut self,
-        input: &dyn Array,
-        samples: &[mts_sample_mapping_t],
-        property: Range<usize>,
-    ) {
-        use ndarray::{Axis, Slice};
-
-        // -2 since we also remove one axis with `index_axis_mut` below
-        let property_axis = self.shape().len() - 2;
-
-        let input = input.as_any().downcast_ref::<ndarray::ArrayD<f64>>().expect("input must be a ndarray");
-        for sample in samples {
-            let value = input.index_axis(Axis(0), sample.input);
-
-            let mut output_location = self.index_axis_mut(Axis(0), sample.output);
-            let mut output_location = output_location.slice_axis_mut(
-                Axis(property_axis), Slice::from(property.clone())
-            );
-
-            output_location.assign(&value);
-        }
-    }
-}
-
-/******************************************************************************/
-
-/// An implementation of the [`Array`] trait without any data.
-///
-/// This only tracks the shape of the array.
-#[derive(Debug, Clone)]
-pub struct EmptyArray {
-    shape: Vec<usize>,
-}
-
-impl EmptyArray {
-    /// Create a new `EmptyArray` with the given shape.
-    pub fn new(shape: Vec<usize>) -> EmptyArray {
-        EmptyArray { shape }
-    }
-}
-
-impl Array for EmptyArray {
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        self
-    }
-
-    fn data(&mut self) -> &mut [f64] {
-        panic!("can not call Array::data() for EmptyArray");
-    }
-
-    fn create(&self, shape: &[usize]) -> Box<dyn Array> {
-        Box::new(EmptyArray { shape: shape.to_vec() })
-    }
-
-    fn copy(&self) -> Box<dyn Array> {
-        Box::new(EmptyArray { shape: self.shape.clone() })
-    }
-
-    fn shape(&self) -> &[usize] {
-        &self.shape
-    }
-
-    fn reshape(&mut self, shape: &[usize]) {
-        self.shape = shape.to_vec();
-    }
-
-    fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-        self.shape.swap(axis_1, axis_2);
-    }
-
-    fn move_samples_from(&mut self, _: &dyn Array, _: &[mts_sample_mapping_t], _: Range<usize>) {
-        panic!("can not call Array::move_samples_from() for EmptyArray");
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use metatensor_sys::*;
-
-    use super::*;
-
-    #[test]
-    fn ndarray_as_mts_array() {
-        let data = ndarray::ArrayD::<f64>::zeros(vec![4, 5, 6]);
-
-        let address = data.as_ptr() as usize;
-        let mut mts_array = mts_array_t::from(Box::new(data) as Box<dyn Array>);
-
-        let mut rust_origin = 0;
-        let status = unsafe {
-            mts_register_data_origin(b"rust.Box<dyn Array>\0".as_ptr().cast(), &mut rust_origin)
-        };
-        assert_eq!(status, MTS_SUCCESS);
-
-        assert_eq!(mts_array.origin().unwrap(), rust_origin);
-
-        assert_eq!(mts_array.shape().unwrap(), [4, 5, 6]);
-
-        assert_eq!(mts_array.data().unwrap().as_ptr() as usize, address);
-
-        mts_array.reshape(&[20, 6, 1]).unwrap();
-        assert_eq!(mts_array.shape().unwrap(), [20, 6, 1]);
-
-        mts_array.swap_axes(1, 2).unwrap();
-        assert_eq!(mts_array.shape().unwrap(), [20, 1, 6]);
-
-        let copy = mts_array.copy().unwrap();
-        assert_eq!(copy.origin().unwrap(), rust_origin);
-        assert_eq!(copy.shape().unwrap(), [20, 1, 6]);
-        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
-
-        let created = mts_array.create(&[2, 3, 4]).unwrap();
-        assert_eq!(created.origin().unwrap(), rust_origin);
-        assert_eq!(created.shape().unwrap(), [2, 3, 4]);
-        assert_ne!(mts_array.data().unwrap().as_ptr() as usize, address);
-    }
+        Ok(())
+    })
 }

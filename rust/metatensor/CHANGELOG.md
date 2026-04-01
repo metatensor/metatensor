@@ -5,6 +5,7 @@ the [keep a changelog](https://keepachangelog.com/en/1.1.0/) format. This
 project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
+
 <!--
 ### Added
 
@@ -14,6 +15,20 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Removed
 -->
+
+### Added
+
+- Added `MtsArray` as a safe wrapper around an owned `mts_array_t`
+
+### Changed
+
+- Renamed `ArrayRef{Mut}::{as,to}_array` to `ArrayRef{Mut}::{as,to}_ndarray`
+
+### Removed
+
+- Removed `Array::data()` trait method and all implementations. Use
+  `mts_array_t.as_dlpack` instead, which supports all numeric types via the
+  DLPack standard rather than only float64.
 
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.4) - 2026-03-05
 

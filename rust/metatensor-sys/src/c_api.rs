@@ -4,6 +4,8 @@
 //! This module is exported for advanced users of the metatensor crate, but
 //! should not be needed by most.
 
+use dlpk::sys::*;
+
 #[cfg_attr(
     feature = "static",
     link(name = "metatensor", kind = "static", modifiers = "-whole-archive")
@@ -87,49 +89,83 @@ fn bindgen_test_layout_mts_labels_t() {
 pub type mts_data_origin_t = u64;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
-pub struct mts_sample_mapping_t {
-    pub input: usize,
-    pub output: usize,
+pub struct mts_data_movement_t {
+    pub sample_in: usize,
+    pub sample_out: usize,
+    pub properties_start_in: usize,
+    pub properties_start_out: usize,
+    pub properties_length: usize,
 }
 #[test]
-fn bindgen_test_layout_mts_sample_mapping_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mts_sample_mapping_t> = ::std::mem::MaybeUninit::uninit();
+fn bindgen_test_layout_mts_data_movement_t() {
+    const UNINIT: ::std::mem::MaybeUninit<mts_data_movement_t> = ::std::mem::MaybeUninit::uninit();
     let ptr = UNINIT.as_ptr();
     assert_eq!(
-        ::std::mem::size_of::<mts_sample_mapping_t>(),
-        16usize,
-        "Size of mts_sample_mapping_t"
+        ::std::mem::size_of::<mts_data_movement_t>(),
+        40usize,
+        "Size of mts_data_movement_t"
     );
     assert_eq!(
-        ::std::mem::align_of::<mts_sample_mapping_t>(),
+        ::std::mem::align_of::<mts_data_movement_t>(),
         8usize,
-        "Alignment of mts_sample_mapping_t"
+        "Alignment of mts_data_movement_t"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).input) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).sample_in) as usize - ptr as usize },
         0usize,
-        "Offset of field: mts_sample_mapping_t::input"
+        "Offset of field: mts_data_movement_t::sample_in"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).output) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).sample_out) as usize - ptr as usize },
         8usize,
-        "Offset of field: mts_sample_mapping_t::output"
+        "Offset of field: mts_data_movement_t::sample_out"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_in) as usize - ptr as usize },
+        16usize,
+        "Offset of field: mts_data_movement_t::properties_start_in"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_out) as usize - ptr as usize },
+        24usize,
+        "Offset of field: mts_data_movement_t::properties_start_out"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).properties_length) as usize - ptr as usize },
+        32usize,
+        "Offset of field: mts_data_movement_t::properties_length"
     );
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_array_t {
     pub ptr: *mut ::std::os::raw::c_void,
+    pub destroy: ::std::option::Option<unsafe extern "C" fn(array: *mut ::std::os::raw::c_void)>,
     pub origin: ::std::option::Option<
         unsafe extern "C" fn(
             array: *const ::std::os::raw::c_void,
             origin: *mut mts_data_origin_t,
         ) -> mts_status_t,
     >,
-    pub data: ::std::option::Option<
+    pub device: ::std::option::Option<
+        unsafe extern "C" fn(
+            array: *const ::std::os::raw::c_void,
+            device: *mut DLDevice,
+        ) -> mts_status_t,
+    >,
+    pub dtype: ::std::option::Option<
+        unsafe extern "C" fn(
+            array: *const ::std::os::raw::c_void,
+            dtype: *mut DLDataType,
+        ) -> mts_status_t,
+    >,
+    pub as_dlpack: ::std::option::Option<
         unsafe extern "C" fn(
             array: *mut ::std::os::raw::c_void,
-            data: *mut *mut f64,
+            dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+            device: DLDevice,
+            stream: *const i64,
+            max_version: DLPackVersion,
         ) -> mts_status_t,
     >,
     pub shape: ::std::option::Option<
@@ -158,6 +194,7 @@ pub struct mts_array_t {
             array: *const ::std::os::raw::c_void,
             shape: *const usize,
             shape_count: usize,
+            fill_value: mts_array_t,
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,
@@ -167,15 +204,12 @@ pub struct mts_array_t {
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,
-    pub destroy: ::std::option::Option<unsafe extern "C" fn(array: *mut ::std::os::raw::c_void)>,
-    pub move_samples_from: ::std::option::Option<
+    pub move_data: ::std::option::Option<
         unsafe extern "C" fn(
             output: *mut ::std::os::raw::c_void,
             input: *const ::std::os::raw::c_void,
-            samples: *const mts_sample_mapping_t,
-            samples_count: usize,
-            property_start: usize,
-            property_end: usize,
+            movements: *const mts_data_movement_t,
+            movements_count: usize,
         ) -> mts_status_t,
     >,
 }
@@ -185,7 +219,7 @@ fn bindgen_test_layout_mts_array_t() {
     let ptr = UNINIT.as_ptr();
     assert_eq!(
         ::std::mem::size_of::<mts_array_t>(),
-        80usize,
+        96usize,
         "Size of mts_array_t"
     );
     assert_eq!(
@@ -199,49 +233,59 @@ fn bindgen_test_layout_mts_array_t() {
         "Offset of field: mts_array_t::ptr"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
+        unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
         8usize,
+        "Offset of field: mts_array_t::destroy"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
+        16usize,
         "Offset of field: mts_array_t::origin"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).data) as usize - ptr as usize },
-        16usize,
-        "Offset of field: mts_array_t::data"
+        unsafe { ::std::ptr::addr_of!((*ptr).device) as usize - ptr as usize },
+        24usize,
+        "Offset of field: mts_array_t::device"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).dtype) as usize - ptr as usize },
+        32usize,
+        "Offset of field: mts_array_t::dtype"
+    );
+    assert_eq!(
+        unsafe { ::std::ptr::addr_of!((*ptr).as_dlpack) as usize - ptr as usize },
+        40usize,
+        "Offset of field: mts_array_t::as_dlpack"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
-        24usize,
+        48usize,
         "Offset of field: mts_array_t::shape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
-        32usize,
+        56usize,
         "Offset of field: mts_array_t::reshape"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
-        40usize,
+        64usize,
         "Offset of field: mts_array_t::swap_axes"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
-        48usize,
+        72usize,
         "Offset of field: mts_array_t::create"
     );
     assert_eq!(
         unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
-        56usize,
+        80usize,
         "Offset of field: mts_array_t::copy"
     );
     assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
-        64usize,
-        "Offset of field: mts_array_t::destroy"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).move_samples_from) as usize - ptr as usize },
-        72usize,
-        "Offset of field: mts_array_t::move_samples_from"
+        unsafe { ::std::ptr::addr_of!((*ptr).move_data) as usize - ptr as usize },
+        88usize,
+        "Offset of field: mts_array_t::move_data"
     );
 }
 pub type mts_realloc_buffer_t = ::std::option::Option<
@@ -255,6 +299,7 @@ pub type mts_create_array_callback_t = ::std::option::Option<
     unsafe extern "C" fn(
         shape: *const usize,
         shape_count: usize,
+        dtype: DLDataType,
         array: *mut mts_array_t,
     ) -> mts_status_t,
 >;
@@ -372,6 +417,10 @@ extern "C" {
         parameters: *mut *const *const ::std::os::raw::c_char,
         parameters_count: *mut usize,
     ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_block_device(block: *const mts_block_t, device: *mut DLDevice) -> mts_status_t;
+    #[must_use]
+    pub fn mts_block_dtype(block: *const mts_block_t, dtype: *mut DLDataType) -> mts_status_t;
     pub fn mts_tensormap(
         keys: mts_labels_t,
         blocks: *mut *mut mts_block_t,
@@ -401,6 +450,7 @@ extern "C" {
     pub fn mts_tensormap_keys_to_properties(
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
+        fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_components_to_properties(
@@ -411,6 +461,7 @@ extern "C" {
     pub fn mts_tensormap_keys_to_samples(
         tensor: *const mts_tensormap_t,
         keys_to_move: mts_labels_t,
+        fill_value: mts_array_t,
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     #[must_use]
@@ -430,6 +481,16 @@ extern "C" {
         tensor: *const mts_tensormap_t,
         keys: *mut *const *const ::std::os::raw::c_char,
         keys_count: *mut usize,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_device(
+        tensor: *const mts_tensormap_t,
+        device: *mut DLDevice,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_tensormap_dtype(
+        tensor: *const mts_tensormap_t,
+        dtype: *mut DLDataType,
     ) -> mts_status_t;
     #[must_use]
     pub fn mts_labels_load(

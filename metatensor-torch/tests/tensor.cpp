@@ -1,3 +1,6 @@
+#include <cmath>
+#include <limits>
+
 #include <torch/torch.h>
 
 #include <metatensor.hpp>
@@ -38,7 +41,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_samples") {
-        auto tensor = test_tensor_map()->keys_to_samples("key_2", /* sort_samples */ true);
+        auto tensor = test_tensor_map()->keys_to_samples("key_2", /*fill_value*/ 0, /* sort_samples */ true);
 
         CHECK(*tensor->keys() == metatensor::Labels({"key_1"}, {{0}, {1}, {2}}));
 
@@ -85,7 +88,7 @@ TEST_CASE("TensorMap") {
         CHECK(torch::all(gradient->values() == expected).item<bool>());
 
         // unsorted samples
-        tensor = test_tensor_map()->keys_to_samples("key_2", /*sort_samples*/ false);
+        tensor = test_tensor_map()->keys_to_samples("key_2", /*fill_value*/ 0, /*sort_samples*/ false);
 
         block = TensorMapHolder::block_by_id(tensor, 2);
         CHECK(*block->samples() == metatensor::Labels({"samples", "key_2"}, {
@@ -94,7 +97,7 @@ TEST_CASE("TensorMap") {
     }
 
     SECTION("keys_to_properties") {
-        auto tensor = test_tensor_map()->keys_to_properties("key_1", /*sort_samples*/ true);
+        auto tensor = test_tensor_map()->keys_to_properties("key_1", /*fill_value*/ 0, /*sort_samples*/ true);
 
         CHECK(*tensor->keys() == metatensor::Labels({"key_2"}, {{0}, {2}, {3}}));
 
@@ -199,13 +202,13 @@ TEST_CASE("TensorMap") {
         CHECK(new_info.at("creator") == "metatensor-torch test");
         CHECK(new_info.at("version") == "1.0");
 
-        auto k2p_tensor = tensor->keys_to_properties("key_1", /*sort_samples*/ true);
+        auto k2p_tensor = tensor->keys_to_properties("key_1", /*fill_value*/ 0, /*sort_samples*/ true);
         auto k2p_new_info = k2p_tensor->info();
         CHECK(k2p_new_info.size() == 2);
         CHECK(k2p_new_info.at("creator") == "metatensor-torch test");
         CHECK(k2p_new_info.at("version") == "1.0");
 
-        auto k2s_tensor = tensor->keys_to_samples("key_2", /* sort_samples */ true);
+        auto k2s_tensor = tensor->keys_to_samples("key_2", /*fill_value*/ 0, /* sort_samples */ true);
         auto k2s_new_info = k2s_tensor->info();
         CHECK(k2s_new_info.size() == 2);
         CHECK(k2s_new_info.at("creator") == "metatensor-torch test");
@@ -252,6 +255,52 @@ TEST_CASE("TensorMap serialization") {
     }
 }
 
+
+TEST_CASE("fill_value") {
+    SECTION("keys_to_properties with NaN fill") {
+        auto tensor = test_tensor_map();
+        auto result = tensor->keys_to_properties("key_1", /*fill_value*/ std::numeric_limits<double>::quiet_NaN());
+
+        auto block = TensorMapHolder::block_by_id(result, 0);
+        auto values = block->values();
+
+        // Sample 0 exists in both blocks (key_1=0 and key_1=1)
+        CHECK(values[0][0][0].item<double>() == 1.0);
+        CHECK(values[0][0][1].item<double>() == 2.0);
+
+        // Sample 1 exists only in block with key_1=1 -> key_1=0 part should be NaN
+        CHECK(std::isnan(values[1][0][0].item<double>()));
+        CHECK(values[1][0][1].item<double>() == 2.0);
+
+        // Sample 2 exists only in block with key_1=0 -> key_1=1 part should be NaN
+        CHECK(values[2][0][0].item<double>() == 1.0);
+        CHECK(std::isnan(values[2][0][1].item<double>()));
+    }
+
+    SECTION("keys_to_properties with default zero") {
+        auto tensor = test_tensor_map();
+        auto result_default = tensor->keys_to_properties("key_1");
+        auto result_explicit = tensor->keys_to_properties("key_1", /*fill_value*/ 0.0);
+
+        for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
+            auto block_default = TensorMapHolder::block_by_id(result_default, i);
+            auto block_explicit = TensorMapHolder::block_by_id(result_explicit, i);
+            CHECK(torch::all(block_default->values() == block_explicit->values()).item<bool>());
+        }
+    }
+
+    SECTION("keys_to_samples with default zero") {
+        auto tensor = test_tensor_map();
+        auto result_default = tensor->keys_to_samples("key_2");
+        auto result_explicit = tensor->keys_to_samples("key_2", /*fill_value*/ 0.0);
+
+        for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
+            auto block_default = TensorMapHolder::block_by_id(result_default, i);
+            auto block_explicit = TensorMapHolder::block_by_id(result_explicit, i);
+            CHECK(torch::all(block_default->values() == block_explicit->values()).item<bool>());
+        }
+    }
+}
 
 TensorMap test_tensor_map() {
     auto blocks = std::vector<TensorBlock>();

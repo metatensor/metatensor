@@ -9,9 +9,9 @@ with the ecosystem.
 How do I use environment variables to control tests?
 ----------------------------------------------------
 
-You can customize test execution by setting specific environment variables in your 
+You can customize test execution by setting specific environment variables in your
 shell. This provides a lighter alternative to the :ref:`devdoc-local-ci` setup.
-Please refer to :ref:`running-tests` for a full list of supported variables 
+Please refer to :ref:`running-tests` for a full list of supported variables
 and their descriptions.
 
 .. important::
@@ -30,7 +30,6 @@ Python interpreter. You can use ``tox`` within a specific Python environment:
 
     # Use the -x flag to override the base_python for the environment
     METATENSOR_TESTS_TORCH_VERSION="2.2" \
-    METATENSOR_TESTS_NUMPY_VERSION_PIN="<2.0" \
     tox -e core-tests -x testenv:core-tests.base_python=python3.11
 
 How do I run the full CI suite locally?
@@ -59,12 +58,12 @@ specifying the matrix keys. To run the legacy NumPy tests:
     gh act -j python-tests \
       --matrix os:ubuntu-24.04 \
       --matrix python-version:3.10 \
-      --matrix torch-version:2.1 \
+      --matrix torch-version:2.3 \
       --matrix numpy-version-pin:"<2.0"
 
 .. tip::
 
-   If you don't need the full Docker isolation of ``act``, you can also 
+   If you don't need the full Docker isolation of ``act``, you can also
    replicate this legacy environment using :ref:`the environment variables method <devdoc-faq-env-vars>`.
 
 .. _devdoc-faq-env-vars:
@@ -163,6 +162,56 @@ We prefer a clean history with logical commits. If your branch has many small
       git add -p  # selectively add changes
       git commit -m "logical commit message"
 
+How do I run code coverage locally?
+-----------------------------------
+
+**Python coverage** is collected automatically by ``tox`` via ``pytest-cov``.
+Each environment writes a ``.coverage`` file under ``.tox/<env>/``. To produce
+a combined report:
+
+.. code-block:: bash
+
+    # run all (or specific) tox environments
+    uvx tox
+    # combine per-environment coverage files
+    coverage combine .tox/*/.coverage
+    # terminal report with missed lines
+    coverage report --show-missing
+    # or generate an HTML report
+    coverage html
+    firefox htmlcov/index.html
+
+Path remapping is configured in the root ``pyproject.toml`` under
+``[tool.coverage.paths]``.
+
+**Rust coverage** uses ``cargo-llvm-cov`` with LLVM instrumentation. Install
+the prerequisites first:
+
+.. code-block:: bash
+
+    rustup component add llvm-tools
+    cargo +stable install cargo-llvm-cov --locked
+
+Then generate an HTML report (including C/C++ code compiled via FFI):
+
+.. code-block:: bash
+
+    CC=$(which clang) CXX=$(which clang++) \
+    LLVM_COV=$(which llvm-cov) LLVM_PROFDATA=$(which llvm-profdata) \
+    LLVM_PROFILE_FILE="cargo-test-%p-%m.profraw" \
+    CARGO_INCREMENTAL=0 RUSTFLAGS='-Cinstrument-coverage' \
+    CFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    CXXFLAGS='-fprofile-instr-generate -fcoverage-mapping' \
+    cargo llvm-cov --include-ffi --all-features --workspace --html
+
+    # serve locally
+    python -m http.server -d target/llvm-cov/html
+
+The CI workflow in ``.github/workflows/coverage.yml`` uploads both
+``coverage.xml`` (Python) and ``rust_codecov.json`` (Rust) to
+`Codecov <https://app.codecov.io/gh/metatensor/metatensor>`_.
+The project coverage target is **82%** (configured in ``.codecov.yml``).
+
 How do I pin stuff for the Rust MSRV?
 -------------------------------------
 
@@ -174,7 +223,7 @@ consider:
 
 .. code-block:: bash
 
-    cargo tree # to find where the offending 
+    cargo tree # to find where the offending
 
 For handling these issues it may be worthwhile to have a local copy of our MSRV, for 1.74, for instance:
 

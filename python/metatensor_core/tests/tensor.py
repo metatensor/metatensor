@@ -29,6 +29,50 @@ def large_tensor():
     return _tests_utils.large_tensor()
 
 
+@pytest.fixture
+def tensor_different_properties():
+    tensor = _tests_utils.tensor()
+    # modify the existing tensor fixture to create a situation where the blocks to merge
+    # will have different properties
+
+    block_4 = tensor.block(3)
+
+    assert len(block_4.properties) == 1
+    new_properties = Labels(
+        names=block_4.properties.names,
+        values=np.array([[1], [2], [3], [4], [5]]),
+    )
+
+    new_values = np.zeros((4, 3, 5))
+    new_values[:, :, 0] = block_4.values[:, :, 0]
+    new_values[:, :, 1:] = 5.0
+
+    new_block_4 = TensorBlock(
+        values=new_values,
+        samples=block_4.samples,
+        components=block_4.components,
+        properties=new_properties,
+    )
+
+    gradient = block_4.gradient("g")
+    new_grad_values = np.zeros((gradient.values.shape[0], 3, 5))
+    new_grad_values[:, :, 0] = gradient.values[:, :, 0]
+    new_grad_values[:, :, 1:] = 6.0
+
+    new_gradient = TensorBlock(
+        values=new_grad_values,
+        samples=gradient.samples,
+        components=gradient.components,
+        properties=new_properties,
+    )
+    new_block_4.add_gradient("g", new_gradient)
+
+    blocks = [b.copy() for b in tensor.blocks()]
+    blocks[3] = new_block_4
+
+    return TensorMap(tensor.keys, blocks)
+
+
 def test_constructor_errors():
     block = TensorBlock(
         values=np.full((3, 1, 1), 1.0),
@@ -353,6 +397,51 @@ def test_keys_to_samples_unsorted(tensor):
     assert tuple(block.samples[7]) == (5, 3)
 
 
+def test_keys_to_samples_different_properties(tensor_different_properties):
+    tensor = tensor_different_properties.keys_to_samples("key_2")
+
+    block = tensor.block(key_1=2)
+    assert block.properties == Labels(["p"], np.array([[0], [1], [2], [3], [4], [5]]))
+
+    key_2_idx = block.samples.names.index("key_2")
+    for i in range(len(block.samples)):
+        key_2_val = block.samples[i][key_2_idx]
+
+        if key_2_val == 2:
+            # From block 2: should have value at p=0, and 0 at others
+            assert np.allclose(block.values[i, :, 0], 3.0)
+            assert np.allclose(block.values[i, :, 1], 0.0)
+            assert np.allclose(block.values[i, :, 2], 0.0)
+        elif key_2_val == 3:
+            # From block 3: should have 0 at p=0, and values at others
+            assert np.allclose(block.values[i, :, 0], 0.0)
+            # Original values were 4.0 for the first property
+            assert np.allclose(block.values[i, :, 1], 4.0)
+            # We set 5.0 for the new property
+            assert np.allclose(block.values[i, :, 2:], 5.0)
+
+    # Check gradients
+    gradient = block.gradient("g")
+    assert gradient.properties.names == ["p"]
+    assert len(gradient.properties) == 6
+
+    for i in range(len(gradient.samples)):
+        sample_id = gradient.samples[i][0]
+        # check key_2 of the corresponding sample
+        key_2_val = block.samples[sample_id][key_2_idx]
+
+        if key_2_val == 2:
+            # From block 2: gradient non-zero at p=0
+            assert not np.allclose(gradient.values[i, :, 0], 0.0)
+            assert np.allclose(gradient.values[i, :, 1], 0.0)
+            assert np.allclose(gradient.values[i, :, 2:], 0.0)
+        elif key_2_val == 3:
+            # From block 3: gradient non-zero at p=1 and p=5
+            assert np.allclose(gradient.values[i, :, 0], 0.0)
+            assert not np.allclose(gradient.values[i, :, 1], 0.0)
+            assert not np.allclose(gradient.values[i, :, 2:], 0.0)
+
+
 def test_components_to_properties(tensor):
     tensor = tensor.components_to_properties("c")
 
@@ -607,3 +696,49 @@ def test_info(tensor):
     assert c2p_tensor.info() == expected_info
 
     assert tensor.get_info("missing") is None
+
+
+def test_keys_to_properties_fill_value_nan(tensor):
+    tensor = tensor.keys_to_properties("key_1", fill_value=float("nan"))
+
+    # The first block merges blocks with different key_1 values.
+    # Missing entries should be NaN instead of 0.0
+    block = tensor.block(0)
+
+    expected = np.array(
+        [
+            [[1.0, 2.0, 2.0, 2.0]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+            [[float("nan"), 2.0, 2.0, 2.0]],
+            [[1.0, float("nan"), float("nan"), float("nan")]],
+        ]
+    )
+
+    # Can not use assert_equal for NaN, use element-wise checks
+    values = block.values
+    assert values.shape == expected.shape
+
+    for idx in np.ndindex(values.shape):
+        if np.isnan(expected[idx]):
+            assert np.isnan(values[idx]), f"Expected NaN at {idx}, got {values[idx]}"
+        else:
+            assert values[idx] == expected[idx], f"Mismatch at {idx}"
+
+
+def test_keys_to_properties_fill_value_default_zero(tensor):
+    # Verify that default fill_value=0.0 matches existing behavior
+    tensor_default = tensor.keys_to_properties("key_1")
+    tensor_explicit = tensor.keys_to_properties("key_1", fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert_equal(tensor_default.block(i).values, tensor_explicit.block(i).values)
+
+
+def test_keys_to_samples_fill_value_default(tensor):
+    # keys_to_samples also supports fill_value
+    tensor_default = tensor.keys_to_samples("key_2", sort_samples=True)
+    tensor_explicit = tensor.keys_to_samples("key_2", sort_samples=True, fill_value=0.0)
+
+    for i in range(len(tensor_default)):
+        assert_equal(tensor_default.block(i).values, tensor_explicit.block(i).values)

@@ -3,6 +3,8 @@ use std::ffi::CStr;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 
+use dlpk::sys::DLDataType;
+
 use crate::Error;
 use crate::data::mts_array_t;
 
@@ -150,13 +152,14 @@ pub unsafe extern "C" fn mts_block_load_buffer(
     return result;
 }
 
-fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>) -> Result<mts_array_t, Error> + '_ {
-    |shape: Vec<usize>| {
+fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error> + '_ {
+    |shape: Vec<usize>, dtype: DLDataType| {
         let mut array = mts_array_t::null();
         let status = unsafe {
             create_array(
                 shape.as_ptr(),
                 shape.len(),
+                dtype,
                 &mut array
             )
         };

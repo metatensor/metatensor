@@ -2,7 +2,6 @@ use std::sync::Arc;
 use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
-use crate::labels::LabelValue;
 use crate::utils::ConstCString;
 use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
@@ -218,6 +217,24 @@ impl TensorBlock {
             )));
         }
 
+        let gradient_device = gradient.values.device()?;
+        let values_device = self.values.device()?;
+        if gradient_device != values_device {
+            return Err(Error::InvalidParameter(format!(
+                "the gradient values are on device '{}' but the block values are on device '{}'",
+                gradient_device, values_device,
+            )));
+        }
+
+        let gradient_dtype = gradient.values.dtype()?;
+        let values_dtype = self.values.dtype()?;
+        if gradient_dtype != values_dtype {
+            return Err(Error::InvalidParameter(format!(
+                "the gradient values have dtype '{}' but the block values have dtype '{}'",
+                gradient_dtype, values_dtype,
+            )));
+        }
+
         if gradient.samples.size() == 0 {
             return Err(Error::InvalidParameter(
                 "gradients samples must have at least one dimension, named 'sample', we got none".into()
@@ -232,8 +249,8 @@ impl TensorBlock {
         }
 
         if gradient.samples.count() > 0 {
-            let mut min_sample_value = LabelValue::new(0);
-            let mut max_sample_value = LabelValue::new(0);
+            let mut min_sample_value = 0;
+            let mut max_sample_value = 0;
             if gradient.samples.is_sorted() {
                 // only check the first and last entry
                 min_sample_value = gradient.samples[0][0];
@@ -251,14 +268,14 @@ impl TensorBlock {
                 }
             }
 
-            if min_sample_value.i32() < 0 {
+            if min_sample_value < 0 {
                 return Err(Error::InvalidParameter(format!(
                     "invalid value for the 'sample' dimension in gradient samples: \
                     all values should be positive, but we got {}", min_sample_value
                 )));
             }
 
-            if max_sample_value.usize() >= self.samples.count() {
+            if usize::try_from(max_sample_value).expect("could not convert to usize") >= self.samples.count() {
                 return Err(Error::InvalidParameter(format!(
                     "invalid value for the 'sample' dimension in gradient samples: we got \
                     {}, but the values contain {} samples", max_sample_value, self.samples.count()
@@ -691,6 +708,46 @@ mod tests {
             ).unwrap();
             let result = block.add_gradient("components", gradient);
             assert!(result.is_ok());
+        }
+
+        #[test]
+        fn gradient_device_mismatch() {
+            let samples = example_labels("samples", 4);
+            let properties = example_labels("properties", 7);
+            let values = TestArray::new(vec![4, 7]);
+            let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
+
+            let gradient = TensorBlock::new(
+                TestArray::new_other_device(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties,
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("bad_device", gradient).unwrap_err().to_string(),
+                "invalid parameter: the gradient values are on device 'CUDA:0' \
+                but the block values are on device 'CPU:0'"
+            );
+        }
+
+        #[test]
+        fn gradient_dtype_mismatch() {
+            let samples = example_labels("samples", 4);
+            let properties = example_labels("properties", 7);
+            let values = TestArray::new(vec![4, 7]);
+            let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
+
+            let gradient = TensorBlock::new(
+                TestArray::new_other_dtype(vec![3, 7]),
+                example_labels("sample", 3),
+                vec![],
+                properties,
+            ).unwrap();
+            assert_eq!(
+                block.add_gradient("bad_dtype", gradient).unwrap_err().to_string(),
+                "invalid parameter: the gradient values have dtype 'f32' \
+                but the block values have dtype 'f64'"
+            );
         }
     }
 }

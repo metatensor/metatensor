@@ -1,5 +1,7 @@
 import ctypes
+import functools
 import io
+import operator
 import pathlib
 from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
@@ -8,7 +10,6 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, mts_labels_t
 from ._c_lib import _get_library
-from .utils import _ptr_to_const_ndarray
 
 
 class LabelsValues(np.ndarray):
@@ -198,32 +199,6 @@ class Labels:
      [0 5 1]]
 
 
-    It is possible to create a view inside a :py:class:`Labels`, selecting a subset of
-    columns/dimensions:
-
-    >>> # single dimension
-    >>> view = labels.view("atom")
-    >>> view.names
-    ['atom']
-    >>> print(view.values)
-    [[1]
-     [2]
-     [5]]
-    >>> # multiple dimensions
-    >>> view = labels.view(["atom", "system"])
-    >>> view.names
-    ['atom', 'system']
-    >>> print(view.values)
-    [[1 0]
-     [2 0]
-     [5 0]]
-    >>> view.is_view()
-    True
-    >>> # we can convert a view back to a full, owned Labels
-    >>> owned_labels = view.to_owned()
-    >>> owned_labels.is_view()
-    False
-
     One can also iterate over labels entries, or directly index the :py:class:`Labels`
     to get a specific entry
 
@@ -247,8 +222,6 @@ class Labels:
 
     Labels can be checked for equality:
 
-    >>> owned_labels == labels
-    False
     >>> labels == labels
     True
 
@@ -404,17 +377,11 @@ class Labels:
 
     def __str__(self) -> str:
         printed = self.print(4, 3)
-        if self.is_view():
-            return f"LabelsView(\n   {printed}\n)"
-        else:
-            return f"Labels(\n   {printed}\n)"
+        return f"Labels(\n   {printed}\n)"
 
     def __repr__(self) -> str:
         printed = self.print(-1, 3)
-        if self.is_view():
-            return f"LabelsView(\n   {printed}\n)"
-        else:
-            return f"Labels(\n   {printed}\n)"
+        return f"Labels(\n   {printed}\n)"
 
     def __len__(self) -> int:
         """number of entries in these labels"""
@@ -439,25 +406,23 @@ class Labels:
 
         When indexing with an integer, get the corresponding row/labels entry (i.e.
         :py:func:`Labels.entry`).
-
-        See also :py:func:`Labels.view` to extract the values associated with multiple
-        columns/dimensions.
         """
         if isinstance(index, (int, np.int8, np.int16, np.int32, np.int64)):
             return self.entry(index)
-        else:
-            return self.column(index)
+        if isinstance(index, (str, int)):
+            return self.column(index) if isinstance(index, str) else self.entry(index)
+
+        raise TypeError(
+            "Labels can only be indexed by a single string or integer"
+            f", got {type(index)}."
+            "To select multiple columns, construct a new `Labels` object."
+        )
 
     def __contains__(
         self,
         entry: Union[LabelsEntry, Sequence[int]],
     ) -> bool:
         """check if these :py:class:`Labels` contain the given ``entry``"""
-        if self.is_view():
-            raise ValueError(
-                "can not call `__contains__` on a Labels view, call `to_owned` before"
-            )
-
         return self.position(entry) is not None
 
     def __eq__(self, other: "Labels") -> bool:
@@ -484,13 +449,7 @@ class Labels:
         return not self.__eq__(other)
 
     def _as_mts_labels_t(self):
-        if self.is_view():
-            raise ValueError(
-                "can not use a Labels view with the metatensor shared library, "
-                "call `to_owned` before"
-            )
-        else:
-            return self._labels
+        return self._labels
 
     # ===== Serialization support ===== #
 
@@ -781,11 +740,6 @@ class Labels:
         labels.
         """
 
-        if self.is_view():
-            raise ValueError(
-                "can not call `position` on a Labels view, call `to_owned` before"
-            )
-
         result = ctypes.c_int64()
         c_entry = ctypes.ARRAY(ctypes.c_int32, len(entry))()
         for i, v in enumerate(entry):
@@ -825,11 +779,6 @@ class Labels:
             2  2
         )
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `difference` with Labels view, call `to_owned` before"
-            )
-
         output = mts_labels_t()
         self._lib.mts_labels_difference(
             self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0
@@ -865,12 +814,6 @@ class Labels:
         >>> print(mapping_1)
         [ 0 -1 -1  1]
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `difference_and_mapping` with Labels view, "
-                "call `to_owned` before"
-            )
-
         output = mts_labels_t()
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
@@ -904,11 +847,6 @@ class Labels:
             1  3
         )
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `union` with Labels view, call `to_owned` before"
-            )
-
         output = mts_labels_t()
         self._lib.mts_labels_union(
             self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
@@ -948,12 +886,6 @@ class Labels:
         >>> print(mapping_2)
         [2 3 1]
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `union_and_mapping` with Labels view, call `to_owned` "
-                "before"
-            )
-
         output = mts_labels_t()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
@@ -988,11 +920,6 @@ class Labels:
             0  3
         )
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `intersection` with Labels view, call `to_owned` before"
-            )
-
         output = mts_labels_t()
         self._lib.mts_labels_intersection(
             self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
@@ -1031,12 +958,6 @@ class Labels:
         >>> print(mapping_2)
         [ 1 -1  0]
         """
-        if self.is_view() or other.is_view():
-            raise ValueError(
-                "can not call `intersection_and_mapping` with Labels view, call "
-                "`to_owned` before"
-            )
-
         output = mts_labels_t()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
@@ -1122,13 +1043,13 @@ class Labels:
         .. seealso::
 
             :py:func:`Labels.__getitem__` as the main way to use this function
-
-            :py:func:`Labels.view` to access multiple columns simultaneously
         """
         if not isinstance(dimension, str):
-            raise TypeError(
-                f"column names must be a string, got {type(dimension)} instead"
+            message = (
+                "Labels can only be indexed by a single string or integer, "
+                f"got {type(dimension)}"
             )
+            raise TypeError(message)
 
         try:
             index = self.names.index(dimension)
@@ -1138,53 +1059,6 @@ class Labels:
             )
 
         return self.values[:, index]
-
-    def view(self, dimensions: Union[str, Sequence[str]]) -> "Labels":
-        """
-        Get a view for the specified columns in these labels.
-
-        .. seealso::
-
-            :py:func:`Labels.column` to get the values associated with a single
-            dimension
-        """
-
-        names = _normalize_names_type(dimensions)
-        indices = []
-        for name in names:
-            try:
-                i = self.names.index(name)
-                indices.append(i)
-            except ValueError:
-                raise ValueError(
-                    f"'{name}' not found in the dimensions of these Labels"
-                )
-
-        values = self.values[:, indices]
-
-        obj = self.__new__(Labels)
-        obj._lib = _get_library()
-        obj._labels = None
-        obj._names = names
-        obj._cached_values = values
-
-        return obj
-
-    def is_view(self) -> bool:
-        """are these labels a view inside another set of labels?
-
-        A view is created with :py:func:`Labels.__getitem__` or
-        :py:func:`Labels.view`, and does not implement :py:func:`Labels.position`
-        or :py:func:`Labels.__contains__`.
-        """
-        return self._labels is None
-
-    def to_owned(self) -> "Labels":
-        """convert a view to owned labels, which implement the full API"""
-        labels = _create_new_labels(
-            self._lib, self._names, self.values, assume_unique=False
-        )
-        return Labels._from_mts_labels_t(labels)
 
 
 def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
@@ -1353,3 +1227,15 @@ def _print_labels(
     output = output.getvalue()
     assert output[-1] == "\n"
     return output[:-1]
+
+
+def _ptr_to_const_ndarray(ptr, shape, dtype):
+    if functools.reduce(operator.mul, shape) == 0:
+        return np.empty(shape=shape, dtype=dtype)
+
+    assert ptr is not None
+    array = np.ctypeslib.as_array(ptr, shape=shape)
+    assert array.dtype == dtype
+    assert not array.flags["OWNDATA"]
+    array.flags["WRITEABLE"] = False
+    return array

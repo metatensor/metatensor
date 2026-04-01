@@ -1,5 +1,7 @@
 use std::os::raw::c_void;
 
+use dlpk::sys::DLDataType;
+
 use crate::data::mts_array_t;
 use super::status::mts_status_t;
 
@@ -11,16 +13,17 @@ mod tensor;
 /// maps.
 ///
 /// This function gets the `shape` of the array (the `shape` contains
-/// `shape_count` elements) and should fill `array` with a new valid
-/// `mts_array_t` or return non-zero `mts_status_t`.
+/// `shape_count` elements) and the `dtype` (a `DLDataType` describing the
+/// element type), and should fill `array` with a new valid `mts_array_t` or
+/// return non-zero `mts_status_t`.
 ///
-/// The newly created array should contains 64-bit floating points (`double`)
-/// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
-/// the data pointer and write to it.
+/// The newly created array should live on CPU, since metatensor will use
+/// `mts_array_t.data` to get the data pointer and write to it.
 #[allow(non_camel_case_types)]
 type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,
     shape_count: usize,
+    dtype: DLDataType,
     array: *mut mts_array_t,
 ) -> mts_status_t;
 
@@ -56,18 +59,19 @@ struct ExternalBuffer {
 impl std::io::Write for ExternalBuffer {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        let mut remaining_space = self.allocated - self.current;
+        let remaining_space = self.allocated.saturating_sub(self.current);
 
         if (remaining_space as usize) < buf.len() {
-            // find the new size to be able to fit all the data
-            let mut new_size = 0;
-            while (remaining_space as usize) < buf.len() {
-                new_size = if self.allocated == 0 {
-                    1024
-                } else {
-                    2 * self.allocated
-                };
-                remaining_space = new_size - self.current;
+            let required_size = self.current.saturating_add(buf.len() as u64);
+            let mut new_size = if self.allocated == 0 { 1024 } else { self.allocated };
+            while new_size < required_size {
+                new_size = new_size.saturating_mul(2);
+                if new_size == 0 {
+                     return Err(std::io::Error::new(
+                         std::io::ErrorKind::OutOfMemory,
+                         "requested allocation size overflow",
+                     ));
+                }
             }
 
             let new_ptr = unsafe {
@@ -90,7 +94,8 @@ impl std::io::Write for ExternalBuffer {
 
         let mut output = unsafe {
             let start = (*self.data).offset(self.current as isize);
-            std::slice::from_raw_parts_mut(start, remaining_space as usize)
+            // allocated >= current + buf.len()
+            std::slice::from_raw_parts_mut(start, buf.len())
         };
 
         let count = output.write(buf).expect("failed to write to pre-allocated slice");

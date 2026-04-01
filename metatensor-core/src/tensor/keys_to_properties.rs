@@ -5,7 +5,7 @@ use indexmap::IndexSet;
 use crate::labels::Labels;
 use crate::{Error, TensorBlock};
 
-use crate::data::mts_sample_mapping_t;
+use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
 use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
@@ -38,7 +38,7 @@ impl TensorMap {
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
-    pub fn keys_to_properties(&self, keys_to_move: &Labels, sort_samples: bool) -> Result<TensorMap, Error> {
+    pub fn keys_to_properties(&self, keys_to_move: &Labels, fill_value: &mts_array_t, sort_samples: bool) -> Result<TensorMap, Error> {
         if self.keys.is_empty() {
             return Err(Error::InvalidParameter(
                 "there are no keys to move in an empty TensorMap".into()
@@ -77,6 +77,7 @@ impl TensorMap {
                 keys_to_move,
                 &names_to_move,
                 sort_samples,
+                fill_value,
             )?;
             new_blocks.push(block);
         } else {
@@ -109,14 +110,17 @@ impl TensorMap {
                     keys_to_move,
                     &names_to_move,
                     sort_samples,
+                    fill_value,
                 )?;
                 new_blocks.push(block);
             }
         }
+
         let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
+
         return Ok(tensor);
     }
 }
@@ -128,6 +132,7 @@ fn merge_blocks_along_properties(
     keys_to_move: Option<&Labels>,
     extracted_names: &[&str],
     sort_samples: bool,
+    fill_value: &mts_array_t,
 ) -> Result<TensorBlock, Error> {
     assert!(!blocks_to_merge.is_empty());
 
@@ -214,7 +219,7 @@ fn merge_blocks_along_properties(
     new_shape[0] = merged_samples.count();
     let property_axis = new_shape.len() - 1;
     new_shape[property_axis] = new_properties_count;
-    let mut new_data = first_block.values.create(&new_shape)?;
+    let mut new_data = first_block.values.create(&new_shape, fill_value)?;
 
     // compute the property range for each block, i.e. where we want to put
     // the corresponding data
@@ -249,11 +254,18 @@ fn merge_blocks_along_properties(
     // for each block, gather the data to be moved & send it in one go
     for ((KeyAndBlock{block, ..}, samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
         if let Some(property_range) = property_range {
-            new_data.move_samples_from(
-                &block.values,
-                samples_mapping,
-                property_range.clone()
-            )?;
+            let mut movements = Vec::new();
+            for (sample_i, &new_sample_i) in samples_mapping.iter().enumerate() {
+                movements.push(mts_data_movement_t {
+                    sample_in: sample_i,
+                    sample_out: new_sample_i,
+                    properties_start_in: 0,
+                    properties_start_out: property_range.start,
+                    properties_length: property_range.len(),
+                });
+            }
+
+            new_data.move_data(&block.values, &movements)?;
         }
     }
 
@@ -275,39 +287,39 @@ fn merge_blocks_along_properties(
         let property_axis = new_shape.len() - 1;
         new_shape[property_axis] = new_properties_count;
 
-        let mut new_gradient = first_block.values.create(&new_shape)?;
+        let mut new_gradient = first_block.values.create(&new_shape, fill_value)?;
         let new_components = first_gradient.components.to_vec();
 
         for ((KeyAndBlock{block, ..}, samples_mapping), property_range) in blocks_to_merge.iter().zip(&samples_mappings).zip(&property_ranges) {
             if property_range.is_none() {
                 continue;
             }
-            let property_range = property_range.as_ref().unwrap();
 
+            let property_range = property_range.as_ref().unwrap();
             let gradient = block.gradient(parameter).expect("missing gradient");
             debug_assert!(*gradient.components == *new_components);
 
-            let mut samples_to_move = Vec::new();
+            let mut movements = Vec::new();
             for (sample_i, grad_sample) in gradient.samples.iter().enumerate() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
-                let old_sample_i = grad_sample[0].usize();
+                let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");
 
-                let mapping = &samples_mapping[old_sample_i];
-                debug_assert_eq!(mapping.input, old_sample_i);
-                grad_sample[0] = mapping.output.into();
+                let new_sample_i = samples_mapping[old_sample_i];
+                grad_sample[0] = i32::try_from(new_sample_i).expect("could not convert to i32");
 
-                let new_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
-                samples_to_move.push(mts_sample_mapping_t {
-                    input: sample_i,
-                    output: new_sample_i,
+                let new_grad_sample_i = new_gradient_samples.position(&grad_sample).expect("missing entry in merged samples");
+
+                movements.push(mts_data_movement_t {
+                    sample_in: sample_i,
+                    sample_out: new_grad_sample_i,
+                    properties_start_in: 0,
+                    properties_start_out: property_range.start,
+                    properties_length: property_range.len(),
                 });
             }
-            new_gradient.move_samples_from(
-                &gradient.values,
-                &samples_to_move,
-                property_range.clone(),
-            )?;
+
+            new_gradient.move_data(&gradient.values, &movements)?;
         }
 
         let new_gradient = TensorBlock::new(

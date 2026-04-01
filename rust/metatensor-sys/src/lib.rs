@@ -56,187 +56,22 @@ impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
     }
 }
 
-/// Check the status code returned by arbitrary functions inside an
-/// `mts_array_t`
-fn check_status_external(status: mts_status_t, function: &str) -> Result<(), Error> {
-    if status == MTS_SUCCESS {
-        return Ok(());
-    } else if status > 0 {
-        let message = unsafe {
-            std::ffi::CStr::from_ptr(mts_last_error())
-        };
-        let message = message.to_str().expect("invalid UTF8");
-
-        return Err(Error { code: Some(status), message: message.to_owned() });
-    } else {
-        return Err(Error { code: Some(status), message: format!("calling {} failed", function) });
-    }
-}
-
 impl mts_array_t {
     /// Create an `mts_array_t` with all members set to null pointers/None
     pub fn null() -> mts_array_t {
         mts_array_t {
             ptr: std::ptr::null_mut(),
             origin: None,
-            data: None,
+            device: None,
+            dtype: None,
+            as_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
             create: None,
             copy: None,
             destroy: None,
-            move_samples_from: None,
+            move_data: None,
         }
-    }
-
-    /// call `mts_array_t.origin` with a more convenient API
-    pub fn origin(&self) -> Result<mts_data_origin_t, Error> {
-        let function = self.origin.expect("mts_array_t.origin function is NULL");
-
-        let mut origin = 0;
-        unsafe {
-            check_status_external(
-                function(self.ptr, &mut origin),
-                "mts_array_t.origin",
-            )?;
-        }
-
-        return Ok(origin);
-    }
-
-    /// call `mts_array_t.shape` with a more convenient API
-    #[allow(clippy::cast_possible_truncation)]
-    pub fn shape(&self) -> Result<&[usize], Error> {
-        let function = self.shape.expect("mts_array_t.shape function is NULL");
-
-        let mut shape = std::ptr::null();
-        let mut shape_count: usize = 0;
-
-        unsafe {
-            check_status_external(
-                function(self.ptr, &mut shape, &mut shape_count),
-                "mts_array_t.shape"
-            )?;
-        }
-
-        assert!(shape_count > 0);
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        return Ok(shape);
-    }
-
-    /// call `mts_array_t.data` with a more convenient API
-    pub fn data(&mut self) -> Result<&mut [f64], Error> {
-        let shape = self.shape()?;
-        let mut len = 1;
-        for s in shape {
-            len *= s;
-        }
-
-        let function = self.data.expect("mts_array_t.data function is NULL");
-
-        let mut data_ptr = std::ptr::null_mut();
-        let data = unsafe {
-            check_status_external(
-                function(self.ptr, &mut data_ptr),
-                "mts_array_t.data"
-            )?;
-
-            if len == 0 {
-                &mut []
-            } else {
-                assert!(!data_ptr.is_null());
-                std::slice::from_raw_parts_mut(data_ptr, len)
-            }
-        };
-
-        return Ok(data);
-    }
-
-    /// call `mts_array_t.reshape` with a more convenient API
-    pub fn reshape(&mut self, shape: &[usize]) -> Result<(), Error> {
-        let function = self.reshape.expect("mts_array_t.reshape function is NULL");
-
-        unsafe {
-            check_status_external(
-                function(self.ptr, shape.as_ptr(), shape.len()),
-                "mts_array_t.reshape",
-            )?;
-        }
-
-        return Ok(());
-    }
-
-    /// call `mts_array_t.swap_axes` with a more convenient API
-    pub fn swap_axes(&mut self, axis_1: usize, axis_2: usize) -> Result<(), Error> {
-        let function = self.swap_axes.expect("mts_array_t.swap_axes function is NULL");
-
-        unsafe {
-            check_status_external(
-                function(self.ptr, axis_1, axis_2),
-                "mts_array_t.swap_axes",
-            )?;
-        }
-
-        return Ok(());
-    }
-
-    /// call `mts_array_t.create` with a more convenient API
-    pub fn create(&self, shape: &[usize]) -> Result<mts_array_t, Error> {
-        let function = self.create.expect("mts_array_t.create function is NULL");
-
-        let mut new_array = mts_array_t::null();
-        unsafe {
-            check_status_external(
-                function(self.ptr, shape.as_ptr(), shape.len(), &mut new_array),
-                "mts_array_t.create",
-            )?;
-        }
-
-        return Ok(new_array);
-    }
-
-    /// call `mts_array_t.copy` with a more convenient API
-    pub fn copy(&self) -> Result<mts_array_t, Error> {
-        let function = self.copy.expect("mts_array_t.copy function is NULL");
-
-        let mut new_array = mts_array_t::null();
-        unsafe {
-            check_status_external(
-                function(self.ptr, &mut new_array),
-                "mts_array_t.copy",
-            )?;
-        }
-
-        return Ok(new_array);
-    }
-
-    /// call `mts_array_t.move_samples_from` with a more convenient API
-    pub fn move_samples_from(
-        &mut self,
-        input: &mts_array_t,
-        samples: &[mts_sample_mapping_t],
-        properties: std::ops::Range<usize>,
-    ) -> Result<(), Error> {
-        let function = self.move_samples_from.expect("mts_array_t.move_samples_from function is NULL");
-
-        unsafe {
-            check_status_external(
-                function(
-                    self.ptr,
-                    input.ptr,
-                    samples.as_ptr(),
-                    samples.len(),
-                    properties.start,
-                    properties.end,
-                ),
-                "mts_array_t.move_samples_from",
-            )?;
-        }
-
-        return Ok(());
     }
 }

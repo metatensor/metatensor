@@ -132,32 +132,6 @@ class Labels:
             [0, 5, 1]], dtype=torch.int32)
 
 
-    It is possible to create a view inside a :py:class:`Labels`, selecting only
-    a subset of columns/dimensions:
-
-    >>> # single dimension
-    >>> view = labels.view("atom")
-    >>> view.names
-    ['atom']
-    >>> view.values
-    tensor([[1],
-            [2],
-            [5]], dtype=torch.int32)
-    >>> # multiple dimensions
-    >>> view = labels.view(["atom", "system"])
-    >>> view.names
-    ['atom', 'system']
-    >>> view.values
-    tensor([[1, 0],
-            [2, 0],
-            [5, 0]], dtype=torch.int32)
-    >>> view.is_view()
-    True
-    >>> # we can convert a view back to a full, owned Labels
-    >>> owned_labels = view.to_owned()
-    >>> owned_labels.is_view()
-    False
-
     One can also iterate over labels entries, or directly index the :py:class:`Labels`
     to get a specific entry
 
@@ -181,13 +155,11 @@ class Labels:
 
     Labels can be checked for equality:
 
-    >>> owned_labels == labels
-    False
     >>> labels == labels
     True
 
 
-    Finally, it is possible to check if a value is inside (non-view) labels, and
+    Finally, it is possible to check if a value is inside labels, and
     get the corresponding position:
 
     >>> labels.position([0, 2, 1])
@@ -324,9 +296,6 @@ class Labels:
 
         When indexing with an integer, get the corresponding row/labels entry (i.e.
         :py:func:`Labels.entry`).
-
-        See also :py:func:`Labels.view` to extract the values associated with multiple
-        columns/dimensions.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -691,27 +660,7 @@ class Labels:
         .. seealso::
 
             :py:func:`Labels.__getitem__` as the main way to use this function
-
-            :py:func:`Labels.view` to access multiple columns simultaneously
         """
-        raise THIS_CODE_SHOULD_NOT_RUN
-
-    def view(self, dimensions: StrSequence) -> "Labels":
-        """get a view for the specified columns in these labels, see also
-        :py:func:`Labels.__getitem__`"""
-        raise THIS_CODE_SHOULD_NOT_RUN
-
-    def is_view(self) -> bool:
-        """are these labels a view inside another set of labels?
-
-        A view is created with :py:func:`Labels.__getitem__` or
-        :py:func:`Labels.view`, and does not implement :py:func:`Labels.position`
-        or :py:func:`Labels.__contains__`.
-        """
-        raise THIS_CODE_SHOULD_NOT_RUN
-
-    def to_owned(self) -> "Labels":
-        """convert a view to owned labels, which implement the full API"""
         raise THIS_CODE_SHOULD_NOT_RUN
 
 
@@ -1222,6 +1171,7 @@ class TensorMap:
     def keys_to_samples(
         self,
         keys_to_move: Union[StrSequence, Labels],
+        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1248,6 +1198,9 @@ class TensorMap:
         properties values.
 
         :param keys_to_move: description of the keys to move
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Accepts any numeric type (int, float, bool).
+            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks
@@ -1257,6 +1210,7 @@ class TensorMap:
     def keys_to_properties(
         self,
         keys_to_move: Union[StrSequence, Labels],
+        fill_value: Union[int, float, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1286,7 +1240,7 @@ class TensorMap:
         ``keys_to_move``, blocks with properties ``p=1, 2`` will result in
         ``a, p = (2, 1), (2, 2), (3, 1), (3, 2)``. If there is no values (no
         block/missing sample) for a given property in the merged block, then the
-        value will be set to zero.
+        value will be set to the ``fill_value``.
 
         When using a non empty :py:class:`Labels` for ``keys_to_move``, the
         properties labels of all the merged blocks must take the same values.
@@ -1297,6 +1251,9 @@ class TensorMap:
         kept in the order in which they appear in the blocks.
 
         :param keys_to_move: description of the keys to move
+        :param fill_value: scalar value used to fill missing entries in the
+            merged blocks. Accepts any numeric type (int, float, bool).
+            Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
         :return: a new :py:class:`TensorMap` with merged blocks
