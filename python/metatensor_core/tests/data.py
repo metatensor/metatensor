@@ -432,7 +432,7 @@ GET_TEST_ORIGIN = metatensor.data.array._cast_to_ctype_functype(
 
 
 @metatensor.utils.catch_exceptions
-def create_test_array(shape_ptr, shape_count, array):
+def create_test_array(shape_ptr, shape_count, dtype, array):
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])

@@ -1,5 +1,7 @@
 use std::os::raw::c_void;
 
+use dlpk::sys::DLDataType;
+
 use crate::data::mts_array_t;
 use super::status::mts_status_t;
 
@@ -11,16 +13,17 @@ mod tensor;
 /// maps.
 ///
 /// This function gets the `shape` of the array (the `shape` contains
-/// `shape_count` elements) and should fill `array` with a new valid
-/// `mts_array_t` or return non-zero `mts_status_t`.
+/// `shape_count` elements) and the `dtype` (a `DLDataType` describing the
+/// element type), and should fill `array` with a new valid `mts_array_t` or
+/// return non-zero `mts_status_t`.
 ///
-/// The newly created array should contains 64-bit floating points (`double`)
-/// data, and live on CPU, since metatensor will use `mts_array_t.data` to get
-/// the data pointer and write to it.
+/// The newly created array should live on CPU, since metatensor will use
+/// `mts_array_t.data` to get the data pointer and write to it.
 #[allow(non_camel_case_types)]
 type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,
     shape_count: usize,
+    dtype: DLDataType,
     array: *mut mts_array_t,
 ) -> mts_status_t;
 
