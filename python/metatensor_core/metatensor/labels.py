@@ -22,8 +22,9 @@ class LabelsValues(np.ndarray):
 
     def __new__(cls, labels: "Labels"):
         from metatensor._c_api import c_uintptr_t, DLDevice, DLPackVersion, DLManagedTensorVersioned
-        from metatensor.data._dlpack import make_dlpack_versioned_capsule
+        from metatensor.data.extract import _ptr_to_ndarray, _DLPACK_TO_NUMPY
         import numpy as np
+        import ctypes
 
         lib = _get_library()
 
@@ -40,21 +41,42 @@ class LabelsValues(np.ndarray):
         for i in range(shape_count.value):
             shape.append(shape_ptr[i])
 
-        # Use as_dlpack to get DLPack tensor
+        # Use as_dlpack to get data pointer and dtype (matching ExternalCpuArray)
         dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
         device = DLDevice(device_type=1, device_id=0)  # kDLCPU
         version = DLPackVersion(major=1, minor=0)
         _check_status(array.as_dlpack(
-            array.ptr, device, None, version, ctypes.byref(dl_managed_ptr)
+            array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            device,
+            None,
+            version,
         ))
 
-        # Create capsule and use numpy's from_dlpack
-        capsule = make_dlpack_versioned_capsule(dl_managed_ptr)
-        np_array = np.from_dlpack(capsule)
+        # Extract dtype and create numpy array (matching ExternalCpuArray)
+        dl_tensor = dl_managed_ptr.contents.dl_tensor
+        data_ptr = dl_tensor.data
+        dtype_code = dl_tensor.dtype.code
+        dtype_bits = dl_tensor.dtype.bits
+
+        np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+        if np_dtype is None:
+            raise ValueError(
+                f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+            )
+
+        c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+        np_array = _ptr_to_ndarray(
+            ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+            shape,
+            np_dtype,
+        )
 
         # Create the LabelsValues view
         obj = np_array.view(cls)
         obj._parent = labels
+        # Keep DLPack tensor alive to prevent premature free
+        obj._dl_managed_ptr = dl_managed_ptr
         return obj
 
     def __array_finalize__(self, obj):
