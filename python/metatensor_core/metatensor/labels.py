@@ -21,15 +21,17 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
-        from metatensor._c_api import (
-            c_uintptr_t,
-            DLDevice,
-            DLPackVersion,
-            DLManagedTensorVersioned,
-        )
-        from metatensor.data.extract import _ptr_to_ndarray, _DLPACK_TO_NUMPY
-        import numpy as np
         import ctypes
+
+        import numpy as np
+
+        from metatensor._c_api import (
+            DLDevice,
+            DLManagedTensorVersioned,
+            DLPackVersion,
+            c_uintptr_t,
+        )
+        from metatensor.data.extract import _DLPACK_TO_NUMPY, _ptr_to_ndarray
 
         lib = _get_library()
 
