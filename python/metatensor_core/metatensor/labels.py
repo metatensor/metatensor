@@ -8,7 +8,7 @@ from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
-from ._c_api import c_uintptr_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_labels_t, mts_array_t
 from ._c_lib import _get_library
 from .status import _check_pointer, _check_status
 
@@ -25,18 +25,18 @@ class LabelsValues(np.ndarray):
 
         import numpy as np
 
-        from metatensor._c_api import (
+        from ._c_api import (
             DLDevice,
             DLManagedTensorVersioned,
             DLPackVersion,
             c_uintptr_t,
         )
-        from metatensor.data.extract import _DLPACK_TO_NUMPY, _ptr_to_ndarray
+        from .data.extract import _DLPACK_TO_NUMPY, _ptr_to_ndarray
 
         lib = _get_library()
 
         # Get the values array from the labels
-        array = lib.mts_array_t()
+        array = mts_array_t()
         _check_status(lib.mts_labels_values(labels._labels, ctypes.byref(array)))
 
         # Extract shape

@@ -342,7 +342,9 @@ DLManagedTensorVersioned._fields_ = [
             f.write("\n    ]\n")
             restype = _py_type(function.restype)
             if restype == "mts_status_t":
-                restype = "_check_status"
+                # Don't use _check_status as restype - it's a Python function, not a ctypes type
+                # Instead, use mts_status_t and let callers wrap with _check_status
+                restype = "mts_status_t"
             f.write(f"    lib.{function.name}.restype = {restype}\n")
 
 
