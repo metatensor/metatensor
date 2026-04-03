@@ -24,7 +24,7 @@ def _register_labels_origin():
         return
 
     from .data.extract import register_external_data_wrapper
-    from .data.dlpack import from_dlpack
+    from .data._dlpack import from_dlpack
 
     class LabelsArrayWrapper:
         """Wrapper to convert metatensor.labels mts_array_t to numpy array via DLPack."""
