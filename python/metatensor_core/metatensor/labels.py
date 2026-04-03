@@ -23,16 +23,16 @@ class LabelsValues(np.ndarray):
     def __new__(cls, labels: "Labels"):
         lib = _get_library()
         from .data.extract import mts_array_to_python_array
-        
+
         # Get the values array from the labels
         array = lib.mts_array_t()
         _check_status(lib.mts_labels_values(labels._labels, ctypes.byref(array)))
-        
+
         # Convert mts_array_t to numpy array
         np_array = mts_array_to_python_array(array, parent=labels)
         if not isinstance(np_array, np.ndarray):
             np_array = np.asarray(np_array)
-        
+
         # Create the LabelsValues view
         obj = np_array.view(cls)
         obj._parent = labels
@@ -361,7 +361,7 @@ class Labels:
 
         names_ptr = ctypes.POINTER(ctypes.c_char_p)()
         names_count = c_uintptr_t()
-        obj._lib.mts_labels_dimensions(labels, names_ptr, names_count)
+        _check_status(obj._lib.mts_labels_dimensions(labels, names_ptr, names_count))
 
         names = []
         for i in range(names_count.value):
