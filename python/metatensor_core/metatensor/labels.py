@@ -21,7 +21,12 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
-        from metatensor._c_api import c_uintptr_t, DLDevice, DLPackVersion, DLManagedTensorVersioned
+        from metatensor._c_api import (
+            c_uintptr_t,
+            DLDevice,
+            DLPackVersion,
+            DLManagedTensorVersioned,
+        )
         from metatensor.data.extract import _ptr_to_ndarray, _DLPACK_TO_NUMPY
         import numpy as np
         import ctypes
@@ -45,13 +50,15 @@ class LabelsValues(np.ndarray):
         dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
         device = DLDevice(device_type=1, device_id=0)  # kDLCPU
         version = DLPackVersion(major=1, minor=0)
-        _check_status(array.as_dlpack(
-            array.ptr,
-            ctypes.byref(dl_managed_ptr),
-            device,
-            None,
-            version,
-        ))
+        _check_status(
+            array.as_dlpack(
+                array.ptr,
+                ctypes.byref(dl_managed_ptr),
+                device,
+                None,
+                version,
+            )
+        )
 
         # Extract dtype and create numpy array (matching ExternalCpuArray)
         dl_tensor = dl_managed_ptr.contents.dl_tensor
