@@ -10,7 +10,7 @@ import numpy as np
 
 from ._c_api import c_uintptr_t, mts_labels_t
 from ._c_lib import _get_library
-from .status import _check_pointer
+from .status import _check_pointer, _check_status
 
 
 class LabelsValues(np.ndarray):
@@ -22,22 +22,20 @@ class LabelsValues(np.ndarray):
 
     def __new__(cls, labels: "Labels"):
         lib = _get_library()
-        values_ptr = ctypes.POINTER(ctypes.c_int32)()
-        count = c_uintptr_t()
-        size = c_uintptr_t()
-        lib.mts_labels_values_raw(labels._labels, values_ptr, count, size)
-
-        array = _ptr_to_const_ndarray(
-            ptr=values_ptr,
-            shape=(count.value, size.value),
-            dtype=np.int32,
-        )
-        obj = array.view(cls)
-
-        # keep a reference to the Python labels to prevent them from being
-        # garbage-collected too early.
+        from .data.extract import mts_array_to_python_array
+        
+        # Get the values array from the labels
+        array = lib.mts_array_t()
+        _check_status(lib.mts_labels_values(labels._labels, ctypes.byref(array)))
+        
+        # Convert mts_array_t to numpy array
+        np_array = mts_array_to_python_array(array, parent=labels)
+        if not isinstance(np_array, np.ndarray):
+            np_array = np.asarray(np_array)
+        
+        # Create the LabelsValues view
+        obj = np_array.view(cls)
         obj._parent = labels
-
         return obj
 
     def __array_finalize__(self, obj):
