@@ -13,6 +13,36 @@ from ._c_lib import _get_library
 from .status import _check_pointer, _check_status
 
 
+# Register the metatensor.labels origin wrapper
+_LABELS_ORIGIN_REGISTERED = False
+
+
+def _register_labels_origin():
+    """Register the metatensor.labels origin wrapper for DLPack conversion."""
+    global _LABELS_ORIGIN_REGISTERED
+    if _LABELS_ORIGIN_REGISTERED:
+        return
+
+    from .data.extract import register_external_data_wrapper
+    from .data.dlpack import from_dlpack
+
+    class LabelsArrayWrapper:
+        """Wrapper to convert metatensor.labels mts_array_t to numpy array via DLPack."""
+
+        def __init__(self, mts_array, parent=None):
+            # Get DLPack tensor from mts_array_t
+            dlpack_tensor = mts_array.as_dlpack()
+            # Convert DLPack to numpy array
+            np_array = from_dlpack(dlpack_tensor)
+            if parent is not None:
+                # Keep parent alive
+                np_array._parent = parent
+            self.array = np_array
+
+
+# Register on module load
+_register_labels_origin()
+
 class LabelsValues(np.ndarray):
     """
     Wrapper class around the values inside :py:class:`Labels`, keeping a reference to
