@@ -61,7 +61,7 @@ public:
 
     DLManagedTensorVersioned* as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) override;
 
-    const std::vector<uintptr_t>& shape() const & override;
+    const std::vector<uintptr_t>& shape() const override;
 
     void reshape(std::vector<uintptr_t> shape) override;
 
