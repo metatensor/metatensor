@@ -21,8 +21,8 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
-        from .._c_api import c_uintptr_t, DLDevice, DLPackVersion, DLManagedTensorVersioned
-        from .data._dlpack import make_dlpack_versioned_capsule
+        from metatensor._c_api import c_uintptr_t, DLDevice, DLPackVersion, DLManagedTensorVersioned
+        from metatensor.data._dlpack import make_dlpack_versioned_capsule
         import numpy as np
 
         lib = _get_library()
