@@ -23,25 +23,17 @@ def _register_labels_origin():
     if _LABELS_ORIGIN_REGISTERED:
         return
 
-    from .data.extract import register_external_data_wrapper
-    from .data._dlpack import from_dlpack
+    from .data.extract import register_external_data_wrapper, ExternalCpuArray
 
     class LabelsArrayWrapper:
-        """Wrapper to convert metatensor.labels mts_array_t to numpy array via DLPack."""
+        """Wrapper to convert metatensor.labels mts_array_t to numpy array."""
 
         def __init__(self, mts_array, parent=None):
-            # Get DLPack tensor from mts_array_t
-            dlpack_tensor = mts_array.as_dlpack()
-            # Convert DLPack to numpy array
-            np_array = from_dlpack(dlpack_tensor)
-            if parent is not None:
-                # Keep parent alive
-                np_array._parent = parent
-            self.array = np_array
+            # Use ExternalCpuArray which handles DLPack conversion
+            self.array = ExternalCpuArray(mts_array, parent)
 
-
-# Register on module load
-_register_labels_origin()
+    register_external_data_wrapper("metatensor.labels", LabelsArrayWrapper)
+    _LABELS_ORIGIN_REGISTERED = True
 
 class LabelsValues(np.ndarray):
     """
