@@ -13,28 +13,6 @@ from ._c_lib import _get_library
 from .status import _check_pointer, _check_status
 
 
-# Register the metatensor.labels origin wrapper
-_LABELS_ORIGIN_REGISTERED = False
-
-
-def _register_labels_origin():
-    """Register the metatensor.labels origin wrapper for DLPack conversion."""
-    global _LABELS_ORIGIN_REGISTERED
-    if _LABELS_ORIGIN_REGISTERED:
-        return
-
-    from .data.extract import register_external_data_wrapper, ExternalCpuArray
-
-    class LabelsArrayWrapper:
-        """Wrapper to convert metatensor.labels mts_array_t to numpy array."""
-
-        def __init__(self, mts_array, parent=None):
-            # Use ExternalCpuArray which handles DLPack conversion
-            self.array = ExternalCpuArray(mts_array, parent)
-
-    register_external_data_wrapper("metatensor.labels", LabelsArrayWrapper)
-    _LABELS_ORIGIN_REGISTERED = True
-
 class LabelsValues(np.ndarray):
     """
     Wrapper class around the values inside :py:class:`Labels`, keeping a reference to
@@ -43,17 +21,36 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
+        from .._c_api import c_uintptr_t, DLDevice, DLPackVersion, DLManagedTensorVersioned
+        from .data._dlpack import make_dlpack_versioned_capsule
+        import numpy as np
+
         lib = _get_library()
-        from .data.extract import mts_array_to_python_array
 
         # Get the values array from the labels
         array = lib.mts_array_t()
         _check_status(lib.mts_labels_values(labels._labels, ctypes.byref(array)))
 
-        # Convert mts_array_t to numpy array
-        np_array = mts_array_to_python_array(array, parent=labels)
-        if not isinstance(np_array, np.ndarray):
-            np_array = np.asarray(np_array)
+        # Extract shape
+        shape_ptr = ctypes.POINTER(c_uintptr_t)()
+        shape_count = c_uintptr_t()
+        _check_status(array.shape(array.ptr, shape_ptr, shape_count))
+
+        shape = []
+        for i in range(shape_count.value):
+            shape.append(shape_ptr[i])
+
+        # Use as_dlpack to get DLPack tensor
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+        version = DLPackVersion(major=1, minor=0)
+        _check_status(array.as_dlpack(
+            array.ptr, device, None, version, ctypes.byref(dl_managed_ptr)
+        ))
+
+        # Create capsule and use numpy's from_dlpack
+        capsule = make_dlpack_versioned_capsule(dl_managed_ptr)
+        np_array = np.from_dlpack(capsule)
 
         # Create the LabelsValues view
         obj = np_array.view(cls)
