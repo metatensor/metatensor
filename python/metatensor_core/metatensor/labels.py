@@ -57,7 +57,7 @@ class LabelsValues(np.ndarray):
                 array.ptr,
                 ctypes.byref(dl_managed_ptr),
                 device,
-                None,
+                None,  # stream (NULL = default)
                 version,
             )
         )
@@ -86,6 +86,8 @@ class LabelsValues(np.ndarray):
         obj._parent = labels
         # Keep DLPack tensor alive to prevent premature free
         obj._dl_managed_ptr = dl_managed_ptr
+        # Ensure the array is read-only since labels values should not be modified
+        obj.flags.writeable = False
         return obj
 
     def __array_finalize__(self, obj):

@@ -232,9 +232,10 @@ else:
 #
 # DLPack is not limited to block data. **Labels** also participate in the
 # DLPack ecosystem via the ``mts_array_t`` values array stored inside each
-# ``Labels`` object.  When labels are moved to a device (e.g. via
-# ``Labels.to("cuda")`` in the torch backend), the underlying values tensor
-# stays on that device.  The ``device()`` query on the values array tells
+# ``Labels`` object.  When labels are moved or directly constructed on a
+# device (e.g. via ``Labels.to("cuda")`` in the torch backend), the
+# underlying values tensor stays on that device.  The ``device()`` query
+# on the values array tells
 # callers where the label data lives, and ``as_dlpack()`` exports it without
 # an implicit copy.
 #
