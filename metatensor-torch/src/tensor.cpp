@@ -484,7 +484,10 @@ torch::Device TensorMapHolder::device() const {
     }
 
     mts_block_t* block_ptr = nullptr;
-    mts_tensormap_block_by_id(this->tensor_.as_mts_tensormap_t(), &block_ptr, 0);
+    mts_tensormap_block_by_id(
+        const_cast<mts_tensormap_t*>(this->tensor_.as_mts_tensormap_t()),
+        &block_ptr, 0
+    );
     if (block_ptr == nullptr) {
         return torch::Device(torch::kCPU);
     }
