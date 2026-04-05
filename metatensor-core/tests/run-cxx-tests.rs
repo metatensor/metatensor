@@ -24,7 +24,13 @@ fn run_cxx_tests() {
     assert!(status.success(), "failed to run cmake build");
 
     // run the tests
+    //
+    // Unset LD_LIBRARY_PATH to prevent cargo's test-runner LD_LIBRARY_PATH
+    // (which includes target/debug/deps/) from shadowing the correct
+    // libmetatensor.so via RUNPATH. The test binaries embed the correct
+    // library path in their RUNPATH already.
     let mut ctest = utils::ctest(&build_dir);
+    ctest.env_remove("LD_LIBRARY_PATH");
     let status = ctest.status().expect("could not run ctest");
     assert!(status.success(), "failed to run ctest");
 }
