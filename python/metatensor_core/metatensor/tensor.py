@@ -774,9 +774,7 @@ class TensorMap:
         """
         keys = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
-        _check_status(
-            self._lib.mts_tensormap_info_keys(self._ptr, keys, count)
-        )
+        _check_status(self._lib.mts_tensormap_info_keys(self._ptr, keys, count))
         result = {}
         for i in range(count.value):
             key = keys[i].decode("utf8")

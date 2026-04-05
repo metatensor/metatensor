@@ -469,9 +469,7 @@ class TensorBlock:
         """get a list of all gradients defined in this block"""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
-        _check_status(
-            self._lib.mts_block_gradients_list(self._ptr, parameters, count)
-        )
+        _check_status(self._lib.mts_block_gradients_list(self._ptr, parameters, count))
 
         result = []
         for i in range(count.value):
