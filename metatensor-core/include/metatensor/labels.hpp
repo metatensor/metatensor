@@ -186,15 +186,18 @@ public:
 
     /// Get the number of entries in this set of Labels.
     ///
-    /// This is the same as `shape()[0]` for the corresponding values array.
-    /// Uses the internal raw accessor so it works even before values are cached
-    /// (e.g. for labels on Meta device).
+    /// Reads the shape from the backing `mts_array_t` without materializing
+    /// CPU values, so this works cheaply for labels on any device.
     size_t count() const {
         if (labels_ == nullptr) return 0;
-        const int32_t* v = nullptr;
-        size_t c = 0, s = 0;
-        details::check_status(mts_labels_values_raw(labels_, &v, &c, &s));
-        return c;
+        mts_array_t array;
+        std::memset(&array, 0, sizeof(array));
+        details::check_status(mts_labels_values(labels_, &array));
+        const uintptr_t* shape_ptr = nullptr;
+        uintptr_t shape_count = 0;
+        array.shape(array.ptr, &shape_ptr, &shape_count);
+        assert(shape_count == 2);
+        return static_cast<size_t>(shape_ptr[0]);
     }
 
     /// Get the number of dimensions in this set of Labels.
