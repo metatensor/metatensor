@@ -450,13 +450,18 @@ public:
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    const T* data() const {
+    const T* data() const & {
+        return data_;
+    }
+
+    /// Get the data pointer for rvalue NDArrays.
+    const T* data() const && {
         return data_;
     }
 
     /// Get the data pointer for this array, i.e. the pointer to the first
     /// element.
-    T* data() {
+    T* data() & {
         if (is_const_) {
             throw Error("This NDArray is const, can not get non const access to it");
         }

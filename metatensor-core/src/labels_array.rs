@@ -161,7 +161,10 @@ unsafe extern "C" fn labels_array_as_dlpack(
     }
 
     let current = DLPackVersion::current();
-    if max_version.major != current.major || max_version.minor < current.minor {
+    // Accept any consumer with the same major version. The producer outputs
+    // tensors compatible with version 1.0 (basic DLTensor), so there is no
+    // minimum minor version requirement.
+    if max_version.major != current.major {
         return mts_status_t(1);
     }
 
