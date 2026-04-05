@@ -8,8 +8,9 @@ from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
-from ._c_api import c_uintptr_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_labels_t
 from ._c_lib import _get_library
+from .status import _check_pointer, _check_status
 
 
 class LabelsValues(np.ndarray):
@@ -20,17 +21,73 @@ class LabelsValues(np.ndarray):
     """
 
     def __new__(cls, labels: "Labels"):
-        array = _ptr_to_const_ndarray(
-            ptr=labels._labels.values,
-            shape=(labels._labels.count, labels._labels.size),
-            dtype=np.int32,
+        import ctypes
+
+        import numpy as np
+
+        from ._c_api import (
+            DLDevice,
+            DLManagedTensorVersioned,
+            DLPackVersion,
+            c_uintptr_t,
         )
-        obj = array.view(cls)
+        from .data.extract import _DLPACK_TO_NUMPY, _ptr_to_ndarray
 
-        # keep a reference to the Python labels to prevent them from being
-        # garbage-collected too early.
+        lib = _get_library()
+
+        # Get the values array from the labels
+        array = mts_array_t()
+        _check_status(lib.mts_labels_values(labels._labels, ctypes.byref(array)))
+
+        # Extract shape
+        shape_ptr = ctypes.POINTER(c_uintptr_t)()
+        shape_count = c_uintptr_t()
+        _check_status(array.shape(array.ptr, shape_ptr, shape_count))
+
+        shape = []
+        for i in range(shape_count.value):
+            shape.append(shape_ptr[i])
+
+        # Use as_dlpack to get data pointer and dtype (matching ExternalCpuArray)
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+        version = DLPackVersion(major=1, minor=0)
+        _check_status(
+            array.as_dlpack(
+                array.ptr,
+                ctypes.byref(dl_managed_ptr),
+                device,
+                None,  # stream (NULL = default)
+                version,
+            )
+        )
+
+        # Extract dtype and create numpy array (matching ExternalCpuArray)
+        dl_tensor = dl_managed_ptr.contents.dl_tensor
+        data_ptr = dl_tensor.data
+        dtype_code = dl_tensor.dtype.code
+        dtype_bits = dl_tensor.dtype.bits
+
+        np_dtype = _DLPACK_TO_NUMPY.get((dtype_code, dtype_bits))
+        if np_dtype is None:
+            raise ValueError(
+                f"unsupported DLPack dtype: code={dtype_code}, bits={dtype_bits}"
+            )
+
+        c_type = np.ctypeslib.as_ctypes_type(np.dtype(np_dtype))
+        np_array = _ptr_to_ndarray(
+            ctypes.cast(data_ptr, ctypes.POINTER(c_type)),
+            shape,
+            np_dtype,
+        )
+
+        # Create the LabelsValues view
+        obj = np_array.view(cls)
         obj._parent = labels
-
+        # Keep DLPack tensor alive to prevent premature free
+        obj._dl_managed_ptr = dl_managed_ptr
+        # Ensure the array is read-only since labels values should not be modified
+        obj.flags.writeable = False
         return obj
 
     def __array_finalize__(self, obj):
@@ -346,16 +403,21 @@ class Labels:
         )
 
     @classmethod
-    def _from_mts_labels_t(cls, labels: mts_labels_t):
-        assert labels.internal_ptr_ is not None
+    def _from_mts_labels_t(cls, labels):
+        """Create Labels from an opaque mts_labels_t pointer."""
+        _check_pointer(labels)
 
         obj = cls.__new__(cls)
         obj._lib = _get_library()
         obj._labels = labels
 
+        names_ptr = ctypes.POINTER(ctypes.c_char_p)()
+        names_count = c_uintptr_t()
+        _check_status(obj._lib.mts_labels_dimensions(labels, names_ptr, names_count))
+
         names = []
-        for i in range(labels.size):
-            names.append(labels.names[i].decode("utf8"))
+        for i in range(names_count.value):
+            names.append(names_ptr[i].decode("utf8"))
         obj._names = names
 
         obj._cached_values = None
@@ -368,9 +430,9 @@ class Labels:
                 self._lib.mts_labels_free(self._labels)
 
     def __deepcopy__(self, _memodict):
-        labels = mts_labels_t()
-        self._lib.mts_labels_clone(self._labels, labels)
-        return Labels._from_mts_labels_t(labels)
+        ptr = self._lib.mts_labels_clone(self._labels)
+        _check_pointer(ptr)
+        return Labels._from_mts_labels_t(ptr)
 
     def __copy__(self):
         return self.__deepcopy__({})
@@ -745,11 +807,13 @@ class Labels:
         for i, v in enumerate(entry):
             c_entry[i] = ctypes.c_int32(v)
 
-        self._lib.mts_labels_position(
-            self._labels,
-            c_entry,
-            c_entry._length_,
-            result,
+        _check_status(
+            self._lib.mts_labels_position(
+                self._labels,
+                c_entry,
+                c_entry._length_,
+                result,
+            )
         )
 
         if result.value >= 0:
@@ -779,9 +843,15 @@ class Labels:
             2  2
         )
         """
-        output = mts_labels_t()
-        self._lib.mts_labels_difference(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0
+        output = ctypes.POINTER(mts_labels_t)()
+        _check_status(
+            self._lib.mts_labels_difference(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -814,15 +884,17 @@ class Labels:
         >>> print(mapping_1)
         [ 0 -1 -1  1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
-        self._lib.mts_labels_difference(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            output,
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
+        _check_status(
+            self._lib.mts_labels_difference(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping
@@ -847,9 +919,17 @@ class Labels:
             1  3
         )
         """
-        output = mts_labels_t()
-        self._lib.mts_labels_union(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+        output = ctypes.POINTER(mts_labels_t)()
+        _check_status(
+            self._lib.mts_labels_union(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -886,18 +966,20 @@ class Labels:
         >>> print(mapping_2)
         [2 3 1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
-        self._lib.mts_labels_union(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            output,
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
-            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(second_mapping),
+        _check_status(
+            self._lib.mts_labels_union(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+                second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(second_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping, second_mapping
@@ -920,9 +1002,17 @@ class Labels:
             0  3
         )
         """
-        output = mts_labels_t()
-        self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+        output = ctypes.POINTER(mts_labels_t)()
+        _check_status(
+            self._lib.mts_labels_intersection(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -958,18 +1048,20 @@ class Labels:
         >>> print(mapping_2)
         [ 1 -1  0]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
-        self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            output,
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
-            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(second_mapping),
+        _check_status(
+            self._lib.mts_labels_intersection(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+                second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(second_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping, second_mapping
@@ -1001,11 +1093,13 @@ class Labels:
         selected = np.zeros((len(self)), dtype=np.int64)
         selected_count = c_uintptr_t(len(self))
 
-        self._lib.mts_labels_select(
-            self._as_mts_labels_t(),
-            selection._as_mts_labels_t(),
-            selected.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            ctypes.pointer(selected_count),
+        _check_status(
+            self._lib.mts_labels_select(
+                self._as_mts_labels_t(),
+                selection._as_mts_labels_t(),
+                selected.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                ctypes.pointer(selected_count),
+            )
         )
 
         selected.resize(selected_count.value, refcheck=False)
@@ -1091,25 +1185,27 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
 
 def _create_new_labels(
     lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
-) -> mts_labels_t:
-    labels = mts_labels_t()
+):
+    from .data.array import create_mts_array
 
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
     for i, n in enumerate(names):
         c_names[i] = n.encode("utf8")
 
-    labels.internal_ptr_ = None
-    labels.names = c_names
-    labels.size = len(names)
+    # Ensure values is 2D int32 C-contiguous for the mts_array_t
+    if values.ndim == 1:
+        values = values.reshape(-1, len(names))
+    values = np.ascontiguousarray(values, dtype=np.int32)
 
-    labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-    labels.count = values.shape[0]
+    array = create_mts_array(values)
+
     if assume_unique:
-        lib.mts_labels_create_assume_unique(labels)
+        ptr = lib.mts_labels_create_assume_unique(c_names, len(names), array)
     else:
-        lib.mts_labels_create(labels)
+        ptr = lib.mts_labels_create(c_names, len(names), array)
 
-    return labels
+    _check_pointer(ptr)
+    return ptr
 
 
 def _print_string_center(output, string, width, last):

@@ -37,26 +37,28 @@ TensorBlockHolder::TensorBlockHolder(
         /* parent */ torch::IValue()
     )
 {
-
+    // Use the parameter LabelsHolder's device() directly instead of
+    // round-tripping through Rust (this->samples() etc.), which would lose
+    // non-materializable device info like Meta.
     auto values_device = this->values().device();
-    if (values_device != this->samples()->values().device()) {
+    if (values_device != samples->device()) {
         C10_THROW_ERROR(ValueError,
             "cannot create TensorBlock: values and samples must be on the same device, "
-            "got " + values_device.str() + " and " + this->samples()->values().device().str()
+            "got " + values_device.str() + " and " + samples->device().str()
         );
     }
-    for (const auto& component : this->components()) {
-        if (values_device != component->values().device()) {
+    for (const auto& component : components) {
+        if (values_device != component->device()) {
             C10_THROW_ERROR(ValueError,
                 "cannot create TensorBlock: values and components must be on the same device, "
-                "got " + values_device.str() + " and " + component->values().device().str()
+                "got " + values_device.str() + " and " + component->device().str()
             );
         }
     }
-    if (values_device != this->properties()->values().device()) {
+    if (values_device != properties->device()) {
         C10_THROW_ERROR(ValueError,
             "cannot create TensorBlock: values and properties must be on the same device, "
-            "got " + values_device.str() + " and " + this->properties()->values().device().str()
+            "got " + values_device.str() + " and " + properties->device().str()
         );
     }
 }
@@ -81,6 +83,11 @@ TensorBlock TensorBlockHolder::to(
     torch::optional<torch::Device> device,
     bool non_blocking
 ) const {
+    // Meta tensors don't support MemoryFormat::Preserve (no data to inspect).
+    // Use Contiguous for Meta, Preserve for everything else.
+    auto memory_format = (device.has_value() && device->is_meta())
+        ? torch::MemoryFormat::Contiguous
+        : torch::MemoryFormat::Preserve;
     auto values = this->values().to(
         dtype,
         /*layout*/ torch::nullopt,
@@ -88,7 +95,7 @@ TensorBlock TensorBlockHolder::to(
         /*pin_memory*/ torch::nullopt,
         /*non_blocking*/ non_blocking,
         /*copy*/ false,
-        /*memory_format*/ torch::MemoryFormat::Preserve
+        /*memory_format*/ memory_format
     );
 
     auto samples = this->samples()->to(device);

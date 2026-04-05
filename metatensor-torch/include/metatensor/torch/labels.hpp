@@ -206,7 +206,7 @@ public:
 
 private:
     /// main constructor, checking everything in debug mode & registering the
-    /// `values` as user data for the `labels`.
+    /// `values` as the values array for the `labels`.
     LabelsHolder(std::vector<std::string> names, torch::Tensor values, metatensor::Labels labels);
 
     friend class torch::intrusive_ptr<LabelsHolder>;

@@ -118,7 +118,7 @@ with open(os.path.join(ROOT, "docs", "src", "_prolog.rst")) as fd:
 # -- General configuration ---------------------------------------------------
 
 needs_sphinx = "7.4.0"
-suppress_warnings = ["config.cache"]
+suppress_warnings = ["config.cache", "ref.python"]
 
 python_use_unqualified_type_names = True
 

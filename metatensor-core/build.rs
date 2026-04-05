@@ -24,7 +24,16 @@ fn main() {
     config.autogen_warning = Some(generated_comment.into());
     config.includes.push("metatensor/version.h".into());
     config.includes.push("metatensor/dlpack/dlpack.h".into());
-    config.after_includes = Some("typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;".into());
+    config.after_includes = Some(
+        "typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;\n\
+         typedef struct mts_labels_t mts_labels_t;".into()
+    );
+
+    // mts_labels_t is repr(transparent) over Labels for Arc::into_raw, but
+    // cbindgen would resolve it to `typedef struct Labels mts_labels_t` which
+    // clashes with the C++ metatensor::Labels class. Exclude the type and use
+    // the manual forward declaration above instead.
+    config.export.exclude.push("mts_labels_t".into());
 
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
@@ -39,6 +48,7 @@ fn main() {
     // if not ok, rerun the build script unconditionally
     if result.is_ok() {
         println!("cargo:rerun-if-changed=src");
+        println!("cargo:rerun-if-changed=build.rs");
     }
 
     if std::env::var("METATENSOR_FULL_VERSION").is_err() {

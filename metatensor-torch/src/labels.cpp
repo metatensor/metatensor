@@ -5,11 +5,24 @@
 
 #include <metatensor.hpp>
 
+#include "metatensor/torch/array.hpp"
 #include "metatensor/torch/labels.hpp"
 
 #include "./utils.hpp"
 
 using namespace metatensor_torch;
+
+/// Create an mts_array_t wrapping a torch::Tensor for use as labels values.
+///
+/// Uses TorchDataArray (the same DataArrayBase subclass used for block data)
+/// so that the values array has full DLPack, device, and origin support
+/// without duplicating the vtable logic.
+static mts_array_t torch_tensor_to_labels_mts_array(torch::Tensor tensor) {
+    auto cxx_array = std::unique_ptr<metatensor::DataArrayBase>(
+        new metatensor_torch::TorchDataArray(std::move(tensor))
+    );
+    return metatensor::DataArrayBase::to_mts_array_t(std::move(cxx_array));
+}
 
 /// Check that `values` is a `shape_length`-dimensional array of 32-bit
 /// integers, or convert it to be so.
@@ -111,13 +124,6 @@ LabelsHolder::LabelsHolder(
         assert(names_[i] == labels_->names()[i]);
     }
     assert(values_.scalar_type() == torch::kInt32);
-
-    // register the torch tensor as a custom user data stored inside the labels
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
@@ -131,18 +137,10 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
         );
     }
 
-    labels_ = metatensor::Labels(
-        names_,
-        values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
-        values_.sizes()[0]
-    );
-
-    // register the torch tensor as a custom user data stored inside the labels
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
+    auto array = torch_tensor_to_labels_mts_array(values_);
+    // Always verify uniqueness: from_array{} moves data to CPU internally
+    // if needed. Only the explicit assume_unique constructor skips this.
+    labels_ = metatensor::Labels(names_, std::move(array), metatensor::from_array{});
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):
@@ -156,18 +154,8 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor
         );
     }
 
-    labels_ = metatensor::Labels(
-        names_,
-        values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
-        values_.sizes()[0],
-        metatensor::assume_unique{}
-    );
-
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
+    auto array = torch_tensor_to_labels_mts_array(values_);
+    labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
 }
 
 Labels LabelsHolder::create(
@@ -184,18 +172,29 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
         this->names_.emplace_back(name);
     }
 
-    // check if the labels are already associated with a tensor
-    auto* user_data = this->labels_->user_data();
-    if (user_data != nullptr) {
-        // `user_data` is currently only used to store torch Tensor inside Rust
-        // labels. If we ever start using them for something else, we should
-        // also add a check around here that `user_data` void pointer is
-        // actually a pointer to a torch::Tensor.
-        this->values_ = *static_cast<torch::Tensor*>(user_data);
+    // check if the values array is backed by a torch tensor
+    mts_array_t array;
+    std::memset(&array, 0, sizeof(array));
+    metatensor::details::check_status(
+        mts_labels_values(this->labels_->as_mts_labels_t(), &array)
+    );
+    mts_data_origin_t origin = 0;
+    if (array.origin != nullptr) {
+        array.origin(array.ptr, &origin);
+    }
+
+    if (origin == metatensor_torch::TORCH_DATA_ORIGIN && array.ptr != nullptr) {
+        // recover the torch tensor from the values array.
+        // array.ptr is a DataArrayBase* (from DataArrayBase::to_mts_array_t),
+        // specifically a TorchDataArray* since origin is TORCH_DATA_ORIGIN.
+        auto* base = static_cast<metatensor::DataArrayBase*>(array.ptr);
+        auto* torch_array = dynamic_cast<metatensor_torch::TorchDataArray*>(base);
+        assert(torch_array != nullptr);
+        this->values_ = torch_array->tensor();
     } else {
         auto clone = this->labels_.value();
-        // otherwise create a new tensor which share memory with the Labels.
-        const auto* values = clone.as_mts_labels_t().values;
+        // otherwise create a new tensor which shares memory with the Labels.
+        const auto* values = clone.values().data();
         auto sizes = std::vector<int64_t>{
             static_cast<int64_t>(clone.count()),
             static_cast<int64_t>(clone.size()),
@@ -392,30 +391,46 @@ Labels LabelsHolder::to(torch::IValue device_ivalue, bool non_blocking) const {
 
 Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     if (device == values_.device()) {
-        // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
-    } else {
+    } else if (device.is_meta()) {
+        // TO Meta: clone the Rust Labels (Arc increment, keeps the original
+        // backing array on whatever device it was). The Meta torch tensor
+        // is just a device tag. x->meta->y == x->y because the Rust Labels
+        // still has the data on device x.
         auto new_values = values_.to(device, non_blocking);
-
-        // re-create new mts_labels_t and from them new metatensor::Labels with
-        // the same names & values, but no user data. The user data will be
-        // re-added in the constructor below to point to `new_values`.
-        //
-        // Doing this here allow to minimize the number of copies of the values
-        // when moving from CPU to GPU.
-        auto raw_labels = this->as_metatensor().as_mts_labels_t();
-        // reset the internal rust pointer, this allows `mts_labels_create_assume_unique` to
-        // create a new rust pointer corresponding to a different object instead
-        // of incrementing the reference count of the existing labels.
-        raw_labels.internal_ptr_ = nullptr;
-        // assume that entries uniqueness has been validated at this point
-        metatensor::details::check_status(mts_labels_create_assume_unique(&raw_labels));
-        auto new_labels = metatensor::Labels(raw_labels);
-
+        auto cloned = this->as_metatensor();
         return torch::make_intrusive<LabelsHolder>(
-            this->names(),
-            std::move(new_values),
-            std::move(new_labels)
+            this->names(), std::move(new_values), std::move(cloned)
+        );
+    } else if (values_.device().is_meta()) {
+        // FROM Meta: recover data from the Rust Labels' backing array
+        // (which is still on the pre-Meta device). Get CPU values via
+        // DLPack, create a torch tensor, then move to target device.
+        auto& rust_labels = this->as_metatensor();
+        auto rust_values = rust_labels.values();
+        auto cpu_tensor = torch::from_blob(
+            const_cast<int32_t*>(rust_values.data()),
+            {static_cast<int64_t>(rust_values.shape()[0]),
+             static_cast<int64_t>(rust_values.shape()[1])},
+            torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU)
+        ).clone();
+        auto new_values = cpu_tensor.to(device, non_blocking);
+        auto array = torch_tensor_to_labels_mts_array(new_values);
+        auto new_labels = metatensor::Labels(
+            this->names(), std::move(array), metatensor::assume_unique{}
+        );
+        return torch::make_intrusive<LabelsHolder>(
+            this->names(), std::move(new_values), std::move(new_labels)
+        );
+    } else {
+        // Normal device transfer: move tensor, create new Rust Labels
+        auto new_values = values_.to(device, non_blocking);
+        auto array = torch_tensor_to_labels_mts_array(new_values);
+        auto new_labels = metatensor::Labels(
+            this->names(), std::move(array), metatensor::assume_unique{}
+        );
+        return torch::make_intrusive<LabelsHolder>(
+            this->names(), std::move(new_values), std::move(new_labels)
         );
     }
 }

@@ -70,11 +70,20 @@ TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& bl
 }
 
 TensorMap TensorMapHolder::copy() const {
-    return torch::make_intrusive<TensorMapHolder>(TensorMapHolder(this->tensor_.clone()));
+    auto result = TensorMapHolder(this->tensor_.clone());
+    return torch::make_intrusive<TensorMapHolder>(std::move(result));
 }
 
 Labels TensorMapHolder::keys() const {
-    return torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
+    auto labels = torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
+    // The Rust TensorMap's keys may be on a different device than the block
+    // data (e.g., CPU-backed after to("meta") clones the Rust Labels).
+    // Move keys to match data device for consistency.
+    auto data_device = this->device();
+    if (labels->device() != data_device) {
+        return labels->to(data_device, /*non_blocking=*/false);
+    }
+    return labels;
 }
 
 std::vector<int64_t> TensorMapHolder::blocks_matching(const Labels& selection) const {
@@ -333,7 +342,7 @@ static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_mo
 }
 
 TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
@@ -366,7 +375,7 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, torch:
 }
 
 TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
@@ -399,7 +408,7 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, torch::Sc
 }
 
 TensorMap TensorMapHolder::components_to_properties(torch::IValue dimensions) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
     auto selection = extract_list_str(dimensions, "TensorMap::components_to_properties argument");
     auto tensor = this->tensor_.components_to_properties(selection);
     auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
@@ -468,7 +477,42 @@ std::vector<std::tuple<LabelsEntry, TensorBlock>> TensorMapHolder::items(TensorM
 }
 
 torch::Device TensorMapHolder::device() const {
-    return this->keys()->device();
+    // Query block data device via C API. No keys(), no TensorBlockHolder,
+    // no recursion risk.
+    if (this->tensor_.keys().count() == 0) {
+        return torch::Device(torch::kCPU);
+    }
+
+    mts_block_t* block_ptr = nullptr;
+    mts_tensormap_block_by_id(
+        const_cast<mts_tensormap_t*>(this->tensor_.as_mts_tensormap_t()),
+        &block_ptr, 0
+    );
+    if (block_ptr == nullptr) {
+        return torch::Device(torch::kCPU);
+    }
+
+    mts_array_t data;
+    std::memset(&data, 0, sizeof(data));
+    mts_block_data(block_ptr, &data);
+    if (data.device == nullptr) {
+        return torch::Device(torch::kCPU);
+    }
+
+    DLDevice dl;
+    data.device(data.ptr, &dl);
+
+    torch::DeviceType type;
+    switch (dl.device_type) {
+    case kDLCPU:    type = torch::DeviceType::CPU;  break;
+    case kDLCUDA:   type = torch::DeviceType::CUDA; break;
+    case kDLROCM:   type = torch::DeviceType::HIP;  break;
+    case kDLMetal:  type = torch::DeviceType::MPS;  break;
+    case kDLOneAPI: type = torch::DeviceType::XPU;  break;
+    case kDLExtDev: type = torch::DeviceType::Meta; break;
+    default:        type = torch::DeviceType::CPU;  break;
+    }
+    return torch::Device(type, dl.device_id > 0 ? static_cast<int8_t>(dl.device_id) : -1);
 }
 
 torch::Dtype TensorMapHolder::scalar_type() const {
@@ -569,10 +613,10 @@ TensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
 
 
 void TensorMapHolder::save(const std::string& path) const {
-    // check that device is CPU
-    if (this->keys()->values().device() != torch::kCPU) {
+    // check that device is CPU (use block data device, not keys device)
+    if (this->device() != torch::kCPU) {
         C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with device " + this->keys()->values().device().str() +
+            "cannot save TensorMap with device " + this->device().str() +
             ", only CPU is supported"
         );
     }
@@ -588,10 +632,10 @@ void TensorMapHolder::save(const std::string& path) const {
 }
 
 torch::Tensor TensorMapHolder::save_buffer() const {
-    // check that device is CPU
-    if (this->keys()->values().device() != torch::kCPU) {
+    // check that device is CPU (use block data device, not keys device)
+    if (this->device() != torch::kCPU) {
         C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with device " + this->keys()->values().device().str() +
+            "cannot save TensorMap with device " + this->device().str() +
             ", only CPU is supported"
         );
     }

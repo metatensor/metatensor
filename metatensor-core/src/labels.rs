@@ -1,8 +1,6 @@
 #![allow(clippy::default_trait_access, clippy::module_name_repetitions)]
-use std::sync::RwLock;
 use std::ffi::CString;
 use std::collections::BTreeSet;
-use std::os::raw::c_void;
 
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
@@ -11,6 +9,7 @@ use once_cell::sync::OnceCell;
 use smallvec::SmallVec;
 
 use crate::Error;
+use crate::data::mts_array_t;
 use crate::utils::ConstCString;
 
 /// A single value inside a label. This is represented as a 32-bit signed
@@ -46,36 +45,6 @@ pub fn is_valid_label_name(name: &str) -> bool {
     return true;
 }
 
-#[derive(Debug)]
-struct UserData {
-    ptr: *mut c_void,
-    delete: Option<unsafe extern "C" fn(*mut c_void)>,
-}
-
-impl UserData {
-    /// Create an empty `UserData`
-    fn null() -> UserData {
-        UserData {
-            ptr: std::ptr::null_mut(),
-            delete: None,
-        }
-    }
-}
-
-impl Drop for UserData {
-    fn drop(&mut self) {
-        if let Some(delete) = self.delete {
-            unsafe {
-                delete(self.ptr);
-            }
-        }
-    }
-}
-
-// These should be enforced by the code using metatensor
-unsafe impl Sync for UserData {}
-unsafe impl Send for UserData {}
-
 /// A set of labels used to carry metadata associated with a tensor map.
 ///
 /// This is similar to a list of named tuples, but stored as a 2D array of shape
@@ -88,8 +57,11 @@ pub struct Labels {
     /// Names of the labels, stored as const C strings for easier integration
     /// with the C API
     names: Vec<ConstCString>,
-    /// Values of the labels, as a linearized 2D array in row-major order
-    values: Vec<LabelValue>,
+    /// Always-present backing array (primary data source).
+    /// Count (number of rows) is derived from `array.shape()[0]`.
+    array: mts_array_t,
+    /// CPU values, lazily materialized from array via DLPack
+    values: OnceCell<Vec<LabelValue>>,
     /// Whether the entries of the labels (i.e. the rows of the 2D array) are
     /// sorted in lexicographical order. This is lazily initialized on first
     /// access.
@@ -99,14 +71,11 @@ pub struct Labels {
     /// positions of different entries, allowing to skip the construction of the
     /// `HashMap` when Labels are only used as data storage.
     positions: OnceCell<HashMap<LabelsEntry, usize, LabelsHasher>>,
-    /// Some data provided by the user that we should keep around (this is
-    /// used to store a pointer to the on-GPU tensor in metatensor-torch).
-    user_data: RwLock<UserData>,
 }
 
 impl PartialEq for Labels {
     fn eq(&self, other: &Self) -> bool {
-        self.names == other.names && self.values == other.values
+        self.names == other.names && self.count() == other.count() && self.values_cpu() == other.values_cpu()
     }
 }
 
@@ -119,9 +88,10 @@ impl std::fmt::Debug for Labels {
         writeln!(f, "    {}", self.names().join(", "))?;
 
         let widths = self.names().iter().map(|s| s.len()).collect::<Vec<_>>();
-        for values in self {
+        let values = self.values_cpu();
+        for entry in values.chunks_exact(self.size()) {
             write!(f, "    ")?;
-            for (value, width) in values.iter().zip(&widths) {
+            for (value, width) in entry.iter().zip(&widths) {
                 write!(f, "{:^width$}  ", value, width=width)?;
             }
             writeln!(f)?;
@@ -170,19 +140,148 @@ impl Labels {
         }
     }
 
+    /// Create new Labels from an existing `mts_array_t`.
+    ///
+    /// Values are materialized on CPU (via DLPack) and uniqueness is verified
+    /// regardless of the original device. The array itself is kept as-is (it
+    /// may live on GPU); only the uniqueness check needs CPU data.
+    pub fn from_array(names: &[&str], array: mts_array_t) -> Result<Labels, Error> {
+        let names_vec = Labels::validate_names(names)?;
+
+        let shape = array.shape()?;
+        if shape.len() != 2 {
+            return Err(Error::InvalidParameter(
+                "labels array must be 2-dimensional".into()
+            ));
+        }
+        if shape[1] != names_vec.len() {
+            return Err(Error::InvalidParameter(format!(
+                "labels array has {} columns, but {} names were given",
+                shape[1], names_vec.len()
+            )));
+        }
+
+        let count = shape[0];
+
+        if names_vec.is_empty() && count > 0 {
+            return Err(Error::InvalidParameter(
+                "can not have labels.count > 0 if labels.size is 0".into()
+            ));
+        }
+
+        // Materialize values on CPU for uniqueness verification.
+        // This works regardless of the array's device -- the array's
+        // as_dlpack callback handles the device->CPU transfer.
+        let values = crate::labels_array::materialize_values_from_array(&array, names_vec.len());
+
+        // check uniqueness
+        if !names_vec.is_empty() && count > 0 {
+            let size = names_vec.len();
+            let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
+            entries.sort_unstable();
+            if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
+                let entry = entries[identical];
+                let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+                return Err(Error::InvalidParameter(format!(
+                    "can not have the same label entry multiple times: [{}] is already present",
+                    entry_display
+                )));
+            }
+        }
+
+        Ok(Labels {
+            names: names_vec,
+            array,
+            values: OnceCell::with_value(values),
+            sorted: OnceCell::new(),
+            positions: OnceCell::new(),
+        })
+    }
+
+    /// Create new Labels from an existing `mts_array_t` without checking
+    /// uniqueness.
+    ///
+    /// The caller must ensure that the rows are unique. Passing non-unique
+    /// entries is UB (can cause crashes or infinite loops).
+    ///
+    /// Debug builds still assert uniqueness for CPU arrays.
+    pub unsafe fn from_array_assume_unique(names: &[&str], array: mts_array_t) -> Result<Labels, Error> {
+        let names_vec = Labels::validate_names(names)?;
+
+        let shape = array.shape()?;
+        if shape.len() != 2 {
+            return Err(Error::InvalidParameter(
+                "labels array must be 2-dimensional".into()
+            ));
+        }
+        if shape[1] != names_vec.len() {
+            return Err(Error::InvalidParameter(format!(
+                "labels array has {} columns, but {} names were given",
+                shape[1], names_vec.len()
+            )));
+        }
+
+        let count = shape[0];
+
+        if names_vec.is_empty() && count > 0 {
+            return Err(Error::InvalidParameter(
+                "can not have labels.count > 0 if labels.size is 0".into()
+            ));
+        }
+
+        // In debug builds, if on CPU, materialize and assert uniqueness
+        if cfg!(debug_assertions) {
+            let is_cpu = array.device().map_or(false, |device| {
+                let cpu = dlpk::sys::DLDevice::cpu();
+                device.device_type == cpu.device_type && device.device_id == cpu.device_id
+            });
+            if is_cpu {
+                let values = crate::labels_array::materialize_values_from_array(&array, names_vec.len());
+                if !names_vec.is_empty() && count > 0 {
+                    let size = names_vec.len();
+                    let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
+                    entries.sort_unstable();
+                    if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
+                        let entry = entries[identical];
+                        let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+                        panic!(
+                            "non-unique labels entry in from_array_assume_unique: [{}]",
+                            entry_display
+                        );
+                    }
+                }
+
+                return Ok(Labels {
+                    names: names_vec,
+                    array,
+                    values: OnceCell::with_value(values),
+                    sorted: OnceCell::new(),
+                    positions: OnceCell::new(),
+                });
+            }
+        }
+
+        Ok(Labels {
+            names: names_vec,
+            array,
+            values: OnceCell::new(),
+            sorted: OnceCell::new(),
+            positions: OnceCell::new(),
+        })
+    }
+
     /// Helper constructor to make tests more readable
     #[cfg(test)]
     pub fn new_i32(names: &[&str], values: Vec<i32>) -> Result<Labels, Error> {
         return Labels::new(names, values);
     }
 
-    /// Actual implementation of both [`Labels::new`] and
-    /// [`Labels::new_unchecked_uniqueness`]
-    fn new_impl(names: &[&str], values: Vec<LabelValue>, check_unique: bool) -> Result<Labels, Error> {
+    /// Validate names and return ConstCString vec
+    fn validate_names(names: &[&str]) -> Result<Vec<ConstCString>, Error> {
         for name in names {
             if !is_valid_label_name(name) {
                 return Err(Error::InvalidParameter(format!(
-                    "all labels names must be valid identifiers, '{}' is not", name
+                    "'{}' is not a valid label name", name
                 )));
             }
         }
@@ -196,23 +295,33 @@ impl Labels {
             }
         }
 
-        let names = names.iter()
+        Ok(names.iter()
             .map(|&s| ConstCString::new(CString::new(s).expect("invalid C string")))
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>())
+    }
+
+    /// Actual implementation of both [`Labels::new`] and
+    /// [`Labels::new_unchecked_uniqueness`]
+    fn new_impl(names: &[&str], values: Vec<LabelValue>, check_unique: bool) -> Result<Labels, Error> {
+        let names = Labels::validate_names(names)?;
 
         if names.is_empty() {
             assert!(values.is_empty());
+            let array = crate::labels_array::LabelsValuesArray::from_vec(
+                Vec::new(), 0, 0,
+            );
             return Ok(Labels {
                 names: Vec::new(),
-                values: Vec::new(),
+                array,
+                values: OnceCell::with_value(Vec::new()),
                 sorted: OnceCell::with_value(true),
                 positions: Default::default(),
-                user_data: RwLock::new(UserData::null()),
             });
         }
 
         let size = names.len();
         assert!(values.len() % size == 0);
+        let count = values.len() / size;
 
         if check_unique {
             let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
@@ -227,12 +336,23 @@ impl Labels {
             }
         }
 
+        let array = crate::labels_array::LabelsValuesArray::from_vec(
+            values.clone(), count, size,
+        );
+
         Ok(Labels {
-            names: names,
-            values: values,
+            names,
+            array,
+            values: OnceCell::with_value(values),
             sorted: OnceCell::new(),
             positions: OnceCell::new(),
-            user_data: RwLock::new(UserData::null()),
+        })
+    }
+
+    /// Lazily get the CPU values, materializing from the array if needed
+    pub(crate) fn values_cpu(&self) -> &[LabelValue] {
+        self.values.get_or_init(|| {
+            crate::labels_array::materialize_values_from_array(&self.array, self.size())
         })
     }
 
@@ -255,42 +375,19 @@ impl Labels {
     /// Check whether entries in these Labels are sorted in lexicographic order,
     /// and cache the result.
     pub fn is_sorted(&self) -> bool {
-        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values.chunks_exact(self.size())))
+        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values_cpu().chunks_exact(self.size())))
     }
 
-    /// Get the registered user data (this will be NULL if no data was
-    /// registered)
-    pub fn user_data(&self) -> *mut c_void {
-        let guard = self.user_data.read().expect("poisoned lock");
-        return guard.ptr;
+    /// Get the backing `mts_array_t` for the label values.
+    pub fn values(&self) -> &mts_array_t {
+        &self.array
     }
 
-    /// Register user data for these Labels.
+    /// Get the total number of entries in this set of labels.
     ///
-    /// The `user_data_delete` will be called with `user_data` when the Labels
-    /// are dropped, and should free the memory associated with `user_data`.
-    ///
-    /// Any existing user data will be released (by calling the provided
-    /// `user_data_delete` function) before overwriting with the new data.
-    pub fn set_user_data(
-        &self,
-        user_data: *mut c_void,
-        user_data_delete: Option<unsafe extern "C" fn(*mut c_void)>,
-    ) {
-        let mut guard = self.user_data.write().expect("poisoned lock");
-        *guard = UserData {
-            ptr: user_data,
-            delete: user_data_delete,
-        };
-    }
-
-    /// Get the total number of entries in this set of labels
+    /// Derived from `array.shape()[0]` -- no cached field.
     pub fn count(&self) -> usize {
-        if self.size() == 0 {
-            return 0;
-        } else {
-            return self.values.len() / self.size();
-        }
+        self.array.shape().expect("labels array shape must be available")[0]
     }
 
     /// Check if this set of Labels is empty (contains no entry)
@@ -300,7 +397,7 @@ impl Labels {
 
     /// Check whether the given `label` is part of this set of labels
     pub fn contains(&self, label: &[LabelValue]) -> bool {
-        let positions = self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+        let positions = self.positions.get_or_init(|| init_positions(self.values_cpu(), self.size()));
         positions.contains_key(label)
     }
 
@@ -313,14 +410,15 @@ impl Labels {
     }
 
     fn get_or_init_positions(&self) -> &HashMap<LabelsEntry, usize, LabelsHasher> {
-        return self.positions.get_or_init(|| init_positions(&self.values, self.size()));
+        return self.positions.get_or_init(|| init_positions(self.values_cpu(), self.size()));
     }
 
     /// Iterate over the entries in these Labels
     pub fn iter(&self) -> Iter<'_> {
-        debug_assert!(self.values.len() % self.names.len() == 0);
+        let values = self.values_cpu();
+        debug_assert!(values.len() % self.names.len().max(1) == 0);
         return Iter {
-            ptr: self.values.as_ptr(),
+            ptr: values.as_ptr(),
             cur: 0,
             len: self.count(),
             chunk_len: self.size(),
@@ -341,7 +439,7 @@ impl Labels {
         }
 
         let mut positions = self.get_or_init_positions().clone();
-        let mut values = self.values.clone();
+        let mut values = self.values_cpu().to_vec();
 
         if !first_mapping.is_empty() {
             assert!(first_mapping.len() == self.count());
@@ -370,12 +468,18 @@ impl Labels {
             }
         }
 
+        let size = self.size();
+        let count = if size == 0 { 0 } else { values.len() / size };
+        let array = crate::labels_array::LabelsValuesArray::from_vec(
+            values.clone(), count, size,
+        );
+
         return Ok(Labels {
             names: self.names.clone(),
-            values,
+            array,
+            values: OnceCell::with_value(values),
             sorted: OnceCell::new(),
             positions: OnceCell::with_value(positions),
-            user_data: RwLock::new(UserData::null()),
         });
     }
 
@@ -436,12 +540,18 @@ impl Labels {
             OnceCell::new()
         };
 
+        let size = self.size();
+        let count = if size == 0 { 0 } else { values.len() / size };
+        let array = crate::labels_array::LabelsValuesArray::from_vec(
+            values.clone(), count, size,
+        );
+
         return Ok(Labels {
             names: self.names.clone(),
-            values,
-            sorted: sorted,
+            array,
+            values: OnceCell::with_value(values),
+            sorted,
             positions: OnceCell::new(),
-            user_data: RwLock::new(UserData::null()),
         });
     }
 
@@ -492,12 +602,18 @@ impl Labels {
             OnceCell::new()
         };
 
+        let size = self.size();
+        let count = if size == 0 { 0 } else { values.len() / size };
+        let array = crate::labels_array::LabelsValuesArray::from_vec(
+            values.clone(), count, size,
+        );
+
         return Ok(Labels {
             names: self.names.clone(),
-            values,
-            sorted: sorted,
+            array,
+            values: OnceCell::with_value(values),
+            sorted,
             positions: OnceCell::new(),
-            user_data: RwLock::new(UserData::null()),
         });
     }
 
@@ -619,7 +735,7 @@ impl std::ops::Index<usize> for Labels {
     fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
-        &self.values[start..stop]
+        &self.values_cpu()[start..stop]
     }
 }
 
@@ -632,7 +748,7 @@ mod tests {
     #[test]
     fn valid_names() {
         let e = Labels::new(&["not an ident"], Vec::<LabelValue>::new()).err().unwrap();
-        assert_eq!(e.to_string(), "invalid parameter: all labels names must be valid identifiers, 'not an ident' is not");
+        assert_eq!(e.to_string(), "invalid parameter: 'not an ident' is not a valid label name");
 
         let e = Labels::new(&["not", "there", "not"], Vec::<LabelValue>::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: labels names must be unique, got 'not' multiple times");
@@ -644,7 +760,7 @@ mod tests {
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
-        assert!(labels.sorted.get().is_none());
+        assert!(!labels.sorted.get().is_some());
         assert!(labels.is_sorted());
         assert!(labels.sorted.get().is_some());
 
@@ -672,7 +788,7 @@ mod tests {
 
         let union = first.union(&second, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values, &[0, 1, 1, 2, 2, 3, 4, 5]);
+        assert_eq!(union.values_cpu(), &[0, 1, 1, 2, 2, 3, 4, 5]);
         assert_eq!(first_mapping, &[0, 1]);
         assert_eq!(second_mapping, &[2, 1, 3]);
 
@@ -681,7 +797,7 @@ mod tests {
 
         let union = second.union(&first, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values, &[2, 3, 1, 2, 4, 5, 0, 1]);
+        assert_eq!(union.values_cpu(), &[2, 3, 1, 2, 4, 5, 0, 1]);
         assert_eq!(first_mapping, &[0, 1, 2]);
         assert_eq!(second_mapping, &[3, 1]);
 
@@ -699,7 +815,7 @@ mod tests {
 
         let union = first.union(&empty, first_mapping, second_mapping).unwrap();
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.values, &[0, 1, 1, 2]);
+        assert_eq!(union.values_cpu(), &[0, 1, 1, 2]);
         assert_eq!(first_mapping, &[0, 1]);
         assert_eq!(second_mapping, &Vec::<i64>::new());
     }
@@ -721,7 +837,7 @@ mod tests {
 
         let intersection = first.intersection(&second, first_mapping, second_mapping).unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
-        assert_eq!(intersection.values, &[1, 2]);
+        assert_eq!(intersection.values_cpu(), &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0]);
         assert_eq!(second_mapping, &[-1, 0, -1]);
 
@@ -730,7 +846,7 @@ mod tests {
 
         let intersection = second.intersection(&first, first_mapping, second_mapping).unwrap();
         assert_eq!(intersection.names(), ["aa", "bb"]);
-        assert_eq!(intersection.values, &[1, 2]);
+        assert_eq!(intersection.values_cpu(), &[1, 2]);
         assert_eq!(first_mapping, &[-1, 0, -1]);
         assert_eq!(second_mapping, &[-1, 0]);
 
@@ -762,14 +878,14 @@ mod tests {
 
         let difference = first.difference(&second, first_mapping).unwrap();
         assert_eq!(difference.names(), ["aa", "bb"]);
-        assert_eq!(difference.values, &[0, 1]);
+        assert_eq!(difference.values_cpu(), &[0, 1]);
         assert_eq!(first_mapping, &[0, -1]);
 
         let first_mapping = &mut vec![0; second.count()];
 
         let difference = second.difference(&first, first_mapping).unwrap();
         assert_eq!(difference.names(), ["aa", "bb"]);
-        assert_eq!(difference.values, &[2, 3, /**/ 4, 5]);
+        assert_eq!(difference.values_cpu(), &[2, 3, /**/ 4, 5]);
         assert_eq!(first_mapping, &[0, -1, 1]);
 
         let labels = Labels::new(&["aa"], Vec::<LabelValue>::new()).unwrap();
@@ -791,7 +907,6 @@ mod tests {
 
     #[test]
     fn marker_traits() {
-        // ensure Arc<Labels> is Send and Sync, assuming the user data is
         fn use_send(_: impl Send) {}
         fn use_sync(_: impl Sync) {}
 
@@ -799,6 +914,29 @@ mod tests {
 
         use_send(labels.clone());
         use_sync(labels);
+    }
+
+    #[test]
+    fn values_array_always_present() {
+        let labels = Labels::new_i32(&["x"], vec![1, 2, 3]).unwrap();
+
+        // Array is always present (primary data)
+        let arr = labels.values();
+        let shape = arr.shape().unwrap();
+        assert_eq!(shape, &[3, 1]);
+    }
+
+    #[test]
+    fn from_array_lazy_values() {
+        // Create a labels array, then build Labels from it
+        let original = Labels::new_i32(&["x", "y"], vec![1, 2, 3, 4]).unwrap();
+        let array = original.values().try_clone().unwrap();
+
+        let labels = Labels::from_array(&["x", "y"], array).unwrap();
+        assert_eq!(labels.count(), 2);
+        assert_eq!(labels.size(), 2);
+        assert_eq!(labels[0], [1, 2]);
+        assert_eq!(labels[1], [3, 4]);
     }
 
     #[test]

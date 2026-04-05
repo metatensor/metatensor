@@ -6,7 +6,7 @@ use dlpk::sys::{DLDataType, DLDevice};
 
 use crate::{TensorBlock, Error, mts_array_t};
 
-use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
+use super::labels::mts_labels_t;
 
 use super::{catch_unwind, mts_status_t};
 
@@ -61,11 +61,13 @@ impl mts_block_t {
 /// @param data array handle containing the data for this block. The block takes
 ///             ownership of the array, and will release it with
 ///             `array.destroy(array.ptr)` when it no longer needs it.
-/// @param samples sample labels corresponding to the first dimension of the data
-/// @param components array of component labels corresponding to intermediary
-///                   dimensions of the data
+/// @param samples pointer to sample labels. The block takes ownership of
+///                these labels.
+/// @param components array of pointers to component labels. The block takes
+///                   ownership of these labels.
 /// @param components_count number of entries in the `components` array
-/// @param properties property labels corresponding to the last dimension of the data
+/// @param properties pointer to property labels. The block takes ownership
+///                   of these labels.
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
@@ -73,25 +75,29 @@ impl mts_block_t {
 #[no_mangle]
 pub unsafe extern "C" fn mts_block(
     data: mts_array_t,
-    samples: mts_labels_t,
-    components: *const mts_labels_t,
+    samples: *const mts_labels_t,
+    components: *const *const mts_labels_t,
     components_count: usize,
-    properties: mts_labels_t,
+    properties: *const mts_labels_t,
 ) -> *mut mts_block_t {
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
-        let samples = mts_labels_to_rust(&samples)?;
+        check_pointers_non_null!(samples, properties);
+
+        let samples = mts_labels_t::arc_clone(samples);
 
         let mut rust_components = Vec::new();
         if components_count != 0 {
             check_pointers_non_null!(components);
-            for component in std::slice::from_raw_parts(components, components_count) {
-                rust_components.push(mts_labels_to_rust(component)?);
+            for i in 0..components_count {
+                let component = *components.add(i);
+                check_pointers_non_null!(component);
+                rust_components.push(mts_labels_t::arc_clone(component));
             }
         }
 
-        let properties = mts_labels_to_rust(&properties)?;
+        let properties = mts_labels_t::arc_clone(properties);
 
         let block = TensorBlock::new(data, samples, rust_components, properties)?;
 
@@ -171,31 +177,25 @@ pub unsafe extern "C" fn mts_block_copy(
 
 /// Get the set of labels from this `block`.
 ///
-/// This function allocates memory for `labels` which must be released
-/// `mts_labels_free` when you don't need it anymore.
+/// This function allocates memory for the returned labels which must be
+/// released with `mts_labels_free` when you don't need it anymore.
 ///
 /// @param block pointer to an existing block
 /// @param axis axis/dimension of the data array for which you need the labels
-/// @param labels pointer to an empty `mts_labels_t` that will be set to the
-///        `block`'s labels
 ///
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_block_labels(
     block: *const mts_block_t,
     axis: usize,
-    labels: *mut mts_labels_t,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(block, labels);
+) -> *mut mts_labels_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
-        if (*labels).is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels are already allocated, call mts_labels_free first".into()
-            ));
-        }
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(block);
 
         let block = &(*block);
         let n_components = block.components.len();
@@ -215,10 +215,17 @@ pub unsafe extern "C" fn mts_block_labels(
             )));
         };
 
-        *labels = rust_to_mts_labels(Arc::clone(rust_labels));
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::clone(rust_labels));
 
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 

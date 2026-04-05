@@ -47,7 +47,7 @@ public:
         block_(nullptr),
         is_view_(false)
     {
-        auto c_components = std::vector<mts_labels_t>();
+        auto c_components = std::vector<const mts_labels_t*>();
         for (const auto& component: components) {
             c_components.push_back(component.as_mts_labels_t());
         }
@@ -297,13 +297,9 @@ public:
 
     /// Get the labels in this block associated with the given `axis`.
     Labels labels(uintptr_t axis) const {
-        mts_labels_t labels;
-        std::memset(&labels, 0, sizeof(labels));
-        details::check_status(mts_block_labels(
-            block_, axis, &labels
-        ));
-
-        return Labels(labels);
+        auto* ptr = mts_block_labels(block_, axis);
+        details::check_pointer(ptr);
+        return Labels(ptr);
     }
 
     /// Get the shape of the value array for this block

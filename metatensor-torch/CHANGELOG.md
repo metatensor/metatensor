@@ -17,11 +17,28 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
-## [Version 0.8.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.5) - 2026-03-27
+### Changed
 
-### Added
+- Replaced `LabelsUserData` / `set_user_data` with array-primary Labels. Torch
+  constructors pass their tensor directly as an `mts_array_t` at Labels
+  construction via `from_array_assume_unique`. No mandatory GPU-to-CPU copy.
+  CPU materialization happens lazily via DLPack only when values are accessed.
+  The `TorchLabelsArrayData` vtable implements `device()` and `as_dlpack()` for
+  device-aware label access.
 
-- Added support for PyTorch v2.11
+### Fixed
+
+- Meta device Labels now round-trip correctly through Rust. `LabelsHolder::to(meta)`
+  creates Meta-backed Rust Labels with pre-filled CPU values via
+  `set_cached_values`, so Rust never attempts DLPack materialization on Meta
+  (which has no storage). `TensorMapHolder` caches keys to preserve device info
+  across round-trips, fixing `device()` and operations (`keys_to_samples`,
+  `keys_to_properties`, `components_to_properties`) that previously lost Meta
+  device info.
+
+### Fixed
+
+- Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called
 
 ### Removed
 
@@ -37,10 +54,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Added
 
 - Added support for PyTorch v2.10
-
-### Fixed
-
-- Ensure the `info` of `TensorMap` is kept in the new tensor when `to` is called
 
 ## [Version 0.8.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.3) - 2025-12-05
 

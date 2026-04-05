@@ -388,7 +388,7 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
     return versioned_tensor;
 }
 
-const std::vector<uintptr_t>& TorchDataArray::shape() const & {
+const std::vector<uintptr_t>& TorchDataArray::shape() const {
     return shape_;
 }
 

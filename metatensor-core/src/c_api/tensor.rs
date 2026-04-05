@@ -10,7 +10,7 @@ use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
 use crate::data::mts_array_t;
 use crate::{TensorMap, TensorBlock, Error};
 
-use super::labels::{mts_labels_t, rust_to_mts_labels, mts_labels_to_rust};
+use super::labels::mts_labels_t;
 use super::blocks::mts_block_t;
 use super::status::{mts_status_t, catch_unwind};
 
@@ -50,14 +50,16 @@ impl std::ops::DerefMut for mts_tensormap_t {
 /// Create a new `mts_tensormap_t` with the given `keys` and `blocks`.
 /// `blocks_count` must be set to the number of entries in the blocks array.
 ///
-/// The new tensor map takes ownership of the blocks, which should not be
-/// released separately.
+/// The new tensor map takes ownership of the blocks and keys, which should
+/// not be released separately.
 ///
 /// The memory allocated by this function and the blocks should be released
 /// using `mts_tensormap_free`.
 ///
-/// @param keys labels containing the keys associated with each block
-/// @param blocks pointer to the first element of an array of blocks
+/// @param keys pointer to labels containing the keys associated with each
+///             block. The tensor map takes ownership of the keys.
+/// @param blocks pointer to the first element of an array of blocks. The
+///               tensor map takes ownership of the blocks.
 /// @param blocks_count number of elements in the `blocks` array
 ///
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
@@ -65,7 +67,7 @@ impl std::ops::DerefMut for mts_tensormap_t {
 ///          to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_tensormap(
-    keys: mts_labels_t,
+    keys: *const mts_labels_t,
     blocks: *mut *mut mts_block_t,
     blocks_count: usize,
 ) -> *mut mts_tensormap_t {
@@ -73,6 +75,8 @@ pub unsafe extern "C" fn mts_tensormap(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
+        check_pointers_non_null!(keys);
+
         let mut blocks_vec = Vec::new();
         if blocks_count != 0 {
             check_pointers_non_null!(blocks);
@@ -94,7 +98,7 @@ pub unsafe extern "C" fn mts_tensormap(
             }
         }
 
-        let keys = mts_labels_to_rust(&keys)?;
+        let keys = mts_labels_t::arc_clone(keys);
         let tensor = TensorMap::new(keys, blocks_vec)?;
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -171,32 +175,34 @@ pub unsafe extern "C" fn mts_tensormap_copy(
 
 /// Get the keys for the given `tensor` map.
 ///
-/// This function allocates memory for `keys` which must be released
-/// `mts_labels_free` when you don't need it anymore.
+/// This function allocates memory for the returned labels which must be
+/// released with `mts_labels_free` when you don't need it anymore.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param keys pointer to be filled with the keys of the tensor map
 ///
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
+/// @returns A pointer to the newly allocated labels containing the keys, or a
+///          `NULL` pointer in case of error. In case of error, you can use
+///          `mts_last_error()` to get the error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_tensormap_keys(
     tensor: *const mts_tensormap_t,
-    keys: *mut mts_labels_t,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(tensor, keys);
+) -> *mut mts_labels_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
-        if (*keys).is_rust() {
-            return Err(Error::InvalidParameter(
-                "these labels are already allocated, call mts_labels_free first".into()
-            ));
-        }
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(tensor);
 
-        *keys = rust_to_mts_labels(Arc::clone((*tensor).keys()));
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::clone((*tensor).keys()));
         Ok(())
-    })
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 
@@ -255,7 +261,8 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
 /// @param block_indexes array to be filled with indexes of blocks in the tensor
 ///                      map matching the `selection`
 /// @param count number of entries in `block_indexes`
-/// @param selection labels with a single entry describing which blocks are requested
+/// @param selection pointer to labels with a single entry describing which
+///                  blocks are requested
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
@@ -265,10 +272,10 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
     tensor: *const mts_tensormap_t,
     block_indexes: *mut usize,
 	count: *mut usize,
-    selection: mts_labels_t,
+    selection: *const mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
-        check_pointers_non_null!(tensor, count);
+        check_pointers_non_null!(tensor, count, selection);
 
         if *count != (*tensor).keys().count() {
             return Err(Error::InvalidParameter(format!(
@@ -277,8 +284,7 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
             )));
         }
 
-        let selection = mts_labels_to_rust(&selection)?;
-        let rust_blocks = (*tensor).blocks_matching(&selection)?;
+        let rust_blocks = (*tensor).blocks_matching(&*selection)?;
 		*count = rust_blocks.len();
 
         if (*tensor).keys().is_empty() {
@@ -326,7 +332,7 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
 /// The result is a new tensor map, which should be freed with `mts_tensormap_free`.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param keys_to_move description of the keys to move
+/// @param keys_to_move pointer to labels describing the keys to move
 /// @param fill_value an mts_array_t with shape (1,) and the same dtype as the
 ///                   data, used to fill missing entries when merging blocks
 /// @param sort_samples whether to sort the samples lexicographically after
@@ -338,7 +344,7 @@ pub unsafe extern "C" fn mts_tensormap_blocks_matching(
 #[no_mangle]
 pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     tensor: *const mts_tensormap_t,
-    keys_to_move: mts_labels_t,
+    keys_to_move: *const mts_labels_t,
     fill_value: mts_array_t,
     sort_samples: bool,
 ) -> *mut mts_tensormap_t {
@@ -346,9 +352,9 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers_non_null!(tensor);
+        check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
+        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
 
         let moved = (*tensor).keys_to_properties(&keys_to_move, &fill_value, sort_samples)?;
 
@@ -438,7 +444,7 @@ pub unsafe extern "C" fn mts_tensormap_components_to_properties(
 /// property labels.
 ///
 /// @param tensor pointer to an existing tensor map
-/// @param keys_to_move description of the keys to move
+/// @param keys_to_move pointer to labels describing the keys to move
 /// @param fill_value an mts_array_t with shape (1,) and the same dtype as the
 ///                   data, used to fill missing entries when merging blocks
 /// @param sort_samples whether to sort the samples lexicographically after
@@ -450,7 +456,7 @@ pub unsafe extern "C" fn mts_tensormap_components_to_properties(
 #[no_mangle]
 pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     tensor: *const mts_tensormap_t,
-    keys_to_move: mts_labels_t,
+    keys_to_move: *const mts_labels_t,
     fill_value: mts_array_t,
     sort_samples: bool,
 ) -> *mut mts_tensormap_t {
@@ -458,9 +464,9 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers_non_null!(tensor);
+        check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = mts_labels_to_rust(&keys_to_move)?;
+        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
 
         let moved = (*tensor).keys_to_samples(&keys_to_move, &fill_value, sort_samples)?;
 

@@ -3,18 +3,17 @@ name: Build Python wheels
 on:
   push:
     tags: ["*"]
-  pull_request:
-    paths:
-      # build wheels in PR if this file changed
-      - '.github/workflows/build-wheels.yml'
-      # build wheels in PR if any of the build system files changed
-      - '**/VERSION'
-      - '**/setup.py'
-      - '**/pyproject.toml'
-      - '**/MANIFEST.in'
-      - '**/Cargo.toml'
-      - '**/CMakeLists.txt'
-      - '**/build.rs'
+  # TEMPORARILY DISABLED: git deps in Cargo.toml break wheel builds
+  # pull_request:
+  #   paths:
+  #     - '.github/workflows/build-wheels.yml'
+  #     - '**/VERSION'
+  #     - '**/setup.py'
+  #     - '**/pyproject.toml'
+  #     - '**/MANIFEST.in'
+  #     - '**/Cargo.toml'
+  #     - '**/CMakeLists.txt'
+  #     - '**/build.rs'
   schedule:
     # check the build once a week on mondays
     - cron: '0 10 * * 1'
@@ -66,7 +65,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           enable-cache: true
           activate-environment: true
 
@@ -75,11 +74,11 @@ jobs:
 
       - name: Set up Docker Buildx
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: python/scripts/rustc-manylinux2014_${{ matrix.cibw-arch }}
           tags: rustc-manylinux2014_${{ matrix.cibw-arch }}:latest
@@ -115,7 +114,7 @@ jobs:
     name: ${{ matrix.name }} (torch v${{ matrix.torch-version }})
     strategy:
       matrix:
-        torch-version: ['2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '2.10', '2.11']
+        torch-version: ['2.3', '2.4', '2.5', '2.6', '2.7', '2.8', '2.9', '2.10']
         arch: ['arm64', 'x86_64']
         os: ['ubuntu-24.04', 'ubuntu-24.04-arm', 'macos-15', 'windows-2022']
         exclude:
@@ -147,15 +146,14 @@ jobs:
             rust-target: x86_64-pc-windows-msvc
             cibw-arch: AMD64
           # add the right python version image for each torch version
-          - {torch-version: '2.3',  cibw-python: 'cp312-*'}
-          - {torch-version: '2.4',  cibw-python: 'cp312-*'}
-          - {torch-version: '2.5',  cibw-python: 'cp312-*'}
-          - {torch-version: '2.6',  cibw-python: 'cp313-*'}
-          - {torch-version: '2.7',  cibw-python: 'cp313-*'}
-          - {torch-version: '2.8',  cibw-python: 'cp313-*'}
-          - {torch-version: '2.9',  cibw-python: 'cp314-*'}
-          - {torch-version: '2.10', cibw-python: 'cp314-*'}
-          - {torch-version: '2.11', cibw-python: 'cp314-*'}
+          - {torch-version: '2.3', cibw-python: 'cp312-*'}
+          - {torch-version: '2.4', cibw-python: 'cp312-*'}
+          - {torch-version: '2.5', cibw-python: 'cp312-*'}
+          - {torch-version: '2.6', cibw-python: 'cp312-*'}
+          - {torch-version: '2.7', cibw-python: 'cp312-*'}
+          - {torch-version: '2.8', cibw-python: 'cp312-*'}
+          - {torch-version: '2.9', cibw-python: 'cp312-*'}
+          - {torch-version: '2.10', cibw-python: 'cp312-*'}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -170,7 +168,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           enable-cache: true
           activate-environment: true
 
@@ -179,11 +177,11 @@ jobs:
 
       - name: Set up Docker Buildx
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@v3
 
       - name: build manylinux with rust docker image
         if: matrix.os == 'ubuntu-24.04' || matrix.os == 'ubuntu-24.04-arm'
-        uses: docker/build-push-action@v7
+        uses: docker/build-push-action@v6
         with:
           context: python/scripts/rustc-manylinux_2_28_${{ matrix.cibw-arch }}
           tags: rustc-manylinux_2_28_${{ matrix.cibw-arch }}:latest
@@ -258,7 +256,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           enable-cache: true
           activate-environment: true
 
@@ -311,7 +309,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           enable-cache: true
           activate-environment: true
 
@@ -458,13 +456,13 @@ jobs:
         include:
           - os: ubuntu-24.04
             rust-target: x86_64-unknown-linux-gnu
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.11.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-shared-with-deps-2.10.0%2Bcpu.zip
           - os: macos-15
             rust-target: aarch64-apple-darwin
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.11.0.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-macos-arm64-2.10.0.zip
           - os: windows-2022
             rust-target: x86_64-pc-windows-msvc
-            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.11.0%2Bcpu.zip
+            libtorch-url: https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.10.0%2Bcpu.zip
     steps:
       - uses: actions/checkout@v6
         with:
@@ -479,7 +477,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           enable-cache: true
           activate-environment: true
 

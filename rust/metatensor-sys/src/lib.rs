@@ -4,20 +4,6 @@ mod c_api;
 
 pub use c_api::*;
 
-
-impl mts_labels_t {
-    /// Create an `mts_labels_t` with all members set to null pointers/zero
-    pub fn null() -> mts_labels_t {
-        mts_labels_t {
-            internal_ptr_: std::ptr::null_mut(),
-            names: std::ptr::null(),
-            values: std::ptr::null(),
-            size: 0,
-            count: 0,
-        }
-    }
-}
-
 /// Error type used in metatensor
 #[derive(Debug, Clone)]
 pub struct Error {

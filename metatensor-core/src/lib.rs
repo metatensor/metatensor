@@ -12,7 +12,9 @@
 mod utils;
 
 mod labels;
-use self::labels::{LabelValue, Labels};
+use self::labels::Labels;
+
+mod labels_array;
 
 mod data;
 use self::data::{mts_array_t, mts_data_origin_t};
