@@ -408,7 +408,7 @@ public:
     /// double value = array(2, 3, 1);
     /// ```
     template<typename ...Args>
-    T operator()(Args... args) const {
+    T operator()(Args... args) const & {
         auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
         if (index.size() != shape_.size()) {
             throw Error(
@@ -417,6 +417,12 @@ public:
             );
         }
         return data_[details::linear_index(shape_, index)];
+    }
+
+    /// Read-only access on rvalue NDArrays (e.g. `labels.values()(0, 0)`).
+    template<typename ...Args>
+    T operator()(Args... args) const && {
+        return static_cast<const NDArray&>(*this)(args...);
     }
 
     /// Get a reference to the value inside this `NDArray` at the given index
