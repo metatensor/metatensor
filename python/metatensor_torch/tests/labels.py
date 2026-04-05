@@ -317,14 +317,13 @@ def test_union():
     with pytest.raises(ValueError, match=message):
         first.union_and_mapping(second)
 
+    # Meta labels have no storage; set operations should error
     second = second.to("meta")
-    union = first.union(second)
-    assert union.values.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.union(second)
 
-    union, first_mapping, second_mapping = first.union_and_mapping(second)
-    assert union.values.device == torch.device("meta")
-    assert first_mapping.device == torch.device("meta")
-    assert second_mapping.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.union_and_mapping(second)
 
 
 def test_intersection():
@@ -356,14 +355,13 @@ def test_intersection():
     with pytest.raises(ValueError, match=message):
         first.intersection_and_mapping(second)
 
+    # Meta labels have no storage; set operations should error
     second = second.to("meta")
-    intersection = first.intersection(second)
-    assert intersection.values.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.intersection(second)
 
-    intersection, first_mapping, second_mapping = first.intersection_and_mapping(second)
-    assert intersection.values.device == torch.device("meta")
-    assert first_mapping.device == torch.device("meta")
-    assert second_mapping.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.intersection_and_mapping(second)
 
 
 def test_difference():
@@ -390,13 +388,13 @@ def test_difference():
     with pytest.raises(ValueError, match=message):
         first.difference_and_mapping(second)
 
+    # Meta labels have no storage; set operations should error
     second = second.to("meta")
-    difference = first.difference(second)
-    assert difference.values.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.difference(second)
 
-    difference, mapping = first.difference_and_mapping(second)
-    assert difference.values.device == torch.device("meta")
-    assert mapping.device == torch.device("meta")
+    with pytest.raises(RuntimeError, match="as_dlpack"):
+        first.difference_and_mapping(second)
 
 
 def test_dimensions_manipulation():
