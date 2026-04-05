@@ -75,7 +75,15 @@ TensorMap TensorMapHolder::copy() const {
 }
 
 Labels TensorMapHolder::keys() const {
-    return torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
+    auto labels = torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
+    // The Rust TensorMap's keys may be on a different device than the block
+    // data (e.g., CPU-backed after to("meta") clones the Rust Labels).
+    // Move keys to match data device for consistency.
+    auto data_device = this->device();
+    if (labels->device() != data_device) {
+        return labels->to(data_device);
+    }
+    return labels;
 }
 
 std::vector<int64_t> TensorMapHolder::blocks_matching(const Labels& selection) const {
