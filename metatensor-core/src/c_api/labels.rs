@@ -3,6 +3,7 @@ use std::ffi::CStr;
 use std::sync::Arc;
 
 use crate::{Labels, Error};
+use crate::labels::LabelValue;
 use crate::data::mts_array_t;
 use super::status::{mts_status_t, catch_unwind};
 
@@ -129,6 +130,58 @@ pub unsafe extern "C" fn mts_labels_create_assume_unique(
     let status = catch_unwind(move || {
         let names = create_labels_names_from_raw(names, names_count)?;
         let labels = Labels::from_array_assume_unique(&names, array)?;
+
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+
+/// Create a new set of Labels from the given dimension names, values array,
+/// and pre-computed CPU values, without checking for uniqueness.
+///
+/// This is used when the caller already has validated CPU values (e.g.
+/// from a device transfer) and wants to pair them with a non-CPU backing
+/// array. The `cpu_values` pointer must contain `count * names_count`
+/// elements of i32 data in row-major order.
+///
+/// @param names array of NULL-terminated UTF-8 strings
+/// @param names_count number of entries in the `names` array
+/// @param array the values array (2D, i32, row-major). Takes ownership.
+/// @param cpu_values pointer to i32 CPU values (row-major)
+/// @param count number of label entries (rows)
+///
+/// @returns A pointer to the newly allocated labels, or NULL on error.
+#[no_mangle]
+pub unsafe extern "C" fn mts_labels_create_with_values(
+    names: *const *const c_char,
+    names_count: usize,
+    array: mts_array_t,
+    cpu_values: *const i32,
+    count: usize,
+) -> *mut mts_labels_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+
+    let status = catch_unwind(move || {
+        let names = create_labels_names_from_raw(names, names_count)?;
+
+        let n_elements = count * names_count;
+        let values = if n_elements > 0 {
+            check_pointers_non_null!(cpu_values);
+            std::slice::from_raw_parts(cpu_values.cast::<LabelValue>(), n_elements).to_vec()
+        } else {
+            Vec::new()
+        };
+
+        let labels = Labels::from_array_with_values(&names, array, values)?;
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));

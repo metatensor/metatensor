@@ -95,6 +95,35 @@ public:
         }
     }
 
+    /// Create Labels from a backing mts_array_t and pre-computed CPU values,
+    /// without uniqueness checking.
+    ///
+    /// Used for device transfers where the source was already validated.
+    /// The `cpu_values` pointer must contain `count * names.size()` i32
+    /// elements in row-major order.
+    Labels(
+        const std::vector<std::string>& names,
+        mts_array_t array,
+        const int32_t* cpu_values,
+        size_t count,
+        assume_unique
+    ):
+        labels_(nullptr)
+    {
+        auto c_names = std::vector<const char*>();
+        c_names.reserve(names.size());
+        for (const auto& name: names) {
+            c_names.push_back(name.c_str());
+        }
+
+        labels_ = mts_labels_create_with_values(
+            c_names.data(), c_names.size(), array, cpu_values, count
+        );
+        if (labels_ == nullptr) {
+            throw Error(mts_last_error());
+        }
+    }
+
     /// Create Labels from the given names and a backing mts_array_t.
     ///
     /// Entries are verified for uniqueness (data is moved to CPU if needed).

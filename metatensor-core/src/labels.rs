@@ -270,6 +270,44 @@ impl Labels {
         })
     }
 
+    /// Create new Labels from an existing `mts_array_t` without checking
+    /// uniqueness, with pre-computed CPU values.
+    ///
+    /// This is used when the caller already has validated CPU values (e.g.
+    /// from a device transfer where the source Labels was validated) and wants
+    /// to pair them with a non-CPU backing array (e.g. Meta device).
+    ///
+    /// The caller must ensure that `cpu_values` matches the array's content
+    /// and that entries are unique.
+    pub unsafe fn from_array_with_values(
+        names: &[&str],
+        array: mts_array_t,
+        cpu_values: Vec<LabelValue>,
+    ) -> Result<Labels, Error> {
+        let names_vec = Labels::validate_names(names)?;
+
+        let shape = array.shape()?;
+        if shape.len() != 2 {
+            return Err(Error::InvalidParameter(
+                "labels array must be 2-dimensional".into()
+            ));
+        }
+        if shape[1] != names_vec.len() {
+            return Err(Error::InvalidParameter(format!(
+                "labels array has {} columns, but {} names were given",
+                shape[1], names_vec.len()
+            )));
+        }
+
+        Ok(Labels {
+            names: names_vec,
+            array,
+            values: OnceCell::with_value(cpu_values),
+            sorted: OnceCell::new(),
+            positions: OnceCell::new(),
+        })
+    }
+
     /// Helper constructor to make tests more readable
     #[cfg(test)]
     pub fn new_i32(names: &[&str], values: Vec<i32>) -> Result<Labels, Error> {

@@ -395,14 +395,24 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         return torch::make_intrusive<LabelsHolder>(*this);
     } else if (device.is_meta()) {
         auto new_values = values_.to(device, non_blocking);
-        // For Meta device (no storage), clone the existing CPU-backed Rust Labels.
-        // The clone is cheap (Arc increment). The Rust Labels retains its CPU
-        // values, so lookups and iteration still work. The Meta torch::Tensor
-        // is stored for device tracking only.
-        auto cloned_labels = this->as_metatensor();
+        // For Meta device (no storage), wrap the Meta tensor in an mts_array_t
+        // and pre-fill CPU values from the source so Rust never tries to
+        // materialize the Meta tensor (which has no storage).
+        auto meta_array = torch_tensor_to_labels_mts_array(new_values);
+
+        // Get CPU values from the source labels
+        auto& orig = this->as_metatensor();
+        auto cpu_values = orig.values();
+        auto new_labels = metatensor::Labels(
+            this->names(),
+            std::move(meta_array),
+            cpu_values.data(),
+            static_cast<size_t>(cpu_values.shape()[0]),
+            metatensor::assume_unique{}
+        );
 
         return torch::make_intrusive<LabelsHolder>(
-            this->names(), std::move(new_values), std::move(cloned_labels)
+            this->names(), std::move(new_values), std::move(new_labels)
         );
     } else {
         auto new_values = values_.to(device, non_blocking);
