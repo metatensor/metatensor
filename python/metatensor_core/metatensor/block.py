@@ -17,7 +17,7 @@ from .data import (
     mts_array_to_python_array,
 )
 from .labels import Labels
-from .status import _check_pointer
+from .status import _check_pointer, _check_status
 from .utils import _to_arguments_parse
 
 
@@ -254,7 +254,7 @@ class TensorBlock:
     def _raw_values(self) -> mts_array_t:
         """Get the raw ``mts_array_t`` corresponding to this block's values"""
         data = mts_array_t()
-        self._lib.mts_block_data(self._ptr, data)
+        _check_status(self._lib.mts_block_data(self._ptr, data))
         return data
 
     @property
@@ -374,8 +374,10 @@ class TensorBlock:
             gradients: None
         """
         gradient_block = ctypes.POINTER(mts_block_t)()
-        self._lib.mts_block_gradient(
-            self._ptr, parameter.encode("utf8"), gradient_block
+        _check_status(
+            self._lib.mts_block_gradient(
+                self._ptr, parameter.encode("utf8"), gradient_block
+            )
         )
 
         gradient = TensorBlock._from_ptr(gradient_block, parent=self)
@@ -457,15 +459,19 @@ class TensorBlock:
         # double free
         gradient._move_ptr()
 
-        self._lib.mts_block_add_gradient(
-            self._ptr, parameter.encode("utf8"), gradient_ptr
+        _check_status(
+            self._lib.mts_block_add_gradient(
+                self._ptr, parameter.encode("utf8"), gradient_ptr
+            )
         )
 
     def gradients_list(self) -> List[str]:
         """get a list of all gradients defined in this block"""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
-        self._lib.mts_block_gradients_list(self._ptr, parameters, count)
+        _check_status(
+            self._lib.mts_block_gradients_list(self._ptr, parameters, count)
+        )
 
         result = []
         for i in range(count.value):

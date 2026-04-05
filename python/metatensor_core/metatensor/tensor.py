@@ -13,7 +13,7 @@ from ._c_lib import _get_library
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
 from .labels import Labels, LabelsEntry
-from .status import _check_pointer
+from .status import _check_pointer, _check_status
 from .utils import _to_arguments_parse
 
 
@@ -316,7 +316,7 @@ class TensorMap:
             )
 
         block = ctypes.POINTER(mts_block_t)()
-        self._lib.mts_tensormap_block_by_id(self._ptr, block, index)
+        _check_status(self._lib.mts_tensormap_block_by_id(self._ptr, block, index))
         return TensorBlock._from_ptr(block, parent=self)
 
     def blocks_by_id(self, indices: Sequence[int]) -> TensorBlock:
@@ -340,11 +340,13 @@ class TensorMap:
         block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
         count = c_uintptr_t(block_indexes._length_)
 
-        self._lib.mts_tensormap_blocks_matching(
-            self._ptr,
-            block_indexes,
-            count,
-            selection._as_mts_labels_t(),
+        _check_status(
+            self._lib.mts_tensormap_blocks_matching(
+                self._ptr,
+                block_indexes,
+                count,
+                selection._as_mts_labels_t(),
+            )
         )
 
         result = []
@@ -742,8 +744,10 @@ class TensorMap:
         :param key: key of the info
         :param value: value of the info
         """
-        self._lib.mts_tensormap_set_info(
-            self._ptr, key.encode("utf8"), value.encode("utf8")
+        _check_status(
+            self._lib.mts_tensormap_set_info(
+                self._ptr, key.encode("utf8"), value.encode("utf8")
+            )
         )
 
     def get_info(self, key: str) -> Optional[str]:
@@ -755,7 +759,9 @@ class TensorMap:
         :return: value of the info, or :py:obj:`None` if the info does not exist
         """
         value = ctypes.c_char_p()
-        self._lib.mts_tensormap_get_info(self._ptr, key.encode("utf8"), value)
+        _check_status(
+            self._lib.mts_tensormap_get_info(self._ptr, key.encode("utf8"), value)
+        )
 
         if value.value:
             return value.value.decode("utf8")
@@ -768,7 +774,9 @@ class TensorMap:
         """
         keys = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
-        self._lib.mts_tensormap_info_keys(self._ptr, keys, count)
+        _check_status(
+            self._lib.mts_tensormap_info_keys(self._ptr, keys, count)
+        )
         result = {}
         for i in range(count.value):
             key = keys[i].decode("utf8")
