@@ -8,7 +8,7 @@ from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
-from ._c_api import c_uintptr_t, mts_labels_t, mts_array_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_labels_t
 from ._c_lib import _get_library
 from .status import _check_pointer, _check_status
 
@@ -807,11 +807,13 @@ class Labels:
         for i, v in enumerate(entry):
             c_entry[i] = ctypes.c_int32(v)
 
-        self._lib.mts_labels_position(
-            self._labels,
-            c_entry,
-            c_entry._length_,
-            result,
+        _check_status(
+            self._lib.mts_labels_position(
+                self._labels,
+                c_entry,
+                c_entry._length_,
+                result,
+            )
         )
 
         if result.value >= 0:
@@ -842,12 +844,14 @@ class Labels:
         )
         """
         output = ctypes.POINTER(mts_labels_t)()
-        self._lib.mts_labels_difference(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            None,
-            0,
+        _check_status(
+            self._lib.mts_labels_difference(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -883,12 +887,14 @@ class Labels:
         output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
-        self._lib.mts_labels_difference(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
+        _check_status(
+            self._lib.mts_labels_difference(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping
@@ -914,14 +920,16 @@ class Labels:
         )
         """
         output = ctypes.POINTER(mts_labels_t)()
-        self._lib.mts_labels_union(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            None,
-            0,
-            None,
-            0,
+        _check_status(
+            self._lib.mts_labels_union(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -962,14 +970,16 @@ class Labels:
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
-        self._lib.mts_labels_union(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
-            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(second_mapping),
+        _check_status(
+            self._lib.mts_labels_union(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+                second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(second_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping, second_mapping
@@ -993,14 +1003,16 @@ class Labels:
         )
         """
         output = ctypes.POINTER(mts_labels_t)()
-        self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            None,
-            0,
-            None,
-            0,
+        _check_status(
+            self._lib.mts_labels_intersection(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                None,
+                0,
+                None,
+                0,
+            )
         )
 
         return Labels._from_mts_labels_t(output)
@@ -1040,14 +1052,16 @@ class Labels:
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
-        self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
-            ctypes.pointer(output),
-            first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(first_mapping),
-            second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            len(second_mapping),
+        _check_status(
+            self._lib.mts_labels_intersection(
+                self._as_mts_labels_t(),
+                other._as_mts_labels_t(),
+                ctypes.pointer(output),
+                first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(first_mapping),
+                second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                len(second_mapping),
+            )
         )
 
         return Labels._from_mts_labels_t(output), first_mapping, second_mapping
@@ -1079,11 +1093,13 @@ class Labels:
         selected = np.zeros((len(self)), dtype=np.int64)
         selected_count = c_uintptr_t(len(self))
 
-        self._lib.mts_labels_select(
-            self._as_mts_labels_t(),
-            selection._as_mts_labels_t(),
-            selected.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
-            ctypes.pointer(selected_count),
+        _check_status(
+            self._lib.mts_labels_select(
+                self._as_mts_labels_t(),
+                selection._as_mts_labels_t(),
+                selected.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+                ctypes.pointer(selected_count),
+            )
         )
 
         selected.resize(selected_count.value, refcheck=False)
