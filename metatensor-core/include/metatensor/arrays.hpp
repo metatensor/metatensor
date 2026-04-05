@@ -534,6 +534,19 @@ private:
         validate();
     }
 
+    /// Construct an NDArray that owns a DLPack tensor. The data pointer
+    /// comes from the DLTensor; the owned_data is the DLManagedTensorVersioned
+    /// which is freed via its deleter when the NDArray is destroyed.
+    NDArray(const T* data, std::vector<size_t> shape, void* owned, std::function<void(void*)> deleter):
+        data_(const_cast<T*>(data)),
+        shape_(std::move(shape)),
+        is_const_(true),
+        owned_data_(owned),
+        deleter_(std::move(deleter))
+    {
+        validate();
+    }
+
     friend class Labels;
 
     void validate() const {

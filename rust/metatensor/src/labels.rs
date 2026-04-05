@@ -178,15 +178,21 @@ impl Labels {
     /// Get the total number of entries in this set of labels
     #[inline]
     pub fn count(&self) -> usize {
-        let mut values_ptr = std::ptr::null();
-        let mut count = 0;
-        let mut size = 0;
+        let mut array = crate::c_api::mts_array_t::null();
         unsafe {
-            check_status(crate::c_api::mts_labels_values_raw(
-                self.ptr, &mut values_ptr, &mut count, &mut size,
-            )).expect("failed to get labels count");
+            check_status(crate::c_api::mts_labels_values(
+                self.ptr, &mut array,
+            )).expect("failed to get labels values array");
         }
-        count
+
+        let mut shape_ptr = std::ptr::null();
+        let mut shape_count: usize = 0;
+        unsafe {
+            let shape_fn = array.shape.expect("labels array must have shape callback");
+            shape_fn(array.ptr, &mut shape_ptr, &mut shape_count);
+            assert!(shape_count == 2, "labels array must be 2D");
+            (*shape_ptr)
+        }
     }
 
     /// Check if this set of Labels is empty (contains no entry)
@@ -407,18 +413,48 @@ impl Labels {
     }
 
     pub(crate) fn values(&self) -> &[LabelValue] {
-        if self.count() == 0 || self.size() == 0 {
+        let count = self.count();
+        let size = self.size();
+        if count == 0 || size == 0 {
             return &[]
-        } else {
-            let mut values_ptr = std::ptr::null();
-            let mut count = 0;
-            let mut size = 0;
-            unsafe {
-                check_status(crate::c_api::mts_labels_values_raw(
-                    self.ptr, &mut values_ptr, &mut count, &mut size,
-                )).expect("failed to get labels values");
-                std::slice::from_raw_parts(values_ptr.cast(), count * size)
+        }
+
+        // Get the values array, then extract CPU data via DLPack.
+        // The DLPack tensor from LabelsValuesArray is zero-copy (points into
+        // the array's own data), so this pointer is valid as long as the
+        // Labels (and thus the mts_labels_t) is alive.
+        let mut array = crate::c_api::mts_array_t::null();
+        unsafe {
+            check_status(crate::c_api::mts_labels_values(
+                self.ptr, &mut array,
+            )).expect("failed to get labels values array");
+        }
+
+        let cpu = dlpk::sys::DLDevice::cpu();
+        let version = dlpk::sys::DLPackVersion::current();
+
+        let mut dl_managed: *mut dlpk::sys::DLManagedTensorVersioned = std::ptr::null_mut();
+        unsafe {
+            let as_dlpack_fn = array.as_dlpack.expect("labels array must have as_dlpack callback");
+            let status = as_dlpack_fn(
+                array.ptr as *mut std::os::raw::c_void,
+                &mut dl_managed,
+                cpu,
+                std::ptr::null(),
+                version,
+            );
+            assert!(status == 0, "failed to get DLPack from labels array");
+            assert!(!dl_managed.is_null(), "DLPack tensor is null");
+
+            let data_ptr = (*dl_managed).dl_tensor.data as *const LabelValue;
+            // The DLPack tensor points into the LabelsValuesArray's data, which
+            // lives as long as the Labels. We can free the DLPack metadata
+            // immediately since we only need the data pointer.
+            if let Some(deleter) = (*dl_managed).deleter {
+                deleter(dl_managed);
             }
+
+            std::slice::from_raw_parts(data_ptr, count * size)
         }
     }
 }

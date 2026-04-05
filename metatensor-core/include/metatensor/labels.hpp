@@ -9,15 +9,6 @@
 
 #include <metatensor.h>
 
-// Internal function not in the public C header, exported from the shared library
-extern "C" {
-    mts_status_t mts_labels_values_raw(
-        const mts_labels_t* labels,
-        const int32_t** values,
-        uintptr_t* count,
-        uintptr_t* size
-    );
-}
 #include "./errors.hpp"
 #include "./arrays.hpp"
 #include "./io_fwd.hpp"
@@ -238,15 +229,53 @@ public:
         return result;
     }
 
-    /// Get the array of values for these Labels.
+    /// Get the array of values for these Labels as a CPU NDArray.
+    ///
+    /// The returned NDArray owns a DLPack tensor that keeps the data alive.
+    /// The data is valid as long as the NDArray (or a copy of it) exists.
     NDArray<int32_t> values() const {
         if (labels_ == nullptr) {
             return NDArray<int32_t>(static_cast<const int32_t*>(nullptr), {0, 0});
         }
-        const int32_t* v = nullptr;
-        size_t c = 0, s = 0;
-        details::check_status(mts_labels_values_raw(labels_, &v, &c, &s));
-        return NDArray<int32_t>(v, {c, s});
+
+        mts_array_t array;
+        std::memset(&array, 0, sizeof(array));
+        details::check_status(mts_labels_values(labels_, &array));
+
+        // Get shape
+        const uintptr_t* shape_ptr = nullptr;
+        uintptr_t shape_count = 0;
+        array.shape(array.ptr, &shape_ptr, &shape_count);
+        assert(shape_count == 2);
+        size_t count = static_cast<size_t>(shape_ptr[0]);
+        size_t size = static_cast<size_t>(shape_ptr[1]);
+
+        if (count == 0 || size == 0) {
+            return NDArray<int32_t>(static_cast<const int32_t*>(nullptr), {count, size});
+        }
+
+        // Extract CPU data via DLPack
+        DLDevice cpu_device = {kDLCPU, 0};
+        DLPackVersion version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        DLManagedTensorVersioned* dl = nullptr;
+        auto status = array.as_dlpack(array.ptr, &dl, cpu_device, nullptr, version);
+        if (status != MTS_SUCCESS || dl == nullptr) {
+            throw Error("failed to get CPU values from labels via DLPack");
+        }
+
+        auto* data = static_cast<const int32_t*>(dl->dl_tensor.data);
+
+        return NDArray<int32_t>(
+            data,
+            {count, size},
+            static_cast<void*>(dl),
+            [](void* p) {
+                auto* m = static_cast<DLManagedTensorVersioned*>(p);
+                if (m != nullptr && m->deleter != nullptr) {
+                    m->deleter(m);
+                }
+            }
+        );
     }
 
     /// Take the union of these `Labels` with `other`.

@@ -123,10 +123,13 @@ unsafe extern "C" fn labels_array_dtype(
     mts_status_t(0)
 }
 
-/// Context struct that keeps label data alive for the DLPack tensor lifetime.
+/// Context struct for the DLPack tensor metadata.
+///
+/// The DLTensor data pointer points directly into the LabelsValuesArray's
+/// existing data -- no copy is made. This is safe because the DLPack tensor
+/// is obtained from a non-owning `mts_array_t` view, so the Labels (and thus
+/// the LabelsValuesArray) must outlive the DLPack tensor.
 struct LabelsDLPackContext {
-    /// Owned i32 values (contiguous, row-major)
-    values: Vec<i32>,
     /// DLPack shape array (i64)
     shape: [i64; 2],
     /// DLPack strides array (i64, row-major)
@@ -172,16 +175,20 @@ unsafe extern "C" fn labels_array_as_dlpack(
     let count = array_ref.shape[0];
     let size = array_ref.shape[1];
 
-    let values = array_ref.values.clone();
+    // Point directly at the LabelsValuesArray's existing data (zero-copy).
+    let data_ptr = if array_ref.values.is_empty() {
+        std::ptr::null_mut()
+    } else {
+        array_ref.values.as_ptr() as *mut c_void
+    };
 
     let mut ctx = Box::new(LabelsDLPackContext {
-        values,
         shape: [count as i64, size as i64],
         strides: [size as i64, 1],
     });
 
     let dl_tensor = DLTensor {
-        data: ctx.values.as_mut_ptr().cast(),
+        data: data_ptr,
         device: cpu,
         ndim: 2,
         dtype: DLDataType {
