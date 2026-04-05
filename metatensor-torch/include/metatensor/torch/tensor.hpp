@@ -197,10 +197,16 @@ public:
 private:
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;
+    /// Cached device (from block data, not keys)
+    torch::Device device_ = torch::Device(torch::kCPU);
 
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
     explicit TensorMapHolder(metatensor::TensorMap tensor):
-        tensor_(std::move(tensor)) {}
+        tensor_(std::move(tensor)),
+        device_(compute_device(this->tensor_)) {}
+
+    /// Compute device from first block's data array
+    static torch::Device compute_device(const metatensor::TensorMap& tensor);
 };
 
 

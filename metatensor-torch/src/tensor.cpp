@@ -53,7 +53,8 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 
 
 TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
-    tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
+    tensor_(keys->as_metatensor(), blocks_from_torch(blocks)),
+    device_(blocks.empty() ? keys->device() : blocks[0]->device())
 {
     // Block-vs-block device/dtype consistency is enforced by metatensor-core.
     // The torch-specific check below ensures keys (which may live on GPU) are
@@ -81,7 +82,7 @@ Labels TensorMapHolder::keys() const {
     // Move keys to match data device for consistency.
     auto data_device = this->device();
     if (labels->device() != data_device) {
-        return labels->to(data_device);
+        return labels->to(data_device, /*non_blocking=*/false);
     }
     return labels;
 }
@@ -477,15 +478,45 @@ std::vector<std::tuple<LabelsEntry, TensorBlock>> TensorMapHolder::items(TensorM
 }
 
 torch::Device TensorMapHolder::device() const {
-    // Use block data device rather than keys device: after to("meta"),
-    // the Rust TensorMap's keys are still on the pre-Meta device (since
-    // Meta clones the Rust Labels), but the block data IS on Meta.
-    if (this->keys()->count() > 0) {
-        auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
-        auto tb = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
-        return tb->device();
+    return this->device_;
+}
+
+torch::Device TensorMapHolder::compute_device(const metatensor::TensorMap& tensor) {
+    if (tensor.keys().count() == 0) {
+        return torch::Device(torch::kCPU);
     }
-    return this->keys()->device();
+
+    // Get the first block's data array device via C API
+    mts_block_t* block_ptr = nullptr;
+    auto status = mts_tensormap_block_by_id(tensor.as_mts_tensormap_t(), &block_ptr, 0);
+    if (status != MTS_SUCCESS || block_ptr == nullptr) {
+        return torch::Device(torch::kCPU);
+    }
+
+    mts_array_t data;
+    std::memset(&data, 0, sizeof(data));
+    status = mts_block_data(block_ptr, &data);
+    if (status != MTS_SUCCESS || data.device == nullptr) {
+        return torch::Device(torch::kCPU);
+    }
+
+    DLDevice dl_device;
+    status = data.device(data.ptr, &dl_device);
+    if (status != MTS_SUCCESS) {
+        return torch::Device(torch::kCPU);
+    }
+
+    torch::DeviceType type;
+    switch (dl_device.device_type) {
+    case kDLCPU:    type = torch::DeviceType::CPU;  break;
+    case kDLCUDA:   type = torch::DeviceType::CUDA; break;
+    case kDLROCM:   type = torch::DeviceType::HIP;  break;
+    case kDLMetal:  type = torch::DeviceType::MPS;  break;
+    case kDLOneAPI: type = torch::DeviceType::XPU;  break;
+    case kDLExtDev: type = torch::DeviceType::Meta; break;
+    default:        type = torch::DeviceType::CPU;  break;
+    }
+    return torch::Device(type, dl_device.device_id > 0 ? static_cast<int8_t>(dl_device.device_id) : -1);
 }
 
 torch::Dtype TensorMapHolder::scalar_type() const {
