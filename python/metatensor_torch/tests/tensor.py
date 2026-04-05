@@ -436,29 +436,20 @@ def meta_tensor():
 
 
 def test_keys_to_samples_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_samples("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
+    # Meta block data has no storage; keys_to_samples needs to copy data
+    # between blocks, which fails for Meta tensors.
+    with pytest.raises((RuntimeError, NotImplementedError), match="meta"):
+        meta_tensor.keys_to_samples("keys")
 
 
 def test_keys_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_properties("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
+    with pytest.raises((RuntimeError, NotImplementedError), match="meta"):
+        meta_tensor.keys_to_properties("keys")
 
 
 def test_components_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.components_to_properties("component")
-    for block in new_tensor.blocks():
-        assert new_tensor.keys.values.device == block.values.device
-        assert block.samples.values.device == block.values.device
-        assert block.properties.values.device == block.values.device
+    with pytest.raises((RuntimeError, NotImplementedError), match="meta"):
+        meta_tensor.components_to_properties("component")
 
 
 def test_different_device(meta_tensor):

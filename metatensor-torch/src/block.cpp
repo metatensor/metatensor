@@ -83,6 +83,11 @@ TensorBlock TensorBlockHolder::to(
     torch::optional<torch::Device> device,
     bool non_blocking
 ) const {
+    // Meta tensors don't support MemoryFormat::Preserve (no data to inspect).
+    // Use Contiguous for Meta, Preserve for everything else.
+    auto memory_format = (device.has_value() && device->is_meta())
+        ? torch::MemoryFormat::Contiguous
+        : torch::MemoryFormat::Preserve;
     auto values = this->values().to(
         dtype,
         /*layout*/ torch::nullopt,
@@ -90,7 +95,7 @@ TensorBlock TensorBlockHolder::to(
         /*pin_memory*/ torch::nullopt,
         /*non_blocking*/ non_blocking,
         /*copy*/ false,
-        /*memory_format*/ torch::MemoryFormat::Preserve
+        /*memory_format*/ memory_format
     );
 
     auto samples = this->samples()->to(device);
