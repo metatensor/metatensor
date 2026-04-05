@@ -4,17 +4,6 @@ mod c_api;
 
 pub use c_api::*;
 
-// Internal function not in the public C header -- raw i32 pointer access
-// for the Rust wrapper's labels values access.
-extern "C" {
-    pub fn mts_labels_values_raw(
-        labels: *const mts_labels_t,
-        values: *mut *const i32,
-        count: *mut usize,
-        size: *mut usize,
-    ) -> mts_status_t;
-}
-
 /// Error type used in metatensor
 #[derive(Debug, Clone)]
 pub struct Error {

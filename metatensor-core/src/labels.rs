@@ -356,15 +356,6 @@ impl Labels {
         })
     }
 
-    /// Pre-fill the cached CPU values without triggering materialization
-    /// from the array. Used when the caller has values from a known-good
-    /// source (e.g., device transfer where the source Labels was validated).
-    ///
-    /// If the values are already cached, this is a no-op.
-    pub fn set_cached_values(&self, values: Vec<LabelValue>) {
-        let _ = self.values.set(values);
-    }
-
     /// Get the number of entries/named values in a single label
     pub fn size(&self) -> usize {
         self.names.len()

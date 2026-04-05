@@ -12,7 +12,7 @@
 mod utils;
 
 mod labels;
-use self::labels::{LabelValue, Labels};
+use self::labels::Labels;
 
 mod labels_array;
 

@@ -2,7 +2,7 @@ use std::os::raw::c_char;
 use std::ffi::CStr;
 use std::sync::Arc;
 
-use crate::{LabelValue, Labels, Error};
+use crate::{Labels, Error};
 use crate::data::mts_array_t;
 use super::status::{mts_status_t, catch_unwind};
 
@@ -208,32 +208,6 @@ pub unsafe extern "C" fn mts_labels_values(
 }
 
 
-// Internal: raw i32 pointer access for Rust wrapper and C++ labels.
-// Not in the public C header (excluded from cbindgen via build.rs).
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_values_raw(
-    labels: *const mts_labels_t,
-    values: *mut *const i32,
-    count: *mut usize,
-    size: *mut usize,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(labels, values, count, size);
-        let labels = &*labels;
-
-        *count = labels.count();
-        *size = labels.size();
-        if labels.count() == 0 || labels.size() == 0 {
-            *values = std::ptr::null();
-        } else {
-            *values = (&(*labels)[0][0] as *const LabelValue).cast();
-        }
-
-        Ok(())
-    })
-}
-
-
 /// Get the position of the entry defined by the `values` array in the given set
 /// of `labels`.
 ///
@@ -305,62 +279,6 @@ unsafe fn create_labels_names_from_raw(
     Ok(names)
 }
 
-
-// Keep old names as aliases for backward compatibility during transition.
-// These are excluded from cbindgen via build.rs.
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_create_from_array(
-    names: *const *const c_char,
-    names_count: usize,
-    array: mts_array_t,
-) -> *mut mts_labels_t {
-    mts_labels_create(names, names_count, array)
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_create_from_array_assume_unique(
-    names: *const *const c_char,
-    names_count: usize,
-    array: mts_array_t,
-) -> *mut mts_labels_t {
-    mts_labels_create_assume_unique(names, names_count, array)
-}
-
-
-// Internal: used by metatensor-torch for Meta device transfers.
-// Not part of the public C API (not in metatensor.h).
-#[no_mangle]
-pub unsafe extern "C" fn mts_labels_set_cached_values(
-    labels: *const mts_labels_t,
-    values: *const i32,
-    count: usize,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(labels);
-        let labels = &*labels;
-        let size = labels.size();
-
-        if count != labels.count() {
-            return Err(Error::InvalidParameter(format!(
-                "mts_labels_set_cached_values: expected count={}, got {}",
-                labels.count(), count
-            )));
-        }
-
-        let n_elements = count * size;
-        let label_values = if n_elements > 0 {
-            check_pointers_non_null!(values);
-            let slice = std::slice::from_raw_parts(values.cast::<LabelValue>(), n_elements);
-            slice.to_vec()
-        } else {
-            Vec::new()
-        };
-
-        labels.set_cached_values(label_values);
-
-        Ok(())
-    })
-}
 
 /// Make a copy of `labels`, incrementing the internal reference count.
 ///
