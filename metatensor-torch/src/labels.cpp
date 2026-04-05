@@ -5,6 +5,7 @@
 
 #include <metatensor.hpp>
 
+#include "metatensor/torch/array.hpp"
 #include "metatensor/torch/labels.hpp"
 #include <ATen/DLConvertor.h>
 
@@ -33,20 +34,21 @@ struct TorchLabelsArrayData {
     std::vector<uintptr_t> shape;
 };
 
-/// Origin ID for torch-backed labels arrays, distinct from TORCH_DATA_ORIGIN
-/// (which is for f64 block data backed by TorchDataArray). Using a separate
-/// origin prevents type confusion if an mts_array_t with TORCH_DATA_ORIGIN
-/// were ever passed as a labels values array.
-static mts_data_origin_t TORCH_LABELS_ORIGIN = 0;
-
+/// Return TORCH_DATA_ORIGIN for torch-backed labels arrays. Both block data
+/// and labels values are backed by torch::Tensor, so they share the same
+/// origin. Registration is triggered on first call if not already done.
 static mts_status_t torch_labels_origin(const void*, mts_data_origin_t* origin) {
+    // Ensure TORCH_DATA_ORIGIN is registered (thread-safe via C++11 static init)
     static auto REGISTRATION = []{
-        auto name = std::string("metatensor_torch::TorchLabelsArrayData");
-        mts_register_data_origin(name.c_str(), &TORCH_LABELS_ORIGIN);
+        if (metatensor_torch::TORCH_DATA_ORIGIN == 0) {
+            // Instantiate a dummy TorchDataArray to trigger registration
+            auto dummy = metatensor_torch::TorchDataArray(torch::empty({0}));
+            dummy.origin();
+        }
         return 0;
     }();
     (void)REGISTRATION;
-    *origin = TORCH_LABELS_ORIGIN;
+    *origin = metatensor_torch::TORCH_DATA_ORIGIN;
     return MTS_SUCCESS;
 }
 
@@ -356,7 +358,7 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
         array.origin(array.ptr, &origin);
     }
 
-    if (origin == TORCH_LABELS_ORIGIN && array.ptr != nullptr) {
+    if (origin == metatensor_torch::TORCH_DATA_ORIGIN && array.ptr != nullptr) {
         // recover the torch tensor from the values array
         auto* data = static_cast<TorchLabelsArrayData*>(array.ptr);
         this->values_ = data->tensor;
@@ -564,7 +566,9 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
         return torch::make_intrusive<LabelsHolder>(*this);
     } else if (device.is_meta()) {
         auto new_values = values_.to(device, non_blocking);
-        // Create Rust Labels with Meta-backed array (preserves device in round-trips)
+        // Create Rust Labels with Meta-backed array (preserves device in round-trips).
+        // assume_unique is safe: the source labels were validated at construction
+        // time; device transfer does not change the data content.
         auto meta_array = torch_tensor_to_labels_mts_array(new_values);
         auto new_labels = metatensor::Labels(
             this->names(), std::move(meta_array), metatensor::assume_unique{}
@@ -591,7 +595,9 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     } else {
         auto new_values = values_.to(device, non_blocking);
 
-        // create new Labels from the moved tensor's array
+        // Create new Labels from the moved tensor's array.
+        // assume_unique is safe: the source labels were validated at construction
+        // time; device transfer does not change the data content.
         auto array = torch_tensor_to_labels_mts_array(new_values);
         auto new_labels = metatensor::Labels(
             this->names(), std::move(array), metatensor::assume_unique{}
