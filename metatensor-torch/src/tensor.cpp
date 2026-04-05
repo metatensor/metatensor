@@ -469,6 +469,14 @@ std::vector<std::tuple<LabelsEntry, TensorBlock>> TensorMapHolder::items(TensorM
 }
 
 torch::Device TensorMapHolder::device() const {
+    // Use block data device rather than keys device: after to("meta"),
+    // the Rust TensorMap's keys are still on the pre-Meta device (since
+    // Meta clones the Rust Labels), but the block data IS on Meta.
+    if (this->keys()->count() > 0) {
+        auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(0);
+        auto tb = torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+        return tb->device();
+    }
     return this->keys()->device();
 }
 
