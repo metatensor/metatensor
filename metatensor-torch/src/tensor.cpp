@@ -53,8 +53,7 @@ static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<
 
 
 TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
-    tensor_(keys->as_metatensor(), blocks_from_torch(blocks)),
-    device_(blocks.empty() ? keys->device() : blocks[0]->device())
+    tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
 {
     // Block-vs-block device/dtype consistency is enforced by metatensor-core.
     // The torch-specific check below ensures keys (which may live on GPU) are
@@ -478,36 +477,30 @@ std::vector<std::tuple<LabelsEntry, TensorBlock>> TensorMapHolder::items(TensorM
 }
 
 torch::Device TensorMapHolder::device() const {
-    return this->device_;
-}
-
-torch::Device TensorMapHolder::compute_device(const metatensor::TensorMap& tensor) {
-    if (tensor.keys().count() == 0) {
+    // Query block data device via C API. No keys(), no TensorBlockHolder,
+    // no recursion risk.
+    if (this->tensor_.keys().count() == 0) {
         return torch::Device(torch::kCPU);
     }
 
-    // Get the first block's data array device via C API
     mts_block_t* block_ptr = nullptr;
-    auto status = mts_tensormap_block_by_id(tensor.as_mts_tensormap_t(), &block_ptr, 0);
-    if (status != MTS_SUCCESS || block_ptr == nullptr) {
+    mts_tensormap_block_by_id(this->tensor_.as_mts_tensormap_t(), &block_ptr, 0);
+    if (block_ptr == nullptr) {
         return torch::Device(torch::kCPU);
     }
 
     mts_array_t data;
     std::memset(&data, 0, sizeof(data));
-    status = mts_block_data(block_ptr, &data);
-    if (status != MTS_SUCCESS || data.device == nullptr) {
+    mts_block_data(block_ptr, &data);
+    if (data.device == nullptr) {
         return torch::Device(torch::kCPU);
     }
 
-    DLDevice dl_device;
-    status = data.device(data.ptr, &dl_device);
-    if (status != MTS_SUCCESS) {
-        return torch::Device(torch::kCPU);
-    }
+    DLDevice dl;
+    data.device(data.ptr, &dl);
 
     torch::DeviceType type;
-    switch (dl_device.device_type) {
+    switch (dl.device_type) {
     case kDLCPU:    type = torch::DeviceType::CPU;  break;
     case kDLCUDA:   type = torch::DeviceType::CUDA; break;
     case kDLROCM:   type = torch::DeviceType::HIP;  break;
@@ -516,7 +509,7 @@ torch::Device TensorMapHolder::compute_device(const metatensor::TensorMap& tenso
     case kDLExtDev: type = torch::DeviceType::Meta; break;
     default:        type = torch::DeviceType::CPU;  break;
     }
-    return torch::Device(type, dl_device.device_id > 0 ? static_cast<int8_t>(dl_device.device_id) : -1);
+    return torch::Device(type, dl.device_id > 0 ? static_cast<int8_t>(dl.device_id) : -1);
 }
 
 torch::Dtype TensorMapHolder::scalar_type() const {
