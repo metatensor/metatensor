@@ -393,6 +393,17 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     if (device == values_.device()) {
         // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
+    } else if (device.is_meta()) {
+        // Meta tensors have no storage, so the Rust Labels can't materialize
+        // CPU values from a Meta-backed array. Keep the existing CPU-backed
+        // Rust Labels (clone increments the Arc) and only store the Meta
+        // tensor for device tracking.
+        auto new_values = values_.to(device, non_blocking);
+        auto cloned_labels = this->as_metatensor();
+
+        return torch::make_intrusive<LabelsHolder>(
+            this->names(), std::move(new_values), std::move(cloned_labels)
+        );
     } else {
         auto new_values = values_.to(device, non_blocking);
 
@@ -476,6 +487,15 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     }
 }
 
+/// Get CPU-backed labels for Rust set operations. Meta tensors have no storage
+/// and cannot provide CPU data via DLPack, so we move them to CPU first.
+static Labels ensure_cpu(const Labels& labels) {
+    if (labels->device().is_meta()) {
+        return labels->to(torch::kCPU);
+    }
+    return labels;
+}
+
 Labels LabelsHolder::set_union(const Labels& other) const {
     auto device = this->values_.device();
     if (device != other->values_.device()) {
@@ -485,7 +505,9 @@ Labels LabelsHolder::set_union(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_union(other->labels_.value()));
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+    auto result = LabelsHolder(cpu_self->labels_->set_union(cpu_other->labels_.value()));
     return result.to(device);
 }
 
@@ -498,12 +520,15 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
         );
     }
 
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_union(
-        other->labels_.value(),
+    auto result = LabelsHolder(cpu_self->labels_->set_union(
+        cpu_other->labels_.value(),
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
@@ -526,7 +551,9 @@ Labels LabelsHolder::set_intersection(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_intersection(other->labels_.value()));
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+    auto result = LabelsHolder(cpu_self->labels_->set_intersection(cpu_other->labels_.value()));
     return result.to(device);
 }
 
@@ -539,12 +566,15 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
         );
     }
 
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_intersection(
-        other->labels_.value(),
+    auto result = LabelsHolder(cpu_self->labels_->set_intersection(
+        cpu_other->labels_.value(),
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
@@ -567,7 +597,9 @@ Labels LabelsHolder::set_difference(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_difference(other->labels_.value()));
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+    auto result = LabelsHolder(cpu_self->labels_->set_difference(cpu_other->labels_.value()));
     return result.to(device);
 }
 
@@ -580,11 +612,14 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
         );
     }
 
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_other = ensure_cpu(other);
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto mapping = torch::zeros({this->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_difference(
-        other->labels_.value(),
+    auto result = LabelsHolder(cpu_self->labels_->set_difference(
+        cpu_other->labels_.value(),
         mapping.data_ptr<int64_t>(),
         mapping.size(0)
     ));
@@ -604,6 +639,9 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
         );
     }
 
+    auto cpu_self = ensure_cpu(torch::make_intrusive<LabelsHolder>(*this));
+    auto cpu_selection = ensure_cpu(selection);
+
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto selected = torch::zeros({this->count()}, options);
     auto selected_count = static_cast<size_t>(selected.size(0));
@@ -612,8 +650,8 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
         return selected;
     }
 
-    labels_->select(
-        selection->labels_.value(),
+    cpu_self->labels_->select(
+        cpu_selection->labels_.value(),
         selected.data_ptr<int64_t>(),
         &selected_count
     );
