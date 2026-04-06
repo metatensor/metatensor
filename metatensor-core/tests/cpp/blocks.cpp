@@ -118,6 +118,7 @@ TEST_CASE("Blocks") {
         public:
             BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray<double>(std::move(shape)) {}
 
+            [[noreturn]]
             std::unique_ptr<DataArrayBase> copy() const override {
                 throw std::runtime_error("can not copy this!");
             }
@@ -166,7 +167,7 @@ TEST_CASE("Blocks") {
             std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({3, 0})),
             Labels({"samples"}, {{0}, {1}, {4}}),
             {},
-            Labels({}, {})
+            Labels({"properties"})
         );
     }
 }

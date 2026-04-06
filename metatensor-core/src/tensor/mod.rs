@@ -32,37 +32,37 @@ pub struct TensorMap {
     info_keys: Vec<ConstCString>
 }
 
-fn check_labels_names(
+fn check_labels_dimensions(
     block: &TensorBlock,
-    sample_names: &[&str],
-    component_names: &[Vec<&str>],
+    sample_dimensions: &[&str],
+    component_dimensions: &[Vec<&str>],
     context: &str,
 ) -> Result<(), Error> {
-    if block.samples.names() != sample_names {
+    if block.samples.dimensions() != sample_dimensions {
         return Err(Error::InvalidParameter(format!(
-            "all blocks must have the same sample names, got [{}] and [{}]{}",
-            block.samples.names().join(", "),
-            sample_names.join(", "),
+            "all blocks must have the same sample dimensions, got [{}] and [{}]{}",
+            block.samples.dimensions().join(", "),
+            sample_dimensions.join(", "),
             context,
         )));
     }
 
-    if block.components.len() != component_names.len() {
+    if block.components.len() != component_dimensions.len() {
         return Err(Error::InvalidParameter(format!(
             "all blocks must contains the same set of components, the current \
             block has {} components while the first block has {}{}",
             block.components.len(),
-            component_names.len(),
+            component_dimensions.len(),
             context,
         )));
     }
 
     for (component_i, component) in block.components.iter().enumerate() {
-        if component.names() != component_names[component_i] {
+        if component.dimensions() != component_dimensions[component_i] {
             return Err(Error::InvalidParameter(format!(
-                "all blocks must have the same component names, got [{}] and [{}]{}",
-                component.names().join(", "),
-                component_names[component_i].join(", "),
+                "all blocks must have the same component dimensions, got [{}] and [{}]{}",
+                component.dimensions().join(", "),
+                component_dimensions[component_i].join(", "),
                 context,
             )));
         }
@@ -131,8 +131,8 @@ fn check_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
 
 #[derive(Debug, Clone, PartialEq)]
 struct GradientMetadata<'a> {
-    sample_names: Vec<&'a str>,
-    component_names: Vec<Vec<&'a str>>,
+    sample_dimensions: Vec<&'a str>,
+    component_dimensions: Vec<Vec<&'a str>>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -148,9 +148,9 @@ impl GradientMap<'_> {
         let mut gradients = HashMap::new();
         for (gradient_name, sub_gradient) in block.gradients() {
             let metadata = GradientMetadata {
-                sample_names: sub_gradient.samples.names(),
-                component_names: sub_gradient.components.iter()
-                    .map(|c| c.names())
+                sample_dimensions: sub_gradient.samples.dimensions(),
+                component_dimensions: sub_gradient.components.iter()
+                    .map(|c| c.dimensions())
                     .collect::<Vec<_>>(),
             };
             gradients.insert(gradient_name.clone(), (metadata, GradientMap::new(sub_gradient)));
@@ -181,23 +181,23 @@ impl TensorMap {
 
         if !blocks.is_empty() {
             // extract metadata from the first block
-            let sample_names = blocks[0].samples.names();
-            let component_names = blocks[0].components.iter()
-                .map(|c| c.names())
+            let sample_dimensions = blocks[0].samples.dimensions();
+            let component_dimensions = blocks[0].components.iter()
+                .map(|c| c.dimensions())
                 .collect::<Vec<_>>();
-            let property_names = blocks[0].properties.names();
+            let property_dimensions = blocks[0].properties.dimensions();
             let gradient_map = GradientMap::new(&blocks[0]);
 
             for block in &blocks {
                 // check samples and components are the same as those of the first block
-                check_labels_names(block, &sample_names, &component_names, "")?;
+                check_labels_dimensions(block, &sample_dimensions, &component_dimensions, "")?;
 
                 // check properties are the same as those of the first block
-                if block.properties.names() != property_names {
+                if block.properties.dimensions() != property_dimensions {
                     return Err(Error::InvalidParameter(format!(
-                        "all blocks must have the same property names, got [{}] and [{}]",
-                        block.properties.names().join(", "),
-                        property_names.join(", "),
+                        "all blocks must have the same property dimensions, got [{}] and [{}]",
+                        block.properties.dimensions().join(", "),
+                        property_dimensions.join(", "),
                     )));
                 }
 
@@ -205,7 +205,7 @@ impl TensorMap {
                 if GradientMap::new(block) != gradient_map {
                     return Err(Error::InvalidParameter(
                         "all blocks must have the same set of gradients, with \
-                        the same sample, property and component names, \
+                        the same sample, property and component dimensions, \
                         and the same must be true for gradients of gradients".into(),
                     ));
                 }
@@ -270,9 +270,9 @@ impl TensorMap {
         }
 
         let mut dimensions = Vec::new();
-        'outer: for requested in selection.names() {
-            for (i, &name) in self.keys.names().iter().enumerate() {
-                if requested == name {
+        'outer: for requested in selection.dimensions() {
+            for (i, &dimension) in self.keys.dimensions().iter().enumerate() {
+                if requested == dimension {
                     dimensions.push(i);
                     continue 'outer;
                 }
@@ -285,9 +285,10 @@ impl TensorMap {
         }
 
         let mut matching = Vec::new();
-        let selection = selection.iter().next().expect("empty selection");
+        let selection_cpu = selection.to_cpu();
+        let selection = selection_cpu.iter().next().expect("the selection should contain exactly one entry");
 
-        for (block_i, labels) in self.keys.iter().enumerate() {
+        for (block_i, labels) in self.keys.to_cpu().iter().enumerate() {
             let mut selected = true;
             for (&requested_i, &value) in dimensions.iter().zip(selection) {
                 if labels[requested_i] != value {
@@ -408,7 +409,7 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same sample names, \
+            "invalid parameter: all blocks must have the same sample dimensions, \
             got [something_else] and [samples]"
         );
 
@@ -459,7 +460,7 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same component names, \
+            "invalid parameter: all blocks must have the same component dimensions, \
             got [something_else] and [components]"
         );
 
@@ -484,7 +485,7 @@ mod tests {
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: all blocks must have the same property names, \
+            "invalid parameter: all blocks must have the same property dimensions, \
             got [something_else] and [properties]"
         );
 
@@ -509,33 +510,33 @@ mod tests {
 
         let tensor = TensorMap::new(keys, blocks).unwrap();
 
-        let selection = Labels::new_i32(&["key_1", "key_2"], vec![1, 1]).unwrap();
+        let selection = Labels::from_vec(&["key_1", "key_2"], vec![1, 1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2]
         );
 
-        let selection = Labels::new_i32(&["key_1"], vec![1]).unwrap();
+        let selection = Labels::from_vec(&["key_1"], vec![1]).unwrap();
         assert_eq!(
             tensor.blocks_matching(&selection).unwrap(),
             [2, 3]
         );
 
-        let selection = Labels::new_i32(&["key_1"], vec![]).unwrap();
+        let selection = Labels::from_vec(&["key_1"], vec![]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 0"
         );
 
-        let selection = Labels::new_i32(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
+        let selection = Labels::from_vec(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: block selection must contain exactly one entry, got 2"
         );
 
-        let selection = Labels::new_i32(&["key_3"], vec![1]).unwrap();
+        let selection = Labels::from_vec(&["key_3"], vec![1]).unwrap();
         let result = tensor.blocks_matching(&selection);
         assert_eq!(
             result.unwrap_err().to_string(),

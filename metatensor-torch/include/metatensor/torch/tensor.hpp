@@ -199,7 +199,8 @@ private:
     metatensor::TensorMap tensor_;
 
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
-    explicit TensorMapHolder(metatensor::TensorMap tensor): tensor_(std::move(tensor)) {}
+    explicit TensorMapHolder(metatensor::TensorMap tensor):
+        tensor_(std::move(tensor)) {}
 };
 
 

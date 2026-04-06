@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::ffi::CString;
 use std::collections::{HashMap, BTreeSet};
 
+use crate::labels::CpuLabels;
 use crate::utils::ConstCString;
 use crate::Labels;
 use crate::{mts_array_t, get_data_origin};
@@ -53,11 +54,11 @@ fn check_data_and_labels(
         )));
     }
 
-    // ensure that all component labels have different names
-    let n_components = components.iter().map(|c| c.names()).collect::<BTreeSet<_>>().len();
+    // ensure that all component labels have different dimensions
+    let n_components = components.iter().map(|c| c.dimensions()).collect::<BTreeSet<_>>().len();
     if n_components != components.len() {
         return Err(Error::InvalidParameter(format!(
-            "{}: some of the component names appear more than once in component labels",
+            "{}: some of the component dimensions appear more than once in component labels",
             context,
         )));
     }
@@ -90,14 +91,14 @@ fn check_component_labels(components: &[Arc<Labels>]) -> Result<(), Error> {
         if component.size() != 1 {
             return Err(Error::InvalidParameter(format!(
                 "component labels must have a single dimension, got {}: [{}] for component {}",
-                component.size(), component.names().join(", "), i
+                component.size(), component.dimensions().join(", "), i
             )));
         }
 
         if component.is_empty() {
             return Err(Error::InvalidParameter(format!(
                 "component '{}' must contain at least one entry, got 0",
-                component.names()[0]
+                component.dimensions()[0]
             )));
         }
     }
@@ -241,46 +242,17 @@ impl TensorBlock {
             ));
         }
 
-        if gradient.samples.size() < 1 || gradient.samples.names()[0] != "sample" {
+        if gradient.samples.size() < 1 || gradient.samples.dimensions()[0] != "sample" {
             return Err(Error::InvalidParameter(format!(
                 "'{}' is not valid for the first dimension in the gradients \
-                samples labels, it should be 'sample'", gradient.samples.names()[0]
+                samples labels, it should be 'sample'", gradient.samples.dimensions()[0]
             )));
         }
 
-        if gradient.samples.count() > 0 {
-            let mut min_sample_value = 0;
-            let mut max_sample_value = 0;
-            if gradient.samples.is_sorted() {
-                // only check the first and last entry
-                min_sample_value = gradient.samples[0][0];
-                let last = gradient.samples.count() - 1;
-                max_sample_value = gradient.samples[last][0];
-            } else {
-                // check everything
-                for sample in &*gradient.samples {
-                    let sample_value = sample[0];
-                    if sample_value < min_sample_value {
-                        min_sample_value = sample_value;
-                    } else if sample_value > max_sample_value {
-                        max_sample_value = sample_value;
-                    }
-                }
-            }
-
-            if min_sample_value < 0 {
-                return Err(Error::InvalidParameter(format!(
-                    "invalid value for the 'sample' dimension in gradient samples: \
-                    all values should be positive, but we got {}", min_sample_value
-                )));
-            }
-
-            if usize::try_from(max_sample_value).expect("could not convert to usize") >= self.samples.count() {
-                return Err(Error::InvalidParameter(format!(
-                    "invalid value for the 'sample' dimension in gradient samples: we got \
-                    {}, but the values contain {} samples", max_sample_value, self.samples.count()
-                )));
-            }
+        // kDLExtDev is used for torch's "meta" device, which does not have
+        // associated data to check.
+        if gradient.samples.values().device()?.device_type != dlpk::sys::DLDeviceType::kDLExtDev {
+            check_gradient_samples(&gradient.samples.to_cpu(), self.samples.count())?;
         }
 
         check_component_labels(&gradient.components)?;
@@ -308,7 +280,7 @@ impl TensorBlock {
                         component {} (dimension name is '{}'). Components which \
                         are specific to the gradients must come first, and be \
                         followed by the exact same components as the values.",
-                        component_i, values_labels.names()[0]
+                        component_i, values_labels.dimensions()[0]
                     )));
                 }
             }
@@ -326,8 +298,8 @@ impl TensorBlock {
     pub(crate) fn components_to_properties(&mut self, dimension: &str) -> Result<(), Error> {
         let mut component_axis = None;
         for (component_i, component) in self.components.iter().enumerate() {
-            assert_eq!(component.names().len(), 1);
-            if component.names()[0] == dimension {
+            assert_eq!(component.dimensions().len(), 1);
+            if component.dimensions()[0] == dimension {
                 component_axis = Some(component_i);
                 break;
             }
@@ -341,8 +313,8 @@ impl TensorBlock {
 
         // construct the new property with old properties and the components
         let old_properties = &self.properties;
-        let new_property_names = moved_component.names().iter()
-            .chain(old_properties.names().iter())
+        let new_property_dimensions = moved_component.dimensions().iter()
+            .chain(old_properties.dimensions().iter())
             .copied()
             .collect::<Vec<_>>();
 
@@ -351,15 +323,16 @@ impl TensorBlock {
             moved_component.count() * moved_component.size()
             * old_properties.count() * old_properties.size()
         );
-        for new_property in &*moved_component {
-            for old_property in old_properties.iter() {
+
+        for new_property in &moved_component.to_cpu() {
+            for old_property in &old_properties.to_cpu() {
                 new_property_values.extend_from_slice(new_property);
                 new_property_values.extend_from_slice(old_property);
             }
         }
         let new_properties = unsafe {
             // SAFETY: the new property can only contain unique entries by construction
-            Labels::new_unchecked_uniqueness(&new_property_names, new_property_values).expect("invalid labels")
+            Labels::from_vec_unchecked_uniqueness(&new_property_dimensions, new_property_values).expect("invalid labels")
         };
 
         let mut new_shape = self.values.shape()?.to_vec();
@@ -381,6 +354,45 @@ impl TensorBlock {
     }
 }
 
+fn check_gradient_samples(cpu_samples: &CpuLabels<'_>, samples_count: usize) -> Result<(), Error> {
+    if cpu_samples.count() > 0 {
+        let mut min_sample_value = 0;
+        let mut max_sample_value = 0;
+        if cpu_samples.is_sorted() {
+            // only check the first and last entry
+            min_sample_value = cpu_samples[0][0];
+            let last = cpu_samples.count() - 1;
+            max_sample_value = cpu_samples[last][0];
+        } else {
+            // check everything
+            for sample in cpu_samples {
+                let sample_value = sample[0];
+                if sample_value < min_sample_value {
+                    min_sample_value = sample_value;
+                } else if sample_value > max_sample_value {
+                    max_sample_value = sample_value;
+                }
+            }
+        }
+
+        if min_sample_value < 0 {
+            return Err(Error::InvalidParameter(format!(
+                "invalid value for the 'sample' dimension in gradient samples: \
+                all values should be positive, but we got {}", min_sample_value
+            )));
+        }
+
+        if usize::try_from(max_sample_value).expect("could not convert to usize") >= samples_count {
+            return Err(Error::InvalidParameter(format!(
+                "invalid value for the 'sample' dimension in gradient samples: we got \
+                {}, but the values contain {} samples", max_sample_value, samples_count
+            )));
+        }
+    }
+
+    return Ok(());
+}
+
 #[cfg(test)]
 mod tests {
     use crate::data::TestArray;
@@ -388,7 +400,7 @@ mod tests {
     use super::*;
 
     fn example_labels(name: &str, count: i32) -> Arc<Labels> {
-        return Arc::new(Labels::new_i32(&[name], (0..count).collect()).expect("invalid labels"));
+        return Arc::new(Labels::from_vec(&[name], (0..count).collect()).expect("invalid labels"));
     }
 
     #[test]
@@ -467,11 +479,11 @@ mod tests {
         assert_eq!(
             result.unwrap_err().to_string(),
             "invalid parameter: data and labels don't match: some of the \
-            component names appear more than once in component labels"
+            component dimensions appear more than once in component labels"
         );
 
         let values = TestArray::new(vec![3, 1, 2]);
-        let component = Arc::new(Labels::new_i32(
+        let component = Arc::new(Labels::from_vec(
             &["component_1", "component_2"],
             vec![0, 1],
         ).expect("invalid labels"));
@@ -484,10 +496,7 @@ mod tests {
         );
 
         let values = TestArray::new(vec![3, 0, 2]);
-        let component = Arc::new(Labels::new_i32(
-            &["component"],
-            vec![],
-        ).expect("invalid labels"));
+        let component = Arc::new(Labels::empty(&["component"]).expect("invalid labels"));
 
         let result = TensorBlock::new(values, samples, vec![component], properties);
         assert_eq!(
@@ -507,7 +516,7 @@ mod tests {
             let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
             assert!(block.gradients().is_empty());
 
-            let gradient_samples = Arc::new(Labels::new_i32(
+            let gradient_samples = Arc::new(Labels::from_vec(
                 &["sample", "foo"],
                 vec![0, 0, /**/ 1, 1, /**/ 3, -2],
             ).expect("invalid labels"));
@@ -533,15 +542,15 @@ mod tests {
             assert_eq!(gradients_list, ["component", "foo"]);
 
             let gradient_block = block.gradients().get("foo").unwrap();
-            assert_eq!(gradient_block.samples.names(), ["sample", "foo"]);
+            assert_eq!(gradient_block.samples.dimensions(), ["sample", "foo"]);
             assert!(gradient_block.components.is_empty());
-            assert_eq!(gradient_block.properties.names(), ["properties"]);
+            assert_eq!(gradient_block.properties.dimensions(), ["properties"]);
 
             let gradient_block = block.gradients().get("component").unwrap();
-            assert_eq!(gradient_block.samples.names(), ["sample"]);
+            assert_eq!(gradient_block.samples.dimensions(), ["sample"]);
             assert_eq!(gradient_block.components.len(), 1);
-            assert_eq!(gradient_block.components[0].names(), ["component"]);
-            assert_eq!(gradient_block.properties.names(), ["properties"]);
+            assert_eq!(gradient_block.components[0].dimensions(), ["component"]);
+            assert_eq!(gradient_block.properties.dimensions(), ["properties"]);
 
             assert!(block.gradients().get("baz").is_none());
         }
@@ -588,7 +597,7 @@ mod tests {
 
             let gradient = TensorBlock::new(
                 TestArray::new(vec![0, 7]),
-                Arc::new(Labels::new(&[], vec![]).unwrap()),
+                Arc::new(Labels::empty(&[]).unwrap()),
                 vec![],
                 properties.clone(),
             ).unwrap();
@@ -610,7 +619,7 @@ mod tests {
 
             let gradient = TensorBlock::new(
                 TestArray::new(vec![3, 7]),
-                Arc::new(Labels::new_i32(&["sample"], vec![2, 1, -1]).unwrap()),
+                Arc::new(Labels::from_vec(&["sample"], vec![2, 1, -1]).unwrap()),
                 vec![],
                 properties.clone(),
             ).unwrap();
@@ -621,7 +630,7 @@ mod tests {
 
             let gradient = TensorBlock::new(
                 TestArray::new(vec![3, 7]),
-                Arc::new(Labels::new_i32(&["sample"], vec![2, 1, 6]).unwrap()),
+                Arc::new(Labels::from_vec(&["sample"], vec![2, 1, 6]).unwrap()),
                 vec![],
                 properties.clone(),
             ).unwrap();

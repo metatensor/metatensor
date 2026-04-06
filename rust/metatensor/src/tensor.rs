@@ -2,7 +2,7 @@ use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
 use crate::block::TensorBlockRefMut;
-use crate::c_api::{mts_tensormap_t, mts_labels_t};
+use crate::c_api::mts_tensormap_t;
 
 use crate::errors::{check_status, check_ptr};
 use crate::{Error, LabelValue, Labels, MtsArray, TensorBlock, TensorBlockRef};
@@ -90,13 +90,9 @@ impl TensorMap {
     pub unsafe fn from_raw(ptr: *mut mts_tensormap_t) -> TensorMap {
         assert!(!ptr.is_null());
 
-        let mut keys = mts_labels_t::null();
-        check_status(crate::c_api::mts_tensormap_keys(
-            ptr,
-            &mut keys
-        )).expect("failed to get the keys");
-
-        let keys = Labels::from_raw(keys);
+        let keys_ptr = crate::c_api::mts_tensormap_keys(ptr);
+        assert!(!keys_ptr.is_null(), "failed to get the keys");
+        let keys = Labels::from_raw(keys_ptr);
 
         return TensorMap {
             ptr,
@@ -248,7 +244,8 @@ impl TensorMap {
         let matching = self.blocks_matching(selection)?;
         if matching.len() != 1 {
             let selection_str = selection.names()
-                .iter().zip(&selection[0])
+                .iter()
+                .zip(&selection.to_cpu()[0])
                 .map(|(name, value)| format!("{} = {}", name, value))
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -411,7 +408,7 @@ impl TensorMap {
     #[inline]
     pub fn iter(&self) -> TensorMapIter<'_> {
         return TensorMapIter {
-            inner: self.keys().iter().zip(self.blocks())
+            inner: self.keys().to_cpu().into_iter().zip(self.blocks())
         };
     }
 
@@ -427,7 +424,7 @@ impl TensorMap {
         }
 
         return TensorMapIterMut {
-            inner: self.keys().into_iter().zip(blocks)
+            inner: self.keys().to_cpu().into_iter().zip(blocks)
         };
     }
 
@@ -437,7 +434,7 @@ impl TensorMap {
     pub fn par_iter(&self) -> TensorMapParIter<'_> {
         use rayon::prelude::*;
         TensorMapParIter {
-            inner: self.keys().par_iter().zip_eq(self.blocks().into_par_iter())
+            inner: self.keys().to_cpu().into_par_iter().zip_eq(self.blocks().into_par_iter())
         }
     }
 
@@ -456,7 +453,7 @@ impl TensorMap {
         }
 
         TensorMapParIterMut {
-            inner: self.keys().par_iter().zip_eq(blocks)
+            inner: self.keys().to_cpu().into_par_iter().zip_eq(blocks)
         }
     }
 

@@ -13,3 +13,16 @@
    fun:_ZN3c104impl28wrap_kernel_functor_unboxed_*
    fun:_ZN2at4_ops15to_dtype_layout4callERKNS_6TensorESt8optionalIN3c1010ScalarTypeEES5_INS6_6LayoutEES5_INS6_6DeviceEES5_IbEbbS5_INS6_12MemoryFormatEE
 }
+{
+   <pytorch_empty_generic_uninitialized>
+   Memcheck:Cond
+   fun:_ZN2at6detail13empty_generic*
+   ...
+}
+{
+   <pytorch_to_uninitialized_memory_format>
+   Memcheck:Cond
+   fun:_ZN2at6native2to*
+   fun:*wrap_kernel_functor_unboxed*
+   fun:_ZN2at4_ops15to_dtype_layout*
+}

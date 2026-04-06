@@ -8,7 +8,7 @@ from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 import numpy as np
 
 from . import data
-from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_block_t
 from ._c_lib import _get_library
 from .block import TensorBlock
 from .data import Device, DeviceWarning, DType
@@ -296,8 +296,8 @@ class TensorMap:
     @property
     def keys(self) -> Labels:
         """The set of keys labeling the blocks in this tensor map."""
-        result = mts_labels_t()
-        self._lib.mts_tensormap_keys(self._ptr, result)
+        result = self._lib.mts_tensormap_keys(self._ptr)
+        _check_pointer(result)
         return Labels._from_mts_labels_t(result)
 
     def block_by_id(self, index: int) -> TensorBlock:
