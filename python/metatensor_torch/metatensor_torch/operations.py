@@ -113,4 +113,6 @@ module = importlib.util.module_from_spec(spec)
 # override `metatensor.torch.operations` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
+# also register as metatensor.operations for backward compat with flat package layout
+sys.modules["metatensor.operations"] = module
 spec.loader.exec_module(module)

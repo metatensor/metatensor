@@ -70,4 +70,6 @@ module = importlib.util.module_from_spec(spec)
 # override `metatensor.torch.learn` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
+# also register as metatensor.learn for backward compat with flat package layout
+sys.modules["metatensor.learn"] = module
 spec.loader.exec_module(module)
