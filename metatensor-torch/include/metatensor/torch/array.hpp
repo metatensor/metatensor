@@ -63,7 +63,7 @@ public:
 
     const std::vector<uintptr_t>& shape() const & override;
 
-    void reshape(std::vector<uintptr_t> shape) override;
+    void reshape(const std::vector<uintptr_t>& shape) override;
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override;
 
@@ -81,6 +81,8 @@ private:
     // the actual data
     torch::Tensor tensor_;
 };
+
+torch::Device dlpack_device_to_torch(DLDevice device);
 
 }
 

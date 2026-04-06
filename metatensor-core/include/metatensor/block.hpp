@@ -47,7 +47,7 @@ public:
         block_(nullptr),
         is_view_(false)
     {
-        auto c_components = std::vector<mts_labels_t>();
+        auto c_components = std::vector<const mts_labels_t*>();
         for (const auto& component: components) {
             c_components.push_back(component.as_mts_labels_t());
         }
@@ -152,13 +152,10 @@ public:
     /// @param device the DLPack device to request data on (default: CPU)
     /// @param stream pointer to a device stream, or nullptr for default
     template<typename T = double>
-    DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) & {
+    DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) {
         auto array = this->mts_array();
         return array.as_dlpack_array<T>(device, stream, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
     }
-
-    template<typename T = double>
-    DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) && = delete;
 
     /// Access the sample `Labels` for this block.
     ///
@@ -304,13 +301,9 @@ public:
 
     /// Get the labels in this block associated with the given `axis`.
     Labels labels(uintptr_t axis) const {
-        mts_labels_t labels;
-        std::memset(&labels, 0, sizeof(labels));
-        details::check_status(mts_block_labels(
-            block_, axis, &labels
-        ));
-
-        return Labels(labels);
+        const auto* ptr = mts_block_labels(block_, axis);
+        details::check_pointer(ptr);
+        return Labels(ptr);
     }
 
     /// Get the shape of the value array for this block

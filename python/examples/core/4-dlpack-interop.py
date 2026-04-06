@@ -227,6 +227,25 @@ else:
 
 # %%
 #
+# Labels and device placement
+# ---------------------------
+#
+# DLPack is not limited to block data. **Labels** also participate in the
+# DLPack ecosystem via the ``mts_array_t`` values array stored inside each
+# ``Labels`` object.  When labels are moved or directly constructed on a
+# device (e.g. via ``Labels.to("cuda")`` in the torch backend), the
+# underlying values tensor stays on that device.  The ``device()`` query
+# on the values array tells
+# callers where the label data lives, and ``as_dlpack()`` exports it without
+# an implicit copy.
+#
+# This matters for GPU workflows: label metadata (sample indices, property
+# indices) can be kept on the same device as the block data, avoiding
+# unnecessary CPU round-trips during operations like ``keys_to_samples`` or
+# set operations (union, intersection, difference).
+
+# %%
+#
 # How DLPack enables this
 # -----------------------
 #

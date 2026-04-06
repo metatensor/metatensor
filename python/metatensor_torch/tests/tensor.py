@@ -414,8 +414,14 @@ def test_empty_tensor():
 
 
 @pytest.fixture
-def meta_tensor():
-    device = "meta"
+def device_tensor():
+    if _tests_utils.can_use_mps_backend():
+        device = torch.device("mps:0")
+    elif torch.cuda.is_available():
+        device = torch.device("cuda:0")
+    else:
+        pytest.skip("this test requires a real device to run")
+
     return TensorMap(
         keys=Labels.range("keys", 2).to(device),
         blocks=[
@@ -435,8 +441,8 @@ def meta_tensor():
     )
 
 
-def test_keys_to_samples_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_samples("keys")
+def test_keys_to_samples_same_device(device_tensor):
+    new_tensor = device_tensor.keys_to_samples("keys")
     block = new_tensor.block()
     assert new_tensor.keys.values.device == block.values.device
     assert block.samples.values.device == block.values.device
@@ -444,8 +450,8 @@ def test_keys_to_samples_same_device(meta_tensor):
     assert block.properties.values.device == block.values.device
 
 
-def test_keys_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.keys_to_properties("keys")
+def test_keys_to_properties_same_device(device_tensor):
+    new_tensor = device_tensor.keys_to_properties("keys")
     block = new_tensor.block()
     assert new_tensor.keys.values.device == block.values.device
     assert block.samples.values.device == block.values.device
@@ -453,21 +459,21 @@ def test_keys_to_properties_same_device(meta_tensor):
     assert block.properties.values.device == block.values.device
 
 
-def test_components_to_properties_same_device(meta_tensor):
-    new_tensor = meta_tensor.components_to_properties("component")
+def test_components_to_properties_same_device(device_tensor):
+    new_tensor = device_tensor.components_to_properties("component")
     for block in new_tensor.blocks():
         assert new_tensor.keys.values.device == block.values.device
         assert block.samples.values.device == block.values.device
         assert block.properties.values.device == block.values.device
 
 
-def test_different_device(meta_tensor):
+def test_different_device(device_tensor):
     message = "tried to build a TensorMap from blocks on different devices"
     with pytest.raises(RuntimeError, match=message):
         TensorMap(
-            keys=meta_tensor.keys,
+            keys=device_tensor.keys,
             blocks=[
-                meta_tensor.blocks()[0],
+                device_tensor.blocks()[0],
                 TensorBlock(
                     values=torch.tensor([[[3.0, 4.0]]]),
                     samples=Labels.range("samples", 1),
@@ -478,20 +484,23 @@ def test_different_device(meta_tensor):
         )
 
 
-def test_different_dtype(meta_tensor):
+def test_different_dtype():
     message = "tried to build a TensorMap from blocks with different dtypes"
     with pytest.raises(RuntimeError, match=message):
         TensorMap(
-            keys=meta_tensor.keys,
+            keys=Labels.range("keys", 2),
             blocks=[
-                meta_tensor.blocks()[0],
                 TensorBlock(
-                    values=torch.tensor(
-                        [[[3.0, 4.0]]], device="meta", dtype=torch.float16
-                    ),
-                    samples=Labels.range("samples", 1).to("meta"),
-                    components=[Labels.range("component", 1).to("meta")],
-                    properties=Labels.range("properties", 2).to("meta"),
+                    values=torch.tensor([[[1.0, 2.0]]], dtype=torch.float64),
+                    samples=Labels.range("samples", 1),
+                    components=[Labels.range("component", 1)],
+                    properties=Labels.range("properties", 2),
+                ),
+                TensorBlock(
+                    values=torch.tensor([[[3.0, 4.0]]], dtype=torch.float32),
+                    samples=Labels.range("samples", 1),
+                    components=[Labels.range("component", 1)],
+                    properties=Labels.range("properties", 2),
                 ),
             ],
         )

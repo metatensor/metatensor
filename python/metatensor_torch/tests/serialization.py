@@ -12,6 +12,15 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from . import _tests_utils
 
 
+AVAILABLE_DEVICES = []
+
+if _tests_utils.can_use_mps_backend():
+    AVAILABLE_DEVICES.append(torch.device("mps:0"))
+
+if torch.cuda.is_available():
+    AVAILABLE_DEVICES.append(torch.device("cuda:0"))
+
+
 @pytest.fixture
 def tensor_path():
     return os.path.join(
@@ -139,17 +148,17 @@ def test_save(tmpdir, tensor_path):
     saved = tensor.save_buffer()
     assert torch.all(buffer == saved)
 
-    tensor_f32 = tensor.to(torch.float32)
-    with pytest.raises(ValueError, match="only float64 is supported"):
+    with tmpdir.as_cwd():
+        # different dtype
+        tensor_f32 = tensor.to(torch.float32)
         mts.save_buffer(tensor_f32)
-    with pytest.raises(ValueError, match="only float64 is supported"):
         mts.save(tmpfile, tensor_f32)
 
-    tensor_meta = tensor.to(torch.device("meta"))
-    with pytest.raises(ValueError, match="only CPU is supported"):
-        mts.save_buffer(tensor_meta)
-    with pytest.raises(ValueError, match="only CPU is supported"):
-        mts.save(tmpfile, tensor_meta)
+        # different device
+        if len(AVAILABLE_DEVICES) > 0:
+            tensor_device = tensor_f32.to(AVAILABLE_DEVICES[0])
+            mts.save_buffer(tensor_device)
+            mts.save(tmpfile, tensor_device)
 
 
 def test_pickle(tmpdir, tensor_path):

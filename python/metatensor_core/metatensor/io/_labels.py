@@ -5,9 +5,9 @@ from typing import BinaryIO, Union
 
 import numpy as np
 
-from .._c_api import mts_labels_t
 from .._c_lib import _get_library
 from ..labels import Labels
+from ..status import _check_pointer
 from ._utils import _save_buffer_raw
 
 
@@ -24,12 +24,12 @@ def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
 
         if isinstance(file, str):
             path = file.encode("utf8")
-        elif isinstance(path, pathlib.Path):
-            path = bytes(path)
+        elif isinstance(file, pathlib.Path):
+            path = bytes(file)
 
-        labels = mts_labels_t()
-        lib.mts_labels_load(path, labels)
-        return Labels._from_mts_labels_t(labels)
+        ptr = lib.mts_labels_load(path)
+        _check_pointer(ptr)
+        return Labels._from_mts_labels_t(ptr)
 
     else:
         # assume we have a file-like object
@@ -57,10 +57,10 @@ def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
         # https://github.com/python/cpython/issues/60190
         buffer = char_array.from_buffer_copy(buffer)
 
-    labels = mts_labels_t()
-    lib.mts_labels_load_buffer(buffer, len(buffer), labels)
+    ptr = lib.mts_labels_load_buffer(buffer, len(buffer))
+    _check_pointer(ptr)
 
-    return Labels._from_mts_labels_t(labels)
+    return Labels._from_mts_labels_t(ptr)
 
 
 def _save_labels(
@@ -86,7 +86,7 @@ def _save_labels(
                 stacklevel=1,
             )
         path = file.encode("utf8")
-        lib.mts_labels_save(path, labels._labels)
+        lib.mts_labels_save(path, labels._ptr)
     elif isinstance(file, pathlib.Path):
         if not file.name.endswith(".mts"):
             file = file.with_name(file.name + ".mts")
@@ -96,7 +96,7 @@ def _save_labels(
                 stacklevel=1,
             )
         path = bytes(file)
-        lib.mts_labels_save(path, labels._labels)
+        lib.mts_labels_save(path, labels._ptr)
     else:
         # assume we have a file-like object
         buffer = _save_labels_buffer_raw(labels)
@@ -110,7 +110,7 @@ def _save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
     """
     lib = _get_library()
 
-    return _save_buffer_raw(lib.mts_labels_save_buffer, labels._labels)
+    return _save_buffer_raw(lib.mts_labels_save_buffer, labels._ptr)
 
 
 def _labels_from_mts(data):
@@ -120,4 +120,5 @@ def _labels_from_mts(data):
 
 def _labels_to_mts(labels):
     dtype = [(name, np.int32) for name in labels.names]
-    return labels.values.view(dtype=dtype).reshape((labels.values.shape[0],))
+    values = np.asarray(labels.values)
+    return values.view(dtype=dtype).reshape((values.shape[0],)).copy()

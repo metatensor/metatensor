@@ -5,11 +5,24 @@
 
 #include <metatensor.hpp>
 
+#include "metatensor/torch/array.hpp"
 #include "metatensor/torch/labels.hpp"
 
 #include "./utils.hpp"
 
 using namespace metatensor_torch;
+
+/// Create an mts_array_t wrapping a torch::Tensor for use as labels values.
+///
+/// Uses TorchDataArray (the same DataArrayBase subclass used for block data)
+/// so that the values array has full DLPack, device, and origin support
+/// without duplicating the vtable logic.
+static metatensor::MtsArray torch_tensor_to_labels_mts_array(torch::Tensor tensor) {
+    auto cxx_array = std::unique_ptr<metatensor::DataArrayBase>(
+        new metatensor_torch::TorchDataArray(std::move(tensor))
+    );
+    return metatensor::DataArrayBase::to_mts_array(std::move(cxx_array));
+}
 
 /// Check that `values` is a `shape_length`-dimensional array of 32-bit
 /// integers, or convert it to be so.
@@ -111,13 +124,6 @@ LabelsHolder::LabelsHolder(
         assert(names_[i] == labels_->names()[i]);
     }
     assert(values_.scalar_type() == torch::kInt32);
-
-    // register the torch tensor as a custom user data stored inside the labels
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
@@ -131,18 +137,10 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
         );
     }
 
-    labels_ = metatensor::Labels(
-        names_,
-        values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
-        values_.sizes()[0]
-    );
-
-    // register the torch tensor as a custom user data stored inside the labels
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
+    auto array = torch_tensor_to_labels_mts_array(values_);
+    // Always verify uniqueness: from_array{} moves data to CPU internally
+    // if needed. Only the explicit assume_unique constructor skips this.
+    labels_ = metatensor::Labels(names_, std::move(array));
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):
@@ -156,18 +154,8 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor
         );
     }
 
-    labels_ = metatensor::Labels(
-        names_,
-        values_.to(torch::kCPU).contiguous().data_ptr<int32_t>(),
-        values_.sizes()[0],
-        metatensor::assume_unique{}
-    );
-
-    auto user_data = metatensor::LabelsUserData(
-        new torch::Tensor(values_),
-        [](void* tensor) { delete static_cast<torch::Tensor*>(tensor); }
-    );
-    labels_->set_user_data(std::move(user_data));
+    auto array = torch_tensor_to_labels_mts_array(values_);
+    labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
 }
 
 Labels LabelsHolder::create(
@@ -184,22 +172,30 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
         this->names_.emplace_back(name);
     }
 
-    // check if the labels are already associated with a tensor
-    auto* user_data = this->labels_->user_data();
-    if (user_data != nullptr) {
-        // `user_data` is currently only used to store torch Tensor inside Rust
-        // labels. If we ever start using them for something else, we should
-        // also add a check around here that `user_data` void pointer is
-        // actually a pointer to a torch::Tensor.
-        this->values_ = *static_cast<torch::Tensor*>(user_data);
+    // check if the values array is backed by a torch tensor
+    auto origin = this->labels_->mts_array().origin();
+    auto* array_ptr = this->labels_->mts_array().as_mts_array_t().ptr;
+
+    if (origin == metatensor_torch::TORCH_DATA_ORIGIN && array_ptr != nullptr) {
+        // recover the torch tensor from the values array.
+        // array.ptr is a DataArrayBase* (from DataArrayBase::to_mts_array_t),
+        // specifically a TorchDataArray* since origin is TORCH_DATA_ORIGIN.
+        auto* base = static_cast<metatensor::DataArrayBase*>(array_ptr);
+        auto* torch_array = dynamic_cast<metatensor_torch::TorchDataArray*>(base);
+        assert(torch_array != nullptr);
+        this->values_ = torch_array->tensor();
     } else {
-        auto clone = this->labels_.value();
-        // otherwise create a new tensor which share memory with the Labels.
-        const auto* values = clone.as_mts_labels_t().values;
+        metatensor::Labels clone = this->labels_.value();
+        // otherwise create a new tensor which shares memory with the Labels.
+        auto cloned_values = clone.values(clone.device());
+        const auto* values = cloned_values.data();
         auto sizes = std::vector<int64_t>{
             static_cast<int64_t>(clone.count()),
             static_cast<int64_t>(clone.size()),
         };
+
+        auto options = torch::TensorOptions().dtype(torch::kInt32)
+            .device(dlpack_device_to_torch(clone.device()));
 
         this->values_ = torch::from_blob(
             // This should really be a `const int32_t*`, but we can not prevent
@@ -207,15 +203,15 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
             // https://github.com/pytorch/pytorch/issues/44027
             const_cast<int32_t*>(values),
             sizes,
-            // capture `clone` inside the torch::Tensor custom deleter to
+            // capture `cloned_values` inside the torch::Tensor custom deleter to
             // keep the corresponding data alive as long as the tensor might be
-            [clone=std::move(clone)](void*) mutable {
+            std::move([clone=std::move(clone)](void*) mutable {
                 // when running this function (i.e. when destroying the
-                // torch::Tensor), we move the cloned Labels & let them go out
+                // torch::Tensor), we move the clone & let it go out
                 // of scope, releasing the corresponding memory.
                 auto _ = std::move(clone);
-            },
-            torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU)
+            }),
+            options
         );
     }
 }
@@ -392,30 +388,16 @@ Labels LabelsHolder::to(torch::IValue device_ivalue, bool non_blocking) const {
 
 Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
     if (device == values_.device()) {
-        // return the same object
         return torch::make_intrusive<LabelsHolder>(*this);
     } else {
-        auto new_values = values_.to(device, non_blocking);
-
-        // re-create new mts_labels_t and from them new metatensor::Labels with
-        // the same names & values, but no user data. The user data will be
-        // re-added in the constructor below to point to `new_values`.
-        //
-        // Doing this here allow to minimize the number of copies of the values
-        // when moving from CPU to GPU.
-        auto raw_labels = this->as_metatensor().as_mts_labels_t();
-        // reset the internal rust pointer, this allows `mts_labels_create_assume_unique` to
-        // create a new rust pointer corresponding to a different object instead
-        // of incrementing the reference count of the existing labels.
-        raw_labels.internal_ptr_ = nullptr;
-        // assume that entries uniqueness has been validated at this point
-        metatensor::details::check_status(mts_labels_create_assume_unique(&raw_labels));
-        auto new_labels = metatensor::Labels(raw_labels);
-
+        // Normal device transfer: move tensor, create new Rust Labels
+        auto new_values = this->values_.to(device, non_blocking);
+        auto array = torch_tensor_to_labels_mts_array(new_values);
+        auto new_labels = metatensor::Labels(
+            this->names(), std::move(array), metatensor::assume_unique{}
+        );
         return torch::make_intrusive<LabelsHolder>(
-            this->names(),
-            std::move(new_values),
-            std::move(new_labels)
+            this->names(), std::move(new_values), std::move(new_labels)
         );
     }
 }

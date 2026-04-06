@@ -1,5 +1,4 @@
 use std::ffi::CStr;
-use std::ptr::NonNull;
 use std::cell::RefCell;
 
 use crate::c_api::{mts_status_t, MTS_SUCCESS, mts_last_error};
@@ -33,10 +32,8 @@ pub fn check_status(status: mts_status_t) -> Result<(), Error> {
 }
 
 /// Check a pointer allocated by metatensor-core, returning an error if is null
-pub fn check_ptr<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
-    if let Some(ptr) = NonNull::new(ptr) {
-        return Ok(ptr);
-    } else {
+pub fn check_ptr<T>(ptr: *const T) -> Result<(), Error> {
+    if ptr.is_null() {
         let message = unsafe {
             CStr::from_ptr(mts_last_error())
         };
@@ -44,6 +41,8 @@ pub fn check_ptr<T>(ptr: *mut T) -> Result<NonNull<T>, Error> {
 
         return Err(Error { code: None, message: message.to_owned() });
     }
+
+    return Ok(())
 }
 
 

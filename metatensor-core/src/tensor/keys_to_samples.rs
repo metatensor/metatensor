@@ -43,13 +43,14 @@ impl TensorMap {
             ))
         }
 
-        let names_to_move = keys_to_move.names();
-        let splitted_keys = remove_dimensions_from_keys(&self.keys, &names_to_move)?;
+        let dimensions_to_move = keys_to_move.dimensions();
+        let splitted_keys = remove_dimensions_from_keys(&self.keys, &dimensions_to_move)?;
 
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
             // create a single block with everything
-            let blocks_to_merge = self.keys.iter()
+            let blocks_to_merge = self.keys.to_cpu()
+                .iter()
                 .zip(&self.blocks)
                 .map(|(key, block)| {
                     let mut moved_key = Vec::new();
@@ -66,23 +67,24 @@ impl TensorMap {
 
             let block = merge_blocks_along_samples(
                 &blocks_to_merge,
-                &names_to_move,
+                &dimensions_to_move,
                 sort_samples,
                 fill_value,
             )?;
             new_blocks.push(block);
         } else {
-            for entry in &splitted_keys.new_keys {
-                let selection = Labels::new(
-                    &splitted_keys.new_keys.names(),
+            for entry in &splitted_keys.new_keys.to_cpu() {
+                let selection = Labels::from_vec(
+                    &splitted_keys.new_keys.dimensions(),
                     entry.to_vec()
                 ).expect("invalid labels");
 
                 let matching = self.blocks_matching(&selection)?;
+                let cpu_keys = self.keys.to_cpu();
                 let blocks_to_merge = matching.iter()
                     .map(|&i| {
                         let block = &self.blocks[i];
-                        let key = &self.keys[i];
+                        let key = &cpu_keys[i];
                         let mut moved_key = Vec::new();
                         for &i in &splitted_keys.dimensions_positions {
                             moved_key.push(key[i]);
@@ -97,7 +99,7 @@ impl TensorMap {
 
                 new_blocks.push(merge_blocks_along_samples(
                     &blocks_to_merge,
-                    &names_to_move,
+                    &dimensions_to_move,
                     sort_samples,
                     fill_value,
                 )?);
@@ -143,7 +145,7 @@ fn merge_blocks_along_samples(
     }
 
     // collect and merge samples across the blocks
-    let new_sample_names = first_block.samples.names().iter()
+    let new_sample_names = first_block.samples.dimensions().iter()
         .chain(extracted_names.iter())
         .copied()
         .collect::<Vec<_>>();
@@ -198,7 +200,7 @@ fn merge_blocks_along_samples(
             // Gradients share the same properties as the values, so we reuse property_mappings[i]
             // which is handled inside merge_data
             let mut gradient_mapping = Vec::new();
-            for grad_sample in gradient.samples.iter() {
+            for grad_sample in &gradient.samples.to_cpu() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
                 let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");

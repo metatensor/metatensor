@@ -10,6 +10,57 @@
 
 using namespace metatensor_torch;
 
+
+torch::Device metatensor_torch::dlpack_device_to_torch(DLDevice device) {
+    torch::DeviceType type;
+    // Reference:
+    // https://github.com/pytorch/pytorch/blob/3eddf049221fc04c2ac9d4af53c00305484ef325/c10/core/Device.cpp#L13-L38
+
+    switch (device.device_type) {
+    case kDLCPU:
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDA:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLCUDAHost:
+        // PyTorch treats pinned CUDA memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLCUDAManaged:
+        type = torch::DeviceType::CUDA;
+        break;
+    case kDLROCM:
+        type = torch::DeviceType::HIP;
+        break;
+    case kDLROCMHost:
+        // PyTorch treats pinned ROCm memory as CPU-accessible.
+        type = torch::DeviceType::CPU;
+        break;
+    case kDLMetal:
+        type = torch::DeviceType::MPS;
+        break;
+    case kDLOneAPI:
+        type = torch::DeviceType::XPU;
+        break;
+    case kDLTrn:
+        type = torch::DeviceType::XLA;
+        break;
+    case kDLVulkan:
+        type = torch::DeviceType::Vulkan;
+        break;
+    case kDLExtDev:
+        type = torch::DeviceType::Meta;
+        break;
+    default:
+        throw metatensor::Error(
+            "TorchDataArray: Unsupported or unmapped DLPack device type: " +
+            std::to_string(device.device_type));
+    }
+
+    return torch::Device(type);
+}
+
 // We need to register a data origin with metatensor, that will be used for all
 // mts_array_t containing a C++ torch tensor. This is initialized to 0 (meaning
 // "no origin"), and will be set by `MetatensorOriginRegistration` in
@@ -247,59 +298,6 @@ DLDataType TorchDataArray::dtype() const {
     return dt;
 }
 
-namespace {
-
-torch::Device dlpack_device_to_torch(DLDevice device) {
-    torch::DeviceType type;
-    // Reference:
-    // https://github.com/pytorch/pytorch/blob/3eddf049221fc04c2ac9d4af53c00305484ef325/c10/core/Device.cpp#L13-L38
-
-    switch (device.device_type) {
-    case kDLCPU:
-        type = torch::DeviceType::CPU;
-        break;
-    case kDLCUDA:
-        type = torch::DeviceType::CUDA;
-        break;
-    case kDLCUDAHost:
-        // PyTorch treats pinned CUDA memory as CPU-accessible.
-        type = torch::DeviceType::CPU;
-        break;
-    case kDLCUDAManaged:
-        type = torch::DeviceType::CUDA;
-        break;
-    case kDLROCM:
-        type = torch::DeviceType::HIP;
-        break;
-    case kDLROCMHost:
-        // PyTorch treats pinned ROCm memory as CPU-accessible.
-        type = torch::DeviceType::CPU;
-        break;
-    case kDLMetal:
-        type = torch::DeviceType::MPS;
-        break;
-    case kDLOneAPI:
-        type = torch::DeviceType::XPU;
-        break;
-    case kDLTrn:
-        type = torch::DeviceType::XLA;
-        break;
-    case kDLVulkan:
-        type = torch::DeviceType::Vulkan;
-        break;
-    case kDLExtDev:
-        type = torch::DeviceType::Meta;
-        break;
-    default:
-        throw metatensor::Error(
-            "TorchDataArray: Unsupported or unmapped DLPack device type: " +
-            std::to_string(device.device_type));
-    }
-
-    return torch::Device(type);
-}
-
-} // namespace
 
 DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) {
     // Uses the existing ATen API which returns legacy DLManagedTensor, then
@@ -400,7 +398,7 @@ const std::vector<uintptr_t>& TorchDataArray::shape() const & {
     return shape_;
 }
 
-void TorchDataArray::reshape(std::vector<uintptr_t> shape) {
+void TorchDataArray::reshape(const std::vector<uintptr_t>& shape) {
     auto sizes = std::vector<int64_t>();
     for (auto size: shape) {
         sizes.push_back(static_cast<int64_t>(size));

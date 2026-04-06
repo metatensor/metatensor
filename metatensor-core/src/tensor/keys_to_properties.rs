@@ -45,8 +45,8 @@ impl TensorMap {
             ));
         }
 
-        let names_to_move = keys_to_move.names();
-        let splitted_keys = remove_dimensions_from_keys(&self.keys, &names_to_move)?;
+        let dimensions_to_move = keys_to_move.dimensions();
+        let splitted_keys = remove_dimensions_from_keys(&self.keys, &dimensions_to_move)?;
 
         let keys_to_move = if keys_to_move.count() == 0 {
             None
@@ -57,7 +57,7 @@ impl TensorMap {
         let mut new_blocks = Vec::new();
         if splitted_keys.new_keys.count() == 1 {
             // create a single block with everything
-            let blocks_to_merge = self.keys.iter()
+            let blocks_to_merge = self.keys.to_cpu().iter()
                 .zip(&self.blocks)
                 .map(|(key, block)| {
                     let mut moved_key = Vec::new();
@@ -75,24 +75,25 @@ impl TensorMap {
             let block = merge_blocks_along_properties(
                 &blocks_to_merge,
                 keys_to_move,
-                &names_to_move,
+                &dimensions_to_move,
                 sort_samples,
                 fill_value,
             )?;
             new_blocks.push(block);
         } else {
             assert!(splitted_keys.new_keys.count() > 1);
-            for entry in &splitted_keys.new_keys {
-                let selection = Labels::new(
-                    &splitted_keys.new_keys.names(),
+            for entry in &splitted_keys.new_keys.to_cpu() {
+                let selection = Labels::from_vec(
+                    &splitted_keys.new_keys.dimensions(),
                     entry.to_vec(),
                 ).expect("invalid labels");
 
                 let matching = self.blocks_matching(&selection)?;
+                let cpu_keys = self.keys.to_cpu();
                 let blocks_to_merge = matching.iter()
                     .map(|&i| {
                         let block = &self.blocks[i];
-                        let key = &self.keys[i];
+                        let key = &cpu_keys[i];
                         let mut moved_key = Vec::new();
                         for &i in &splitted_keys.dimensions_positions {
                             moved_key.push(key[i]);
@@ -108,7 +109,7 @@ impl TensorMap {
                 let block = merge_blocks_along_properties(
                     &blocks_to_merge,
                     keys_to_move,
-                    &names_to_move,
+                    &dimensions_to_move,
                     sort_samples,
                     fill_value,
                 )?;
@@ -169,16 +170,16 @@ fn merge_blocks_along_properties(
     // collect and merge samples across the blocks
     let (merged_samples, samples_mappings) = merge_samples(
         blocks_to_merge,
-        &first_block.samples.names(),
+        &first_block.samples.dimensions(),
         sort_samples,
     );
 
     let mut new_properties = IndexSet::new();
     if let Some(keys_to_move) = keys_to_move {
         // use the user-provided new values
-        for new_property in keys_to_move {
+        for new_property in &keys_to_move.to_cpu() {
             for KeyAndBlock{block, ..} in blocks_to_merge {
-                for old_property in &*block.properties {
+                for old_property in &block.properties.to_cpu() {
                     let mut property = new_property.to_vec();
                     property.extend_from_slice(old_property);
                     new_properties.insert(property);
@@ -190,7 +191,7 @@ fn merge_blocks_along_properties(
         // collect properties from the blocks, augmenting them with the new
         // properties
         for KeyAndBlock{key, block} in blocks_to_merge {
-            for old_property in &*block.properties {
+            for old_property in &block.properties.to_cpu() {
                 let mut property = key.clone();
                 property.extend_from_slice(old_property);
                 new_properties.insert(property);
@@ -199,13 +200,13 @@ fn merge_blocks_along_properties(
     }
 
     let new_property_names = extracted_names.iter()
-        .chain(first_block.properties.names().iter())
+        .chain(first_block.properties.dimensions().iter())
         .copied()
         .collect::<Vec<_>>();
 
     let new_properties = unsafe {
         // SAFETY: the values come from a set, so they are already unique
-        Arc::new(Labels::new_unchecked_uniqueness(
+        Arc::new(Labels::from_vec_unchecked_uniqueness(
             &new_property_names,
             new_properties.iter().flatten().copied().collect()
         ).expect("invalid labels"))
@@ -232,7 +233,7 @@ fn merge_blocks_along_properties(
         }
 
         let mut first = key.clone();
-        first.extend_from_slice(&block.properties[0]);
+        first.extend_from_slice(&block.properties.to_cpu()[0]);
 
         // we can lookup only the `first` new property here, since the new
         // properties match exactly the old ones, just with an added "channel"
@@ -300,7 +301,7 @@ fn merge_blocks_along_properties(
             debug_assert!(*gradient.components == *new_components);
 
             let mut movements = Vec::new();
-            for (sample_i, grad_sample) in gradient.samples.iter().enumerate() {
+            for (sample_i, grad_sample) in gradient.samples.to_cpu().iter().enumerate() {
                 // translate from the old sample id in gradients to the new ones
                 let mut grad_sample = grad_sample.to_vec();
                 let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");

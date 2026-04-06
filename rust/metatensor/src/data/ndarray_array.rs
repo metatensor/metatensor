@@ -34,7 +34,7 @@ where
         let fill_value_dlpack = fill_value.as_dlpack(cpu_device, None, max_version).expect("failed to extract fill_value as DLPack");
 
         // Validate fill_value shape from the DLPack tensor directly
-        assert_eq!(fill_value_dlpack.shape(), [], "fill_value must have shape (1,)");
+        assert_eq!(fill_value_dlpack.shape(), &[], "fill_value must be a single scalar");
         assert_eq!(fill_value_dlpack.device(), cpu_device, "fill_value must be on CPU");
 
         let fill_value_ptr = fill_value_dlpack.data_ptr::<T>().expect("dtype mismatch between array and fill_value");

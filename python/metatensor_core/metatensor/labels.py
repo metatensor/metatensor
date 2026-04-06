@@ -8,48 +8,14 @@ from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
-from ._c_api import c_uintptr_t, mts_labels_t
+from ._c_api import (
+    c_uintptr_t,
+    mts_array_t,
+    mts_labels_t,
+)
 from ._c_lib import _get_library
-
-
-class LabelsValues(np.ndarray):
-    """
-    Wrapper class around the values inside :py:class:`Labels`, keeping a reference to
-    the :py:class:`Labels` alive as needed. This class inherit from
-    :py:class:`numpy.ndarray`, and can be used anywhere a numpy ndarray can be used.
-    """
-
-    def __new__(cls, labels: "Labels"):
-        array = _ptr_to_const_ndarray(
-            ptr=labels._labels.values,
-            shape=(labels._labels.count, labels._labels.size),
-            dtype=np.int32,
-        )
-        obj = array.view(cls)
-
-        # keep a reference to the Python labels to prevent them from being
-        # garbage-collected too early.
-        obj._parent = labels
-
-        return obj
-
-    def __array_finalize__(self, obj):
-        # keep the parent around when creating sub-views of this array
-        self._parent = getattr(obj, "_parent", None)
-
-    def __array_wrap__(self, new, context=None, return_scalar=False):
-        self_ptr = self.ctypes.data
-        self_size = self.nbytes
-
-        new_ptr = new.ctypes.data
-
-        if self_ptr <= new_ptr <= self_ptr + self_size:
-            # if the new array is a view inside memory owned by self, wrap it in
-            # LabelsValues
-            return super().__array_wrap__(new)
-        else:
-            # otherwise return the ndarray straight away
-            return np.asarray(new)
+from .data import Array, create_mts_array, mts_array_to_python_array
+from .status import _check_pointer
 
 
 class LabelsEntry:
@@ -71,11 +37,11 @@ class LabelsEntry:
     [0 1 8]
     """
 
-    def __init__(self, names: List[str], values: LabelsValues):
+    def __init__(self, names: List[str], values: Array):
         assert isinstance(names, list)
         for n in names:
             assert isinstance(n, str)
-        assert isinstance(values, LabelsValues)
+        assert isinstance(values, Array.__supertype__)
 
         self._names = names
 
@@ -92,7 +58,7 @@ class LabelsEntry:
         return self._names
 
     @property
-    def values(self) -> LabelsValues:
+    def values(self) -> Array:
         """
         values associated with each dimensions of this Labels entry, stored as
         32-bit integers.
@@ -246,17 +212,14 @@ class Labels:
         assume_unique: bool = False,
     ):
         """
-        :param names: names of the dimensions in the new labels. A single string
-                      is transformed into a list with one element, i.e.
-                      ``names="a"`` is the same as ``names=["a"]``.
-
-        :param values: values of the labels, this needs to be a 2-dimensional
-                       array of integers.
-
-        :param assume_unique: skip uniqueness checks inside metatensor. This
-                              should only be set to ``True`` if you can
-                              ensure that label entries are already unique,
-                              either by construction or because you checked.
+        :param names: names of the dimensions in the new labels. A single string is
+            transformed into a list with one element, i.e. ``names="a"`` is the same as
+            ``names=["a"]``.
+        :param values: values of the labels, this needs to be a 2-dimensional array of
+            integers.
+        :param assume_unique: skip uniqueness checks inside metatensor. This should only
+            be set to ``True`` if you can ensure that label entries are already unique,
+            either by construction or because you checked.
         """
 
         names = _normalize_names_type(names)
@@ -291,8 +254,11 @@ class Labels:
         except TypeError as e:
             raise TypeError("Labels values must be convertible to integers") from e
 
+        # values should not be writeable
+        values.flags.writeable = False
+
         self._lib = _get_library()
-        self._labels = _create_new_labels(
+        self._ptr = _create_new_labels(
             self._lib, names, values, assume_unique=assume_unique
         )
         self._names = names
@@ -346,16 +312,21 @@ class Labels:
         )
 
     @classmethod
-    def _from_mts_labels_t(cls, labels: mts_labels_t):
-        assert labels.internal_ptr_ is not None
+    def _from_mts_labels_t(cls, labels):
+        """Create Labels from an opaque mts_labels_t pointer."""
+        _check_pointer(labels)
 
         obj = cls.__new__(cls)
         obj._lib = _get_library()
-        obj._labels = labels
+        obj._ptr = labels
+
+        names_ptr = ctypes.POINTER(ctypes.c_char_p)()
+        names_count = c_uintptr_t()
+        obj._lib.mts_labels_dimensions(labels, names_ptr, names_count)
 
         names = []
-        for i in range(labels.size):
-            names.append(labels.names[i].decode("utf8"))
+        for i in range(names_count.value):
+            names.append(names_ptr[i].decode("utf8"))
         obj._names = names
 
         obj._cached_values = None
@@ -364,13 +335,13 @@ class Labels:
 
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None:
-            if hasattr(self, "_labels") and self._labels is not None:
-                self._lib.mts_labels_free(self._labels)
+            if hasattr(self, "_labels") and self._ptr is not None:
+                self._lib.mts_labels_free(self._ptr)
 
     def __deepcopy__(self, _memodict):
-        labels = mts_labels_t()
-        self._lib.mts_labels_clone(self._labels, labels)
-        return Labels._from_mts_labels_t(labels)
+        ptr = self._lib.mts_labels_clone(self._ptr)
+        _check_pointer(ptr)
+        return Labels._from_mts_labels_t(ptr)
 
     def __copy__(self):
         return self.__deepcopy__({})
@@ -449,7 +420,7 @@ class Labels:
         return not self.__eq__(other)
 
     def _as_mts_labels_t(self):
-        return self._labels
+        return self._ptr
 
     # ===== Serialization support ===== #
 
@@ -526,13 +497,20 @@ class Labels:
         return self._names
 
     @property
-    def values(self) -> np.ndarray:
+    def _raw_values(self) -> mts_array_t:
+        """Get the raw ``mts_array_t`` corresponding to these Labels' values"""
+        data = mts_array_t()
+        self._lib.mts_labels_values(self._ptr, data)
+        return data
+
+    @property
+    def values(self) -> Array:
         """
         values associated with each dimensions of the :py:class:`Labels`, stored
         as 2-dimensional tensor of 32-bit integers
         """
         if self._cached_values is None:
-            self._cached_values = LabelsValues(self)
+            self._cached_values = mts_array_to_python_array(self._raw_values, self)
 
         return self._cached_values
 
@@ -746,7 +724,7 @@ class Labels:
             c_entry[i] = ctypes.c_int32(v)
 
         self._lib.mts_labels_position(
-            self._labels,
+            self._ptr,
             c_entry,
             c_entry._length_,
             result,
@@ -779,9 +757,13 @@ class Labels:
             2  2
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_difference(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -814,13 +796,13 @@ class Labels:
         >>> print(mapping_1)
         [ 0 -1 -1  1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
         self._lib.mts_labels_difference(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
         )
@@ -847,9 +829,15 @@ class Labels:
             1  3
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_union(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -886,14 +874,14 @@ class Labels:
         >>> print(mapping_2)
         [2 3 1]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_union(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
             second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
@@ -920,9 +908,15 @@ class Labels:
             0  3
         )
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(), other._as_mts_labels_t(), output, None, 0, None, 0
+            self._as_mts_labels_t(),
+            other._as_mts_labels_t(),
+            ctypes.pointer(output),
+            None,
+            0,
+            None,
+            0,
         )
 
         return Labels._from_mts_labels_t(output)
@@ -958,14 +952,14 @@ class Labels:
         >>> print(mapping_2)
         [ 1 -1  0]
         """
-        output = mts_labels_t()
+        output = ctypes.POINTER(mts_labels_t)()
         first_mapping = np.zeros(len(self), dtype=np.int64)
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_intersection(
             self._as_mts_labels_t(),
             other._as_mts_labels_t(),
-            output,
+            ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
             second_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
@@ -1091,25 +1085,26 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
 
 def _create_new_labels(
     lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
-) -> mts_labels_t:
-    labels = mts_labels_t()
+):
 
     c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
     for i, n in enumerate(names):
         c_names[i] = n.encode("utf8")
 
-    labels.internal_ptr_ = None
-    labels.names = c_names
-    labels.size = len(names)
+    # Ensure values is 2D int32 C-contiguous for the mts_array_t
+    if values.ndim == 1:
+        values = values.reshape(-1, len(names))
+    values = np.ascontiguousarray(values, dtype=np.int32)
 
-    labels.values = values.ctypes.data_as(ctypes.POINTER(ctypes.c_int32))
-    labels.count = values.shape[0]
+    array = create_mts_array(values)
+
     if assume_unique:
-        lib.mts_labels_create_assume_unique(labels)
+        ptr = lib.mts_labels_assume_unique(c_names, len(names), array)
     else:
-        lib.mts_labels_create(labels)
+        ptr = lib.mts_labels(c_names, len(names), array)
 
-    return labels
+    _check_pointer(ptr)
+    return ptr
 
 
 def _print_string_center(output, string, width, last):
