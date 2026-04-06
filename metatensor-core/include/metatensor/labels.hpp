@@ -29,14 +29,6 @@ namespace metatensor {
         );
     }
 
-/// It is possible to store some user-provided data inside `Labels`, and access
-/// it later. This class is used to take ownership of the data and corresponding
-/// delete function before giving the data to metatensor.
-///
-/// User data inside `Labels` is an advanced functionality, that most users
-/// should not need to interact with.
-class LabelsUserData;
-
 /// Tag for the creation of Labels without uniqueness checks
 struct assume_unique {};
 
@@ -48,6 +40,26 @@ struct assume_unique {};
 /// unique, and they are often (but not always) sorted in lexicographic order.
 class Labels final {
 public:
+    /// Create Labels from the given dimension names and values.
+    ///
+    /// The Labels take ownership of the values.
+    Labels(const std::vector<std::string>& dimensions, MtsArray values):
+        labels_(nullptr)
+    {
+        auto c_dimensions = std::vector<const char*>();
+        c_dimensions.reserve(dimensions.size());
+        for (const auto& name: dimensions) {
+            c_dimensions.push_back(name.c_str());
+        }
+
+        labels_ = mts_labels(
+            c_dimensions.data(), c_dimensions.size(), std::move(values).release()
+        );
+        if (labels_ == nullptr) {
+            throw Error(mts_last_error());
+        }
+    }
+
     /// Create a new set of Labels from the given `names` and `values`.
     ///
     /// Each entry in the values must contain `names.size()` elements.
@@ -61,121 +73,125 @@ public:
     /// });
     /// ```
     Labels(
-        const std::vector<std::string>& names,
-        const std::vector<std::initializer_list<int32_t>>& values
-    ): Labels(names, NDArray<int32_t>(values, names.size()), InternalConstructor{}) {}
+        const std::vector<std::string>& dimensions,
+        std::initializer_list<std::initializer_list<int32_t>> values
+    ): Labels(dimensions, NDArray<int32_t>(values, dimensions.size()), InternalConstructor{}) {}
 
-    /// This function does not check for uniqueness of the labels entries, which
-    /// should be enforced by the caller. Calling this function with non-unique
-    /// entries is invalid and can lead to crashes or infinite loops.
-    explicit Labels(
-        const std::vector<std::string>& names,
-        const std::vector<std::initializer_list<int32_t>>& values,
-        assume_unique
-    ): Labels(names, NDArray<int32_t>(values, names.size()), assume_unique{}, InternalConstructor{}) {}
+    /// Create Labels from the given dimension names and a backing mts_array_t,
+    /// assuming uniqueness of entries (no uniqueness check is performed).
+    ///
+    /// The Labels take ownership of the array.
+    Labels(const std::vector<std::string>& dimensions, MtsArray array, assume_unique):
+        labels_(nullptr)
+    {
+        auto c_dimensions = std::vector<const char*>();
+        c_dimensions.reserve(dimensions.size());
+        for (const auto& name: dimensions) {
+            c_dimensions.push_back(name.c_str());
+        }
 
-    /// Create an empty set of Labels with the given names
-    explicit Labels(const std::vector<std::string>& names):
-        Labels(names, static_cast<const int32_t*>(nullptr), 0) {}
+        labels_ = mts_labels_assume_unique(
+            c_dimensions.data(), c_dimensions.size(), std::move(array).release()
+        );
+        if (labels_ == nullptr) {
+            throw Error(mts_last_error());
+        }
+    }
 
-    /// Create labels with the given `names` and `values`. `values` must be an
-    /// array with `count x names.size()` elements.
-    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count):
-        Labels(details::labels_from_cxx(names, values, count, false)) {}
+    /// Create an empty set of Labels with the given dimension names.
+    explicit Labels(const std::vector<std::string>& dimensions):
+        Labels(dimensions, static_cast<const int32_t*>(nullptr), 0) {}
+
+    /// Create labels with the given `dimensions` and `values`. `values` must be
+    /// an array with `count x dimensions.size()` elements.
+    Labels(const std::vector<std::string>& dimensions, const int32_t* values, size_t count):
+        Labels(details::labels_from_cxx(dimensions, values, count, false)) {}
 
     /// Unchecked variant, caller promises the labels are unique. Calling with
-    /// non-unique entries is invalid and can ead to crashes or infinite loops.
-    Labels(const std::vector<std::string>& names, const int32_t* values, size_t count, assume_unique):
-        Labels(details::labels_from_cxx(names, values, count, true)) {}
+    /// non-unique entries is invalid and can lead to crashes or infinite loops.
+    Labels(const std::vector<std::string>& dimensions, const int32_t* values, size_t count, assume_unique):
+        Labels(details::labels_from_cxx(dimensions, values, count, true)) {}
 
     ~Labels() {
-        mts_labels_free(&labels_);
+        if (labels_ != nullptr) {
+            mts_labels_free(labels_);
+            labels_ = nullptr;
+        }
     }
 
     /// Labels is copy-constructible
-    Labels(const Labels& other): Labels() {
+    Labels(const Labels& other): labels_(nullptr) {
         *this = other;
     }
 
     /// Labels can be copy-assigned
     Labels& operator=(const Labels& other) {
-        mts_labels_free(&labels_);
-        std::memset(&labels_, 0, sizeof(labels_));
-        details::check_status(mts_labels_clone(other.labels_, &labels_));
-        assert(this->labels_.internal_ptr_ != nullptr);
-
-        this->values_ = NDArray<int32_t>(labels_.values, {labels_.count, labels_.size});
-
-        this->names_.clear();
-        for (size_t i=0; i<this->labels_.size; i++) {
-            this->names_.push_back(this->labels_.names[i]);
+        if (this == &other) {
+            return *this;
         }
 
+        if (labels_ != nullptr) {
+            mts_labels_free(labels_);
+            labels_ = nullptr;
+        }
+
+        labels_ = mts_labels_clone(other.labels_);
+        if (labels_ == nullptr) {
+            throw Error(mts_last_error());
+        }
         return *this;
     }
 
     /// Labels is move-constructible
-    Labels(Labels&& other) noexcept: Labels() {
+    Labels(Labels&& other) noexcept: labels_(nullptr) {
         *this = std::move(other);
     }
 
     /// Labels can be move-assigned
     Labels& operator=(Labels&& other) noexcept {
-        mts_labels_free(&labels_);
+        if (labels_ != nullptr) {
+            mts_labels_free(labels_);
+        }
         this->labels_ = other.labels_;
-        assert(this->labels_.internal_ptr_ != nullptr);
-        std::memset(&other.labels_, 0, sizeof(other.labels_));
-
-        this->values_ = std::move(other.values_);
-        this->names_ = std::move(other.names_);
-
+        other.labels_ = nullptr;
         return *this;
     }
 
     /// Get the names of the dimensions used in these `Labels`.
-    const std::vector<const char*>& names() const {
-        return names_;
+    std::vector<const char*> names() const {
+        if (labels_ == nullptr) {
+            return {};
+        }
+
+        const char* const* dimensions_ptr = nullptr;
+        size_t dimensions_count = 0;
+        details::check_status(mts_labels_dimensions(labels_, &dimensions_ptr, &dimensions_count));
+        return std::vector<const char*>(dimensions_ptr, dimensions_ptr + dimensions_count);
+    }
+
+    /// Get the device of the values for these `Labels`.
+    DLDevice device() const {
+        auto array = this->mts_array();
+        return array.device();
     }
 
     /// Get the number of entries in this set of Labels.
-    ///
-    /// This is the same as `shape()[0]` for the corresponding values array
     size_t count() const {
-        return labels_.count;
+        auto values = this->mts_array();
+        return values.shape()[0];
     }
 
     /// Get the number of dimensions in this set of Labels.
     ///
     /// This is the same as `shape()[1]` for the corresponding values array
     size_t size() const {
-        return labels_.size;
+        return this->names().size();
     }
 
-    /// Convert from this set of Labels to the C `mts_labels_t`
-    mts_labels_t as_mts_labels_t() const {
-        assert(labels_.internal_ptr_ != nullptr);
+    /// Get the underlying `mts_labels_t` pointer
+    const mts_labels_t* as_mts_labels_t() const {
         return labels_;
     }
-
-    /// Get the user data pointer registered with these `Labels`.
-    ///
-    /// If no user data have been registered, this function will return
-    /// `nullptr`.
-    void* user_data() & {
-        assert(labels_.internal_ptr_ != nullptr);
-
-        void* data = nullptr;
-        details::check_status(mts_labels_user_data(labels_, &data));
-        return data;
-    }
-
-    void* user_data() && = delete;
-
-    /// Register some user data pointer with these `Labels`.
-    ///
-    /// Any existing user data will be released (by calling the provided
-    /// `delete` function) before overwriting with the new data.
-    void set_user_data(LabelsUserData user_data);
 
     /// Get the position of the `entry` in this set of Labels, or -1 if the
     /// entry is not part of these Labels.
@@ -196,27 +212,52 @@ public:
 
     /// Variant of `Labels::position` taking a pointer and length as input
     int64_t position(const int32_t* entry, size_t length) const {
-        assert(labels_.internal_ptr_ != nullptr);
+        assert(labels_ != nullptr);
 
         int64_t result = 0;
         details::check_status(mts_labels_position(labels_, entry, length, &result));
         return result;
     }
 
-    /// Get the array of values for these Labels
-    const NDArray<int32_t>& values() const & {
-        return values_;
+    /// Get the array of values for these Labels as an `mts_array_t`.
+    MtsArray mts_array() const {
+        mts_array_t array;
+        std::memset(&array, 0, sizeof(array));
+        details::check_status(mts_labels_values(labels_, &array));
+        return MtsArray(array);
     }
 
-    const NDArray<int32_t>& values() && = delete;
+    /// Get the array of values for these Labels as a DLPack array on the
+    /// requested `device`.
+    ///
+    /// @param device the DLPack device to request data on (default: CPU)
+    /// @param stream pointer to a device stream, or nullptr for default
+    DLPackArray<int32_t> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) const {
+        auto mts_array = this->mts_array();
+
+        return mts_array.as_dlpack_array<int32_t>(device, stream, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
+    }
+
+    /// Get the array of values for these Labels on CPU.
+    ///
+    /// This can trigger a copy if the values are not already on CPU, but
+    /// following calls to this function will then return a view without
+    /// copying.
+    NDArray<int32_t> values_cpu() const {
+        const int32_t* values = nullptr;
+        uintptr_t count = 0;
+        uintptr_t size = 0;
+        details::check_status(mts_labels_values_cpu(labels_, &values, &count, &size));
+
+        return NDArray<int32_t>(values, {count, size});
+    }
 
     /// Take the union of these `Labels` with `other`.
     ///
     /// If requested, this function can also give the positions in the union
     /// where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the union with
     /// @param first_mapping if you want the mapping from the positions of
@@ -236,8 +277,7 @@ public:
         int64_t* second_mapping = nullptr,
         size_t second_mapping_count = 0
     ) const {
-        mts_labels_t result;
-        std::memset(&result, 0, sizeof(result));
+        const mts_labels_t* result = nullptr;
 
         details::check_status(mts_labels_union(
             labels_,
@@ -257,8 +297,7 @@ public:
     /// If requested, this function can also give the positions in the
     /// union where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the union with
     /// @param first_mapping if you want the mapping from the positions of
@@ -300,8 +339,7 @@ public:
     /// If requested, this function can also give the positions in the
     /// intersection where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the intersection with
     /// @param first_mapping if you want the mapping from the positions of
@@ -325,8 +363,7 @@ public:
         int64_t* second_mapping = nullptr,
         size_t second_mapping_count = 0
     ) const {
-        mts_labels_t result;
-        std::memset(&result, 0, sizeof(result));
+        const mts_labels_t* result = nullptr;
 
         details::check_status(mts_labels_intersection(
             labels_,
@@ -346,8 +383,7 @@ public:
     /// If requested, this function can also give the positions in the
     /// intersection where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the intersection with
     /// @param first_mapping if you want the mapping from the positions of
@@ -393,8 +429,7 @@ public:
     /// If requested, this function can also give the positions in the
     /// difference where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the difference with
     /// @param first_mapping if you want the mapping from the positions of
@@ -409,8 +444,7 @@ public:
         int64_t* first_mapping = nullptr,
         size_t first_mapping_count = 0
     ) const {
-        mts_labels_t result;
-        std::memset(&result, 0, sizeof(result));
+        const mts_labels_t* result = nullptr;
 
         details::check_status(mts_labels_difference(
             labels_,
@@ -428,8 +462,7 @@ public:
     /// If requested, this function can also give the positions in the
     /// difference where each entry of the input `Labels` ended up.
     ///
-    /// No user data pointer is registered with the output, even if the inputs
-    /// have some.
+    /// The output data will be on CPU, regardless of the device of the inputs.
     ///
     /// @param other the `Labels` we want to take the difference with
     /// @param first_mapping if you want the mapping from the positions of
@@ -577,20 +610,9 @@ public:
     }
 
 private:
-    explicit Labels(): values_(static_cast<const int32_t*>(nullptr), {0, 0})
-    {
-        std::memset(&labels_, 0, sizeof(labels_));
-    }
-
-    explicit Labels(mts_labels_t labels):
-        values_(labels.values, {labels.count, labels.size}),
-        labels_(labels)
-    {
-        assert(labels_.internal_ptr_ != nullptr);
-
-        for (size_t i=0; i<labels_.size; i++) {
-            names_.push_back(labels_.names[i]);
-        }
+    /// Construct from an owning raw pointer (takes ownership)
+    explicit Labels(const mts_labels_t* ptr): labels_(ptr) {
+        assert(labels_ != nullptr);
     }
 
     // the constructor below is ambiguous with the public constructor taking
@@ -611,88 +633,23 @@ private:
 
     friend class metatensor_torch::LabelsHolder;
 
-    std::vector<const char*> names_;
-    NDArray<int32_t> values_;
-    mts_labels_t labels_;
+    /// Owning pointer to the opaque labels
+    const mts_labels_t* labels_;
 
     friend bool operator==(const Labels& lhs, const Labels& rhs);
 };
 
-/// It is possible to store some user-provided data inside `Labels`, and access
-/// it later. This class is used to take ownership of the data and corresponding
-/// delete function before giving the data to metatensor.
-///
-/// User data inside `Labels` is an advanced functionality, that most users
-/// should not need to interact with.
-class LabelsUserData {
-public:
-    /// Create `LabelsUserData` containing the given `data`.
-    ///
-    /// `deleter` will be called when the data is dropped, and should
-    /// free the corresponding memory.
-    LabelsUserData(void* data, void(*deleter)(void*)): data_(data), deleter_(deleter) {}
-
-    ~LabelsUserData() {
-        if (deleter_ !=  nullptr) {
-            deleter_(data_);
-        }
-    }
-
-    /// LabelsUserData is not copy-constructible
-    LabelsUserData(const LabelsUserData& other) = delete;
-    /// LabelsUserData can not be copy-assigned
-    LabelsUserData& operator=(const LabelsUserData& other) = delete;
-
-    /// LabelsUserData is move-constructible
-    LabelsUserData(LabelsUserData&& other) noexcept: LabelsUserData(nullptr, nullptr) {
-        *this = std::move(other);
-    }
-
-    /// LabelsUserData be move-assigned
-    LabelsUserData& operator=(LabelsUserData&& other) noexcept {
-        if (deleter_ !=  nullptr) {
-            deleter_(data_);
-        }
-
-        data_ = other.data_;
-        deleter_ = other.deleter_;
-
-        other.data_ = nullptr;
-        other.deleter_ = nullptr;
-
-        return *this;
-    }
-
-private:
-    friend class Labels;
-
-    void* data_;
-    void(*deleter_)(void*);
-};
-
-inline void Labels::set_user_data(LabelsUserData user_data) {
-    assert(labels_.internal_ptr_ != nullptr);
-
-    details::check_status(mts_labels_set_user_data(
-        labels_,
-        user_data.data_,
-        user_data.deleter_
-    ));
-
-    // the user data was moved inside `labels_`
-    user_data.data_ = nullptr;
-    user_data.deleter_ = nullptr;
-}
-
 /// Two Labels compare equal only if they have the same names and values in the
 /// same order.
 inline bool operator==(const Labels& lhs, const Labels& rhs) {
-    if (lhs.names_.size() != rhs.names_.size()) {
+    auto lhs_names = lhs.names();
+    auto rhs_names = rhs.names();
+    if (lhs_names.size() != rhs_names.size()) {
         return false;
     }
 
-    for (size_t i=0; i<lhs.names_.size(); i++) {
-        if (std::strcmp(lhs.names_[i], rhs.names_[i]) != 0) {
+    for (size_t i=0; i<lhs_names.size(); i++) {
+        if (std::strcmp(lhs_names[i], rhs_names[i]) != 0) {
             return false;
         }
     }
@@ -713,24 +670,40 @@ namespace details {
         size_t count,
         bool assume_unique = false
     ) {
-        mts_labels_t labels{};
-
         auto c_names = std::vector<const char*>();
         c_names.reserve(names.size());
         for (const auto& name: names) {
             c_names.push_back(name.c_str());
         }
 
-        labels.names = c_names.data();
-        labels.size = c_names.size();
-        labels.count = count;
-        labels.values = values;
-
-        if (assume_unique) {
-            details::check_status(mts_labels_create_assume_unique(&labels));
-        } else {
-            details::check_status(mts_labels_create(&labels));
+        // Wrap raw values in a SimpleDataArray<int32_t> to create an mts_array_t
+        auto data = std::vector<int32_t>();
+        size_t n_elements = count * names.size();
+        if (values != nullptr && n_elements > 0) {
+            data.assign(values, values + n_elements);
         }
+        auto shape = std::vector<uintptr_t>{count, names.size()};
+        auto cxx_array = std::unique_ptr<DataArrayBase>(
+            new SimpleDataArray<int32_t>(std::move(shape), std::move(data))
+        );
+        auto array = DataArrayBase::to_mts_array(std::move(cxx_array));
+
+        const mts_labels_t* labels;
+        if (assume_unique) {
+            labels = mts_labels_assume_unique(
+                c_names.data(),
+                c_names.size(),
+                std::move(array).release()
+            );
+        } else {
+            labels = mts_labels(
+                c_names.data(),
+                c_names.size(),
+                std::move(array).release()
+            );
+        }
+
+        details::check_pointer(labels);
 
         return metatensor::Labels(labels);
     }

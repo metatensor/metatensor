@@ -19,19 +19,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Added
 
-- Added `mts_array_t.device` function pointer to query the device of an array
-  without exporting via DLPack. Implemented for all array backends (Rust
-  `ArcArray`, `MmapArray`, C++ `SimpleDataArray`/`EmptyDataArray`/`DLPackArray`,
-  `TorchDataArray`, and Python numpy/torch arrays).
-- C++ `TensorBlock::values()` now accepts optional `device` and `stream`
-  parameters, allowing data to be requested on a specific device rather than
-  always defaulting to CPU.
-- C++ `DLPackArray<T>::device()` accessor returns the DLDevice of the managed
-  tensor. `DLPackArray<T>::operator()` now throws for non-CPU data to prevent
-  invalid memory access.
-- Added `ExternalCudaArray` in Python, the CUDA counterpart to `ExternalCpuArray`.
-  It wraps non-Python CUDA data as a `torch.Tensor` via DLPack, for use with
-  external array backends (e.g. Rust/Burn) that store data on CUDA devices.
+- Added `ExternalCudaArray` in Python, the CUDA counterpart to
+  `ExternalCpuArray`. It wraps non-Python CUDA data as a `torch.Tensor` via
+  DLPack, for use with external array backends (e.g. Rust/Burn) that store data
+  on CUDA devices.
 - C++ `TensorBlock::values()` is now a template `values<T>()` (defaulting to
   `double`) and returns a `DLPackArray<T>` that owns the DLPack resource,
   preventing dangling-pointer issues. The data is requested on CPU; if the
@@ -52,10 +43,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   implementations (`DataArrayBase::data()` in C++, `Array::data()` in Rust,
   `_mts_array_data` in Python). Use `mts_array_t.as_dlpack` instead, which
   supports all numeric types via the DLPack standard rather than only float64.
+
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
-
 
 ## [Version 0.1.20](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.20) - 2026-02-27
 

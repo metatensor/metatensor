@@ -333,7 +333,7 @@ static std::vector<std::string> extract_list_str(const torch::IValue& keys_to_mo
 }
 
 TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
@@ -366,7 +366,7 @@ TensorMap TensorMapHolder::keys_to_properties(torch::IValue keys_to_move, torch:
 }
 
 TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, torch::Scalar fill_value, bool sort_samples) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
 
     // Create a fill_value mts_array_t matching the tensor's dtype.
     // For empty tensors (no blocks), pass a zero-initialized mts_array_t.
@@ -399,7 +399,7 @@ TensorMap TensorMapHolder::keys_to_samples(torch::IValue keys_to_move, torch::Sc
 }
 
 TensorMap TensorMapHolder::components_to_properties(torch::IValue dimensions) const {
-    auto device = this->keys()->values().device();
+    auto device = this->device();
     auto selection = extract_list_str(dimensions, "TensorMap::components_to_properties argument");
     auto tensor = this->tensor_.components_to_properties(selection);
     auto result = torch::make_intrusive<TensorMapHolder>(TensorMapHolder(std::move(tensor)));
@@ -569,39 +569,10 @@ TensorMap TensorMapHolder::load_buffer(torch::Tensor buffer) {
 
 
 void TensorMapHolder::save(const std::string& path) const {
-    // check that device is CPU
-    if (this->keys()->values().device() != torch::kCPU) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with device " + this->keys()->values().device().str() +
-            ", only CPU is supported"
-        );
-    }
-    // check that dtype is float64
-    if (this->scalar_type() != torch::kFloat64) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with dtype " + scalar_type_name(this->scalar_type()) +
-            ", only float64 is supported"
-        );
-    }
-
     metatensor::io::save(path, this->as_metatensor());
 }
 
 torch::Tensor TensorMapHolder::save_buffer() const {
-    // check that device is CPU
-    if (this->keys()->values().device() != torch::kCPU) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with device " + this->keys()->values().device().str() +
-            ", only CPU is supported"
-        );
-    }
-    // check that dtype is float64
-    if (this->scalar_type() != torch::kFloat64) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorMap with dtype " + scalar_type_name(this->scalar_type()) +
-            ", only float64 is supported"
-        );
-    }
     auto buffer = metatensor::io::save_buffer(this->as_metatensor());
     // move the buffer to the heap so it can escape this function
     // `torch::from_blob` does not take ownership of the data,
@@ -639,7 +610,7 @@ torch::optional<std::string> TensorMapHolder::get_info(std::string key) const {
 torch::Dict<std::string, std::string> TensorMapHolder::info() const {
     auto result = torch::Dict<std::string, std::string>();
     for (auto it: this->tensor_.info()) {
-        result.insert(it.first, std::move(it.second));
+        result.insert(it.first, it.second);
     }
     return result;
 }

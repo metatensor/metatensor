@@ -24,21 +24,21 @@ pub struct RemovedDimensionsKeys {
 
 /// Remove the given dimensions from these keys, returning the updated set of
 /// keys and the positions of the removed dimensions in the initial keys
-pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result<RemovedDimensionsKeys, Error> {
-    let names = keys.names();
-    for dimension in dimensions {
-        if !names.contains(dimension) {
+pub fn remove_dimensions_from_keys(keys: &Labels, to_remove: &[&str]) -> Result<RemovedDimensionsKeys, Error> {
+    let dimensions = keys.dimensions();
+    for remove in to_remove {
+        if !dimensions.contains(remove) {
             return Err(Error::InvalidParameter(format!(
                 "'{}' is not part of the keys for this tensor map",
-                dimension
+                remove
             )));
         }
     }
 
     let mut extracted_i = Vec::new();
-    for &dimension in dimensions {
-        for (i, &name) in names.iter().enumerate() {
-            if dimension == name {
+    for &remove in to_remove {
+        for (i, &dimension) in dimensions.iter().enumerate() {
+            if remove == dimension {
                 extracted_i.push(i);
             }
         }
@@ -46,15 +46,15 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
 
     let mut remaining_names = Vec::new();
     let mut remaining_i = Vec::new();
-    for (i, &name) in names.iter().enumerate() {
+    for (i, &dimension) in dimensions.iter().enumerate() {
         if !extracted_i.contains(&i) {
-            remaining_names.push(name);
+            remaining_names.push(dimension);
             remaining_i.push(i);
         }
     }
 
     let mut remaining_keys = IndexSet::new();
-    for key in keys {
+    for key in &keys.to_cpu() {
         let mut entry = Vec::new();
         for &i in &remaining_i {
             entry.push(key[i]);
@@ -68,11 +68,11 @@ pub fn remove_dimensions_from_keys(keys: &Labels, dimensions: &[&str]) -> Result
     }).expect("the set should contain at least an empty vector");
 
     let remaining_keys = if values.is_empty() {
-        Labels::new(&["_"], vec![0]).expect("invalid labels")
+        Labels::from_vec(&["_"], vec![0]).expect("invalid labels")
     } else {
         unsafe {
             // SAFETY: the values come from an IndexSet and should already be unique
-            Labels::new_unchecked_uniqueness(&remaining_names, values).expect("invalid labels")
+            Labels::from_vec_unchecked_uniqueness(&remaining_names, values).expect("invalid labels")
         }
     };
 
@@ -88,15 +88,15 @@ pub fn merge_gradient_samples(
     samples_mappings: &[Vec<usize>],
 ) -> Arc<Labels> {
     let mut new_sample_values = BTreeSet::new();
-    let mut new_sample_names = None;
+    let mut new_sample_dimensions = None;
     for (KeyAndBlock{block, ..}, samples_mapping) in blocks.iter().zip(samples_mappings) {
         let gradient = block.gradient(gradient_name).expect("missing gradient");
 
-        if new_sample_names.is_none() {
-            new_sample_names = Some(gradient.samples.names());
+        if new_sample_dimensions.is_none() {
+            new_sample_dimensions = Some(gradient.samples.dimensions());
         }
 
-        for grad_sample in &*gradient.samples {
+        for grad_sample in &gradient.samples.to_cpu() {
             // translate from the old sample id in gradients to the new ones
             let mut grad_sample = grad_sample.to_vec();
             let old_sample_i = usize::try_from(grad_sample[0]).expect("could not convert to usize");
@@ -110,8 +110,8 @@ pub fn merge_gradient_samples(
 
     let labels = unsafe {
         // SAFETY: values should already be unique since they come from a set
-        Labels::new_unchecked_uniqueness(
-            &new_sample_names.expect("missing gradient sample names"),
+        Labels::from_vec_unchecked_uniqueness(
+            &new_sample_dimensions.expect("missing gradient sample names"),
             new_sample_values.iter().flatten().copied().collect()
         ).expect("invalid labels")
     };
@@ -130,7 +130,7 @@ pub fn merge_samples(
     // were in the blocks, and then optionally sort them later below
     let mut merged_samples = IndexSet::new();
     for KeyAndBlock{key, block} in blocks {
-        for sample in &*block.samples {
+        for sample in &block.samples.to_cpu() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
@@ -146,7 +146,7 @@ pub fn merge_samples(
 
     let merged_samples = unsafe {
         // SAFETY: values should already be unique since they come from a set
-        Labels::new_unchecked_uniqueness(
+        Labels::from_vec_unchecked_uniqueness(
             new_sample_names,
             merged_samples.iter().flatten().copied().collect()
         ).expect("invalid labels")
@@ -158,7 +158,7 @@ pub fn merge_samples(
     for KeyAndBlock{key, block} in blocks {
         let mut mapping_for_block = Vec::with_capacity(block.samples.count());
 
-        for sample in &*block.samples {
+        for sample in &block.samples.to_cpu() {
             let mut sample = sample.to_vec();
             if add_key_to_samples {
                 sample.extend_from_slice(key);
@@ -184,6 +184,6 @@ mod tests_utils {
     use crate::labels::Labels;
 
     pub fn example_labels(names: &[&str], values: &[i32]) -> Arc<Labels> {
-        return Arc::new(Labels::new(names, values.to_vec()).expect("invalid labels"));
+        return Arc::new(Labels::from_vec(names, values.to_vec()).expect("invalid labels"));
     }
 }

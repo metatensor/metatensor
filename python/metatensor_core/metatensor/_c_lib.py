@@ -61,6 +61,7 @@ class LibraryFinder(object):
 
             # Register the origin used by the Rust API as an external CPU array
             register_external_data_wrapper("RustArray", ExternalCpuArray)
+            register_external_data_wrapper("metatensor.Labels", ExternalCpuArray)
 
         return self._cached_dll
 

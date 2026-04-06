@@ -1,12 +1,6 @@
 import importlib.metadata
 import sys
 
-
-__version__ = importlib.metadata.version("metatensor-operations")
-
-sys.modules["metatensor.operations"] = sys.modules[__name__]
-
-
 from ._abs import abs  # noqa: F401
 from ._add import add  # noqa: F401
 from ._allclose import (  # noqa: F401
@@ -86,3 +80,8 @@ from ._subtract import subtract  # noqa: F401
 from ._unique_metadata import unique_metadata, unique_metadata_block  # noqa: F401
 from ._utils import NotEqualError  # noqa: F401
 from ._zeros_like import zeros_like, zeros_like_block  # noqa: F401
+
+
+__version__ = importlib.metadata.version("metatensor-operations")
+
+sys.modules["metatensor.operations"] = sys.modules[__name__]

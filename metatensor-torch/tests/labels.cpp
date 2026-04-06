@@ -37,8 +37,6 @@ TEST_CASE("Labels") {
         auto empty = LabelsHolder::create({}, {});
         CHECK(empty->size() == 0);
         CHECK(empty->count() == 0);
-
-        CHECK_THROWS_WITH(LabelsHolder::create({}, {{}, {}, {}}), "invalid parameter: can not have labels.count > 0 if labels.size is 0");
     }
 
     SECTION("unchecked constructor") {
@@ -128,6 +126,28 @@ TEST_CASE("Labels") {
 
         expected = torch::tensor({-1, 0, -1});
         CHECK(torch::all(std::get<2>(result) == expected).item<bool>());
+    }
+
+    SECTION("meta tensor construction") {
+        // Regression test for https://github.com/metatensor/metatensor/issues/1055
+        // torch.func.jvp introduces Meta-device tensors; Labels construction
+        // must not crash when given a Meta tensor.
+        auto values = torch::tensor({{0, 1}, {2, 3}}, torch::kInt32);
+        auto meta_values = values.to(torch::kMeta);
+
+        // assume_unique skips data access for uniqueness checking
+        auto labels = LabelsHolder(
+            std::vector<std::string>{"a", "b"},
+            meta_values,
+            metatensor::assume_unique{}
+        );
+
+        CHECK(labels.count() == 2);
+        CHECK(labels.size() == 2);
+        CHECK(labels.names()[0] == "a");
+        CHECK(labels.names()[1] == "b");
+        // values tensor should be on meta device
+        CHECK(labels.values().device().is_meta());
     }
 
     SECTION("Labels keep the values tensor alive") {

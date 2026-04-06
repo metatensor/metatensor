@@ -12,7 +12,7 @@
 mod utils;
 
 mod labels;
-use self::labels::{LabelValue, Labels};
+use self::labels::Labels;
 
 mod data;
 use self::data::{mts_array_t, mts_data_origin_t};
@@ -94,14 +94,14 @@ impl From<(String, zip::result::ZipError)> for Error {
 // Box<dyn Any + Send + 'static> is the error type in std::panic::catch_unwind
 impl From<Box<dyn std::any::Any + Send + 'static>> for Error {
     fn from(error: Box<dyn std::any::Any + Send + 'static>) -> Error {
-        let message = if let Some(message) = error.downcast_ref::<String>() {
-            message.clone()
-        } else if let Some(message) = error.downcast_ref::<&str>() {
-            (*message).to_owned()
+        if error.is::<String>() {
+            Error::Internal(*error.downcast::<String>().expect("should be a String"))
+        } else if error.is::<&str>() {
+            Error::Internal((*error.downcast::<&str>().expect("should be an &str")).to_owned())
+        } else if error.is::<Error>() {
+            return *error.downcast::<Error>().expect("it should be an Error");
         } else {
             panic!("panic message is not a string, something is very wrong")
-        };
-
-        Error::Internal(message)
+        }
     }
 }

@@ -9,6 +9,15 @@ from metatensor.torch import Labels, LabelsEntry
 from . import _tests_utils
 
 
+AVAILABLE_DEVICES = []
+
+if _tests_utils.can_use_mps_backend():
+    AVAILABLE_DEVICES.append(torch.device("mps:0"))
+
+if torch.cuda.is_available():
+    AVAILABLE_DEVICES.append(torch.device("cuda:0"))
+
+
 def test_constructor():
     # keyword arguments + name is a tuple
     labels = Labels(names=("a", "b"), values=torch.tensor([[0, 0], [0, 1]]))
@@ -307,24 +316,29 @@ def test_union():
     assert torch.all(second_mapping == torch.tensor([2, 1, 3]))
 
     # check that union preserves devices
-    first = first.to("meta")
+    if len(AVAILABLE_DEVICES) == 0:
+        pytest.skip("no real device available")
 
-    message = "device mismatch in `Labels.union`: got 'meta' and 'cpu'"
+    device = AVAILABLE_DEVICES[0]
+
+    first = first.to(device)
+
+    message = "device mismatch in `Labels.union`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.union(second)
 
-    message = "device mismatch in `Labels.union_and_mapping`: got 'meta' and 'cpu'"
+    message = "device mismatch in `Labels.union_and_mapping`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.union_and_mapping(second)
 
-    second = second.to("meta")
+    second = second.to(device)
     union = first.union(second)
-    assert union.values.device == torch.device("meta")
+    assert union.values.device == device
 
     union, first_mapping, second_mapping = first.union_and_mapping(second)
-    assert union.values.device == torch.device("meta")
-    assert first_mapping.device == torch.device("meta")
-    assert second_mapping.device == torch.device("meta")
+    assert union.values.device == device
+    assert first_mapping.device == device
+    assert second_mapping.device == device
 
 
 def test_intersection():
@@ -344,26 +358,29 @@ def test_intersection():
     assert torch.all(second_mapping == torch.tensor([-1, 0, -1]))
 
     # check that intersection preserves devices
-    first = first.to("meta")
+    if len(AVAILABLE_DEVICES) == 0:
+        pytest.skip("no real device available")
 
-    message = "device mismatch in `Labels.intersection`: got 'meta' and 'cpu'"
+    device = AVAILABLE_DEVICES[0]
+
+    first = first.to(device)
+
+    message = "device mismatch in `Labels.intersection`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.intersection(second)
 
-    message = (
-        "device mismatch in `Labels.intersection_and_mapping`: got 'meta' and 'cpu'"
-    )
+    message = "device mismatch in `Labels.intersection_and_mapping`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.intersection_and_mapping(second)
 
-    second = second.to("meta")
+    second = second.to(device)
     intersection = first.intersection(second)
-    assert intersection.values.device == torch.device("meta")
+    assert intersection.values.device == device
 
     intersection, first_mapping, second_mapping = first.intersection_and_mapping(second)
-    assert intersection.values.device == torch.device("meta")
-    assert first_mapping.device == torch.device("meta")
-    assert second_mapping.device == torch.device("meta")
+    assert intersection.values.device == device
+    assert first_mapping.device == device
+    assert second_mapping.device == device
 
 
 def test_difference():
@@ -380,23 +397,28 @@ def test_difference():
     assert torch.all(mapping == torch.tensor([0, -1]))
 
     # check that difference preserves devices
-    first = first.to("meta")
+    if len(AVAILABLE_DEVICES) == 0:
+        pytest.skip("no real device available")
 
-    message = "device mismatch in `Labels.difference`: got 'meta' and 'cpu'"
+    device = AVAILABLE_DEVICES[0]
+
+    first = first.to(device)
+
+    message = "device mismatch in `Labels.difference`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.difference(second)
 
-    message = "device mismatch in `Labels.difference_and_mapping`: got 'meta' and 'cpu'"
+    message = "device mismatch in `Labels.difference_and_mapping`: got '.+' and 'cpu'"
     with pytest.raises(ValueError, match=message):
         first.difference_and_mapping(second)
 
-    second = second.to("meta")
+    second = second.to(device)
     difference = first.difference(second)
-    assert difference.values.device == torch.device("meta")
+    assert difference.values.device == device
 
     difference, mapping = first.difference_and_mapping(second)
-    assert difference.values.device == torch.device("meta")
-    assert mapping.device == torch.device("meta")
+    assert difference.values.device == device
+    assert mapping.device == device
 
 
 def test_dimensions_manipulation():

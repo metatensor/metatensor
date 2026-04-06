@@ -207,25 +207,15 @@ namespace io {
     /**************************************************************************/
 
     inline Labels load_labels(const std::string& path) {
-        mts_labels_t labels;
-        std::memset(&labels, 0, sizeof(labels));
-
-        details::check_status(mts_labels_load(
-            path.c_str(), &labels
-        ));
-
-        return Labels(labels);
+        const auto* ptr = mts_labels_load(path.c_str());
+        details::check_pointer(ptr);
+        return Labels(ptr);
     }
 
     inline Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count) {
-        mts_labels_t labels;
-        std::memset(&labels, 0, sizeof(labels));
-
-        details::check_status(mts_labels_load_buffer(
-            buffer, buffer_count, &labels
-        ));
-
-        return Labels(labels);
+        const auto* ptr = mts_labels_load_buffer(buffer, buffer_count);
+        details::check_pointer(ptr);
+        return Labels(ptr);
     }
 
     template <typename Buffer>

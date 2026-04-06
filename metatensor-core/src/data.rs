@@ -79,13 +79,13 @@ pub struct mts_array_t {
 
     /// Remove this array and free the associated memory. This function can be
     /// set to `NULL` if there is no memory management to do.
-    destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
+    pub destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
 
     /// This function needs to store the "data origin" for this array in
     /// `origin`. Users of `mts_array_t` should register a single data
     /// origin with `mts_register_data_origin`, and use it for all compatible
     /// arrays.
-    origin: Option<unsafe extern "C" fn(
+    pub origin: Option<unsafe extern "C" fn(
         array: *const c_void,
         origin: *mut mts_data_origin_t
     ) -> mts_status_t>,
@@ -94,7 +94,7 @@ pub struct mts_array_t {
     /// via DLPack.
     ///
     /// The implementation must store the device information in `*device`.
-    pub(crate) device: Option<unsafe extern "C" fn(
+    pub device: Option<unsafe extern "C" fn(
         array: *const c_void,
         device: *mut DLDevice,
     ) -> mts_status_t>,
@@ -102,7 +102,7 @@ pub struct mts_array_t {
     /// Query the data type of this array without a full DLPack export.
     ///
     /// The implementation must store the data type in `*dtype`.
-    pub(crate) dtype: Option<unsafe extern "C" fn(
+    pub dtype: Option<unsafe extern "C" fn(
         array: *const c_void,
         dtype: *mut DLDataType,
     ) -> mts_status_t>,
@@ -143,7 +143,7 @@ pub struct mts_array_t {
     /// responsible for calling its `deleter` function when the tensor is no
     /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
     /// exceed the lifetime of the `mts_array_t` it was created from.
-    as_dlpack: Option<unsafe extern "C" fn(
+    pub as_dlpack: Option<unsafe extern "C" fn(
         array: *mut c_void,
         dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
         device: DLDevice,
@@ -155,7 +155,7 @@ pub struct mts_array_t {
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`. If the array is a single scalar, `shape_count` should be
     /// set to 0, and the shape pointer to `NULL`.
-    shape: Option<unsafe extern "C" fn(
+    pub shape: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *mut *const usize,
         shape_count: *mut usize,
@@ -164,14 +164,14 @@ pub struct mts_array_t {
     /// Change the shape of the array managed by this `mts_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
     /// `shape` array.
-    reshape: Option<unsafe extern "C" fn(
+    pub reshape: Option<unsafe extern "C" fn(
         array: *mut c_void,
         shape: *const usize,
         shape_count: usize,
     ) -> mts_status_t>,
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
-    swap_axes: Option<unsafe extern "C" fn(
+    pub swap_axes: Option<unsafe extern "C" fn(
         array: *mut c_void,
         axis_1: usize,
         axis_2: usize,
@@ -187,7 +187,7 @@ pub struct mts_array_t {
     /// with the same dtype as this array. This function should call
     /// `fill_value.destroy` if the function pointer is not `NULL` when
     /// `fill_value` is no longer needed.
-    create: Option<unsafe extern "C" fn(
+    pub create: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *const usize,
         shape_count: usize,
@@ -199,7 +199,7 @@ pub struct mts_array_t {
     ///
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
-    copy: Option<unsafe extern "C" fn(
+    pub copy: Option<unsafe extern "C" fn(
         array: *const c_void,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
@@ -217,7 +217,7 @@ pub struct mts_array_t {
     /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
     /// x]` for `i` up to `movements_count` and `x` up to
     /// `movements[i].properties_length`. All indexes are 0-based.
-    move_data: Option<unsafe extern "C" fn(
+    pub move_data: Option<unsafe extern "C" fn(
         output: *mut c_void,
         input: *const c_void,
         movements: *const mts_data_movement_t,

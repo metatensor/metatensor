@@ -1,7 +1,7 @@
 use std::ffi::{CStr, CString};
 use std::iter::FusedIterator;
 
-use crate::c_api::{mts_block_t, mts_array_t, mts_labels_t};
+use crate::c_api::{mts_block_t, mts_array_t};
 use crate::c_api::MTS_INVALID_PARAMETER_ERROR;
 
 use crate::errors::check_status;
@@ -136,15 +136,12 @@ impl<'a> TensorBlockRef<'a> {
 
     #[inline]
     fn labels(&self, dimension: usize) -> Labels {
-        let mut labels = mts_labels_t::null();
-        unsafe {
-            check_status(crate::c_api::mts_block_labels(
-                self.as_ptr(),
-                dimension,
-                &mut labels,
-            )).expect("failed to get labels");
-        }
-        return unsafe { Labels::from_raw(labels) };
+        let ptr = unsafe {
+            crate::c_api::mts_block_labels(self.as_ptr(), dimension)
+        };
+        crate::errors::check_ptr(ptr).expect("failed to get labels");
+
+        unsafe { Labels::from_raw(ptr) }
     }
 
     /// Get the samples for this block

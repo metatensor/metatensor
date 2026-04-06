@@ -232,7 +232,7 @@ public:
     }
 
     ~DLPackArray() {
-        if (managed_ != nullptr && managed_->deleter) {
+        if (managed_ != nullptr && managed_->deleter != nullptr) {
             managed_->deleter(managed_);
         }
     }
@@ -249,7 +249,7 @@ public:
 
     /// DLPackArray can be move-assigned
     DLPackArray& operator=(DLPackArray&& other) noexcept {
-        if (managed_ != nullptr && managed_->deleter) {
+        if (managed_ != nullptr && managed_->deleter != nullptr) {
             managed_->deleter(managed_);
         }
 
@@ -745,7 +745,7 @@ public:
     }
 
     /// Get the data type of this array.
-    virtual DLDataType dtype() const {
+    DLDataType dtype() const {
         if (array_.dtype == nullptr) {
             throw Error("invalid mts_array_t: null dtype function pointer");
         }
@@ -993,7 +993,7 @@ public:
             return details::catch_exceptions([](void* array, const uintptr_t* shape, uintptr_t shape_count){
                 auto* cxx_array = static_cast<DataArrayBase*>(array);
                 auto cxx_shape = std::vector<uintptr_t>(shape, shape + shape_count);
-                cxx_array->reshape(std::move(cxx_shape));
+                cxx_array->reshape(cxx_shape);
             }, array, shape, shape_count);
         };
 
@@ -1075,7 +1075,7 @@ public:
     const std::vector<uintptr_t>& shape() && = delete;
 
     /// Set the shape of this array to the given `shape`
-    virtual void reshape(std::vector<uintptr_t> shape) = 0;
+    virtual void reshape(const std::vector<uintptr_t>& shape) = 0;
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
     virtual void swap_axes(uintptr_t axis_1, uintptr_t axis_2) = 0;
@@ -1153,11 +1153,11 @@ public:
         return shape_;
     }
 
-    void reshape(std::vector<uintptr_t> shape) override {
+    void reshape(const std::vector<uintptr_t>& shape) override {
         if (details::product(shape_) != details::product(shape)) {
             throw metatensor::Error("invalid shape in reshape");
         }
-        shape_ = std::move(shape);
+        shape_ = shape;
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
@@ -1487,6 +1487,7 @@ public:
         return details::dtype_of<double>();
     }
 
+    [[noreturn]]
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {
         throw metatensor::Error("can not call `as_dlpack` for an EmtpyDataArray");
     }
@@ -1495,11 +1496,11 @@ public:
         return shape_;
     }
 
-    void reshape(std::vector<uintptr_t> shape) override {
+    void reshape(const std::vector<uintptr_t>& shape) override {
         if (details::product(shape_) != details::product(shape)) {
             throw metatensor::Error("invalid shape in reshape");
         }
-        shape_ = std::move(shape);
+        shape_ = shape;
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
@@ -1517,6 +1518,7 @@ public:
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
 
+    [[noreturn]]
     void move_data(const DataArrayBase&, std::vector<mts_data_movement_t>) override {
         throw metatensor::Error("can not call `move_data` for an EmptyDataArray");
     }

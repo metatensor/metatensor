@@ -282,7 +282,7 @@ TEST_CASE("DLPack conversion") {
                 /*device=*/{kDLCUDA, 0},
                 /*stream=*/&stream_idx,
                 /*max_version=*/version
-            ), Catch::Matchers::Contains("CUDA stream support is not implemented yet"));
+            ), Catch::Matchers::Contains("CUDA stream synchronization is not yet implemented"));
             // CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
             // dl_managed->deleter(dl_managed);
         }
