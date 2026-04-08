@@ -262,7 +262,7 @@ TEST_CASE("TensorMap") {
         auto tensor = test_tensor_map().keys_to_properties("key_1", /*fill_value*/ std::numeric_limits<double>::quiet_NaN(), /*sort_samples*/ true);
 
         auto block = tensor.block_by_id(0);
-        auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());
+        const auto& values = SimpleDataArray<double>::from_mts_array(block.mts_array());
         auto view = values.view();
 
         // Sample 0: exists in both key_1=0 (val=1.0) and key_1=1 (val=2.0)

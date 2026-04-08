@@ -199,12 +199,15 @@ impl<'a> ArrayRef<'a> {
             )?;
         }
 
-        assert!(shape_count > 0);
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        return Ok(shape);
+        if shape_count == 0 {
+            return Ok(&[]);
+        } else {
+            assert!(!shape.is_null());
+            let shape = unsafe {
+                std::slice::from_raw_parts(shape, shape_count)
+            };
+            return Ok(shape);
+        }
     }
 
     /// Create a new array with the same options as this one (dtype, device)
@@ -501,12 +504,15 @@ impl<'a> ArrayRefMut<'a> {
             )?;
         }
 
-        assert!(shape_count > 0);
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        return Ok(shape);
+        if shape_count == 0 {
+            return Ok(&[]);
+        } else {
+            assert!(!shape.is_null());
+            let shape = unsafe {
+                std::slice::from_raw_parts(shape, shape_count)
+            };
+            return Ok(shape);
+        }
     }
 
     /// Reshape the data in this array, if supported by the underlying data.

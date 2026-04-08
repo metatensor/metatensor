@@ -278,16 +278,9 @@ def _extract_scalar_from_mts_array(mts_array):
     )
     _check_status(status)
 
-    if shape_count.value != 1:
-        raise ValueError(
-            "fill_value must be a scalar (shape (1,)), "
-            f"got shape with {shape_count.value} dimensions"
-        )
-
-    if shape_ptr[0] != 1:
-        raise ValueError(
-            f"fill_value must be a scalar (shape (1,)), got shape ({shape_ptr[0]},)"
-        )
+    if shape_count.value != 0:
+        shape = [shape_ptr[i] for i in range(shape_count.value)]
+        raise ValueError(f"`fill_value` must be a single scalar, got shape {shape}")
 
     # Use as_dlpack to get the data
     dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
@@ -303,7 +296,7 @@ def _extract_scalar_from_mts_array(mts_array):
     _check_status(status)
 
     array = np.from_dlpack(DLPackArray(dl_managed_ptr))
-    return array[0]
+    return array[()]
 
 
 @catch_exceptions

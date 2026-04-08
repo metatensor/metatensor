@@ -25,7 +25,7 @@ where
             .expect("failed to extract fill_value as DLPack");
 
         // Validate fill_value shape from the DLPack tensor directly
-        assert_eq!(fill_value_dlpack.shape(), [1], "fill_value must have shape (1,)");
+        assert!(fill_value_dlpack.shape().is_empty(), "`fill_value` must be a single scalar");
 
         let fill_value_ptr = fill_value_dlpack.data_ptr::<T>().expect("dtype mismatch between array and fill_value");
         let fill_value_scalar = unsafe { std::ptr::read(fill_value_ptr) };
@@ -226,7 +226,7 @@ mod tests {
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
 
-        let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![1], 42.0));
+        let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![], 42.0));
 
         let created = mts_array.create(&[2, 3, 4], fill_value.as_ref()).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
@@ -263,7 +263,7 @@ mod tests {
 
 
             // And `create` should make an array of the same type (i32)
-            let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![1], T::default()));
+            let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![], T::default()));
 
             let created = mts_array.create(&[1, 1], fill_value.as_ref()).unwrap();
             let dl_managed = created.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();

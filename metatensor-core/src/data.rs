@@ -153,7 +153,8 @@ pub struct mts_array_t {
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
-    /// `*shape_count`.
+    /// `*shape_count`. If the array is a single scalar, `shape_count` should be
+    /// set to 0, and the shape pointer to `NULL`.
     shape: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *mut *const usize,
@@ -162,7 +163,7 @@ pub struct mts_array_t {
 
     /// Change the shape of the array managed by this `mts_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
-    /// `shape` array
+    /// `shape` array.
     reshape: Option<unsafe extern "C" fn(
         array: *mut c_void,
         shape: *const usize,
@@ -182,9 +183,10 @@ pub struct mts_array_t {
     /// in `shape_count`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`,
-    /// which must be an `mts_array_t` with shape `(1,)` and the same dtype as
-    /// this array. This function should call `fill_value.destroy` if the
-    /// function pointer is not null when `fill_value` is no longer needed.
+    /// which must be an `mts_array_t` containing a single scalar (empty shape)
+    /// with the same dtype as this array. This function should call
+    /// `fill_value.destroy` if the function pointer is not `NULL` when
+    /// `fill_value` is no longer needed.
     create: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *const usize,
@@ -387,7 +389,8 @@ impl mts_array_t {
         return Ok(tensor);
     }
 
-    /// Get the shape of this array
+    /// Get the shape of this array, this can be empty if the array has no shape
+    /// (e.g. a scalar).
     #[allow(clippy::cast_possible_truncation)]
     pub fn shape(&self) -> Result<&[usize], Error> {
         let function = self.shape.expect("mts_array_t.shape function is NULL");
@@ -409,13 +412,15 @@ impl mts_array_t {
             });
         }
 
-        assert!(shape_count > 0);
-        assert!(!shape.is_null());
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        return Ok(shape);
+        if shape_count == 0 {
+            return Ok(&[]);
+        } else {
+            assert!(!shape.is_null());
+            let shape = unsafe {
+                std::slice::from_raw_parts(shape, shape_count)
+            };
+            return Ok(shape);
+        }
     }
 
     /// Set the shape of this array to the given new `shape`
@@ -478,9 +483,9 @@ impl mts_array_t {
         }
 
         let fill_shape = fill_value.shape()?;
-        if fill_shape != [1] {
+        if !fill_shape.is_empty() {
             return Err(Error::InvalidParameter(format!(
-                "fill_value must have shape [1], got {:?}", fill_shape
+                "fill_value must be a single scalar, got a shape {:?}", fill_shape
             )));
         }
 

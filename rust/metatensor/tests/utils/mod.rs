@@ -6,9 +6,9 @@ use metatensor::c_api::mts_array_t;
 
 use ndarray::ArcArray;
 
-/// Create an mts_array_t fill value with the given scalar (shape (1,), f64)
+/// Create an mts_array_t fill value with the given scalar
 pub fn make_fill_value(scalar: f64) -> mts_array_t {
-    let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![1], scalar));
+    let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![], scalar));
     mts_array_t::from(data)
 }
 
