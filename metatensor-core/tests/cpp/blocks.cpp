@@ -199,7 +199,7 @@ TEST_CASE("values<T>() with non-double types") {
     SECTION("float block") {
         auto block = TensorBlock(
             std::unique_ptr<SimpleDataArray<float>>(
-                new SimpleDataArray<float>({2, 2}, {1.5f, 2.5f, 3.5f, 4.5f})
+                new SimpleDataArray<float>({2, 2}, {1.5F, 2.5F, 3.5F, 4.5F})
             ),
             Labels({"samples"}, {{0}, {1}}),
             {},
@@ -208,8 +208,8 @@ TEST_CASE("values<T>() with non-double types") {
 
         auto values = block.values<float>();
         CHECK(values.shape() == std::vector<size_t>{2, 2});
-        CHECK(values(0, 0) == Approx(1.5f));
-        CHECK(values(1, 1) == Approx(4.5f));
+        CHECK(values(0, 0) == Approx(1.5F));
+        CHECK(values(1, 1) == Approx(4.5F));
     }
 
     SECTION("default T=double") {
