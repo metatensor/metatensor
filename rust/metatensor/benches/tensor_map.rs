@@ -44,7 +44,7 @@ mod benchmarks {
     }
 
     fn make_fill_value(scalar: f64) -> mts_array_t {
-        let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![1], scalar));
+        let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![], scalar));
         mts_array_t::from(data)
     }
 
