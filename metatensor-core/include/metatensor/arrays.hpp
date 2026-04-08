@@ -159,6 +159,33 @@ namespace details {
         return false;
     }
 
+    template<typename Lhs, typename Rhs>
+    bool arrays_equal(const Lhs& lhs, const Rhs& rhs) {
+        if (lhs.shape() != rhs.shape()) {
+            return false;
+        }
+
+        using lhs_data_t = std::remove_cv_t<std::remove_pointer_t<decltype(lhs.data())>>;
+        using rhs_data_t = std::remove_cv_t<std::remove_pointer_t<decltype(rhs.data())>>;
+
+        static_assert(std::is_same_v<lhs_data_t, rhs_data_t>, "data types of lhs and rhs must be the same");
+
+        if (std::is_integral_v<lhs_data_t>) {
+            // compare integers with memcmp
+            return std::memcmp(lhs.data(), rhs.data(), sizeof(lhs_data_t) * details::product(lhs.shape())) == 0;
+        } else {
+            // make sure to handle NaN and ±0.0 correctly when comparing floating
+            // point data and everything else
+            const auto* lhs_ptr = lhs.data();
+            const auto* rhs_ptr = rhs.data();
+            for (size_t i=0; i<details::product(lhs.shape()); i++) {
+                if (lhs_ptr[i] != rhs_ptr[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+    }
 } // namespace details
 
 
@@ -321,6 +348,19 @@ private:
     std::vector<size_t> shape_;
 };
 
+/// Compare this `DLPackArray` with another `DLPackArray`. The array are equal if
+/// and only if both the shape and data are equal.
+template<typename T>
+bool operator==(const DLPackArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare this `DLPackArray` with another `DLPackArray`. The array are equal
+/// if and only if both the shape and data are equal.
+template<typename T>
+bool operator!=(const DLPackArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
 
 /// Simple N-dimensional array interface
 ///
@@ -578,32 +618,42 @@ private:
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator==(const NDArray<T>& lhs, const NDArray<T>& rhs) {
-    if (lhs.shape() != rhs.shape()) {
-        return false;
-    }
-
-    if (std::is_integral_v<T>) {
-        // compare integers with memcmp
-        return std::memcmp(lhs.data(), rhs.data(), sizeof(T) * details::product(lhs.shape())) == 0;
-    } else {
-        // make sure to handle NaN and ±0.0 correctly when comparing floating
-        // point data and everything else
-        const auto* lhs_ptr = lhs.data();
-        const auto* rhs_ptr = rhs.data();
-        for (size_t i=0; i<details::product(lhs.shape()); i++) {
-            if (lhs_ptr[i] != rhs_ptr[i]) {
-                return false;
-            }
-        }
-        return true;
-    }
+    return details::arrays_equal(lhs, rhs);
 }
 
 /// Compare this `NDArray` with another `NDarray`. The array are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
-    return !(lhs == rhs);
+    return !details::arrays_equal(lhs, rhs);
+}
+
+/// Compare this `DLPackArray` with another `NDArray`. The array are equal if
+/// and only if both the shape and data are equal.
+template<typename T>
+bool operator==(const DLPackArray<T>& lhs, const NDArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare this `DLPackArray` with another `NDArray`. The array are equal
+/// if and only if both the shape and data are equal.
+template<typename T>
+bool operator!=(const DLPackArray<T>& lhs, const NDArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
+
+/// Compare an `NDArray` with a `DLPackArray`. The array are equal if
+/// and only if both the shape and data are equal.
+template<typename T>
+bool operator==(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare this `NDArray` with another `DLPackArray`. The array are equal
+/// if and only if both the shape and data are equal.
+template<typename T>
+bool operator!=(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
 }
 
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
@@ -1204,6 +1254,16 @@ public:
         return managed.release();
     }
 
+    /// Get a pointer to the data managed by this SimpleDataArray
+    T* data() {
+        return data_->data();
+    }
+
+    /// Get a const pointer to the data managed by this SimpleDataArray
+    const T* data() const {
+        return data_->data();
+    }
+
 private:
     std::vector<uintptr_t> shape_;
     std::shared_ptr<std::vector<T>> data_;
@@ -1212,19 +1272,68 @@ private:
     friend bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs);
 };
 
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-template<typename U>
-inline bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
+/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The array are
+/// equal if and only if both the shape and data are equal.
+template<typename T>
+inline bool operator==(const SimpleDataArray<T>& lhs, const SimpleDataArray<T>& rhs) {
     return lhs.shape_ == rhs.shape_ && *lhs.data_ == *rhs.data_;
 }
 
-/// Two SimpleDataArray compare as equal if they have the exact same shape and
-/// data.
-template<typename U>
-inline bool operator!=(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs) {
+/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The array are
+/// equal if and only if both the shape and data are equal.
+template<typename T>
+inline bool operator!=(const SimpleDataArray<T>& lhs, const SimpleDataArray<T>& rhs) {
     return !(lhs == rhs);
 }
+
+/// Compare a `DLPackArray` with a `SimpleDataArray`
+template<typename T>
+bool operator==(const DLPackArray<T>& lhs, const SimpleDataArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `DLPackArray` with a `SimpleDataArray`
+template<typename T>
+bool operator!=(const DLPackArray<T>& lhs, const SimpleDataArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `SimpleDataArray` with a `DLPackArray`
+template<typename T>
+bool operator==(const SimpleDataArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `SimpleDataArray` with a `DLPackArray`
+template<typename T>
+bool operator!=(const SimpleDataArray<T>& lhs, const DLPackArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `SimpleDataArray` with a `NDArray`
+template<typename T>
+bool operator==(const SimpleDataArray<T>& lhs, const NDArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `SimpleDataArray` with a `NDArray`
+template<typename T>
+bool operator!=(const SimpleDataArray<T>& lhs, const NDArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `NDArray` with a `SimpleDataArray`
+template<typename T>
+bool operator==(const NDArray<T>& lhs, const SimpleDataArray<T>& rhs) {
+    return details::arrays_equal(lhs, rhs);
+}
+
+/// Compare a `NDArray` with a `SimpleDataArray`
+template<typename T>
+bool operator!=(const NDArray<T>& lhs, const SimpleDataArray<T>& rhs) {
+    return !details::arrays_equal(lhs, rhs);
+}
+
 
 /// An implementation of `DataArrayBase` containing no data.
 ///
