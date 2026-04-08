@@ -6,7 +6,7 @@ use std::os::raw::c_void;
 use dlpk::sys::{DLDataType, DLDataTypeCode};
 
 use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
-use crate::Array;
+use crate::MtsArray;
 
 mod tensor;
 pub use self::tensor::{load, save, load_buffer, save_buffer};
@@ -42,11 +42,11 @@ unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size
     return result;
 }
 
-/// Create a typed `ndarray::ArcArray<T>` and box it as `dyn Array`.
+/// Create a typed `ndarray::Array<T>` and box it as `dyn Array`.
 macro_rules! create_typed_array {
     ($shape:expr, $c_array:expr, $T:ty) => {{
-        let array = ndarray::ArcArray::<$T, _>::from_elem($shape, <$T>::default());
-        *$c_array = (Box::new(array) as Box<dyn Array>).into();
+        let array = ndarray::Array::<$T, _>::from_elem($shape, <$T>::default());
+        std::convert::Into::<MtsArray>::into(array)
     }};
 }
 
@@ -71,7 +71,7 @@ unsafe extern "C" fn create_ndarray(
             });
         }
 
-        match (dtype.code, dtype.bits) {
+        let array = match (dtype.code, dtype.bits) {
             (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
             (DLDataTypeCode::kDLFloat, 64) => create_typed_array!(shape, c_array, f64),
             (DLDataTypeCode::kDLInt, 8) => create_typed_array!(shape, c_array, i8),
@@ -95,7 +95,9 @@ unsafe extern "C" fn create_ndarray(
                     ),
                 });
             }
-        }
+        };
+
+        *c_array = array.into_raw();
 
         Ok(())
     })
