@@ -39,8 +39,8 @@ impl Array for EmptyArray {
         Box::new(EmptyArray { shape: self.shape.clone() })
     }
 
-    fn shape(&self) -> &[usize] {
-        &self.shape
+    fn shape(&self) -> Vec<usize> {
+        self.shape.clone()
     }
 
     fn reshape(&mut self, shape: &[usize]) {

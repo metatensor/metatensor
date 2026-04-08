@@ -1,6 +1,7 @@
 use std::ptr::NonNull;
+use std::sync::{Arc, RwLock, RwLockReadGuard};
 
-use ndarray::{ArcArray, IxDyn};
+use ndarray::ArrayD;
 use dlpk::sys::DLDevice;
 
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
@@ -9,7 +10,7 @@ use crate::c_api::{MTS_SUCCESS, mts_last_error};
 use crate::Error;
 use crate::errors::{LAST_RUST_ERROR, RUST_FUNCTION_FAILED_ERROR_CODE};
 
-use super::{Array, ArrayRef, ArrayRefMut};
+use super::{ArrayRef, ArrayRefMut};
 use super::origin::get_data_origin;
 
 /// Wrapper around `mts_array_t` that provides a more convenient API to use it
@@ -34,9 +35,14 @@ impl MtsArray {
         MtsArray { array }
     }
 
-    /// Create a new `MtsArray` from any type that implements the [`Array`] trait.
-    pub fn new(value: impl Array) -> MtsArray {
-        MtsArray { array: mts_array_t::from(Box::new(value) as Box<dyn Array>) }
+    /// Get the underlying `mts_array_t`, transferring ownership of the data to
+    /// the caller.
+    pub fn into_raw(self) -> mts_array_t {
+        let array = self.array;
+        // since mts_array_t is Copy, we need to forget self to avoid calling
+        // Drop when this function returns
+        std::mem::forget(self);
+        array
     }
 
     /// Get the underlying array as an `&dyn Any` instance.
@@ -52,17 +58,22 @@ impl MtsArray {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any();
         }
     }
 
+    #[inline]
+    fn as_lock<T>(&self) -> &Arc<RwLock<ArrayD<T>>> where T: 'static {
+        self.as_any().downcast_ref().expect("this is not an Arc<RwLock<ArrayD>>")
+    }
+
     /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
     /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
     #[inline]
-    pub fn as_ndarray(&self) -> &ArcArray<f64, IxDyn> {
-        self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
+    pub fn as_ndarray<T>(&self) -> RwLockReadGuard<'_, ArrayD<T>> where T: 'static {
+        return self.as_lock().read().expect("lock was poisoned");
     }
 
     /// Get the underlying `mts_array_t`.

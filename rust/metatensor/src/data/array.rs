@@ -38,7 +38,7 @@ pub trait Array: std::any::Any + Send + Sync {
 
     /// Get the shape of the array. This can be empty if the array has no shape
     /// (e.g. a scalar).
-    fn shape(&self) -> &[usize];
+    fn shape(&self) -> Vec<usize>;
 
     /// Change the shape of the array to the given `shape`
     fn reshape(&mut self, shape: &[usize]);
@@ -88,15 +88,35 @@ pub trait Array: std::any::Any + Send + Sync {
     ) -> Result<DLPackTensor, Error>;
 }
 
-impl From<Box<dyn Array>> for mts_array_t {
-    fn from(array: Box<dyn Array>) -> Self {
-        // We need to box the box to make sure the pointer is a normal 1-word
-        // pointer (`Box<dyn Trait>` contains a 2-words, *fat* pointer which can
-        // not be casted to `*mut c_void`)
-        let array = Box::new(array);
+pub (super) struct RustArray {
+    impl_: Box<dyn Array>,
+    shape: Vec<usize>,
+}
 
-        return mts_array_t {
-            ptr: Box::into_raw(array).cast(),
+impl std::ops::Deref for RustArray {
+    type Target = dyn Array;
+
+    fn deref(&self) -> &Self::Target {
+        &*self.impl_
+    }
+}
+
+impl std::ops::DerefMut for RustArray {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut *self.impl_
+    }
+}
+
+impl From<Box<dyn Array>> for MtsArray {
+    fn from(value: Box<dyn Array>) -> Self {
+        let shape = value.shape();
+        let array = RustArray {
+            impl_: value,
+            shape,
+        };
+
+        let raw = mts_array_t {
+            ptr: Box::into_raw(Box::new(array)).cast(),
             origin: Some(rust_array_origin),
             device: Some(rust_array_device),
             dtype: Some(rust_array_dtype),
@@ -108,7 +128,16 @@ impl From<Box<dyn Array>> for mts_array_t {
             copy: Some(rust_array_copy),
             destroy: Some(rust_array_destroy),
             move_data: Some(rust_array_move_data),
-        }
+        };
+
+        return MtsArray::from_raw(raw);
+    }
+}
+
+impl<T> From<T> for MtsArray where T: Array + 'static {
+    fn from(value: T) -> Self {
+        let boxed = Box::new(value) as Box<dyn Array>;
+        return MtsArray::from(boxed);
     }
 }
 
@@ -127,11 +156,11 @@ macro_rules! check_pointers {
 }
 
 pub(super) static RUST_DATA_ORIGIN: Lazy<mts_data_origin_t> = Lazy::new(|| {
-    super::origin::register_data_origin("rust.Box<dyn Array>".into()).expect("failed to register a new origin")
+    super::origin::register_data_origin("RustArray".into()).expect("failed to register a new origin")
 });
 
 /******************************************************************************/
-/// Implementation of `mts_array_t.origin` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.origin` using `RustArray`
 unsafe extern "C" fn rust_array_origin(
     array: *const c_void,
     origin: *mut mts_data_origin_t
@@ -144,35 +173,35 @@ unsafe extern "C" fn rust_array_origin(
     })
 }
 
-/// Implementation of `mts_array_t.device` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.device` using `RustArray`
 unsafe extern "C" fn rust_array_device(
     array: *const c_void,
     device: *mut DLDevice,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, device);
-        let array = array.cast::<Box<dyn Array>>();
-        *device = (*array).device();
+        let array = array.cast::<RustArray>();
+        *device = (*array).impl_.device();
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.dtype` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.dtype` using `RustArray`
 unsafe extern "C" fn rust_array_dtype(
     array: *const c_void,
     dtype: *mut DLDataType,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, dtype);
-        let array = array.cast::<Box<dyn Array>>();
-        *dtype = (*array).dtype();
+        let array = array.cast::<RustArray>();
+        *dtype = (*array).impl_.dtype();
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.shape` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.shape` using `RustArray`
 unsafe extern "C" fn rust_array_shape(
     array: *const c_void,
     shape: *mut *const usize,
@@ -180,8 +209,8 @@ unsafe extern "C" fn rust_array_shape(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, shape, shape_count);
-        let array = array.cast::<Box<dyn Array>>();
-        let rust_shape = (*array).shape();
+        let array = array.cast::<RustArray>();
+        let rust_shape = &(*array).shape;
 
         *shape = rust_shape.as_ptr();
         *shape_count = rust_shape.len();
@@ -190,7 +219,7 @@ unsafe extern "C" fn rust_array_shape(
     })
 }
 
-/// Implementation of `mts_array_t.reshape` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.reshape` using `RustArray`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern "C" fn rust_array_reshape(
     array: *mut c_void,
@@ -199,7 +228,7 @@ unsafe extern "C" fn rust_array_reshape(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array);
-        let array = array.cast::<Box<dyn Array>>();
+        let array = array.cast::<RustArray>();
 
         let shape = if shape_count == 0 {
             &[]
@@ -208,13 +237,14 @@ unsafe extern "C" fn rust_array_reshape(
             std::slice::from_raw_parts(shape, shape_count)
         };
 
-        (*array).reshape(shape);
+        (*array).impl_.reshape(shape);
+        (*array).shape = shape.to_vec();
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.swap_axes` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.swap_axes` using `RustArray`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern "C" fn rust_array_swap_axes(
     array: *mut c_void,
@@ -223,14 +253,15 @@ unsafe extern "C" fn rust_array_swap_axes(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array);
-        let array = array.cast::<Box<dyn Array>>();
-        (*array).swap_axes(axis_1, axis_2);
+        let array = array.cast::<RustArray>();
+        (*array).impl_.swap_axes(axis_1, axis_2);
+        (*array).shape.swap(axis_1, axis_2);
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.create` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.create` using `RustArray`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern "C" fn rust_array_create(
     array: *const c_void,
@@ -241,7 +272,7 @@ unsafe extern "C" fn rust_array_create(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, array_storage);
-        let array = array.cast::<Box<dyn Array>>();
+        let array = array.cast::<RustArray>();
 
         let shape = if shape_count == 0 {
             &[]
@@ -250,40 +281,44 @@ unsafe extern "C" fn rust_array_create(
             std::slice::from_raw_parts(shape, shape_count)
         };
 
-        let new_array = (*array).create(shape, MtsArray::from_raw(fill_value));
+        let new_array = (*array).impl_.create(shape, MtsArray::from_raw(fill_value));
+        let new_array = MtsArray::from(new_array);
 
-        *array_storage = new_array.into();
+        *array_storage = new_array.into_raw();
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.copy` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.copy` using `RustArray`
 unsafe extern "C" fn rust_array_copy(
     array: *const c_void,
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, array_storage);
-        let array = array.cast::<Box<dyn Array>>();
-        *array_storage = (*array).copy().into();
+        let array = array.cast::<RustArray>();
+
+        let new_array = (*array).impl_.copy();
+        let new_array = MtsArray::from(new_array);
+        *array_storage = new_array.into_raw();
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.destroy` for `Box<dyn Array>`
+/// Implementation of `mts_array_t.destroy` for `RustArray`
 unsafe extern "C" fn rust_array_destroy(
     array: *mut c_void,
 ) {
     if !array.is_null() {
-        let array = array.cast::<Box<dyn Array>>();
+        let array = array.cast::<RustArray>();
         let boxed = Box::from_raw(array);
         std::mem::drop(boxed);
     }
 }
 
-/// Implementation of `mts_array_t.move_sample` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.move_sample` using `RustArray`
 #[allow(clippy::cast_possible_truncation)]
 unsafe extern "C" fn rust_array_move_data(
     output: *mut c_void,
@@ -293,8 +328,8 @@ unsafe extern "C" fn rust_array_move_data(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(output, input);
-        let output = output.cast::<Box<dyn Array>>();
-        let input = input.cast::<Box<dyn Array>>();
+        let output = output.cast::<RustArray>();
+        let input = input.cast::<RustArray>();
 
         let movements = if movements_count == 0 {
             &[]
@@ -303,13 +338,13 @@ unsafe extern "C" fn rust_array_move_data(
             std::slice::from_raw_parts(movements, movements_count)
         };
 
-        (*output).move_data(&**input, movements);
+        (*output).impl_.move_data(&*(*input).impl_, movements);
 
         Ok(())
     })
 }
 
-/// Implementation of `mts_array_t.as_dlpack` using `Box<dyn Array>`
+/// Implementation of `mts_array_t.as_dlpack` using `RustArray`
 unsafe extern "C" fn rust_array_as_dlpack(
     array: *mut c_void,
     out: *mut *mut DLManagedTensorVersioned,
@@ -319,12 +354,11 @@ unsafe extern "C" fn rust_array_as_dlpack(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, out);
-        let array = array.cast::<Box<dyn Array>>();
+        let array = array.cast::<RustArray>();
         let stream_opt = stream.as_ref().copied();
-        let tensor = (*array).as_dlpack(device, stream_opt, max_version)?;
+        let tensor = (*array).impl_.as_dlpack(device, stream_opt, max_version)?;
 
-        let raw_ptr = tensor.into_raw();
-        *out = raw_ptr.as_ptr();
+        *out = tensor.into_raw().as_ptr();
 
         Ok(())
     })

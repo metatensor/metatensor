@@ -5,9 +5,7 @@ compile_error!("the bench feature is required for bencharks, use `cargo bench --
 mod benchmarks {
     use criterion::{BatchSize, BenchmarkId, Criterion};
     pub use criterion::{criterion_group, criterion_main};
-    use metatensor::{Array, Labels, LabelsBuilder, TensorBlock, TensorMap};
-    use metatensor::c_api::mts_array_t;
-    use ndarray::ArcArray;
+    use metatensor::{Labels, LabelsBuilder, MtsArray, TensorBlock, TensorMap};
 
     fn tensor_map(n_blocks: usize, n_samples: usize, n_properties: usize) -> TensorMap {
         let mut keys = LabelsBuilder::new(vec!["key_1", "key_2"]);
@@ -35,7 +33,7 @@ mod benchmarks {
             let properties = properties.finish();
 
             let shape = vec![samples.count(), components[0].count(), properties.count()];
-            let data = ArcArray::from_elem(shape, 1.0);
+            let data = ndarray::Array::from_elem(shape, 1.0);
 
             blocks.push(TensorBlock::new(data, &samples, &components, &properties).unwrap());
         }
@@ -43,9 +41,8 @@ mod benchmarks {
         TensorMap::new(keys, blocks).unwrap()
     }
 
-    fn make_fill_value(scalar: f64) -> mts_array_t {
-        let data: Box<dyn Array> = Box::new(ArcArray::from_elem(vec![], scalar));
-        mts_array_t::from(data)
+    fn make_fill_value(scalar: f64) -> MtsArray {
+        MtsArray::from(ndarray::Array::from_elem(vec![], scalar))
     }
 
     pub fn keys_to_samples(c: &mut Criterion) {

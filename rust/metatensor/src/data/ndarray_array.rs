@@ -1,3 +1,5 @@
+use std::sync::{Arc, RwLock, TryLockError};
+
 use dlpk::sys::{DLDevice, DLPackVersion, DLDataType};
 use dlpk::{DLPackTensor, GetDLPackDataType, DLPackPointerCast};
 
@@ -6,7 +8,15 @@ use crate::c_api::mts_data_movement_t;
 
 use super::{Array, MtsArray};
 
-impl<T> Array for ndarray::ArcArray<T, ndarray::IxDyn>
+impl<T> From<ndarray::ArrayD<T>> for MtsArray where T: 'static + Clone + Send + Default + Sync + GetDLPackDataType + DLPackPointerCast {
+    fn from(value: ndarray::ArrayD<T>) -> Self {
+        let array = Arc::new(RwLock::new(value));
+        let boxed: Box<dyn Array> = Box::new(array);
+        return MtsArray::from(boxed);
+    }
+}
+
+impl<T> Array for Arc<RwLock<ndarray::ArrayD<T>>>
 where
     T: 'static + Send + Sync + Clone + Default + GetDLPackDataType + DLPackPointerCast,
 {
@@ -21,32 +31,49 @@ where
     fn create(&self, shape: &[usize], fill_value: MtsArray) -> Box<dyn Array> {
         let cpu_device = DLDevice::cpu();
         let max_version = DLPackVersion::current();
-        let fill_value_dlpack = fill_value.as_dlpack(cpu_device, None, max_version)
-            .expect("failed to extract fill_value as DLPack");
+        let fill_value_dlpack = fill_value.as_dlpack(cpu_device, None, max_version).expect("failed to extract fill_value as DLPack");
 
         // Validate fill_value shape from the DLPack tensor directly
-        assert!(fill_value_dlpack.shape().is_empty(), "`fill_value` must be a single scalar");
+        assert_eq!(fill_value_dlpack.shape(), [], "fill_value must have shape (1,)");
+        assert_eq!(fill_value_dlpack.device(), cpu_device, "fill_value must be on CPU");
 
         let fill_value_ptr = fill_value_dlpack.data_ptr::<T>().expect("dtype mismatch between array and fill_value");
         let fill_value_scalar = unsafe { std::ptr::read(fill_value_ptr) };
 
-        Box::new(ndarray::ArcArray::from_elem(shape, fill_value_scalar))
+        let array = ndarray::Array::from_elem(shape, fill_value_scalar);
+        return Box::new(Arc::new(RwLock::new(array)));
     }
 
     fn copy(&self) -> Box<dyn Array> {
         return Box::new(self.clone());
     }
 
-    fn shape(&self) -> &[usize] {
-        return self.shape();
+    fn shape(&self) -> Vec<usize> {
+        match self.try_read() {
+            Ok(lock) => lock.shape().to_vec(),
+            Err(TryLockError::Poisoned(_)) => panic!("array lock is poisoned"),
+            Err(TryLockError::WouldBlock) => panic!("array is already locked"),
+        }
     }
 
     fn reshape(&mut self, shape: &[usize]) {
-        *self = self.to_shape(shape).expect("invalid shape").to_shared();
+        let mut lock = match self.try_write() {
+            Ok(lock) => lock,
+            Err(TryLockError::Poisoned(_)) => panic!("array lock is poisoned"),
+            Err(TryLockError::WouldBlock) => panic!("array is already locked"),
+        };
+        let array = std::mem::take(&mut *lock);
+        let array = array.into_shape_clone(shape).expect("invalid shape");
+        let _ = std::mem::replace(&mut *lock, array);
     }
 
     fn swap_axes(&mut self, axis_1: usize, axis_2: usize) {
-        self.swap_axes(axis_1, axis_2);
+        let mut lock = match self.try_write() {
+            Ok(lock) => lock,
+            Err(TryLockError::Poisoned(_)) => panic!("array lock is poisoned"),
+            Err(TryLockError::WouldBlock) => panic!("array is already locked"),
+        };
+        lock.swap_axes(axis_1, axis_2);
     }
 
     fn move_data(
@@ -56,7 +83,18 @@ where
     ) {
         use ndarray::{Axis, Slice};
 
-        let input = input.as_any().downcast_ref::<ndarray::ArcArray<T, ndarray::IxDyn>>().expect("input must be a ndarray of the same type");
+        let input = input.as_any().downcast_ref::<Self>().expect("input must be a ndarray of the same type");
+        let input = match input.try_read() {
+            Ok(lock) => lock,
+            Err(TryLockError::Poisoned(_)) => panic!("input array lock is poisoned"),
+            Err(TryLockError::WouldBlock) => panic!("input array is already locked"),
+        };
+
+        let mut output = match self.try_write() {
+            Ok(lock) => lock,
+            Err(TryLockError::Poisoned(_)) => panic!("output array lock is poisoned"),
+            Err(TryLockError::WouldBlock) => panic!("output array is already locked"),
+        };
 
         if movements.is_empty() {
             return;
@@ -97,7 +135,7 @@ where
             }
         }
 
-        let property_axis = self.shape().len() - 1;
+        let property_axis = output.shape().len() - 1;
 
         if constant_properties {
             let input_slice_info = Slice::from(first_prop_start_in..(first_prop_start_in + first_prop_len));
@@ -112,7 +150,7 @@ where
                     Axis(0),
                     Slice::from(sample_start_in..(sample_start_in + sample_count))
                 );
-                let mut output_samples = self.slice_axis_mut(
+                let mut output_samples = output.slice_axis_mut(
                     Axis(0),
                     Slice::from(sample_start_out..(sample_start_out + sample_count))
                 );
@@ -124,7 +162,7 @@ where
             } else {
                 for move_item in movements {
                     let input_sample = input.index_axis(Axis(0), move_item.sample_in);
-                    let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
+                    let mut output_sample = output.index_axis_mut(Axis(0), move_item.sample_out);
 
                     let value = input_sample.slice_axis(
                         // property_axis - 1 because we are slicing the sample
@@ -143,7 +181,7 @@ where
             // fallback to the general case
             for move_item in movements {
                 let input_sample = input.index_axis(Axis(0), move_item.sample_in);
-                let mut output_sample = self.index_axis_mut(Axis(0), move_item.sample_out);
+                let mut output_sample = output.index_axis_mut(Axis(0), move_item.sample_out);
 
                 let value = input_sample.slice_axis(
                     // see above for property_axis - 1 explanation
@@ -205,7 +243,7 @@ where
             });
         }
 
-        let tensor: DLPackTensor = self.try_into().map_err(|e| Error {
+        let tensor: DLPackTensor = Arc::clone(self).try_into().map_err(|e| Error {
             code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
             message: format!("failed to convert ndarray to DLPack: {:?}", e),
         })?;
@@ -221,12 +259,12 @@ mod tests {
 
     #[test]
     fn ndarray_as_mts_array() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3, 4]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![2, 3, 4]);
+        let mts_array = MtsArray::from(data);
 
         assert_eq!(mts_array.shape().unwrap(), [2, 3, 4]);
 
-        let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![], 42.0));
+        let fill_value = MtsArray::from(ndarray::Array::from_elem(vec![], 42.0));
 
         let created = mts_array.create(&[2, 3, 4], fill_value.as_ref()).unwrap();
         assert_eq!(created.shape().unwrap(), [2, 3, 4]);
@@ -234,8 +272,8 @@ mod tests {
 
     #[test]
     fn ndarray_as_mts_array_dlpack() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![4, 5, 6]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![4, 5, 6]);
+        let mts_array = MtsArray::from(data);
 
         let dl_managed = mts_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
 
@@ -250,8 +288,8 @@ mod tests {
     #[test]
     fn ndarray_all_dtypes() {
         fn test_for_dtype<T>(code: DLDataTypeCode, bits: u8) where T: Send + Sync + Clone + Default + GetDLPackDataType + DLPackPointerCast + 'static {
-            let data = ndarray::ArcArray::<T, _>::from_elem(vec![2, 2], T::default());
-            let mts_array = MtsArray::new(data);
+            let data = ndarray::Array::<T, _>::from_elem(vec![2, 2], T::default());
+            let mts_array = MtsArray::from(data);
 
             assert_eq!(mts_array.shape().unwrap(), [2, 2]);
 
@@ -263,7 +301,7 @@ mod tests {
 
 
             // And `create` should make an array of the same type (i32)
-            let fill_value = MtsArray::new(ndarray::ArcArray::from_elem(vec![], T::default()));
+            let fill_value = MtsArray::from(ndarray::Array::from_elem(vec![], T::default()));
 
             let created = mts_array.create(&[1, 1], fill_value.as_ref()).unwrap();
             let dl_managed = created.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
@@ -288,16 +326,16 @@ mod tests {
 
     #[test]
     fn ndarray_device() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![2, 3]);
+        let mts_array = MtsArray::from(data);
 
         assert_eq!(mts_array.device().unwrap(), DLDevice::cpu());
     }
 
     #[test]
     fn as_dlpack_rejects_stream() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![2, 3]);
+        let mts_array = MtsArray::from(data);
         match mts_array.as_dlpack(DLDevice::cpu(), Some(42), DLPackVersion::current()) {
             Err(e) => assert!(e.message.contains("stream"), "{}", e.message),
             Ok(_) => panic!("expected error for non-null stream"),
@@ -306,8 +344,8 @@ mod tests {
 
     #[test]
     fn as_dlpack_rejects_wrong_device() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![2, 3]);
+        let mts_array = MtsArray::from(data);
         let cuda = DLDevice {
             device_type: dlpk::sys::DLDeviceType::kDLCUDA,
             device_id: 0,
@@ -320,8 +358,8 @@ mod tests {
 
     #[test]
     fn as_dlpack_rejects_incompatible_version() {
-        let data = ndarray::ArcArray::<f64, _>::zeros(vec![2, 3]);
-        let mts_array = MtsArray::new(data);
+        let data = ndarray::Array::<f64, _>::zeros(vec![2, 3]);
+        let mts_array = MtsArray::from(data);
 
         let bad_version = DLPackVersion { major: 99, minor: 0 };
         match mts_array.as_dlpack(DLDevice::cpu(), None, bad_version) {
