@@ -5,7 +5,6 @@ use metatensor::{Labels, TensorMap};
 mod utils;
 use utils::{example_tensor, example_block, example_labels, make_fill_value};
 
-use ndarray::ArrayD;
 
 #[test]
 fn sorted_samples() {
@@ -32,14 +31,15 @@ fn sorted_samples() {
         example_labels(vec!["key_1", "properties"], vec![[0, 0], [1, 3], [1, 4], [1, 5]])
     );
 
-    let expected = ArrayD::from_shape_vec(vec![5, 1, 4], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![5, 1, 4], vec![
         1.0, 2.0, 2.0, 2.0,
         0.0, 2.0, 2.0, 2.0,
         1.0, 0.0, 0.0, 0.0,
         0.0, 2.0, 2.0, 2.0,
         1.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     let gradient_1 = block.gradient("parameter").unwrap();
     assert_eq!(
@@ -47,17 +47,19 @@ fn sorted_samples() {
         example_labels(vec!["sample", "parameter"], vec![[0, -2], [0, 3], [3, -2], [4, 3]])
     );
 
-    let expected = ArrayD::from_shape_vec(vec![4, 1, 4], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![4, 1, 4], vec![
         11.0, 12.0, 12.0, 12.0,
         0.0, 12.0, 12.0, 12.0,
         0.0, 12.0, 12.0, 12.0,
         11.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(gradient_1.values().as_ndarray(), expected);
+    let values = gradient_1.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     // The new second block contains the old third block
     let block = tensor.block_by_id(1);
-    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![4, 3, 1], 3.0));
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, ndarray::Array::from_elem(vec![4, 3, 1], 3.0));
 
     assert_eq!(
         block.properties(),
@@ -66,7 +68,8 @@ fn sorted_samples() {
 
     // The new third block contains the old fourth block
     let block = tensor.block_by_id(2);
-    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![4, 3, 1], 4.0));
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, ndarray::Array::from_elem(vec![4, 3, 1], 4.0));
     assert_eq!(
         block.properties(),
         example_labels(vec!["key_1", "properties"], vec![[2, 0]])
@@ -254,24 +257,26 @@ fn user_provided_entries() {
         ])
     );
 
-    let expected = ArrayD::from_shape_vec(vec![5, 1, 8], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![5, 1, 8], vec![
         1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0,
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     // second block also contains the new property chanel even if it was not
     // merged with another block
     let block = tensor.block_by_id(1);
-    let expected = ArrayD::from_shape_vec(vec![3, 1, 8], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![3, 1, 8], vec![
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     assert_eq!(
         block.properties(),
@@ -307,18 +312,20 @@ fn user_provided_entries() {
     );
 
     // only data from the first block was kept
-    let expected = ArrayD::from_shape_vec(vec![5, 1, 4], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![5, 1, 4], vec![
         1.0, 1.0, 1.0, 1.0,
         0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0,
         0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     // second block stayed the same, only properties labels changed
     let block = tensor.block_by_id(1);
-    assert_eq!(block.values().as_ndarray(), ArrayD::from_elem(vec![3, 1, 4], 3.0));
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, ndarray::Array::from_elem(vec![3, 1, 4], 3.0));
 
     assert_eq!(
         block.properties(),
@@ -353,23 +360,25 @@ fn user_provided_entries() {
         ])
     );
 
-    let expected = ArrayD::from_shape_vec(vec![5, 1, 12], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![5, 1, 12], vec![
         1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         0.0, 0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0, 0.0,
         1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     // Second block
     let block = tensor.block_by_id(1);
-    let expected = ArrayD::from_shape_vec(vec![3, 1, 12], vec![
+    let expected = ndarray::Array::from_shape_vec(vec![3, 1, 12], vec![
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         3.0, 3.0, 3.0, 3.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
     ]).unwrap();
-    assert_eq!(block.values().as_ndarray(), expected);
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+    assert_eq!(*values, expected);
 
     assert_eq!(
         block.properties(),
@@ -391,8 +400,7 @@ fn nan_fill_value() {
     // The new first block merges blocks with key_1=0 and key_1=1.
     // Samples present in one block but missing in the other should be NaN.
     let block = tensor.block_by_id(0);
-    let block_values = block.values();
-    let values = block_values.as_ndarray();
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
 
     // Sample 0 exists in both blocks -> values from block_1 (1.0) and block_2 (2.0)
     assert_eq!(values[[0, 0, 0]], 1.0);
@@ -408,8 +416,7 @@ fn nan_fill_value() {
 
     // Second block (key_2=1) only has key_1=0, so the key_1=1 columns should be NaN
     let block = tensor.block_by_id(1);
-    let block_values = block.values();
-    let values = block_values.as_ndarray();
+    let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
     assert_eq!(values[[0, 0, 0]], 3.0);
     assert!(values[[0, 0, 4]].is_nan());
 }

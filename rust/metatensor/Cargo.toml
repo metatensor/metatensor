@@ -15,7 +15,7 @@ bench = false
 
 [dependencies]
 metatensor-sys = {version = "0.1.18", path="../metatensor-sys"}
-dlpk = {version = "=0.1.4", features = ["ndarray", "half"]}
+dlpk = { version = "0.1.5", features = ["ndarray", "half", "sync"]}
 half = "<2.5"
 
 once_cell = "1"
@@ -39,7 +39,7 @@ bench = ["dep:criterion"]
 # pin for compatibility with rustc 1.74
 tempfile = "=3.24.0"
 half = "<2.5"
-dlpk = {version = "=0.1.4", features = ["ndarray", "half"]}
+dlpk = { version = "0.1.5", features = ["ndarray", "half", "sync"]}
 
 
 [[bench]]

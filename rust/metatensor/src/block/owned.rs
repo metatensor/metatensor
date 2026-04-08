@@ -1,6 +1,6 @@
 use crate::c_api::mts_block_t;
 use crate::errors::check_status;
-use crate::{Array, ArrayRef, Labels, Error};
+use crate::{ArrayRef, Error, Labels, MtsArray};
 
 use super::{TensorBlockRef, TensorBlockRefMut};
 
@@ -99,7 +99,7 @@ impl TensorBlock {
     /// initialized without any gradients.
     #[inline]
     pub fn new(
-        data: impl Array,
+        values: impl Into<MtsArray>,
         samples: &Labels,
         components: &[Labels],
         properties: &Labels
@@ -111,7 +111,7 @@ impl TensorBlock {
 
         let ptr = unsafe {
             crate::c_api::mts_block(
-                (Box::new(data) as Box<dyn Array>).into(),
+                values.into().into_raw(),
                 samples.as_mts_labels_t(),
                 c_components.as_ptr(),
                 c_components.len(),
@@ -194,13 +194,14 @@ mod tests {
     #[test]
     fn block() {
         let block = TensorBlock::new(
-            ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0),
+            ndarray::Array::from_elem(vec![2, 1, 3], 1.0),
             &Labels::new(["samples"], &[[0], [1]]),
             &[Labels::new(["component"], &[[0]])],
             &Labels::new(["properties"], &[[-2], [0], [1]]),
         ).unwrap();
 
-        assert_eq!(block.values().as_ndarray(), ndarray::ArcArray::from_elem(vec![2, 1, 3], 1.0));
+        let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
+        assert_eq!(*values, ndarray::Array::from_elem(vec![2, 1, 3], 1.0));
         assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
         assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
