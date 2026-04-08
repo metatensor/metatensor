@@ -181,12 +181,15 @@ impl MtsArray {
             )?;
         }
 
-        assert!(shape_count > 0);
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        return Ok(shape);
+        if shape_count == 0 {
+            return Ok(&[]);
+        } else {
+            assert!(!shape.is_null());
+            let shape = unsafe {
+                std::slice::from_raw_parts(shape, shape_count)
+            };
+            return Ok(shape);
+        }
     }
 
     /// Reshape the data in this array, if supported by the underlying data.

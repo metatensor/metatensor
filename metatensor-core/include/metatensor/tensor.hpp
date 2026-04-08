@@ -309,7 +309,7 @@ public:
         bool sort_samples = true
     ) const {
         auto fill_value_array = DataArrayBase::to_mts_array_t(
-            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
+            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
         // Ownership of fill_value_array is transfered to the C API
         return keys_to_properties(keys_to_move, fill_value_array, sort_samples);
@@ -404,7 +404,7 @@ public:
         bool sort_samples = true
     ) const {
         auto fill_value_array = DataArrayBase::to_mts_array_t(
-            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{1}, fill_value)
+            std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
         // Ownership of fill_value_array is transfered to the C API
         return keys_to_samples(keys_to_move, fill_value_array, sort_samples);

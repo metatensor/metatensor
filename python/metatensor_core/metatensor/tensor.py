@@ -778,8 +778,7 @@ class TensorMap:
 
 def _make_fill_value_array(tensor, fill_value):
     """
-    Create an ``mts_array_t`` wrapping a shape-(1,) array with the given scalar
-    ``fill_value``.
+    Create an ``mts_array_t`` wrapping a single scalar ``fill_value``.
 
     The dtype is inferred from the first block's values array. Returns an mts_array_t
     struct suitable for passing to C functions. For empty TensorMaps, returns a
@@ -795,8 +794,8 @@ def _make_fill_value_array(tensor, fill_value):
     # Always use numpy for the fill_value array. DLPack handles dtype/device
     # conversion when the C API passes it to the array implementation's create
     # callback, so there is no need to match the original array type here.
-    fv_array = np.array([fill_value], dtype=values.dtype)
-    return data.create_mts_array(fv_array)
+    fill_value_array = np.array(fill_value, dtype=values.dtype)
+    return data.create_mts_array(fill_value_array)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

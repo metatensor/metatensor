@@ -80,7 +80,7 @@ TEST_CASE("Data Array") {
         uintptr_t new_shape[] = {1, 2, 3, 4};
         shape_count = 4;
         auto fill_value = DataArrayBase::to_mts_array_t(
-            std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, 0.0)
+            std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{}, 0.0)
         );
         status = array.create(array.ptr, new_shape, shape_count, fill_value, &new_array);
         CHECK(status == MTS_SUCCESS);

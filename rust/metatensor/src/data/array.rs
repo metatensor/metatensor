@@ -36,7 +36,8 @@ pub trait Array: std::any::Any + Send + Sync {
     /// (data type, data location, etc.)
     fn copy(&self) -> Box<dyn Array>;
 
-    /// Get the shape of the array
+    /// Get the shape of the array. This can be empty if the array has no shape
+    /// (e.g. a scalar).
     fn shape(&self) -> &[usize];
 
     /// Change the shape of the array to the given `shape`
@@ -197,11 +198,16 @@ unsafe extern "C" fn rust_array_reshape(
     shape_count: usize,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
-        assert!(shape_count > 0);
-        assert!(!shape.is_null());
         check_pointers!(array);
         let array = array.cast::<Box<dyn Array>>();
-        let shape = std::slice::from_raw_parts(shape, shape_count);
+
+        let shape = if shape_count == 0 {
+            &[]
+        } else {
+            check_pointers!(shape);
+            std::slice::from_raw_parts(shape, shape_count)
+        };
+
         (*array).reshape(shape);
 
         Ok(())
@@ -234,12 +240,16 @@ unsafe extern "C" fn rust_array_create(
     array_storage: *mut mts_array_t,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
-        assert!(shape_count > 0);
-        assert!(!shape.is_null());
-        check_pointers!(array, shape, array_storage);
+        check_pointers!(array, array_storage);
         let array = array.cast::<Box<dyn Array>>();
 
-        let shape = std::slice::from_raw_parts(shape, shape_count);
+        let shape = if shape_count == 0 {
+            &[]
+        } else {
+            check_pointers!(shape);
+            std::slice::from_raw_parts(shape, shape_count)
+        };
+
         let new_array = (*array).create(shape, MtsArray::from_raw(fill_value));
 
         *array_storage = new_array.into();
