@@ -14,6 +14,12 @@ pub use self::external::MtsArray;
 mod array_ref;
 pub use self::array_ref::{ArrayRef, ArrayRefMut};
 
+pub use dlpk::sys::{DLDataType, DLDataTypeCode};
+pub use dlpk::sys::{DLDeviceType, DLDevice};
+pub use dlpk::sys::DLPackVersion;
+pub use dlpk::DLPackTensor;
+
+pub use metatensor_sys::mts_data_movement_t;
 
 #[cfg(test)]
 mod tests {
