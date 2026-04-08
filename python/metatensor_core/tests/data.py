@@ -99,7 +99,7 @@ class MtsArrayMixin:
             new_mts_array = mts_array_t()
             new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
 
-            fill_value_array = self.create_array((1,), dtype=dtype)
+            fill_value_array = self.create_array((), dtype=dtype)
             fill_value_mts = metatensor.data.create_mts_array(fill_value_array)
 
             status = mts_array.create(
@@ -110,7 +110,6 @@ class MtsArrayMixin:
                 new_mts_array,
             )
 
-            print(dtype)
             assert status == MTS_SUCCESS
 
             new_array = metatensor.data.mts_array_to_python_array(new_mts_array)

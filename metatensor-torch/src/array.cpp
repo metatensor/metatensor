@@ -59,11 +59,11 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
     }
 
     // Validate fill_value shape from the DLPack tensor directly
-    if (fill_value_dlpack->dl_tensor.ndim != 1 || fill_value_dlpack->dl_tensor.shape[0] != 1) {
+    if (fill_value_dlpack->dl_tensor.ndim != 0) {
         if (fill_value_dlpack->deleter != nullptr) {
             fill_value_dlpack->deleter(fill_value_dlpack);
         }
-        throw std::runtime_error("fill_value must have shape (1,)");
+        throw std::runtime_error("`fill_value` must be a single scalar");
     }
 
     c10::Scalar scalar_val;
