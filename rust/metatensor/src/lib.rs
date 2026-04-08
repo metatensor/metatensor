@@ -35,7 +35,7 @@ pub use metatensor_sys as c_api;
 pub mod errors;
 pub use self::errors::Error;
 
-mod data;
+pub mod data;
 pub use self::data::{ArrayRef, ArrayRefMut};
 pub use self::data::{Array, EmptyArray, MtsArray};
 
