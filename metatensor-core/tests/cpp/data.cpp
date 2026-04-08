@@ -208,8 +208,8 @@ TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
 
 TEST_CASE("DLPackArray<T> - construction and access") {
     // Create a SimpleDataArray<double>, get a DLPack tensor, wrap in DLPackArray
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
-    auto view = data->view();
+    auto data = SimpleDataArray<double>({2, 3});
+    auto view = data.view();
     view(0, 0) = 1.0;
     view(0, 1) = 2.0;
     view(0, 2) = 3.0;
@@ -219,7 +219,7 @@ TEST_CASE("DLPackArray<T> - construction and access") {
 
     DLDevice cpu_device = {kDLCPU, 0};
     DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    DLManagedTensorVersioned* managed = data.as_dlpack(cpu_device, nullptr, ver);
     REQUIRE(managed != nullptr);
 
     SECTION("basic construction and element access") {
@@ -265,11 +265,11 @@ TEST_CASE("DLPackArray<T> - construction and access") {
 }
 
 TEST_CASE("DLPackArray<T> - dtype mismatch") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+    auto data = SimpleDataArray<double>({2, 3});
 
     DLDevice cpu_device = {kDLCPU, 0};
     DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    DLManagedTensorVersioned* managed = data.as_dlpack(cpu_device, nullptr, ver);
     REQUIRE(managed != nullptr);
 
     // double tensor should NOT match int32_t
@@ -280,7 +280,7 @@ TEST_CASE("DLPackArray<T> - dtype mismatch") {
 
     // After dtype mismatch, the managed tensor should have been cleaned up.
     // Get a new one for float mismatch test
-    managed = data->as_dlpack(cpu_device, nullptr, ver);
+    managed = data.as_dlpack(cpu_device, nullptr, ver);
     REQUIRE(managed != nullptr);
 
     CHECK_THROWS_WITH(
@@ -290,8 +290,8 @@ TEST_CASE("DLPackArray<T> - dtype mismatch") {
 }
 
 TEST_CASE("DLPackArray<T> - with int32 data") {
-    auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 2}));
-    auto view = data->view();
+    auto data = SimpleDataArray<int32_t>({2, 2});
+    auto view = data.view();
     view(0, 0) = 10;
     view(0, 1) = 20;
     view(1, 0) = 30;
@@ -299,7 +299,7 @@ TEST_CASE("DLPackArray<T> - with int32 data") {
 
     DLDevice cpu_device = {kDLCPU, 0};
     DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+    DLManagedTensorVersioned* managed = data.as_dlpack(cpu_device, nullptr, ver);
     REQUIRE(managed != nullptr);
 
     auto arr = DLPackArray<int32_t>(managed);
@@ -347,8 +347,8 @@ TEST_CASE("SimpleDataArray - device()") {
 }
 
 TEST_CASE("EmptyDataArray - device()") {
-    auto data = std::unique_ptr<EmptyDataArray>(new EmptyDataArray({2, 3}));
-    auto dev = data->device();
+    auto data = EmptyDataArray({2, 3});
+    auto dev = data.device();
     CHECK(dev.device_type == kDLCPU);
     CHECK(dev.device_id == 0);
 }
@@ -362,10 +362,10 @@ TEST_CASE("DLPackArray<T> - device()") {
     }
 
     SECTION("CPU array returns CPU") {
-        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+        auto data = SimpleDataArray<double>({2, 3});
         DLDevice cpu_device = {kDLCPU, 0};
         DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        DLManagedTensorVersioned* managed = data->as_dlpack(cpu_device, nullptr, ver);
+        DLManagedTensorVersioned* managed = data.as_dlpack(cpu_device, nullptr, ver);
         REQUIRE(managed != nullptr);
 
         auto arr = DLPackArray<double>(managed);
@@ -422,7 +422,7 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     // Succeed because 1.5 is compatible with 1.3
     DLPackVersion new_version = {1, 5};
     DLManagedTensorVersioned* managed = nullptr;
-    CHECK_NOTHROW(managed = s->as_dlpack(cpu_device, nullptr, new_version));
+    managed = s->as_dlpack(cpu_device, nullptr, new_version);
 
     // Case 3: Request an ABI breaking version (2.0)
     // Succeed because 1.5 is compatible with 1.0
@@ -443,24 +443,24 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
 
 TEST_CASE("SimpleDataArray - dtype()") {
     SECTION("double") {
-        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
-        auto dt = data->dtype();
+        auto data = SimpleDataArray<double>({2, 3});
+        auto dt = data.dtype();
         CHECK(dt.code == kDLFloat);
         CHECK(dt.bits == 64);
         CHECK(dt.lanes == 1);
     }
 
     SECTION("float") {
-        auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3}));
-        auto dt = data->dtype();
+        auto data = SimpleDataArray<float>({2, 3});
+        auto dt = data.dtype();
         CHECK(dt.code == kDLFloat);
         CHECK(dt.bits == 32);
         CHECK(dt.lanes == 1);
     }
 
     SECTION("int32") {
-        auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3}));
-        auto dt = data->dtype();
+        auto data = SimpleDataArray<int32_t>({2, 3});
+        auto dt = data.dtype();
         CHECK(dt.code == kDLInt);
         CHECK(dt.bits == 32);
         CHECK(dt.lanes == 1);
@@ -484,9 +484,58 @@ TEST_CASE("SimpleDataArray - dtype()") {
 }
 
 TEST_CASE("EmptyDataArray - dtype()") {
-    auto data = std::unique_ptr<EmptyDataArray>(new EmptyDataArray({2, 3}));
-    auto dt = data->dtype();
+    auto data = EmptyDataArray({2, 3});
+    auto dt = data.dtype();
     CHECK(dt.code == kDLFloat);
     CHECK(dt.bits == 64);
     CHECK(dt.lanes == 1);
+}
+
+
+template<typename T>
+void check_array_equality() {
+    auto array_1 = SimpleDataArray<T>({2, 2}, {1, 2, 3, 4});
+    auto array_2 = SimpleDataArray<T>({2, 2}, {1, 2, 3, -4});
+    auto array_3 = SimpleDataArray<T>({2, 2}, {1, 2, 3, 4});
+
+    // SimpleDataArray equality
+    CHECK(array_1 == array_3);
+    CHECK(array_1 != array_2);
+
+    // NDArray equality
+    CHECK(array_1.view() == array_3.view());
+    CHECK(array_1.view() != array_2.view());
+
+    auto cpu_device = DLDevice{kDLCPU, 0};
+    auto ver = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    auto dlpack_1 = DLPackArray<T>(array_1.as_dlpack(cpu_device, nullptr, ver));
+    auto dlpack_2 = DLPackArray<T>(array_2.as_dlpack(cpu_device, nullptr, ver));
+    auto dlpack_3 = DLPackArray<T>(array_3.as_dlpack(cpu_device, nullptr, ver));
+
+    // DLPackArray equality
+    CHECK(dlpack_1 == dlpack_3);
+    CHECK(dlpack_1 != dlpack_2);
+
+    // SimpleDataArray and NDArray
+    CHECK(array_1 == array_3.view());
+    CHECK(array_3.view() == array_1);
+    CHECK(array_1 != array_2.view());
+    CHECK(array_2.view() != array_1);
+
+    // SimpleDataArray and DLPackArray
+    CHECK(dlpack_1 == array_3);
+    CHECK(array_3 == dlpack_1);
+    CHECK(dlpack_1 != array_2);
+    CHECK(array_2 != dlpack_1);
+
+    // NDArray and DLPackArray
+    CHECK(dlpack_1 == array_3.view());
+    CHECK(array_3.view() == dlpack_1);
+    CHECK(dlpack_1 != array_2.view());
+    CHECK(array_2.view() != dlpack_1);
+}
+
+TEST_CASE("array equality") {
+    check_array_equality<double>();
+    check_array_equality<int>();
 }
