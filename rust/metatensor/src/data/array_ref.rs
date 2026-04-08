@@ -1,13 +1,13 @@
 use std::ptr::NonNull;
+use std::sync::{Arc, RwLock};
 
-use ndarray::{ArcArray, IxDyn};
+use ndarray::ArrayD;
 
 use dlpk::sys::DLDevice;
 
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t};
 use crate::Error;
 
-use super::Array;
 use super::external::{check_status_external, MtsArray};
 use super::origin::get_data_origin;
 
@@ -55,7 +55,7 @@ impl<'a> ArrayRef<'a> {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any();
         }
@@ -75,27 +75,30 @@ impl<'a> ArrayRef<'a> {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any();
         }
     }
 
-    /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
-    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
+    /// Extract the `Arc<RwLock<ArrayD<T>>>` from this `ArrayRef`, if it
+    /// contains one.
+    ///
+    /// This function will panic if the data in the `mts_array_t` in this
+    /// `ArrayRef` is a different kind of array.
     #[inline]
-    pub fn as_ndarray(&self) -> &ArcArray<f64, IxDyn> {
-        self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
+    pub fn as_ndarray_lock<T>(&self) -> &Arc<RwLock<ArrayD<T>>> where T: 'static {
+        self.as_any().downcast_ref().expect("this is not an Arc<RwLock<ArrayD>>")
     }
 
-    /// Transform this `ArrayRef` into a reference to an `ndarray::ArcArray`,
-    /// keeping the lifetime of the `ArrayRef`.
+    /// Extract the `Arc<RwLock<ArrayD<T>>>` from this `ArrayRef`, if it
+    /// contains one, keeping the initial lifetime of the `ArrayRef`.
     ///
-    /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArcArray`.
+    /// This function will panic if the data in the `mts_array_t` in this
+    /// `ArrayRef` is a different kind of array.
     #[inline]
-    pub fn to_ndarray(self) -> &'a ArcArray<f64, IxDyn> {
-        self.to_any().downcast_ref().expect("this is not a ndarray::ArcArray")
+    pub fn to_ndarray_lock<T>(self) -> &'a Arc<RwLock<ArrayD<T>>> where T: 'static {
+        self.to_any().downcast_ref().expect("this is not an Arc<RwLock<ArrayD>>")
     }
 
     /// Get the raw underlying `mts_array_t`
@@ -298,19 +301,19 @@ impl<'a> ArrayRefMut<'a> {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any();
         }
     }
 
-    /// Get the underlying array as an `&dyn Any` instance,
+    /// Get a reference to the underlying array as an `&dyn Any` instance,
     /// re-using the same lifetime as the `ArrayRefMut`.
     ///
     /// This function panics if the array was not created though this crate and
     /// the [`Array`] trait.
     #[inline]
-    pub fn to_any(&self) -> &'a dyn std::any::Any {
+    pub fn to_any(self) -> &'a dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
         assert_eq!(
             origin, *super::array::RUST_DATA_ORIGIN,
@@ -318,33 +321,13 @@ impl<'a> ArrayRefMut<'a> {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any();
         }
     }
 
     /// Get the underlying array as an `&mut dyn Any` instance.
-    ///
-    /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
-    #[inline]
-    pub fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
-        let origin = self.origin().unwrap_or(0);
-        assert_eq!(
-            origin, *super::array::RUST_DATA_ORIGIN,
-            "this array was not created as a rust Array (origin is '{}')",
-            get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
-        );
-
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
-        unsafe {
-            return (*array).as_any_mut();
-        }
-    }
-
-    /// Get the underlying array as an `&mut dyn Any` instance, re-using the
-    /// same lifetime as the `ArrayRefMut`.
     ///
     /// This function panics if the array was not created though this crate and
     /// the [`Array`] trait.
@@ -357,45 +340,47 @@ impl<'a> ArrayRefMut<'a> {
             get_data_origin(origin).unwrap_or_else(|_| "unknown".into())
         );
 
-        let array = self.array.ptr.cast::<Box<dyn Array>>();
+        let array = self.array.ptr.cast::<super::array::RustArray>();
         unsafe {
             return (*array).as_any_mut();
         }
     }
 
-    /// Get the data in this `ArrayRef` as a `ndarray::ArcArray`. This function
-    /// will panic if the data in this `mts_array_t` is not a `ndarray::ArcArray`.
-    #[inline]
-    pub fn as_ndarray(&self) -> &ArcArray<f64, IxDyn> {
-        self.as_any().downcast_ref().expect("this is not a ndarray::ArcArray")
-    }
-
-    /// Transform this `ArrayRefMut` into a reference to an `ndarray::ArcArray`,
-    /// keeping the lifetime of the `ArrayRefMut`.
+    /// Extract the `Arc<RwLock<ArrayD<T>>>` from this `ArrayRef`, if it
+    /// contains one.
     ///
-    /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArcArray`.
+    /// This function will panic if the data in the `mts_array_t` in this
+    /// `ArrayRefMut` is a different kind of array.
     #[inline]
-    pub fn to_ndarray(&self) -> &ArcArray<f64, IxDyn> {
-        self.to_any().downcast_ref().expect("this is not a ndarray::ArcArray")
+    pub fn as_ndarray_lock<T>(&self) -> &Arc<RwLock<ArrayD<T>>> where T: 'static {
+        self.as_any().downcast_ref().expect("this is not an Arc<RwLock<ArrayD>>")
     }
 
-    /// Get the data in this `ArrayRef` as a mutable reference to an
-    /// `ndarray::ArcArray`. This function will panic if the data in this
-    /// `mts_array_t` is not a `ndarray::ArcArray`.
-    #[inline]
-    pub fn as_ndarray_mut(&mut self) -> &mut ArcArray<f64, IxDyn> {
-        self.as_any_mut().downcast_mut().expect("this is not a ndarray::ArcArray")
-    }
-
-    /// Transform this `ArrayRefMut` into a mutable reference to an
-    /// `ndarray::ArcArray`, keeping the lifetime of the `ArrayRefMut`.
+    /// Extract the `Arc<RwLock<ArrayD<T>>>` from this `ArrayRef`, if it
+    /// contains one, keeping the initial lifetime of the `ArrayRef`.
     ///
-    /// This function will panic if the data in this `mts_array_t` is not a
-    /// `ndarray::ArcArray`.
+    /// This function will panic if the data in the `mts_array_t` in this
+    /// `ArrayRefMut` is a different kind of array.
     #[inline]
-    pub fn to_ndarray_mut(self) -> &'a mut ArcArray<f64, IxDyn> {
-        self.to_any_mut().downcast_mut().expect("this is not a ndarray::ArcArray")
+    pub fn to_ndarray_lock<T>(self) -> &'a Arc<RwLock<ArrayD<T>>> where T: 'static {
+        self.to_any().downcast_ref().expect("this is not an Arc<RwLock<ArrayD>>")
+    }
+
+    /// Get a mutable reference to the underlying array, consuming this
+    /// `ArrayRefMut`.
+    ///
+    /// Since this array is already guaranteed to be unique through the mutable
+    /// borrow, we do not need to lock the `RwLock` to get access to the
+    /// `ArrayD`.
+    ///
+    /// This function will panic if the data in the `mts_array_t` in this
+    /// `ArrayRefMut` does not contain an `Arc<RwLock<ArrayD<T>>>`, or if the
+    /// `Arc` already has multiple strong references.
+    #[inline]
+    pub fn get_ndarray_mut<T>(self) -> &'a mut ArrayD<T> where T: 'static {
+        let arc = self.to_any_mut().downcast_mut::<Arc<RwLock<ArrayD<T>>>>().expect("this is not an Arc<RwLock<ArrayD>>");
+        let lock = Arc::get_mut(arc).expect("the outer Arc already has multiple owners");
+        return lock.get_mut().expect("lock was poisoned");
     }
 
     /// Get the raw underlying `mts_array_t`

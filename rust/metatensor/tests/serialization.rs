@@ -214,7 +214,7 @@ mod dtype_serialization {
             #[test]
             fn $name() {
                 let (samples, properties) = make_labels();
-                let data = ndarray::ArcArray::<$ty, _>::from_elem(vec![2, 3], $val);
+                let data = ndarray::Array::<$ty, _>::from_elem(vec![2, 3], $val);
                 let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
 
                 let mut buf = Vec::new();
@@ -243,7 +243,7 @@ mod dtype_serialization {
     #[test]
     fn f64_roundtrip() {
         let (samples, properties) = make_labels();
-        let data = ndarray::ArcArray::<f64, _>::from_elem(vec![2, 3], 3.41);
+        let data = ndarray::Array::<f64, _>::from_elem(vec![2, 3], 3.41);
         let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
 
         let mut buf = Vec::new();
@@ -264,7 +264,7 @@ mod dtype_serialization {
         properties.add(&[0]);
         properties.add(&[1]);
         let properties = properties.finish();
-        let data = ndarray::ArcArray::<f64, _>::from_elem(vec![0, 2], 0.0);
+        let data = ndarray::Array::<f64, _>::from_elem(vec![0, 2], 0.0);
         let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
 
         let mut buf = Vec::new();
