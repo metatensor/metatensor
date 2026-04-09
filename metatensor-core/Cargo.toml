@@ -31,7 +31,7 @@ byteorder = {version = "1"}
 num-traits = {version = "0.2", default-features = false}
 zip = {version = "0.6", default-features = false, features = ["deflate"]}
 jzon = "0.12"
-dlpk = {version = "0.1.4", features = ["ndarray", "half"]}
+dlpk = {version = "=0.1.4", features = ["ndarray", "half"]}
 ndarray = {version = "0.17"}
 half = { version = "<2.5"}
 
