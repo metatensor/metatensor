@@ -184,43 +184,6 @@ pub fn setup_pytorch(python: &Path) -> PathBuf {
     prefix
 }
 
-/// Install metatensor-torch using the given python
-pub fn setup_metatensor_torch(python: &Path) {
-    let source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
-
-    pip_install(
-        python,
-        // this needs to be in sync with pyproject.toml
-        &["cmake",
-          "packaging>=23",
-          "setuptools>=77",
-          "numpy"],
-        true, // upgrade
-        false, // no_deps
-        false, // no_build_isolation
-    );
-
-    let mut metatensor_core_python = source_dir.clone();
-    metatensor_core_python.extend(["..", "python", "metatensor_core"]);
-    pip_install(
-        python,
-        &[metatensor_core_python.to_str().unwrap()],
-        false, // upgrade
-        true,  // no_deps
-        true,  // no_build_isolation
-    );
-
-    let mut metatensor_torch_python = source_dir.clone();
-    metatensor_torch_python.extend(["..", "python", "metatensor_torch"]);
-    pip_install(
-        python,
-        &[metatensor_torch_python.to_str().unwrap()],
-        false, // upgrade
-        true,  // no_deps
-        true,  // no_build_isolation
-    );
-}
-
 /// Build metatensor-core in `build_dir`, and return the installation prefix
 pub fn setup_metatensor(build_dir: PathBuf) -> PathBuf {
     let mut metatensor_source_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
