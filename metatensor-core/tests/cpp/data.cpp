@@ -8,202 +8,119 @@ using namespace metatensor;
 
 TEST_CASE("Data Array") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
-    auto array = DataArrayBase::to_mts_array_t(std::move(data));
+    auto array = DataArrayBase::to_mts_array(std::move(data));
 
     SECTION("origin") {
-        mts_data_origin_t origin = 0;
-        auto status = array.origin(array.ptr, &origin);
-        CHECK(status == MTS_SUCCESS);
+        auto origin = array.origin();
 
         char buffer[64] = {0};
-        status = mts_get_data_origin(origin, buffer, 64);
+        auto status = mts_get_data_origin(origin, buffer, 64);
         CHECK(status == MTS_SUCCESS);
         CHECK(std::string(buffer) == "metatensor::SimpleDataArray");
     }
 
     SECTION("shape") {
-        const uintptr_t* shape = nullptr;
-        uintptr_t shape_count = 0;
-        auto status = array.shape(array.ptr, &shape, &shape_count);
-        CHECK(status == MTS_SUCCESS);
+        CHECK(array.shape() == std::vector<uintptr_t>{2, 3, 4});
+        auto new_shape = std::vector<uintptr_t>{1, 2, 3, 4};
 
-        CHECK(shape_count == 3);
-        CHECK(shape[0] == 2);
-        CHECK(shape[1] == 3);
-        CHECK(shape[2] == 4);
+        array.reshape(new_shape);
+        CHECK(array.shape() == new_shape);
 
-        uintptr_t new_shape[] = {1, 2, 3, 4};
-        shape_count = 4;
-        status = array.reshape(array.ptr, new_shape, shape_count);
-        CHECK(status == MTS_SUCCESS);
-
-        status = array.shape(array.ptr, &shape, &shape_count);
-        CHECK(status == MTS_SUCCESS);
-
-        CHECK(shape_count == 4);
-        CHECK(shape[0] == 1);
-        CHECK(shape[1] == 2);
-        CHECK(shape[2] == 3);
-        CHECK(shape[3] == 4);
-
-        status = array.swap_axes(array.ptr, 1, 2);
-        CHECK(status == MTS_SUCCESS);
-
-        status = array.shape(array.ptr, &shape, &shape_count);
-        CHECK(status == MTS_SUCCESS);
-
-        CHECK(shape_count == 4);
-        CHECK(shape[0] == 1);
-        CHECK(shape[1] == 3);
-        CHECK(shape[2] == 2);
-        CHECK(shape[3] == 4);
+        array.swap_axes(1, 2);
+        CHECK(array.shape() == std::vector<uintptr_t>{1, 3, 2, 4});
     }
 
     SECTION("new arrays") {
-        mts_array_t new_array;
-        std::memset(&new_array, 0, sizeof(new_array));
-        auto status = array.copy(array.ptr, &new_array);
-        CHECK(status == MTS_SUCCESS);
+        MtsArray new_array = array;
+        CHECK(new_array.as_mts_array_t().ptr != array.as_mts_array_t().ptr);
+        CHECK(new_array.shape() == std::vector<uintptr_t>{2, 3, 4});
 
 
-        const uintptr_t* shape = nullptr;
-        uintptr_t shape_count = 0;
-        status = new_array.shape(new_array.ptr, &shape, &shape_count);
-        CHECK(status == MTS_SUCCESS);
-
-        CHECK(shape_count == 3);
-        CHECK(shape[0] == 2);
-        CHECK(shape[1] == 3);
-        CHECK(shape[2] == 4);
-        new_array.destroy(new_array.ptr);
-
-        uintptr_t new_shape[] = {1, 2, 3, 4};
-        shape_count = 4;
-        auto fill_value = DataArrayBase::to_mts_array_t(
+        auto new_shape = std::vector<uintptr_t>{1, 2, 3, 4};
+        auto fill_value = DataArrayBase::to_mts_array(
             std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{}, 0.0)
         );
-        status = array.create(array.ptr, new_shape, shape_count, fill_value, &new_array);
-        CHECK(status == MTS_SUCCESS);
-
-        status = new_array.shape(new_array.ptr, &shape, &shape_count);
-        CHECK(status == MTS_SUCCESS);
-
-        CHECK(shape_count == 4);
-        CHECK(shape[0] == 1);
-        CHECK(shape[1] == 2);
-        CHECK(shape[2] == 3);
-        CHECK(shape[3] == 4);
-        new_array.destroy(new_array.ptr);
+        new_array = array.create(new_shape, std::move(fill_value));
+        CHECK(new_array.shape() == new_shape);
     }
-
-    array.destroy(array.ptr);
 }
 
 TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
-    auto array = DataArrayBase::to_mts_array_t(std::move(data));
-
-    // mutate via view
     {
-        auto view = static_cast<SimpleDataArray<double>*>(array.ptr)->view();
+        auto view = data->view();
         view(1, 1, 0) = 1.2345;
     }
+    auto array = DataArrayBase::to_mts_array(std::move(data));
 
-    // as_dlpack -> check dtype and data
-    {
-        auto *s = static_cast<SimpleDataArray<double>*>(array.ptr);
-        DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
-        REQUIRE(managed != nullptr);
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    auto dlpack_array = array.as_dlpack_array<double>(cpu_device, nullptr, ver);
 
-        const DLTensor& t = managed->dl_tensor;
-        CHECK(t.device.device_type == kDLCPU);
-        CHECK(t.device.device_id == 0);
-        CHECK(t.ndim == 3);
-        REQUIRE(t.shape != nullptr);
-        REQUIRE(t.strides != nullptr);
-        CHECK(t.shape[0] == 2);
-        CHECK(t.shape[1] == 3);
-        CHECK(t.shape[2] == 4);
-        CHECK(t.strides[0] == 12);
-        CHECK(t.strides[1] == 4);
-        CHECK(t.strides[2] == 1);
+    CHECK(dlpack_array.device().device_type == kDLCPU);
+    CHECK(dlpack_array.device().device_id == 0);
 
-        CHECK(t.dtype.code == kDLFloat);
-        CHECK(t.dtype.bits == 64);
-        CHECK(t.dtype.lanes == 1);
+    CHECK(dlpack_array.dtype().code == kDLFloat);
+    CHECK(dlpack_array.dtype().bits == 64);
+    CHECK(dlpack_array.dtype().lanes == 1);
 
-        REQUIRE(t.data != nullptr);
-        double* pdata = static_cast<double*>(t.data);
-        CHECK(pdata[16] == Approx(1.2345));
+    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
 
-        // free managed tensor using its deleter (should not crash)
-        managed->deleter(managed);
-    }
-
-    array.destroy(array.ptr);
+    const auto* data_ptr = dlpack_array.data();
+    CHECK(data_ptr[16] == 1.2345);
 }
 
 TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
     // Create float-backed array via C++ class, expose through mts_array_t
     auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3, 4}));
-    auto array = DataArrayBase::to_mts_array_t(std::move(data));
-
-    // as_dlpack should provide a valid float-typed DLPack view
     {
-        auto *s = static_cast<SimpleDataArray<float>*>(array.ptr);
-        auto view = s->view();
-        view(1, 1, 0) = static_cast<float>(3.1415);
-
-        DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
-        REQUIRE(managed != nullptr);
-
-        const DLTensor& t = managed->dl_tensor;
-        CHECK(t.dtype.code == kDLFloat);
-        CHECK(t.dtype.bits == 32);
-        CHECK(t.dtype.lanes == 1);
-
-        REQUIRE(t.data != nullptr);
-        auto* pdata = static_cast<float*>(t.data);
-        CHECK(pdata[16] == static_cast<float>(3.1415));
-
-        managed->deleter(managed);
+        auto view = data->view();
+        view(1, 1, 0) = 3.1415F;
     }
 
-    array.destroy(array.ptr);
+    auto array = DataArrayBase::to_mts_array(std::move(data));
+
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    auto dlpack_array = array.as_dlpack_array<float>(cpu_device, nullptr, ver);
+
+    CHECK(dlpack_array.device().device_type == kDLCPU);
+    CHECK(dlpack_array.device().device_id == 0);
+
+    CHECK(dlpack_array.dtype().code == kDLFloat);
+    CHECK(dlpack_array.dtype().bits == 32);
+    CHECK(dlpack_array.dtype().lanes == 1);
+
+    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
+
+    const auto* data_ptr = dlpack_array.data();
+    CHECK(data_ptr[16] == 3.1415F);
 }
 
 TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
     auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3, 4}));
-    auto array = DataArrayBase::to_mts_array_t(std::move(data));
-
-    // DLPack view should be int32
     {
-        auto *s = static_cast<SimpleDataArray<int32_t>*>(array.ptr);
-        auto view = s->view();
+        auto view = data->view();
         view(1, 1, 0) = 42;
-
-        DLDevice cpu_device = {kDLCPU, 0};
-        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        DLManagedTensorVersioned* managed = s->as_dlpack(cpu_device, nullptr, ver);
-        REQUIRE(managed != nullptr);
-
-        const DLTensor& t = managed->dl_tensor;
-        CHECK(t.dtype.code == kDLInt);
-        CHECK(t.dtype.bits == 32);
-        CHECK(t.dtype.lanes == 1);
-
-        REQUIRE(t.data != nullptr);
-        auto* pdata = static_cast<int32_t*>(t.data);
-        CHECK(pdata[16] == 42);
-
-        managed->deleter(managed);
     }
 
-    array.destroy(array.ptr);
+    auto array = DataArrayBase::to_mts_array(std::move(data));
+
+    DLDevice cpu_device = {kDLCPU, 0};
+    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    auto dlpack_array = array.as_dlpack_array<int32_t>(cpu_device, nullptr, ver);
+
+    CHECK(dlpack_array.device().device_type == kDLCPU);
+    CHECK(dlpack_array.device().device_id == 0);
+
+    CHECK(dlpack_array.dtype().code == kDLInt);
+    CHECK(dlpack_array.dtype().bits == 32);
+    CHECK(dlpack_array.dtype().lanes == 1);
+
+    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
+
+    const auto* data_ptr = dlpack_array.data();
+    CHECK(data_ptr[16] == 42);
 }
 
 TEST_CASE("DLPackArray<T> - construction and access") {
@@ -325,25 +242,14 @@ TEST_CASE("DLPackArray<T> - nullptr construction") {
 TEST_CASE("SimpleDataArray - device()") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
 
-    SECTION("direct call") {
-        auto dev = data->device();
-        CHECK(dev.device_type == kDLCPU);
-        CHECK(dev.device_id == 0);
-    }
+    // direct call to device()
+    CHECK(data->device().device_type == kDLCPU);
+    CHECK(data->device().device_id == 0);
 
-    SECTION("via mts_array_t callback") {
-        auto array = DataArrayBase::to_mts_array_t(std::move(data));
-        REQUIRE(array.device != nullptr);
-
-        DLDevice dev;
-        std::memset(&dev, 0xFF, sizeof(dev));
-        auto status = array.device(array.ptr, &dev);
-        CHECK(status == MTS_SUCCESS);
-        CHECK(dev.device_type == kDLCPU);
-        CHECK(dev.device_id == 0);
-
-        array.destroy(array.ptr);
-    }
+    // through mts_array_t callback
+    auto array = DataArrayBase::to_mts_array(std::move(data));
+    CHECK(array.device().device_type == kDLCPU);
+    CHECK(array.device().device_id == 0);
 }
 
 TEST_CASE("EmptyDataArray - device()") {
@@ -405,8 +311,6 @@ TEST_CASE("TensorBlock::values() with device parameter") {
 
 TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 2}));
-    auto array = DataArrayBase::to_mts_array_t(std::move(data));
-    auto *s = static_cast<SimpleDataArray<double>*>(array.ptr);
 
     DLDevice cpu_device = {kDLCPU, 0};
 
@@ -414,7 +318,7 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     // The implementation supports 1.1, so this must fail.
     DLPackVersion old_version = {0, 1};
     CHECK_THROWS_WITH(
-        s->as_dlpack(cpu_device, nullptr, old_version),
+        data->as_dlpack(cpu_device, nullptr, old_version),
         Catch::Matchers::Contains("SimpleDataArray supports DLPack version")
     );
 
@@ -422,13 +326,13 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     // Succeed because 1.5 is compatible with 1.3
     DLPackVersion new_version = {1, 5};
     DLManagedTensorVersioned* managed = nullptr;
-    managed = s->as_dlpack(cpu_device, nullptr, new_version);
+    managed = data->as_dlpack(cpu_device, nullptr, new_version);
 
     // Case 3: Request an ABI breaking version (2.0)
     // Succeed because 1.5 is compatible with 1.0
     DLPackVersion too_new_version = {2, 0};
     CHECK_THROWS_WITH(
-        s->as_dlpack(cpu_device, nullptr, too_new_version),
+        data->as_dlpack(cpu_device, nullptr, too_new_version),
         Catch::Matchers::Contains("Caller requested incompatible version")
     );
 
@@ -438,7 +342,6 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     CHECK(managed->version.minor <= 3);
 
     managed->deleter(managed);
-    array.destroy(array.ptr);
 }
 
 TEST_CASE("SimpleDataArray - dtype()") {
@@ -468,18 +371,11 @@ TEST_CASE("SimpleDataArray - dtype()") {
 
     SECTION("via mts_array_t callback") {
         auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
-        auto array = DataArrayBase::to_mts_array_t(std::move(data));
-        REQUIRE(array.dtype != nullptr);
+        auto array = DataArrayBase::to_mts_array(std::move(data));
 
-        DLDataType dt;
-        std::memset(&dt, 0xFF, sizeof(dt));
-        auto status = array.dtype(array.ptr, &dt);
-        CHECK(status == MTS_SUCCESS);
-        CHECK(dt.code == kDLFloat);
-        CHECK(dt.bits == 64);
-        CHECK(dt.lanes == 1);
-
-        array.destroy(array.ptr);
+        CHECK(array.dtype().code == kDLFloat);
+        CHECK(array.dtype().bits == 64);
+        CHECK(array.dtype().lanes == 1);
     }
 }
 

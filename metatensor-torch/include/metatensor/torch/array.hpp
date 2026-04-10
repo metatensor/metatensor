@@ -56,7 +56,7 @@ public:
 
     std::unique_ptr<metatensor::DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        mts_array_t fill_value
+        metatensor::MtsArray fill_value
     ) const override;
 
     DLManagedTensorVersioned* as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) override;
