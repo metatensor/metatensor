@@ -17,8 +17,7 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        auto values_mts_array = block.mts_array();
-        CHECK(SimpleDataArray<double>::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 2});
+        CHECK(block.mts_array().shape() == std::vector<size_t>{3, 2});
 
         auto values = block.values();
         CHECK(values.shape() == std::vector<size_t>{3, 2});
@@ -39,8 +38,7 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        auto values_mts_array = block.mts_array();
-        CHECK(SimpleDataArray<double>::from_mts_array(values_mts_array).shape() == std::vector<size_t>{3, 3, 2, 2});
+        CHECK(block.mts_array().shape() == std::vector<size_t>{3, 3, 2, 2});
 
         auto values = block.values();
         CHECK(values.shape() == std::vector<size_t>{3, 3, 2, 2});
@@ -81,11 +79,11 @@ TEST_CASE("Blocks") {
         CHECK(block.gradients_list() == std::vector<std::string>{"parameter"});
 
         auto gradient_mts_array = block.gradient("parameter").mts_array();
-        CHECK(SimpleDataArray<double>::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
+        CHECK(gradient_mts_array.shape() == std::vector<size_t>{2, 1, 3, 2});
 
         gradient = block.gradient("parameter");
         gradient_mts_array = gradient.mts_array();
-        CHECK(SimpleDataArray<double>::from_mts_array(gradient_mts_array).shape() == std::vector<size_t>{2, 1, 3, 2});
+        CHECK(gradient_mts_array.shape() == std::vector<size_t>{2, 1, 3, 2});
         auto data = gradient.values();
         CHECK(data.shape() == std::vector<size_t>{2, 1, 3, 2});
 
@@ -155,13 +153,8 @@ TEST_CASE("Blocks") {
 
         auto array = clone.mts_array();
 
-        const uintptr_t* shape = nullptr;
-        uintptr_t shape_count = 0;
-        CHECK(array.shape(array.ptr, &shape, &shape_count) == MTS_SUCCESS);
-        CHECK(std::vector<uintptr_t>(shape, shape + shape_count) == std::vector<uintptr_t>{{3, 3, 2, 2}});
-
-        mts_data_origin_t origin = 0;
-        CHECK(array.origin(array.ptr, &origin) == MTS_SUCCESS);
+        CHECK(array.shape() == std::vector<uintptr_t>{{3, 3, 2, 2}});
+        mts_data_origin_t origin = array.origin();
 
         char buffer[32];
         CHECK(mts_get_data_origin(origin, buffer, sizeof(buffer)) == MTS_SUCCESS);

@@ -56,10 +56,10 @@ TEST_CASE("Arrays") {
         CHECK((copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4}));
         CHECK(copy_ptr->tensor().dtype() == torch::kF64);
 
-        auto fill_value = metatensor::DataArrayBase::to_mts_array_t(
+        auto fill_value = metatensor::DataArrayBase::to_mts_array(
             std::make_unique<TorchDataArray>(torch::zeros({}, torch::kF64))
         );
-        auto created = array.create({5, 6}, fill_value);
+        auto created = array.create({5, 6}, std::move(fill_value));
         auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
 
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));
@@ -100,7 +100,7 @@ TEST_CASE("Arrays") {
                 fill_value = torch::rand({}, options);
             }
 
-            auto fill_value_mts = metatensor::DataArrayBase::to_mts_array_t(
+            auto fill_value_mts = metatensor::DataArrayBase::to_mts_array(
                 std::make_unique<TorchDataArray>(fill_value)
             );
 
