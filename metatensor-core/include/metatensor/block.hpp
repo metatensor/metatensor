@@ -52,7 +52,7 @@ public:
             c_components.push_back(component.as_mts_labels_t());
         }
         block_ = mts_block(
-            DataArrayBase::to_mts_array_t(std::move(values)),
+            DataArrayBase::to_mts_array(std::move(values)).release(),
             samples.as_mts_labels_t(),
             c_components.data(),
             c_components.size(),
@@ -140,14 +140,7 @@ public:
     template<typename T = double>
     DLPackArray<T> values(DLDevice device = {kDLCPU, 0}, const int64_t* stream = nullptr) & {
         auto array = this->mts_array();
-
-        DLManagedTensorVersioned* managed = nullptr;
-        DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        details::check_status(array.as_dlpack(
-            array.ptr, &managed, device, stream, ver
-        ));
-
-        return DLPackArray<T>(managed);
+        return array.as_dlpack_array<T>(device, stream, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
     }
 
     template<typename T = double>
@@ -284,15 +277,15 @@ public:
         return block;
     }
 
-    /// Get a raw `mts_array_t` corresponding to the values in this block.
-    mts_array_t mts_array() {
+    /// Get a raw `MtsArray` corresponding to the values in this block.
+    MtsArray mts_array() {
         mts_array_t array;
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
             mts_block_data(block_, &array)
         );
-        return array;
+        return MtsArray(array);
     }
 
     /// Get the labels in this block associated with the given `axis`.
@@ -309,13 +302,7 @@ public:
     /// Get the shape of the value array for this block
     std::vector<uintptr_t> values_shape() const {
         auto array = this->const_mts_array();
-
-        const uintptr_t* shape = nullptr;
-        uintptr_t shape_count = 0;
-        details::check_status(array.shape(array.ptr, &shape, &shape_count));
-        assert(shape_count >= 2);
-
-        return {shape, shape + shape_count};
+        return array.shape();
     }
 
     /*!
@@ -422,17 +409,17 @@ private:
     /// block takes ownership of the C pointer.
     explicit TensorBlock(mts_block_t* block): block_(block), is_view_(false) {}
 
-    /// Get the `mts_array_t` for this block.
+    /// Get the `MtsArray` for this block.
     ///
-    /// The returned `mts_array_t` should only be used in a const context
-    mts_array_t const_mts_array() const {
+    /// The returned `MtsArray` should only be used in a const context
+    MtsArray const_mts_array() const {
         mts_array_t array;
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
             mts_block_data(block_, &array)
         );
-        return array;
+        return MtsArray(array);
     }
 
     /// Release the `mts_block_t` pointer corresponding to this `TensorBlock`.

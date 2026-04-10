@@ -1,16 +1,16 @@
 #pragma once
 
-#include <algorithm>
-#include <array>
-#include <initializer_list>
-#include <string>
-#include <type_traits>
 #include <cassert>
-#include <cmath>
 #include <cstring>
-#include <functional>
+
+#include <array>
+#include <string>
 #include <memory>
 #include <vector>
+#include <algorithm>
+#include <functional>
+#include <type_traits>
+#include <initializer_list>
 
 #include <metatensor.h>
 
@@ -141,22 +141,10 @@ namespace details {
     /// Returns true when code, bits **and** lanes all match.
     template<typename T>
     bool dlpack_dtype_matches(DLDataType dtype) {
-        if (dtype.lanes != 1) {
-            return false;
-        }
-        if constexpr (std::is_floating_point_v<T>) {
-            return dtype.code == kDLFloat
-                && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
-        } else if constexpr (std::is_integral_v<T>) {
-            if constexpr (std::is_signed_v<T>) {
-                return dtype.code == kDLInt
-                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
-            } else {
-                return dtype.code == kDLUInt
-                    && dtype.bits == static_cast<uint8_t>(sizeof(T) * 8);
-            }
-        }
-        return false;
+        auto expected = dtype_of<T>();
+        return dtype.code == expected.code
+            && dtype.bits == expected.bits
+            && dtype.lanes == expected.lanes;
     }
 
     template<typename Lhs, typename Rhs>
@@ -284,6 +272,14 @@ public:
             return {kDLCPU, 0};
         }
         return managed_->dl_tensor.device;
+    }
+
+    /// Get the DLDataType for this array.
+    DLDataType dtype() const {
+        if (managed_ == nullptr) {
+            throw Error("empty DLPackArray has no dtype");
+        }
+        return managed_->dl_tensor.dtype;
     }
 
     /// Get the value inside this `DLPackArray` at the given index
@@ -656,6 +652,226 @@ bool operator!=(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
     return !details::arrays_equal(lhs, rhs);
 }
 
+/// RAII wrapper around `mts_array_t` that takes ownership of the underlying
+/// data and calls the appropriate destroy function when it goes out of scope.
+///
+/// This class also provides some convenience functions to call the function
+/// pointers in `mts_array_t`.
+class MtsArray final {
+public:
+    /// Create an `MtsArray` that takes ownership of the given `mts_array_t`.
+    explicit MtsArray(mts_array_t array): array_(array) {}
+
+    ~MtsArray() {
+        if (array_.destroy != nullptr) {
+            array_.destroy(array_.ptr);
+        }
+    }
+
+    /// MtsArray is copy-constructible
+    MtsArray(const MtsArray& other): MtsArray({}) {
+        if (other.array_.copy == nullptr) {
+            throw Error("invalid mts_array_t: null copy function pointer");
+        }
+        mts_array_t new_array;
+        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+
+        *this = MtsArray(new_array);
+    }
+
+    /// MtsArray can be copy-assigned
+    MtsArray& operator=(const MtsArray& other) {
+        if (other.array_.copy == nullptr) {
+            throw Error("invalid mts_array_t: null copy function pointer");
+        }
+        mts_array_t new_array;
+        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+
+        *this = MtsArray(new_array);
+        return *this;
+    }
+
+    /// MtsArray is move-constructible
+    MtsArray(MtsArray&& other) noexcept: MtsArray({}) {
+        *this = std::move(other);
+    }
+
+    /// MtsArray can be move-assigned
+    MtsArray& operator=(MtsArray&& other) noexcept {
+        if (array_.destroy != nullptr) {
+            array_.destroy(array_.ptr);
+        }
+
+        array_ = other.array_;
+        other.array_ = mts_array_t{};
+
+        return *this;
+    }
+
+    /// Release ownership of the `mts_array_t` and return it. After this call,
+    /// the `MtsArray` is empty and does not own any data.
+    mts_array_t release() && {
+        mts_array_t array = array_;
+        array_ = mts_array_t{};
+        return array;
+    }
+
+    /// Get a non-owning view of this `MtsArray` as an `mts_array_t`.
+    mts_array_t as_mts_array_t() const {
+        auto view = mts_array_t{};
+        std::memcpy(&view, &array_, sizeof(mts_array_t));
+        view.destroy = nullptr;
+        return view;
+    }
+
+    /// Get the data origin for this array.
+    mts_data_origin_t origin() const {
+        if (array_.origin == nullptr) {
+            throw Error("invalid mts_array_t: null origin function pointer");
+        }
+        mts_data_origin_t origin;
+        details::check_status(array_.origin(array_.ptr, &origin));
+        return origin;
+    }
+
+    /// Get the device where this array's data resides.
+    DLDevice device() const {
+        if (array_.device == nullptr) {
+            throw Error("invalid mts_array_t: null device function pointer");
+        }
+        DLDevice device;
+        details::check_status(array_.device(array_.ptr, &device));
+        return device;
+    }
+
+    /// Get the data type of this array.
+    virtual DLDataType dtype() const {
+        if (array_.dtype == nullptr) {
+            throw Error("invalid mts_array_t: null dtype function pointer");
+        }
+        DLDataType dtype;
+        details::check_status(array_.dtype(array_.ptr, &dtype));
+
+        return dtype;
+    }
+
+    /// Get a DLPack representation of this array
+    ///
+    /// The returned pointer is owned by the caller and should be freed
+    /// using its deleter function when no longer needed.
+    ///
+    /// See the documentation of `mts_array_t::as_dlpack` for more details about
+    /// the parameters.
+    DLManagedTensorVersioned* as_dlpack(
+        DLDevice device,
+        const int64_t* stream,
+        DLPackVersion max_version
+    ) {
+        if (array_.as_dlpack == nullptr) {
+            throw Error("invalid mts_array_t: null as_dlpack function pointer");
+        }
+        DLManagedTensorVersioned* dlpack;
+        details::check_status(
+            array_.as_dlpack(array_.ptr, &dlpack, device, stream, max_version)
+        );
+        return dlpack;
+    }
+
+    /// Get a DLPackArray corresponding to this array
+    ///
+    /// See the documentation of `mts_array_t::as_dlpack` for more details about
+    /// the parameters.
+    template <typename T>
+    DLPackArray<T> as_dlpack_array(
+        DLDevice device,
+        const int64_t* stream,
+        DLPackVersion max_version
+    ) {
+        return DLPackArray<T>(this->as_dlpack(device, stream, max_version));
+    }
+
+    /// Create a new array with the same options as the current one (data type,
+    /// data location, etc.) and the requested `shape`.
+    ///
+    /// The new array should be filled with the scalar value from `fill_value`,
+    /// which must be an `mts_array_t` with shape `(1,)` and the same dtype as
+    /// this array. This function should call `fill_value.destroy` if the
+    /// function pointer is not null when `fill_value` is no longer needed.
+    MtsArray create(
+        const std::vector<uintptr_t>& shape,
+        MtsArray fill_value
+    ) const {
+        if (array_.create == nullptr) {
+            throw Error("invalid mts_array_t: null create function pointer");
+        }
+        mts_array_t new_array;
+        details::check_status(
+            array_.create(array_.ptr, shape.data(), shape.size(), std::move(fill_value).release(), &new_array)
+        );
+        return MtsArray(new_array);
+    }
+
+    /// Get the shape of this array
+    std::vector<uintptr_t> shape() const {
+        if (array_.shape == nullptr) {
+            throw Error("invalid mts_array_t: null shape function pointer");
+        }
+        const uintptr_t* shape;
+        uintptr_t shape_count;
+        details::check_status(
+            array_.shape(array_.ptr, &shape, &shape_count)
+        );
+        return std::vector<uintptr_t>(shape, shape + shape_count);
+    }
+
+    /// Set the shape of this array to the given `shape`
+    void reshape(const std::vector<uintptr_t>& shape) {
+        if (array_.reshape == nullptr) {
+            throw Error("invalid mts_array_t: null reshape function pointer");
+        }
+        details::check_status(
+            array_.reshape(array_.ptr, shape.data(), shape.size())
+        );
+    }
+
+    /// Swap the axes `axis_1` and `axis_2` in this `array`.
+    void swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
+        if (array_.swap_axes == nullptr) {
+            throw Error("invalid mts_array_t: null swap_axes function pointer");
+        }
+        details::check_status(
+            array_.swap_axes(array_.ptr, axis_1, axis_2)
+        );
+    }
+
+    /// Set entries in the current array taking data from the `input` array.
+    ///
+    /// This array is guaranteed to be created by calling `mts_array_t::create`
+    /// with one of the arrays in the same block or tensor map as the `input`.
+    ///
+    /// The `moves` indicate where the data should be moved from `input` to the
+    /// current DataArrayBase.
+    ///
+    /// This function copy data from `input[move.sample_in, ...,
+    /// move.properties_start_in + i]` to `array[move.sample_out, ...,
+    /// move.properties_start_out + i]` for each `move` in `moves` and `i` up to
+    /// `move.properties_length`. All indexes are 0-based.
+    void move_data(
+        const MtsArray& input,
+        std::vector<mts_data_movement_t> moves
+    ) {
+        if (array_.move_data == nullptr) {
+            throw Error("invalid mts_array_t: null move_data function pointer");
+        }
+        details::check_status(
+            array_.move_data(array_.ptr, input.array_.ptr, moves.data(), moves.size())
+        );
+    }
+
+private:
+    mts_array_t array_;
+};
+
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
 /// tensor map. The array itself if opaque to this library and can come from
 /// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
@@ -683,7 +899,7 @@ public:
     ///
     /// The `mts_array_t` takes ownership of the data, which should be released
     /// with `mts_array_t::destroy`.
-    static mts_array_t to_mts_array_t(std::unique_ptr<DataArrayBase> data) {
+    static MtsArray to_mts_array(std::unique_ptr<DataArrayBase> data) {
         mts_array_t array;
         std::memset(&array, 0, sizeof(array));
 
@@ -719,7 +935,8 @@ public:
             return details::catch_exceptions([](const void* array, mts_array_t* new_array){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
                 auto copy = cxx_array->copy();
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
+                auto new_array_cxx = DataArrayBase::to_mts_array(std::move(copy));
+                *new_array = std::move(new_array_cxx).release();
             }, array, new_array);
         };
 
@@ -736,8 +953,9 @@ public:
                 for (size_t i=0; i<static_cast<size_t>(shape_count); i++) {
                     cxx_shape.push_back(static_cast<size_t>(shape[i]));
                 }
-                auto copy = cxx_array->create(std::move(cxx_shape), fill_value);
-                *new_array = DataArrayBase::to_mts_array_t(std::move(copy));
+                auto copy = cxx_array->create(std::move(cxx_shape), MtsArray(fill_value));
+                auto new_array_cxx = DataArrayBase::to_mts_array(std::move(copy));
+                *new_array = std::move(new_array_cxx).release();
             }, array, shape, shape_count, fill_value, new_array);
         };
 
@@ -806,7 +1024,7 @@ public:
             }, array, input, moves, moves_count);
         };
 
-        return array;
+        return MtsArray(array);
     }
 
     /// Get "data origin" for this array in.
@@ -820,11 +1038,6 @@ public:
     virtual DLDevice device() const = 0;
 
     /// Get the data type of this array.
-    ///
-    /// This provides the `dtype` vtable callback for metatensor-core.
-    /// If not overridden, the dtype falls back to extracting it from
-    /// `as_dlpack`, which is more expensive. Implementations should
-    /// override this for better performance.
     virtual DLDataType dtype() const = 0;
 
     /// Get a DLPack representation of this array
@@ -849,12 +1062,11 @@ public:
     /// data location, etc.) and the requested `shape`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`,
-    /// which must be an `mts_array_t` with shape `(1,)` and the same dtype as
-    /// this array. This function should call `fill_value.destroy` if the
-    /// function pointer is not null when `fill_value` is no longer needed.
+    /// which must be an `MtsArray` containing a single element with the same
+    /// dtype as this array.
     virtual std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        mts_array_t fill_value
+        MtsArray fill_value
     ) const = 0;
 
     /// Get the shape of this array
@@ -970,90 +1182,18 @@ public:
 
     std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        mts_array_t fill_value
+        MtsArray fill_value
     ) const override {
         DLDevice cpu_device = {kDLCPU, 0};
         DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        DLManagedTensorVersioned* fill_value_dlpack = nullptr;
-        auto status = fill_value.as_dlpack(fill_value.ptr, &fill_value_dlpack, cpu_device, nullptr, max_version);
-        if (status != MTS_SUCCESS) {
-            throw Error("failed to extract fill_value as DLPack");
-        }
+        auto fill_value_dlpack = fill_value.as_dlpack_array<T>(cpu_device, nullptr, max_version);
 
         // Validate fill_value shape from the DLPack tensor directly
-        if (fill_value_dlpack->dl_tensor.ndim != 0) {
-            if (fill_value_dlpack->deleter != nullptr) {
-                fill_value_dlpack->deleter(fill_value_dlpack);
-            }
+        if (!fill_value_dlpack.shape().empty()) {
             throw Error("`fill_value` must be a single scalar");
         }
 
-        T scalar;
-        auto code = fill_value_dlpack->dl_tensor.dtype.code;
-        auto bits = fill_value_dlpack->dl_tensor.dtype.bits;
-
-        // Account for DLPack byte_offset per spec
-        const auto* data = static_cast<const char*>(fill_value_dlpack->dl_tensor.data);
-        data += fill_value_dlpack->dl_tensor.byte_offset;
-
-        if (code == kDLFloat && bits == 64) {
-            scalar = static_cast<T>(*reinterpret_cast<const double*>(data));
-        } else if (code == kDLFloat && bits == 32) {
-            scalar = static_cast<T>(*reinterpret_cast<const float*>(data));
-        } else if (code == kDLFloat && bits == 16) {
-            // f16: read as uint16_t and convert (no native C++ f16 type)
-            auto raw = *reinterpret_cast<const uint16_t*>(data);
-            // IEEE 754 f16->f32 conversion
-            uint32_t sign = (raw >> 15) & 0x1;
-            uint32_t exp = (raw >> 10) & 0x1F;
-            uint32_t frac = raw & 0x3FF;
-            float val;
-            if (exp == 0) {
-                // zero and subnormals: value = (-1)^sign * 2^(-14) * (frac/1024)
-                val = std::ldexp(static_cast<float>(frac), -24);
-                if (sign != 0) {
-                    val = -val;
-                }
-            } else if (exp == 0x1F) {
-                uint32_t f32 = (sign << 31) | 0x7F800000 | (frac << 13);
-                std::memcpy(&val, &f32, sizeof(float));
-            } else {
-                uint32_t f32 = (sign << 31) | ((exp + 112) << 23) | (frac << 13);
-                std::memcpy(&val, &f32, sizeof(float));
-            }
-            scalar = static_cast<T>(val);
-        } else if (code == kDLInt && bits == 64) {
-            scalar = static_cast<T>(*reinterpret_cast<const int64_t*>(data));
-        } else if (code == kDLInt && bits == 32) {
-            scalar = static_cast<T>(*reinterpret_cast<const int32_t*>(data));
-        } else if (code == kDLInt && bits == 16) {
-            scalar = static_cast<T>(*reinterpret_cast<const int16_t*>(data));
-        } else if (code == kDLInt && bits == 8) {
-            scalar = static_cast<T>(*reinterpret_cast<const int8_t*>(data));
-        } else if (code == kDLUInt && bits == 64) {
-            scalar = static_cast<T>(*reinterpret_cast<const uint64_t*>(data));
-        } else if (code == kDLUInt && bits == 32) {
-            scalar = static_cast<T>(*reinterpret_cast<const uint32_t*>(data));
-        } else if (code == kDLUInt && bits == 16) {
-            scalar = static_cast<T>(*reinterpret_cast<const uint16_t*>(data));
-        } else if (code == kDLUInt && bits == 8) {
-            scalar = static_cast<T>(*reinterpret_cast<const uint8_t*>(data));
-        } else if (code == kDLBool && bits == 8) {
-            scalar = static_cast<T>(*reinterpret_cast<const bool*>(data));
-        } else {
-            if (fill_value_dlpack->deleter != nullptr) {
-                fill_value_dlpack->deleter(fill_value_dlpack);
-            }
-            throw Error("unsupported fill_value dtype");
-        }
-
-        if (fill_value_dlpack->deleter != nullptr) {
-            fill_value_dlpack->deleter(fill_value_dlpack);
-        }
-
-        if (fill_value.destroy != nullptr) {
-            fill_value.destroy(fill_value.ptr);
-        }
+        auto scalar = fill_value_dlpack.data()[0];
 
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(std::move(shape), scalar));
     }
@@ -1128,20 +1268,16 @@ public:
     ///
     /// This function fails if the `mts_array_t` does not contain a
     /// SimpleDataArray.
-    static SimpleDataArray& from_mts_array(mts_array_t& array) {
-        mts_data_origin_t origin = 0;
-        auto status = array.origin(array.ptr, &origin);
-        if (status != MTS_SUCCESS) {
-            throw Error("failed to get data origin");
-        }
+    static SimpleDataArray& from_mts_array(MtsArray& array) {
+        auto origin = array.origin();
 
         std::array<char, 64> buffer = {0};
-        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        auto status = mts_get_data_origin(origin, buffer.data(), buffer.size());
         if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 
-        auto* base = static_cast<DataArrayBase*>(array.ptr);
+        auto* base = static_cast<DataArrayBase*>(array.as_mts_array_t().ptr);
         return dynamic_cast<SimpleDataArray&>(*base);
     }
 
@@ -1149,20 +1285,16 @@ public:
     ///
     /// This function fails if the `mts_array_t` does not contain a
     /// SimpleDataArray.
-    static const SimpleDataArray& from_mts_array(const mts_array_t& array) {
-        mts_data_origin_t origin = 0;
-        auto status = array.origin(array.ptr, &origin);
-        if (status != MTS_SUCCESS) {
-            throw Error("failed to get data origin");
-        }
+    static const SimpleDataArray& from_mts_array(const MtsArray& array) {
+        auto origin = array.origin();
 
         std::array<char, 64> buffer = {0};
-        status = mts_get_data_origin(origin, buffer.data(), buffer.size());
+        auto status = mts_get_data_origin(origin, buffer.data(), buffer.size());
         if (status != MTS_SUCCESS || std::string(buffer.data()) != "metatensor::SimpleDataArray") {
             throw Error("this array is not a metatensor::SimpleDataArray");
         }
 
-        const auto* base = static_cast<const DataArrayBase*>(array.ptr);
+        const auto* base = static_cast<const DataArrayBase*>(array.as_mts_array_t().ptr);
         return dynamic_cast<const SimpleDataArray&>(*base);
     }
 
@@ -1219,24 +1351,8 @@ public:
         // Fill the DLTensor view
         auto &tensor = managed->dl_tensor;
         tensor.device = {kDLCPU, 0};
+        tensor.dtype = details::dtype_of<T>();
         tensor.ndim = static_cast<int32_t>(this->shape_.size());
-
-        if (std::is_floating_point_v<T>) {
-            tensor.dtype.code = kDLFloat;
-            tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
-            tensor.dtype.lanes = 1;
-        } else if (std::is_integral_v<T>) {
-            if (std::is_signed_v<T>) {
-                tensor.dtype.code = kDLInt;
-            } else {
-                tensor.dtype.code = kDLUInt;
-            }
-            tensor.dtype.bits = static_cast<uint8_t>(sizeof(T) * 8);
-            tensor.dtype.lanes = 1;
-        } else {
-            static_assert(std::is_arithmetic_v<T>, "unsupported tensor element type");
-        }
-
         tensor.byte_offset = 0;
 
         // tensor.data now points into ctx->data's underlying vector.
@@ -1396,7 +1512,7 @@ public:
 
     std::unique_ptr<DataArrayBase> create(
         std::vector<uintptr_t> shape,
-        mts_array_t /*fill_value*/
+        MtsArray /*fill_value*/
     ) const override {
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
     }
@@ -1433,25 +1549,25 @@ inline mts_status_t details::default_create_array(
 
         std::unique_ptr<DataArrayBase> cxx_array;
         if (dtype.code == kDLFloat && dtype.bits == 64) {
-            cxx_array.reset(new SimpleDataArray<double>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<double>>(shape);
         } else if (dtype.code == kDLFloat && dtype.bits == 32) {
-            cxx_array.reset(new SimpleDataArray<float>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<float>>(shape);
         } else if (dtype.code == kDLInt && dtype.bits == 8) {
-            cxx_array.reset(new SimpleDataArray<int8_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<int8_t>>(shape);
         } else if (dtype.code == kDLInt && dtype.bits == 16) {
-            cxx_array.reset(new SimpleDataArray<int16_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<int16_t>>(shape);
         } else if (dtype.code == kDLInt && dtype.bits == 32) {
-            cxx_array.reset(new SimpleDataArray<int32_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<int32_t>>(shape);
         } else if (dtype.code == kDLInt && dtype.bits == 64) {
-            cxx_array.reset(new SimpleDataArray<int64_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<int64_t>>(shape);
         } else if (dtype.code == kDLUInt && dtype.bits == 8) {
-            cxx_array.reset(new SimpleDataArray<uint8_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<uint8_t>>(shape);
         } else if (dtype.code == kDLUInt && dtype.bits == 16) {
-            cxx_array.reset(new SimpleDataArray<uint16_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<uint16_t>>(shape);
         } else if (dtype.code == kDLUInt && dtype.bits == 32) {
-            cxx_array.reset(new SimpleDataArray<uint32_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<uint32_t>>(shape);
         } else if (dtype.code == kDLUInt && dtype.bits == 64) {
-            cxx_array.reset(new SimpleDataArray<uint64_t>(shape));
+            cxx_array = std::make_unique<SimpleDataArray<uint64_t>>(shape);
         } else {
             throw metatensor::Error(
                 "unsupported DLDataType in default_create_array: code="
@@ -1459,7 +1575,7 @@ inline mts_status_t details::default_create_array(
             );
         }
 
-        *array = DataArrayBase::to_mts_array_t(std::move(cxx_array));
+        *array = DataArrayBase::to_mts_array(std::move(cxx_array)).release();
 
         return MTS_SUCCESS;
     }, shape_ptr, shape_count, dtype, array);

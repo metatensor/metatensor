@@ -4,6 +4,9 @@ Data arrays
 .. doxygenclass:: metatensor::DataArrayBase
     :members:
 
+.. doxygenclass:: metatensor::MtsArray
+    :members:
+
 ------------------------------------
 
 .. doxygenclass:: metatensor::SimpleDataArray

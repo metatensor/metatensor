@@ -43,7 +43,7 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy() const {
 
 std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
     std::vector<uintptr_t> shape,
-    mts_array_t fill_value
+    metatensor::MtsArray fill_value
 ) const {
     auto sizes = std::vector<int64_t>();
     for (auto size: shape) {
@@ -52,11 +52,7 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
 
     DLDevice cpu_device = {kDLCPU, 0};
     DLPackVersion max_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    DLManagedTensorVersioned* fill_value_dlpack = nullptr;
-    auto status = fill_value.as_dlpack(fill_value.ptr, &fill_value_dlpack, cpu_device, nullptr, max_version);
-    if (status != MTS_SUCCESS) {
-        throw std::runtime_error("failed to extract fill_value as DLPack");
-    }
+    auto* fill_value_dlpack = fill_value.as_dlpack(cpu_device, nullptr, max_version);
 
     // Validate fill_value shape from the DLPack tensor directly
     if (fill_value_dlpack->dl_tensor.ndim != 0) {
@@ -69,10 +65,23 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
     c10::Scalar scalar_val;
     auto code = fill_value_dlpack->dl_tensor.dtype.code;
     auto bits = fill_value_dlpack->dl_tensor.dtype.bits;
+
+    auto expected_dtype = this->dtype();
+    if (code != expected_dtype.code || bits != expected_dtype.bits) {
+        if (fill_value_dlpack->deleter != nullptr) {
+            fill_value_dlpack->deleter(fill_value_dlpack);
+        }
+        throw std::runtime_error(
+            "`fill_value` dtype (" + std::to_string(code) + " with " + std::to_string(bits) + " bits) does not match the array dtype (" +
+            std::to_string(expected_dtype.code) + " with " + std::to_string(expected_dtype.bits) + " bits)"
+        );
+    }
+
     // Account for DLPack byte_offset per spec
     const auto* data = static_cast<const char*>(fill_value_dlpack->dl_tensor.data);
     data += fill_value_dlpack->dl_tensor.byte_offset;
 
+    // TODO: switch to at::fromDLPackVersioned() when our MSTorchV is 2.9
     if (code == kDLFloat && bits == 64) {
         scalar_val = *reinterpret_cast<const double*>(data);
     } else if (code == kDLFloat && bits == 32) {
@@ -116,10 +125,6 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(
     }
     if (fill_value_dlpack->deleter != nullptr) {
         fill_value_dlpack->deleter(fill_value_dlpack);
-    }
-
-    if (fill_value.destroy != nullptr) {
-        fill_value.destroy(fill_value.ptr);
     }
 
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(
@@ -223,6 +228,9 @@ DLDataType TorchDataArray::dtype() const {
         break;
     case torch::kBool:
         dt.code = kDLBool; dt.bits = 8;
+        break;
+    case torch::kComplexHalf:
+        dt.code = kDLComplex; dt.bits = 32;
         break;
     case torch::kComplexFloat:
         dt.code = kDLComplex; dt.bits = 64;
