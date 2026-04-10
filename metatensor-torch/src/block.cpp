@@ -141,15 +141,13 @@ torch::Tensor TensorBlockHolder::values() const {
     // inside the tensor).
     auto array = const_cast<metatensor::TensorBlock&>(block_).mts_array();
 
-    mts_data_origin_t origin = 0;
-    metatensor::details::check_status(array.origin(array.ptr, &origin));
-    if (origin != TORCH_DATA_ORIGIN) {
+    if (array.origin() != TORCH_DATA_ORIGIN) {
         C10_THROW_ERROR(ValueError,
             "this TensorBlock does not contain a C++ torch Tensor"
         );
     }
 
-    auto* ptr = static_cast<metatensor::DataArrayBase*>(array.ptr);
+    auto* ptr = static_cast<metatensor::DataArrayBase*>(array.as_mts_array_t().ptr);
     auto* wrapper = dynamic_cast<TorchDataArray*>(ptr);
     if (wrapper == nullptr) {
         C10_THROW_ERROR(ValueError,

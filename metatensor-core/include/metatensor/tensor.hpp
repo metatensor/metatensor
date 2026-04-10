@@ -278,19 +278,19 @@ public:
     /// they appear in the blocks.
     ///
     /// @param keys_to_move description of the keys to move
-    /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
-    ///                   used to fill missing entries
+    /// @param fill_value an `MtsArray` containing a single scalar of the same
+    //                    dtype as this `TensorMap`, used to fill missing entries
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     TensorMap keys_to_properties(
         const Labels& keys_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
         auto* ptr = mts_tensormap_keys_to_properties(
             tensor_,
             keys_to_move.as_mts_labels_t(),
-            fill_value,
+            std::move(fill_value).release(),
             sort_samples
         );
 
@@ -302,20 +302,24 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_properties(
         const std::vector<std::string>& keys_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
-        return keys_to_properties(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_properties(Labels(keys_to_move), std::move(fill_value), sort_samples);
     }
 
     /// This function calls `keys_to_properties` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_properties(
         std::string key_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
-        return keys_to_properties(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_properties(
+            std::vector<std::string>{std::move(key_to_move)},
+            std::move(fill_value),
+            sort_samples
+        );
     }
 
     /// Convenience overload: create fill_value from a scalar.
@@ -326,11 +330,11 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        auto fill_value_array = DataArrayBase::to_mts_array_t(
+        auto fill_value_array = DataArrayBase::to_mts_array(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
         // Ownership of fill_value_array is transfered to the C API
-        return keys_to_properties(keys_to_move, fill_value_array, sort_samples);
+        return keys_to_properties(keys_to_move, std::move(fill_value_array), sort_samples);
     }
 
     /// Convenience overload with vector of strings
@@ -373,19 +377,19 @@ public:
     /// property labels.
     ///
     /// @param keys_to_move description of the keys to move
-    /// @param fill_value an mts_array_t with shape (1,) and the same dtype,
-    ///                   used to fill missing entries
+    /// @param fill_value an `MtsArray` containing a single scalar of the same
+    //                    dtype as this `TensorMap`, used to fill missing entries
     /// @param sort_samples whether to sort the merged samples or keep them in
     ///                     the order in which they appear in the original blocks
     TensorMap keys_to_samples(
         const Labels& keys_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
         auto* ptr = mts_tensormap_keys_to_samples(
             tensor_,
             keys_to_move.as_mts_labels_t(),
-            fill_value,
+            std::move(fill_value).release(),
             sort_samples
         );
 
@@ -397,20 +401,24 @@ public:
     /// with the dimensions defined in `keys_to_move`
     TensorMap keys_to_samples(
         const std::vector<std::string>& keys_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
-        return keys_to_samples(Labels(keys_to_move), fill_value, sort_samples);
+        return keys_to_samples(Labels(keys_to_move), std::move(fill_value), sort_samples);
     }
 
     /// This function calls `keys_to_samples` with an empty set of `Labels`
     /// with a single dimension: `key_to_move`
     TensorMap keys_to_samples(
         std::string key_to_move,
-        mts_array_t fill_value,
+        MtsArray fill_value,
         bool sort_samples
     ) const {
-        return keys_to_samples(std::vector<std::string>{std::move(key_to_move)}, fill_value, sort_samples);
+        return keys_to_samples(
+            std::vector<std::string>{std::move(key_to_move)},
+            std::move(fill_value),
+            sort_samples
+        );
     }
 
     /// Convenience overload: create fill_value from a scalar.
@@ -421,11 +429,11 @@ public:
         T fill_value = T{},
         bool sort_samples = true
     ) const {
-        auto fill_value_array = DataArrayBase::to_mts_array_t(
+        auto fill_value_array = DataArrayBase::to_mts_array(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
         // Ownership of fill_value_array is transfered to the C API
-        return keys_to_samples(keys_to_move, fill_value_array, sort_samples);
+        return keys_to_samples(keys_to_move, std::move(fill_value_array), sort_samples);
     }
 
     /// Convenience overload with vector of strings
