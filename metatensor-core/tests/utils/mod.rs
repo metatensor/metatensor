@@ -76,12 +76,5 @@ pub fn ctest(build_dir: &Path) -> Command {
     ctest.arg("--build-config");
     ctest.arg(build_type());
 
-    // When running under cargo-llvm-cov, do NOT override LLVM_PROFILE_FILE.
-    // The C++ test processes inherit cargo-llvm-cov's pattern, so the profraw
-    // from libmetatensor.so (Rust C API exercised by C++ tests) lands where
-    // cargo-llvm-cov expects it. This adds Rust coverage from C++ test vectors
-    // to the main Rust coverage report. The C++ header coverage is exported
-    // separately by .github/scripts/export-cpp-coverage.sh.
-
     return ctest
 }

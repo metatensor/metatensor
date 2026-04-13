@@ -34,7 +34,6 @@ jobs:
             wget https://apt.llvm.org/llvm.sh
             chmod +x llvm.sh
             sudo ./llvm.sh ${{ matrix.llvm-version }}
-            sudo apt install --no-install-recommends llvm-${{ matrix.llvm-version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -62,9 +61,7 @@ jobs:
         uses: actions/cache@v5
         with:
           path: .tox
-          key: tox-${{ hashFiles('pyproject.toml', 'tox.ini') }}
-          restore-keys: |
-            tox-
+          key: tox-${{ hashFiles('pyproject.toml', 'setup.cfg', 'tox.ini') }}
 
       - name: Cache Rust dependencies
         uses: Leafwing-Studios/cargo-cache@v2.6.1
@@ -116,18 +113,8 @@ jobs:
       # fraction of the codebase) is invisible to the Rust coverage report.
       - name: collect Python coverage with instrumented library
         run: |
-          # Drop the entire .tox directory: actions/cache may have restored
-          # a build-metatensor-core env whose wheel was built without
-          # METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB=ON. The first
-          # `build-metatensor-core` build of the session is what produces
-          # the wheel that every test env reinstalls, so it must run with
-          # the instrumented-lib env vars below.
-          rm -rf .tox
-          # Run sequentially (not `run-parallel`) so build-metatensor-core's
-          # cmake/uv-build output is visible — we want to see the
-          # `-- Found metatensor:` message proving find_package ran.
           tox run \
-            -e lint,core-tests,operations-numpy-tests,operations-torch-tests,learn-numpy-tests,learn-torch-tests,torch-tests
+            -e core-tests,operations-numpy-tests,operations-torch-tests,learn-numpy-tests,learn-torch-tests,torch-tests
         env:
             PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
             UV_INDEX_STRATEGY: unsafe-best-match
