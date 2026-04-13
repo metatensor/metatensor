@@ -183,7 +183,7 @@ jobs:
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
-          ./scripts/update-declarations.sh
+          ./scripts/update-declarations.py
           git diff --exit-code
 
       - name: check that C API functions are all documented
