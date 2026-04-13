@@ -3,13 +3,17 @@
 Unified declaration generator for metatensor C API bindings.
 
 Usage:
-    ./scripts/update-declarations.py           # generate both python and julia
+    ./scripts/update-declarations.py            # generate all language bindings
     ./scripts/update-declarations.py python     # generate python only
     ./scripts/update-declarations.py julia      # generate julia only
+    ./scripts/update-declarations.py rust       # generate rust only
 """
 
 import os
+import shutil
+import subprocess
 import sys
+import tempfile
 
 from pycparser import c_ast, parse_file
 
@@ -24,18 +28,21 @@ METATENSOR_HEADER = os.path.relpath(
 )
 
 # DL types that appear in the mts_array_t vtable and public API
-DLPACK_TYPES = frozenset({
-    "DLDevice",
-    "DLPackVersion",
-    "DLDataType",
-    "DLDataTypeCode",
-    "DLManagedTensorVersioned",
-})
+DLPACK_TYPES = frozenset(
+    {
+        "DLDevice",
+        "DLPackVersion",
+        "DLDataType",
+        "DLDataTypeCode",
+        "DLManagedTensorVersioned",
+    }
+)
 
 
 # ============================================================================ #
 # Shared AST parsing
 # ============================================================================ #
+
 
 class Function:
     def __init__(self, name, restype):
@@ -137,9 +144,10 @@ def parse_header(file):
     return visitor
 
 
-# ============================================================================ #
-# Python backend
-# ============================================================================ #
+# ==================================================================================== #
+#                                 Python backend                                       #
+# ==================================================================================== #
+
 
 def _py_type_name(name):
     if name.startswith("mts_") or name in DLPACK_TYPES:
@@ -346,9 +354,9 @@ DLManagedTensorVersioned._fields_ = [
             f.write(f"    lib.{function.name}.restype = {restype}\n")
 
 
-# ============================================================================ #
-# Julia backend
-# ============================================================================ #
+# ==================================================================================== #
+#                                 Julia backend                                        #
+# ==================================================================================== #
 
 CTYPES_TO_JULIA = {
     "uintptr_t": "UIntptr",
@@ -496,20 +504,88 @@ end
             f.write("end\n")
 
 
-# ============================================================================ #
-# Main
-# ============================================================================ #
+# ==================================================================================== #
+#                                 Rust backend                                         #
+# ==================================================================================== #
+
+RUST_START = """
+#![allow(warnings)]
+//! Rust definition corresponding to metatensor-core C-API.
+//!
+//! This module is exported for advanced users of the metatensor crate, but
+//! should not be needed by most.
+
+use dlpk::sys::*;
+
+#[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
+#[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
+#[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
+extern "C" {}
+"""  # noqa: E501
+
+
+def generate_rust():
+    with tempfile.TemporaryDirectory() as tmpdir:
+        subprocess.run(
+            [
+                "bindgen",
+                METATENSOR_HEADER,
+                "--output",
+                os.path.join(tmpdir, "c_api.rs"),
+                "--disable-header-comment",
+                "--no-doc-comments",
+                "--default-macro-constant-type=signed",
+                "--merge-extern-blocks",
+                "--allowlist-function",
+                "^mts_.*",
+                "--allowlist-type",
+                "^mts_.*",
+                "--allowlist-var",
+                "^MTS_.*",
+                "--must-use-type",
+                "mts_status_t",
+                "--blocklist-type",
+                "DL.*",
+                "--rust-target",
+                "1.74",
+                "--raw-line",
+                RUST_START,
+                "--",
+                "-I",
+                os.path.join(ROOT, "scripts", "include"),
+            ],
+            check=True,
+        )
+
+        subprocess.run(
+            ["rustfmt", os.path.join(tmpdir, "c_api.rs")],
+            check=True,
+            cwd=tmpdir,
+        )
+
+        shutil.copyfile(
+            os.path.join(tmpdir, "c_api.rs"),
+            os.path.join(ROOT, "rust", "metatensor-sys", "src", "c_api.rs"),
+        )
+
+
+# ==================================================================================== #
+#                                       main                                           #
+# ==================================================================================== #
+
 
 def main():
     data = parse_header(METATENSOR_HEADER)
 
-    targets = sys.argv[1:] if len(sys.argv) > 1 else ["python", "julia"]
+    targets = sys.argv[1:] if len(sys.argv) > 1 else ["python", "julia", "rust"]
 
     for target in targets:
         if target == "python":
             generate_python(data)
         elif target == "julia":
             generate_julia(data)
+        elif target == "rust":
+            generate_rust()
         else:
             print(f"Unknown target: {target}", file=sys.stderr)
             sys.exit(1)
