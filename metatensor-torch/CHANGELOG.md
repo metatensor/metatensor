@@ -17,6 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Changed
+
+- The Python package now installs itself to `site-packages/metatensor_torch`
+  instead of `site-packages/metatensor/torch`. The module should still be
+  imported as `from metatensor.torch import ...`
+
+### Removed
+
+- `LabelsView` has been removed, and with it the following functions:
+  `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
+  `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
+
 ## [Version 0.8.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.8.5) - 2026-03-27
 
 ### Added

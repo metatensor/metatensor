@@ -23,6 +23,10 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Renamed `ArrayRef{Mut}::{as,to}_array` to `ArrayRef{Mut}::{as,to}_ndarray`
+- Accessing Labels data on CPU requires an explicit call to `to_cpu()` first
+- The default array is now based on `Arc<RwLock<ndarray::ArrayD<T>>>`, to allow
+  passing data back to other languages through DLPack while enforcing Rust's
+  mutable XOR shared rules.
 
 ### Removed
 
