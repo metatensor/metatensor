@@ -14,6 +14,13 @@ fn build_type() -> &'static str {
     }
 }
 
+fn append_flags(existing: Option<String>, extra: &str) -> String {
+    match existing {
+        Some(flags) if !flags.trim().is_empty() => format!("{flags} {extra}"),
+        _ => extra.into(),
+    }
+}
+
 pub fn cmake_config(source_dir: &Path, build_dir: &Path) -> Command {
     let cmake = which::which("cmake").expect("could not find cmake");
 
@@ -26,6 +33,21 @@ pub fn cmake_config(source_dir: &Path, build_dir: &Path) -> Command {
     // the cargo executable currently running
     let cargo_exe = std::env::var("CARGO").expect("CARGO env var is not set");
     cmake_config.arg(format!("-DCARGO_EXE={}", cargo_exe));
+
+    if std::env::var_os("CARGO_LLVM_COV").is_some() {
+        let coverage_compile_flags = "-fprofile-instr-generate -fcoverage-mapping";
+        let coverage_link_flags = "-fprofile-instr-generate";
+
+        let c_flags = append_flags(std::env::var("CFLAGS").ok(), coverage_compile_flags);
+        let cxx_flags = append_flags(std::env::var("CXXFLAGS").ok(), coverage_compile_flags);
+        let exe_linker_flags =
+            append_flags(std::env::var("LDFLAGS").ok(), coverage_link_flags);
+
+        cmake_config.arg(format!("-DCMAKE_C_FLAGS={c_flags}"));
+        cmake_config.arg(format!("-DCMAKE_CXX_FLAGS={cxx_flags}"));
+        cmake_config.arg(format!("-DCMAKE_EXE_LINKER_FLAGS={exe_linker_flags}"));
+        cmake_config.arg(format!("-DCMAKE_SHARED_LINKER_FLAGS={exe_linker_flags}"));
+    }
 
     return cmake_config;
 }
