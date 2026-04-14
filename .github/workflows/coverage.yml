@@ -94,10 +94,18 @@ jobs:
             PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
             UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
             UV_INDEX_STRATEGY: unsafe-best-match
-
+ 
       - name: locate cargo-llvm-cov environment
         id: covenv
         run: |
+          # Extract the LLVM instrumentation environment configured by cargo-llvm-cov.
+          # We require these variables to manually link the subsequent Python test
+          # executions to the Rust coverage reporting pipeline.
+          # Basically harmonizes setup between Rust and the rest of the coverage pipeline.
+          # see https://github.com/taiki-e/cargo-llvm-cov/issues/320
+          # or later
+          # https://github.com/near/nearcore/pull/10180/changes
+          # for another approach.
           eval "$(cargo llvm-cov show-env --export-prefix)"
           # show-env prints LLVM_PROFILE_FILE as target/metatensor-%p-%32m.profraw
           # but cargo-llvm-cov stores its profraw in target/llvm-cov-target/.
