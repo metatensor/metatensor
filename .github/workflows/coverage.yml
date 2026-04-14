@@ -23,6 +23,8 @@ jobs:
       CMAKE_CXX_COMPILER: clang++-${{ matrix.llvm-version }}
       CC: clang-${{ matrix.llvm-version }}
       CXX: clang++-${{ matrix.llvm-version }}
+      LLVM_COV: llvm-cov-${{ matrix.llvm-version }}
+      LLVM_PROFDATA: llvm-profdata-${{ matrix.llvm-version }}
 
     steps:
       - uses: actions/checkout@v6
@@ -32,8 +34,6 @@ jobs:
             wget https://apt.llvm.org/llvm.sh
             chmod +x llvm.sh
             sudo ./llvm.sh ${{ matrix.llvm-version }}
-            sudo apt-get update
-            sudo apt install --no-install-recommends clang-${{ matrix.llvm-version }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -68,45 +68,155 @@ jobs:
         with:
           sweep-cache: true
 
-      - name: setup sccache
-        if: ${{ !env.ACT }}
-        uses: mozilla-actions/sccache-action@v0.0.9
-        with:
-          version: "v0.10.0"
+      # sccache is intentionally NOT used for the coverage job: cached objects
+      # carry instrumentation hashes from a previous build that don't match
+      # the profraw collected in this run, causing llvm-cov to discard
+      # coverage for hundreds of functions ("N functions have mismatched data")
+      # and report exercised code paths as uncovered.
 
-      - name: setup sccache environnement variables
-        if: ${{ !env.ACT }}
+      # Build the instrumented Rust workspace and run Rust + C++ tests via
+      # cargo-llvm-cov. This produces an instrumented libmetatensor.so installed
+      # at target/llvm-cov-target/tmp/cxx-install/deps/metatensor-core/usr/.
+      # Use --no-report so we can merge in Python-side profraw before reporting.
+      # Exclude metatensor-python: its run_python_tests integration test shells
+      # out to `tox`, which builds and caches a metatensor-core wheel in
+      # .tox/build-metatensor-core/tmp/dist/ BEFORE the next step sets
+      # METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB=ON. That cached wheel then bundles
+      # an uninstrumented libmetatensor.so, so the later "collect Python coverage"
+      # step reinstalls it and no python-*.profraw is produced.
+      - name: build and run Rust tests with coverage
         run: |
-          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
-          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
-          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
-          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
-
-      - name: collect Python coverage
-        run: tox
+          cargo llvm-cov --all-features --workspace --exclude metatensor-python \
+            --no-fail-fast --no-report --include-ffi
         env:
-            # Use the CPU only version of torch when building/running the code
+            # PIP_EXTRA_INDEX_URL is read by tox.ini and converted to UV_EXTRA_INDEX_URL
+            # UV_EXTRA_INDEX_URL is used directly by uv in Rust integration tests
             PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+            UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+            UV_INDEX_STRATEGY: unsafe-best-match
+ 
+      - name: locate cargo-llvm-cov environment
+        id: covenv
+        run: |
+          # Extract the LLVM instrumentation environment configured by cargo-llvm-cov.
+          # We require these variables to manually link the subsequent Python test
+          # executions to the Rust coverage reporting pipeline.
+          # Basically harmonizes setup between Rust and the rest of the coverage pipeline.
+          # see https://github.com/taiki-e/cargo-llvm-cov/issues/320
+          # or later
+          # https://github.com/near/nearcore/pull/10180/changes
+          # for another approach.
+          eval "$(cargo llvm-cov show-env --export-prefix)"
+          # show-env prints LLVM_PROFILE_FILE as target/metatensor-%p-%32m.profraw
+          # but cargo-llvm-cov stores its profraw in target/llvm-cov-target/.
+          # Redirect Python profraw there so cargo llvm-cov report merges them.
+          PYTHON_PROFILE_FILE="${{ github.workspace }}/target/llvm-cov-target/python-%p-%32m.profraw"
+          echo "LLVM_PROFILE_FILE=$PYTHON_PROFILE_FILE" >> $GITHUB_ENV
+          echo "MTS_INSTRUMENTED_PREFIX=${{ github.workspace }}/target/llvm-cov-target/tmp/cxx-install/deps/metatensor-core/usr" >> $GITHUB_ENV
+
+      # Run Python tests with the INSTRUMENTED metatensor-core library so
+      # profraw files capturing Python -> Rust C API coverage land in
+      # cargo-llvm-cov's directory and get merged into rust_codecov.json below.
+      # Without this, all the Rust code that Python tests exercise (a huge
+      # fraction of the codebase) is invisible to the Rust coverage report.
+      - name: collect Python coverage with instrumented library
+        run: |
+          tox run \
+            -e core-tests,operations-numpy-tests,operations-torch-tests,learn-numpy-tests,learn-torch-tests,torch-tests
+        env:
+            PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+            UV_INDEX_STRATEGY: unsafe-best-match
+            CMAKE_PREFIX_PATH: ${{ env.MTS_INSTRUMENTED_PREFIX }}
+            METATENSOR_CORE_PYTHON_USE_EXTERNAL_LIB: "ON"
+
+      - name: verify Python tests used instrumented library
+        run: |
+          # Diagnostic: confirm the installed metatensor-core package points
+          # at the instrumented .so via _external.py, and that python-*.profraw
+          # was produced by the Python test runs.
+          echo "=== _external.py in each test env ==="
+          find .tox -name '_external.py' -path '*/site-packages/metatensor/*' -print -exec cat {} \;
+          echo "=== python-*.profraw files ==="
+          ls -la target/llvm-cov-target/python-*.profraw 2>&1 | head -20
+          echo "=== all profraw count ==="
+          find target/llvm-cov-target -maxdepth 1 -name '*.profraw' | wc -l
 
       - name: combine coverage files
         run: |
             coverage combine .tox/*/.coverage
             coverage xml
 
-      - name: generate rust code coverage
+      - name: generate rust code coverage report
         id: coverage
         run: |
-          cargo llvm-cov --all-features --workspace \
-            --no-fail-fast --codecov \
+          cargo llvm-cov report --codecov \
             --include-ffi \
             --output-path rust_codecov.json
-        env:
-            # Use the CPU only version of torch when building/running the code
-            UV_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
+
+      # cargo llvm-cov report --codecov above only sees objects in the cargo
+      # target tree. It ignores two cmake-built artefact sets:
+      #   - C++ test binaries under tmp/{cxx-tests,torch-tests}/ that cover
+      #     metatensor/*.hpp
+      #   - libmetatensor.so at tmp/cxx-install/ that Python tests load; its
+      #     counter IDs differ from the workspace .so, logged as
+      #     "N functions have mismatched data"
+      # Merge all profraw once and run llvm-cov export with the cmake-side
+      # objects to recover both. Codecov merges by file+line so the resulting
+      # lcov augments rust_codecov.json.
+      - name: export cmake-built coverage (C++ tests + Python-exercised Rust)
+        run: |
+          target_dir="${{ github.workspace }}/target/llvm-cov-target"
+
+          mapfile -t profraw < <(find "$target_dir" -maxdepth 1 -name '*.profraw' -type f | sort)
+          if [[ ${#profraw[@]} -eq 0 ]]; then
+            echo "::warning::No profraw files found"
+            : > cmake_coverage.lcov; exit 0
+          fi
+          # --failure-mode=warn skips profraw from a different LLVM version
+          # (e.g. system clang vs Rust's bundled LLVM) instead of aborting.
+          "$LLVM_PROFDATA" merge --failure-mode=warn -sparse \
+            "${profraw[@]}" -o cmake.profdata
+
+          # Test executables + the instrumented libmetatensor.so. Third-party
+          # .so (libtorch etc.) under deps/ are excluded to keep llvm-cov
+          # from complaining about objects it can't map.
+          mapfile -t objects < <({
+            find "$target_dir/tmp" \
+              \( -path '*/cxx-tests/*' -o -path '*/torch-tests/*' \) \
+              -maxdepth 3 -executable -type f \
+              ! -path '*/CMakeFiles/*' ! -path '*/deps/*' \
+              ! -name '*.so' ! -name '*.dylib' ! -name '*.a' ! -name '*.o'
+            find "$target_dir/tmp/cxx-install" -name 'libmetatensor.so' -type f 2>/dev/null
+          } | sort -u)
+          if [[ ${#objects[@]} -eq 0 ]]; then
+            echo "::warning::No cmake-built objects found"
+            : > cmake_coverage.lcov; exit 0
+          fi
+          echo "Merging ${#profraw[@]} profraw files against ${#objects[@]} objects"
+
+          args=(
+            export -format=lcov
+            -instr-profile cmake.profdata
+            -ignore-filename-regex '(\.cargo/registry|/rustc/|/usr/include|metatensor-core/tests/|metatensor-torch/tests/|tests/cpp/external|/llvm-cov-target/tmp/)'
+            "${objects[0]}"
+          )
+          for obj in "${objects[@]:1}"; do args+=(-object "$obj"); done
+          "$LLVM_COV" "${args[@]}" > cmake_coverage.lcov
+          echo "Wrote $(wc -l < cmake_coverage.lcov) lines"
+
+      - name: upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: |
+            cmake_coverage.lcov
+            rust_codecov.json
+            coverage.xml
 
       - name: upload to codecov.io
         uses: codecov/codecov-action@v6
         with:
+          disable_search: true
           fail_ci_if_error: true
-          files: coverage.xml,rust_codecov.json
+          files: coverage.xml,rust_codecov.json,cmake_coverage.lcov
           token: ${{ secrets.CODECOV_TOKEN }}
