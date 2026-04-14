@@ -51,9 +51,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Changed
 
-- C++ `TensorBlock::values()` is now a template `values<T>()` (defaulting to
+- `TensorBlock::values()` is now a template `values<T>()` (defaulting to
   `double`) and returns a `DLPackArray<T>` that owns the DLPack resource,
   preventing dangling-pointer issues.
+- `Labels::position`, `Labels::set_intersection`, `Labels::set_difference`, and
+  `Labels::select` now returns a `std::optional<size_t>` instead of relying on
+  -1 as a sentinel value. The overloads taking `int64_t` pointers are still
+  available for a zero overhead version.
 
 #### Added
 

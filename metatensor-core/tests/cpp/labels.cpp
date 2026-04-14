@@ -27,7 +27,7 @@ TEST_CASE("Labels") {
     CHECK(labels.names()[1] == std::string("bar"));
 
     CHECK(labels.position({3, 4}) == 1);
-    CHECK(labels.position({1, 4}) == -1);
+    CHECK(labels.position({1, 4}) == std::nullopt);
 
     CHECK(values(0, 0) == 1);
     CHECK(values(0, 1) == 2);
@@ -68,8 +68,8 @@ TEST_CASE("Set operations") {
         auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
         auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
 
-        auto first_mapping = std::vector<int64_t>(first.count());
-        auto second_mapping = std::vector<int64_t>(second.count());
+        auto first_mapping = std::vector<size_t>(first.count());
+        auto second_mapping = std::vector<size_t>(second.count());
 
         auto union_ = first.set_union(second, first_mapping, second_mapping);
 
@@ -91,10 +91,10 @@ TEST_CASE("Set operations") {
         CHECK(values(3, 0) == 4);
         CHECK(values(3, 1) == 5);
 
-        auto expected = std::vector<int64_t>{0, 1};
+        auto expected = std::vector<size_t>{0, 1};
         CHECK(first_mapping == expected);
 
-        expected = std::vector<int64_t>{2, 1, 3};
+        expected = std::vector<size_t>{2, 1, 3};
         CHECK(second_mapping == expected);
     }
 
@@ -102,8 +102,8 @@ TEST_CASE("Set operations") {
         auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
         auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
 
-        auto first_mapping = std::vector<int64_t>(first.count());
-        auto second_mapping = std::vector<int64_t>(second.count());
+        auto first_mapping = std::vector<std::optional<size_t>>(first.count());
+        auto second_mapping = std::vector<std::optional<size_t>>(second.count());
 
         auto intersection = first.set_intersection(second, first_mapping, second_mapping);
         CHECK(intersection.size() == 2);
@@ -115,10 +115,10 @@ TEST_CASE("Set operations") {
         CHECK(values(0, 0) == 1);
         CHECK(values(0, 1) == 2);
 
-        auto expected = std::vector<int64_t>{-1, 0};
+        auto expected = std::vector<std::optional<size_t>>{std::nullopt, 0};
         CHECK(first_mapping == expected);
 
-        expected = std::vector<int64_t>{-1, 0, -1};
+        expected = std::vector<std::optional<size_t>>{std::nullopt, 0, std::nullopt};
         CHECK(second_mapping == expected);
     }
 
@@ -126,7 +126,7 @@ TEST_CASE("Set operations") {
         auto first = Labels({"aa", "bb"}, {{0, 1}, {1, 2}});
         auto second = Labels({"aa", "bb"}, {{2, 3}, {1, 2}, {4, 5}});
 
-        auto mapping = std::vector<int64_t>(first.count());
+        auto mapping = std::vector<std::optional<size_t>>(first.count());
 
         auto difference = first.set_difference(second, mapping);
         CHECK(difference.size() == 2);
@@ -138,7 +138,7 @@ TEST_CASE("Set operations") {
         CHECK(values(0, 0) == 0);
         CHECK(values(0, 1) == 1);
 
-        auto expected = std::vector<int64_t>{0, -1};
+        auto expected = std::vector<std::optional<size_t>>{0, std::nullopt};
         CHECK(mapping == expected);
 
         mapping.resize(second.count());
@@ -156,7 +156,7 @@ TEST_CASE("Set operations") {
         CHECK(values(1, 0) == 4);
         CHECK(values(1, 1) == 5);
 
-        expected = std::vector<int64_t>{0, -1, 1};
+        expected = std::vector<std::optional<size_t>>{0, std::nullopt, 1};
         CHECK(mapping == expected);
     }
 
@@ -167,14 +167,14 @@ TEST_CASE("Set operations") {
 
         auto selected = labels.select(selection);
         CHECK(selected.size() == 3);
-        CHECK(selected == std::vector<int64_t>{0, 1, 3});
+        CHECK(selected == std::vector<size_t>{0, 1, 3});
 
         // selection with the same names
         selection = Labels({"aa", "bb"}, {{1, 1}, {2, 1}, {5, 1}, {1, 2}});
 
         selected = labels.select(selection);
         CHECK(selected.size() == 3);
-        CHECK(selected == std::vector<int64_t>{0, 3, 1});
+        CHECK(selected == std::vector<size_t>{0, 3, 1});
 
         // empty selection
         selection = Labels({"aa"}, {});

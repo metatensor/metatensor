@@ -405,7 +405,7 @@ Labels LabelsHolder::to(torch::Device device, bool non_blocking) const {
 torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     const auto& labels = this->as_metatensor();
 
-    int64_t position = -1;
+    torch::optional<int64_t> position = torch::nullopt;
     if (entry.isCustomClass()) {
         const auto& labels_entry = entry.toCustomClass<LabelsEntryHolder>();
         auto values = labels_entry->values().to(torch::kCPU).contiguous();
@@ -459,11 +459,7 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
         );
     }
 
-    if (position == -1) {
-        return {};
-    } else {
-       return position;
-    }
+    return position;
 }
 
 Labels LabelsHolder::set_union(const Labels& other) const {
