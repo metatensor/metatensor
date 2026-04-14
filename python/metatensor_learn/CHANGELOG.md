@@ -17,6 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- This package now installs itself to `site-packages/metatensor_learn` instead
+  of `site-packages/metatensor/learn`. The module should still be imported
+  as `from metatensor.learn import ...`
+
 ## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.4.0) - 2025-10-29
 
 ### Changed

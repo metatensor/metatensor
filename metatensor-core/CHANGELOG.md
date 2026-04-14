@@ -17,32 +17,60 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
-### Added
+### metatensor-core C
 
-- Added `ExternalCudaArray` in Python, the CUDA counterpart to
-  `ExternalCpuArray`. It wraps non-Python CUDA data as a `torch.Tensor` via
-  DLPack, for use with external array backends (e.g. Rust/Burn) that store data
-  on CUDA devices.
-- C++ `TensorBlock::values()` is now a template `values<T>()` (defaulting to
-  `double`) and returns a `DLPackArray<T>` that owns the DLPack resource,
-  preventing dangling-pointer issues. The data is requested on CPU; if the
-  underlying array lives on another device, a copy may occur. For direct GPU
-  access without a copy, use the C-level ``as_dlpack`` interface instead.
-
-### Changed
+#### Changed
 
 - `mts_array_t.move_samples_from` is now `mts_array_t.move_data`, and allows for
   more granular data movement. `mts_sample_mapping_t` has been renamed to
   `mts_data_movement_t`.
-- `TensorMap::keys_to_samples` now handles merging blocks with different set
+- `mts_array_t.data` has been replaced by `mts_array_t.as_dlpack`, returning the
+  data using the [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock can now contain data on different devices and with varied dtypes.
+- Serialization of `mts_tensor_t`, `mts_block_t` and `mts_labels_t` can now be
+  done even if the data lives on a different device or uses a dtype other than
+  float64. `mts_create_array_callback_t` now takes an extra parameter for the
+  dtype to use when creating new arrays.
+- `mts_tensor_keys_to_samples` now handles merging blocks with different set
   of properties.
+- `mts_tensor_keys_to_samples`, `mts_tensor_keys_to_properties` and
+  `mts_array_t.create` now take a `fill_value` parameter, which will be used to
+  fill missing values when merging blocks or creating new arrays respectively.
+- `mts_labels_t` is now an opaque pointer, and stores data using `mts_array_t`;
+  allowing to remove the need to copy all data back to CPU when creating labels.
+  As part of this, `mts_labels_create` is now `mts_labels`, and
+  `mts_labels_create_assume_unique` is now `mts_labels_assume_unique`.
 
-### Removed
+#### Added
 
-- Removed `mts_array_t.data` function pointer and all corresponding
-  implementations (`DataArrayBase::data()` in C++, `Array::data()` in Rust,
-  `_mts_array_data` in Python). Use `mts_array_t.as_dlpack` instead, which
-  supports all numeric types via the DLPack standard rather than only float64.
+- There are new functions `mts_block_device`, `mts_tensormap_device`,
+  `mts_block_dtype`, `mts_tensormap_dtype` to access dtype and device of metatensor data.
+- There are new functions to work with `mts_labels_t`: `mts_labels_dimensions`,
+  `mts_labels_values`, and `mts_labels_values_cpu`.
+
+### metatensor-core C++
+
+#### Changed
+
+- C++ `TensorBlock::values()` is now a template `values<T>()` (defaulting to
+  `double`) and returns a `DLPackArray<T>` that owns the DLPack resource,
+  preventing dangling-pointer issues.
+
+#### Added
+
+- `TensorBlock::device`, `TensorMap::device`, `TensorBlock::dtype`, and
+  `TensorMap::dtype` functions.
+- The `MtsArray` class, which provides a RAII wrapper and more convenient way to
+  use `mts_array_t` from C++
+
+### metatensor-core Python
+
+#### Added
+
+- Added `ExternalCudaArray` in Python, the CUDA counterpart to
+  `ExternalCpuArray`. It wraps non-Python CUDA data as a `torch.Tensor` via
+  DLPack, for use with external array backends that store data on CUDA devices.
+
+#### Removed
 
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
