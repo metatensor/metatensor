@@ -324,7 +324,7 @@ if __name__ == "__main__":
         install_requires.append(f"metatensor-core @ {METATENSOR_CORE_SRC.as_uri()}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core >=0.1.18,<0.2")
+        install_requires.append("metatensor-core >=0.2.0rc1,<0.3.0")
 
     setup(
         version=create_version_number(METATENSOR_TORCH_VERSION),
