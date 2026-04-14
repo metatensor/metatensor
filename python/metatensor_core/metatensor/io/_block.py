@@ -227,19 +227,10 @@ def load_block_buffer_custom_array(
 
     lib = _get_library()
 
-    if isinstance(buffer, bytearray):
-        char_array = ctypes.c_char * len(buffer)
-        buffer = char_array.from_buffer(buffer)
-    elif isinstance(buffer, memoryview):
-        char_array = ctypes.c_char * len(buffer)
-        # FIXME: we would prefer not to make a copy here, but ctypes does not support
-        # passing a memory view to C, even if it is contiguous.
-        # https://github.com/python/cpython/issues/60190
-        buffer = char_array.from_buffer_copy(buffer)
-
+    array = np.frombuffer(buffer, dtype=np.uint8)
     ptr = lib.mts_block_load_buffer(
-        buffer,
-        len(buffer),
+        array.ctypes.data_as(ctypes.c_char_p),
+        array.nbytes,
         mts_create_array_callback_t(create_array),
     )
 

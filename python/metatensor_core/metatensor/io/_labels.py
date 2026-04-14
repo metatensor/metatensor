@@ -47,17 +47,11 @@ def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
     """
     lib = _get_library()
 
-    if isinstance(buffer, bytearray):
-        char_array = ctypes.c_char * len(buffer)
-        buffer = char_array.from_buffer(buffer)
-    elif isinstance(buffer, memoryview):
-        char_array = ctypes.c_char * len(buffer)
-        # FIXME: we would prefer not to make a copy here, but ctypes does not support
-        # passing a memory view to C, even if it is contiguous.
-        # https://github.com/python/cpython/issues/60190
-        buffer = char_array.from_buffer_copy(buffer)
-
-    ptr = lib.mts_labels_load_buffer(buffer, len(buffer))
+    array = np.frombuffer(buffer, dtype=np.uint8)
+    ptr = lib.mts_labels_load_buffer(
+        array.ctypes.data_as(ctypes.c_char_p),
+        array.nbytes,
+    )
     _check_pointer(ptr)
 
     return Labels._from_mts_labels_t(ptr)
