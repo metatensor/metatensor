@@ -1,11 +1,13 @@
 #pragma once
 
-#include <array>
 #include <cassert>
 #include <cstring>
-#include <initializer_list>
+
+#include <array>
 #include <string>
 #include <vector>
+#include <optional>
+#include <initializer_list>
 
 #include <metatensor.h>
 
@@ -193,30 +195,34 @@ public:
         return labels_;
     }
 
-    /// Get the position of the `entry` in this set of Labels, or -1 if the
-    /// entry is not part of these Labels.
-    int64_t position(std::initializer_list<int32_t> entry) const {
+    /// Get the position of the `entry` in this set of Labels, or `std::nullopt`
+    /// if the entry is not part of these Labels.
+    std::optional<size_t> position(std::initializer_list<int32_t> entry) const {
         return this->position(entry.begin(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a fixed-size array as input
     template<size_t N>
-    int64_t position(const std::array<int32_t, N>& entry) const {
+    std::optional<size_t> position(const std::array<int32_t, N>& entry) const {
         return this->position(entry.data(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a vector as input
-    int64_t position(const std::vector<int32_t>& entry) const {
+    std::optional<size_t> position(const std::vector<int32_t>& entry) const {
         return this->position(entry.data(), entry.size());
     }
 
     /// Variant of `Labels::position` taking a pointer and length as input
-    int64_t position(const int32_t* entry, size_t length) const {
+    std::optional<size_t> position(const int32_t* entry, size_t length) const {
         assert(labels_ != nullptr);
 
         int64_t result = 0;
         details::check_status(mts_labels_position(labels_, entry, length, &result));
-        return result;
+        if (result < 0) {
+            return std::nullopt;
+        } else {
+            return static_cast<size_t>(result);
+        }
     }
 
     /// Get the array of values for these Labels as an `mts_array_t`.
@@ -310,28 +316,58 @@ public:
     ///        this function. Otherwise it should be an empty vector.
     Labels set_union(
         const Labels& other,
-        std::vector<int64_t>& first_mapping,
-        std::vector<int64_t>& second_mapping
+        std::vector<size_t>& first_mapping,
+        std::vector<size_t>& second_mapping
     ) const {
-        auto* first_mapping_ptr = first_mapping.data();
-        auto first_mapping_count = first_mapping.size();
+        int64_t* first_mapping_ptr = nullptr;
+        size_t first_mapping_count = first_mapping.size();
+        int64_t* second_mapping_ptr = nullptr;
+        size_t second_mapping_count = second_mapping.size();
+
+        std::vector<int64_t> first_mapping_vector;
+        std::vector<int64_t> second_mapping_vector;
+
+        if (sizeof(size_t) == sizeof(int64_t)) {
+            first_mapping_ptr = reinterpret_cast<int64_t*>(first_mapping.data());
+            second_mapping_ptr = reinterpret_cast<int64_t*>(second_mapping.data());
+        } else {
+            // allocate new arrays, and copy the data later
+            first_mapping_vector.resize(first_mapping.size());
+            second_mapping_vector.resize(second_mapping.size());
+
+            first_mapping_ptr = first_mapping_vector.data();
+            second_mapping_ptr = second_mapping_vector.data();
+        }
+
         if (first_mapping_count == 0) {
             first_mapping_ptr = nullptr;
         }
 
-        auto* second_mapping_ptr = second_mapping.data();
-        auto second_mapping_count = second_mapping.size();
         if (second_mapping_count == 0) {
             second_mapping_ptr = nullptr;
         }
 
-        return this->set_union(
+        auto result = this->set_union(
             other,
             first_mapping_ptr,
             first_mapping_count,
             second_mapping_ptr,
             second_mapping_count
         );
+
+        if (!first_mapping_vector.empty()) {
+            for (size_t i=0; i<first_mapping_count; i++) {
+                first_mapping[i] = static_cast<size_t>(first_mapping_ptr[i]);
+            }
+        }
+
+        if (!second_mapping_vector.empty()) {
+            for (size_t i=0; i<second_mapping_count; i++) {
+                second_mapping[i] = static_cast<size_t>(second_mapping_ptr[i]);
+            }
+        }
+
+        return result;
     }
 
     /// Take the intersection of these `Labels` with `other`.
@@ -391,37 +427,62 @@ public:
     ///        should be a vector containing `this->count()` elements, to be
     ///        filled by this function. Otherwise it should be an empty vector.
     ///        If an entry in `this` is not used in the intersection, the
-    ///        mapping will be set to -1.
+    ///        mapping will be set to `std::nullopt`.
     /// @param second_mapping if you want the mapping from the positions of
     ///        entries in `other` to the positions in the intersection, this
     ///        should be a vector containing `other.count()` elements, to be
     ///        filled by this function. Otherwise it should be an empty vector.
     ///        If an entry in `other` is not used in the intersection, the
-    ///        mapping will be set to -1.
+    ///        mapping will be set to `std::nullopt`.
     Labels set_intersection(
         const Labels& other,
-        std::vector<int64_t>& first_mapping,
-        std::vector<int64_t>& second_mapping
+        std::vector<std::optional<size_t>>& first_mapping,
+        std::vector<std::optional<size_t>>& second_mapping
     ) const {
-        auto* first_mapping_ptr = first_mapping.data();
-        auto first_mapping_count = first_mapping.size();
+        std::vector<int64_t> first_mapping_vector(first_mapping.size(), -1);
+        std::vector<int64_t> second_mapping_vector(second_mapping.size(), -1);
+
+        auto* first_mapping_ptr = first_mapping_vector.data();
+        auto first_mapping_count = first_mapping_vector.size();
         if (first_mapping_count == 0) {
             first_mapping_ptr = nullptr;
         }
 
-        auto* second_mapping_ptr = second_mapping.data();
-        auto second_mapping_count = second_mapping.size();
+        auto* second_mapping_ptr = second_mapping_vector.data();
+        auto second_mapping_count = second_mapping_vector.size();
         if (second_mapping_count == 0) {
             second_mapping_ptr = nullptr;
         }
 
-        return this->set_intersection(
+        auto result = this->set_intersection(
             other,
             first_mapping_ptr,
             first_mapping_count,
             second_mapping_ptr,
             second_mapping_count
         );
+
+        if (!first_mapping_vector.empty()) {
+            for (size_t i=0; i<first_mapping_count; i++) {
+                if (first_mapping_ptr[i] >= 0) {
+                    first_mapping[i] = static_cast<size_t>(first_mapping_ptr[i]);
+                } else {
+                    first_mapping[i] = std::nullopt;
+                }
+            }
+        }
+
+        if (!second_mapping_vector.empty()) {
+            for (size_t i=0; i<second_mapping_count; i++) {
+                if (second_mapping_ptr[i] >= 0) {
+                    second_mapping[i] = static_cast<size_t>(second_mapping_ptr[i]);
+                } else {
+                    second_mapping[i] = std::nullopt;
+                }
+            }
+        }
+
+        return result;
     }
 
     /// Take the difference of these `Labels` with `other`.
@@ -470,19 +531,33 @@ public:
     ///        should be a vector containing `this->count()` elements, to be
     ///        filled by this function. Otherwise it should be an empty vector.
     ///        If an entry in `this` is not used in the difference, the
-    ///        mapping will be set to -1.
-    Labels set_difference(const Labels& other, std::vector<int64_t>& first_mapping) const {
-        auto* first_mapping_ptr = first_mapping.data();
-        auto first_mapping_count = first_mapping.size();
+    ///        mapping will be set to `std::nullopt`.
+    Labels set_difference(const Labels& other, std::vector<std::optional<size_t>>& first_mapping) const {
+        std::vector<int64_t> first_mapping_vector(first_mapping.size(), -1);
+
+        auto* first_mapping_ptr = first_mapping_vector.data();
+        auto first_mapping_count = first_mapping_vector.size();
         if (first_mapping_count == 0) {
             first_mapping_ptr = nullptr;
         }
 
-        return this->set_difference(
+        auto result = this->set_difference(
             other,
             first_mapping_ptr,
             first_mapping_count
         );
+
+        if (!first_mapping_vector.empty()) {
+            for (size_t i=0; i<first_mapping_count; i++) {
+                if (first_mapping_ptr[i] >= 0) {
+                    first_mapping[i] = static_cast<size_t>(first_mapping_ptr[i]);
+                } else {
+                    first_mapping[i] = std::nullopt;
+                }
+            }
+        }
+
+        return result;
     }
 
     /// Select entries in these `Labels` that match the `selection`.
@@ -513,13 +588,28 @@ public:
     ///
     /// This function does the same thing as the one above, but allocates and
     /// return the list of selected indexes in a `std::vector`
-    std::vector<int64_t> select(const Labels& selection) const {
+    std::vector<size_t> select(const Labels& selection) const {
         auto selected_count = this->count();
-        auto selected = std::vector<int64_t>(selected_count, -1);
+        auto selected = std::vector<size_t>(selected_count, static_cast<size_t>(-1));
+        std::vector<int64_t> selected_i64;
 
-        this->select(selection, selected.data(), &selected_count);
+        int64_t* selected_ptr = nullptr;
+        if (sizeof(size_t) == sizeof(int64_t)) {
+            selected_ptr = reinterpret_cast<int64_t*>(selected.data());
+        } else {
+            selected_i64.resize(selected_count, -1);
+            selected_ptr = selected_i64.data();
+        }
 
+        this->select(selection, selected_ptr, &selected_count);
         selected.resize(selected_count);
+
+        if (sizeof(size_t) != sizeof(int64_t)) {
+            for (size_t i = 0; i < selected_count; i++) {
+                selected[i] = static_cast<size_t>(selected_ptr[i]);
+            }
+        }
+
         return selected;
     }
 
