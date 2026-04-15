@@ -23,6 +23,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   instead of `site-packages/metatensor/operations`. The operations should still
   be imported using `import metatensor as mts; mts.join(...)`
 
+### Added
+
+- Operations for reductions over properties: `mean_over_properties`,
+  `mean_over_properties_block`, `std_over_properties`,
+  `std_over_properties_block`, `sum_over_properties`,
+  `sum_over_properties_block`, `var_over_properties`, and
+  `var_over_properties_block`.
+
 ## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.4.0) - 2025-10-29
 
 ### Added
