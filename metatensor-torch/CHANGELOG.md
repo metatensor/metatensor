@@ -22,6 +22,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - The Python package now installs itself to `site-packages/metatensor_torch`
   instead of `site-packages/metatensor/torch`. The module should still be
   imported as `from metatensor.torch import ...`
+- `TensorMap.keys_to_samples` and `TensorMap.keys_to_properties` now take an
+  optional `fill_value` parameter that will be used instead of 0 for missing entries when merging blocks.
 
 ### Removed
 
