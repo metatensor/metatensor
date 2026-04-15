@@ -12,7 +12,7 @@ from setuptools.command.sdist import sdist
 ROOT = pathlib.Path(__file__).parent.resolve()
 METATENSOR_CORE = (ROOT / ".." / "metatensor_core").resolve()
 
-METATENSOR_OPERATIONS_VERSION = "0.4.0"
+METATENSOR_OPERATIONS_VERSION = "0.5.0.rc1"
 
 
 class bdist_egg_disabled(bdist_egg):
