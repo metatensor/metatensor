@@ -50,6 +50,14 @@ def test_constructor():
     assert labels.names == ["test"]
     assert torch.all(labels.values == torch.arange(33).reshape(-1, 1))
 
+    labels = Labels(
+        names=["a", "b"],
+        values=torch.tensor([[0, 0, 1, 2, 3], [1, 0, 4, 5, 6]]).T,
+    )
+    assert torch.all(
+        labels.values == torch.tensor([[0, 1], [0, 0], [1, 4], [2, 5], [3, 6]])
+    )
+
 
 def test_constructor_errors():
     message = (

@@ -58,7 +58,7 @@ pub(super) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size:
 ///
 /// Calls `as_dlpack` with CPU device, reads the i32 data, and returns
 /// it as `Vec<LabelValue>`.
-#[allow(clippy::cast_possible_wrap)]
+#[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
 pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result<Vec<LabelValue>, Error> {
     let shape = array.shape()?;
     let count = shape[0];
@@ -79,34 +79,42 @@ pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result
 
     assert_eq!(tensor.device(), cpu, "labels array is not on CPU");
 
-    if let Some(strides) = tensor.strides() {
-        let bad_strides = if count == 1 {
-            // if a dimension has size 1, any stride is valid since it won't
-            // be used to compute offsets. numpy takes advantage of this in
-            // practise, so we have to support it
-            if size == 1 {
-                false
-            } else {
-                strides[1] != 1
-            }
+    let strides = tensor.strides().map_or([size as i64, 1], |s| [s[0], s[1]]);
+    let contiguous = if count == 1 {
+        // if a dimension has size 1, any stride is valid since it won't
+        // be used to compute offsets. numpy takes advantage of this in
+        // practise, so we have to support it
+        if size == 1 {
+            true
         } else {
-            strides != [size as i64, 1]
-        };
-
-        if bad_strides {
-            return Err(Error::InvalidParameter(
-                format!("unexpected strides for labels values: got {:?}, expected [{}, 1]", strides, size)
-            ));
+            strides[1] == 1
         }
-    }
+    } else {
+        strides == [size as i64, 1]
+    };
     assert_eq!(tensor.shape(), [count as i64, size as i64], "unexpected shape for labels array");
 
-    let total = count * size;
     let data_ptr: *const i32 = tensor.data_ptr()
-        .map_err(|e| Error::InvalidParameter(format!("failed to cast pointer to i32 for Labels values: {}", e)))?;
-    let slice = unsafe { std::slice::from_raw_parts(data_ptr, total) };
+            .map_err(|e| Error::InvalidParameter(format!("failed to cast pointer to i32 for Labels values: {}", e)))?;
 
-    return Ok(slice.to_vec());
+    if contiguous {
+        // If the data is contiguous, we can read it directly as a single slice.
+        let slice = unsafe { std::slice::from_raw_parts(data_ptr, count * size) };
+        return Ok(slice.to_vec());
+    } else {
+        // copy non-contiguous data into a contiguous Vec.
+        let mut values = Vec::with_capacity(count * size);
+        for i in 0..(count as i64) {
+            for j in 0..(size as i64) {
+                let offset = i * strides[0] + j * strides[1];
+                let value = unsafe {
+                    data_ptr.offset(offset as isize).read()
+                };
+                values.push(value);
+            }
+        }
+        return Ok(values);
+    }
 }
 
 macro_rules! check_pointers_non_null {
