@@ -26,6 +26,13 @@ def test_constructor():
 
     np.testing.assert_equal(labels.values, np.array([[1]]))
 
+    # non-contiguous values
+    labels = Labels(
+        names=["a", "b"],
+        values=np.array([[0, 0, 1, 2, 3], [1, 0, 4, 5, 6]]).T,
+    )
+    assert np.all(labels.values == np.array([[0, 1], [0, 0], [1, 4], [2, 5], [3, 6]]))
+
 
 def test_empty_labels():
     # labels without dimensions
