@@ -14,7 +14,6 @@ else
 end
 
 Cbool = Cuchar
-mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
@@ -41,12 +40,6 @@ end
 
 
 # ===== Macros definitions
-MTS_SUCCESS = 0
-MTS_INVALID_PARAMETER_ERROR = 1
-MTS_IO_ERROR = 2
-MTS_SERIALIZATION_ERROR = 3
-MTS_BUFFER_SIZE_ERROR = 254
-MTS_INTERNAL_ERROR = 255
 
 
 # ===== Enum definitions
@@ -72,6 +65,17 @@ const kDLFloat8_e8m0fnu = DLDataTypeCode(14)
 const kDLFloat6_e2m3fn = DLDataTypeCode(15)
 const kDLFloat6_e3m2fn = DLDataTypeCode(16)
 const kDLFloat4_e2m1fn = DLDataTypeCode(17)
+
+
+# enum mts_status_t
+const mts_status_t = UInt32
+const MTS_SUCCESS = mts_status_t(0)
+const MTS_INVALID_PARAMETER_ERROR = mts_status_t(1)
+const MTS_IO_ERROR = mts_status_t(2)
+const MTS_SERIALIZATION_ERROR = mts_status_t(3)
+const MTS_BUFFER_SIZE_ERROR = mts_status_t(4)
+const MTS_CALLBACK_ERROR = mts_status_t(254)
+const MTS_INTERNAL_ERROR = mts_status_t(255)
 
 
 # ===== Struct definitions
@@ -127,11 +131,19 @@ function mts_version()
     )
 end
 
-function mts_last_error()
+function mts_last_error(message::Ptr{Ptr{Cchar}}, origin::Ptr{Ptr{Cchar}}, data::Ptr{Ptr{Cvoid}})
     ccall((:mts_last_error, libmetatensor), 
-        Ptr{Cchar},
-        (),
-        
+        mts_status_t,
+        (Ptr{Ptr{Cchar}}, Ptr{Ptr{Cchar}}, Ptr{Ptr{Cvoid}},),
+        message, origin, data
+    )
+end
+
+function mts_set_last_error(message::Ptr{Cchar}, origin::Ptr{Cchar}, data::Ptr{Cvoid}, data_deleter::Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#)
+    ccall((:mts_set_last_error, libmetatensor), 
+        mts_status_t,
+        (Ptr{Cchar}, Ptr{Cchar}, Ptr{Cvoid}, Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#,),
+        message, origin, data, data_deleter
     )
 end
 

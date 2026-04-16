@@ -19,6 +19,11 @@ mod tensor;
 ///
 /// The newly created array should live on CPU, since metatensor will use
 /// `mts_array_t.data` to get the data pointer and write to it.
+///
+/// This function should return `MTS_SUCCESS` on success, or
+/// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+/// should call `mts_set_last_error` with an appropriate error message before
+/// returning.
 #[allow(non_camel_case_types)]
 type mts_create_array_callback_t = unsafe extern "C" fn(
     shape: *const usize,

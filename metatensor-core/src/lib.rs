@@ -26,7 +26,6 @@ use self::tensor::TensorMap;
 
 #[doc(hidden)]
 mod c_api;
-use c_api::mts_status_t;
 
 mod io;
 
@@ -41,11 +40,8 @@ pub enum Error {
     Io(std::io::Error),
     /// Serialization format error when loading/writing `TensorMap` to a file
     Serialization(String),
-    /// External error, coming from a function used as a callback in `mts_array_t`
-    External {
-        status: mts_status_t,
-        context: String,
-    },
+    /// Error coming from an external function used as a callback
+    CallbackError,
     /// Any other internal error, usually these are internal bugs.
     Internal(String),
 }
@@ -57,7 +53,7 @@ impl std::fmt::Display for Error {
             Error::Io(e) => write!(f, "io error: {}", e),
             Error::Serialization(e) => write!(f, "serialization format error: {}", e),
             Error::BufferSize(e) => write!(f, "buffer is not big enough: {}", e),
-            Error::External { status, context } => write!(f, "external error: {} (status {})", context, status.as_i32()),
+            Error::CallbackError => write!(f, "callback error"),
             Error::Internal(e) => write!(f, "internal metatensor error (this is likely a bug, please report it): {}", e),
         }
     }
@@ -70,7 +66,7 @@ impl std::error::Error for Error {
             Error::Serialization(_) |
             Error::Internal(_) |
             Error::BufferSize(_) |
-            Error::External {..} => None,
+            Error::CallbackError => None,
             Error::Io(e) => Some(e),
         }
     }

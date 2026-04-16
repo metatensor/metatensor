@@ -4,11 +4,10 @@ use std::sync::{Arc, RwLock, RwLockReadGuard};
 use ndarray::ArrayD;
 use dlpk::sys::DLDevice;
 
-use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t, mts_status_t};
-use crate::c_api::{MTS_SUCCESS, mts_last_error};
+use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t};
 
 use crate::Error;
-use crate::errors::{LAST_RUST_ERROR, RUST_FUNCTION_FAILED_ERROR_CODE};
+use crate::errors::check_status;
 
 use super::{ArrayRef, ArrayRefMut};
 use super::origin::get_data_origin;
@@ -48,7 +47,7 @@ impl MtsArray {
     /// Get the underlying array as an `&dyn Any` instance.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn as_any(&self) -> &dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -104,10 +103,7 @@ impl MtsArray {
 
         let mut origin = 0;
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut origin),
-                "mts_array_t.origin",
-            )?;
+            check_status(function(self.array.ptr, &mut origin))?;
         }
 
         return Ok(origin);
@@ -121,10 +117,7 @@ impl MtsArray {
 
         let mut device = DLDevice::cpu();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut device),
-                "mts_array_t.device",
-            )?;
+            check_status(function(self.array.ptr, &mut device))?;
         }
 
         return Ok(device);
@@ -138,10 +131,7 @@ impl MtsArray {
 
         let mut dtype = dlpk::sys::DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 0, lanes: 0 };
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut dtype),
-                "mts_array_t.dtype",
-            )?;
+            check_status(function(self.array.ptr, &mut dtype))?;
         }
 
         return Ok(dtype);
@@ -162,10 +152,7 @@ impl MtsArray {
         let stream_c = stream.as_ref().map_or(std::ptr::null(), |s| s as *const i64);
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut tensor, device, stream_c, max_version),
-                "mts_array_t.as_dlpack",
-            )?;
+            check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
         }
 
         let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
@@ -186,10 +173,7 @@ impl MtsArray {
         let mut shape_count: usize = 0;
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut shape, &mut shape_count),
-                "mts_array_t.shape"
-            )?;
+            check_status(function(self.array.ptr, &mut shape, &mut shape_count))?;
         }
 
         if shape_count == 0 {
@@ -210,10 +194,7 @@ impl MtsArray {
         let function = self.array.reshape.expect("mts_array_t.reshape function is NULL");
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, shape.as_ptr(), shape.len()),
-                "mts_array_t.reshape",
-            )?;
+            check_status(function(self.array.ptr, shape.as_ptr(), shape.len()))?;
         }
 
         return Ok(());
@@ -226,10 +207,7 @@ impl MtsArray {
         let function = self.array.swap_axes.expect("mts_array_t.swap_axes function is NULL");
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, axis_1, axis_2),
-                "mts_array_t.swap_axes",
-            )?;
+            check_status(function(self.array.ptr, axis_1, axis_2))?;
         }
 
         return Ok(());
@@ -244,16 +222,13 @@ impl MtsArray {
 
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(
-                    self.array.ptr,
-                    shape.as_ptr(),
-                    shape.len(),
-                    *fill_value.as_raw(),
-                    &mut new_array
-                ),
-                "mts_array_t.create",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                shape.as_ptr(),
+                shape.len(),
+                *fill_value.as_raw(),
+                &mut new_array
+            ))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -266,10 +241,7 @@ impl MtsArray {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut new_array),
-                "mts_array_t.copy",
-            )?;
+            check_status(function(self.array.ptr, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -287,10 +259,12 @@ impl MtsArray {
 
         let input = input.into();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, input.as_raw().ptr, moves.as_ptr(), moves.len()),
-                "mts_array_t.move_data",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                input.as_raw().ptr,
+                moves.as_ptr(),
+                moves.len(),
+            ))?;
         }
 
         return Ok(());
@@ -306,24 +280,5 @@ impl<'a> From<&'a MtsArray> for ArrayRef<'a> {
 impl<'a> From<&'a mut MtsArray> for ArrayRefMut<'a> {
     fn from(array: &'a mut MtsArray) -> ArrayRefMut<'a> {
         array.as_mut()
-    }
-}
-
-/// Check the status code returned by arbitrary functions inside an
-/// `mts_array_t`
-pub(super) fn check_status_external(status: mts_status_t, function: &str) -> Result<(), Error> {
-    if status == MTS_SUCCESS {
-        return Ok(());
-    } else if status > 0 {
-        let message = unsafe {
-            std::ffi::CStr::from_ptr(mts_last_error())
-        };
-        let message = message.to_str().expect("invalid UTF8");
-
-        return Err(Error { code: Some(status), message: message.to_owned() });
-    } else if status == RUST_FUNCTION_FAILED_ERROR_CODE {
-        return Err(LAST_RUST_ERROR.with(|e| e.borrow().clone()));
-    } else {
-        return Err(Error { code: Some(status), message: format!("calling {} failed", function) });
     }
 }

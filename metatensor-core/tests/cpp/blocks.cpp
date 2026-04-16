@@ -131,7 +131,11 @@ TEST_CASE("Blocks") {
             Labels({"properties"}, {{5}, {3}})
         );
 
-        CHECK_THROWS_WITH(block.clone(), "external error: calling mts_array_t.create failed (status -1)");
+        CHECK_THROWS_WITH(block.clone(), "can not copy this!");
+
+        // reset the last error, this should free the exception and avoid memory leak
+        auto status = mts_set_last_error(nullptr, nullptr, nullptr, nullptr);
+        CHECK(status == MTS_SUCCESS);
     }
 
 

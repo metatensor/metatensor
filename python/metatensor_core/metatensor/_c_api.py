@@ -20,12 +20,6 @@ if arch == "32bit":
 elif arch == "64bit":
     c_uintptr_t = ctypes.c_uint64
 
-MTS_SUCCESS = 0
-MTS_INVALID_PARAMETER_ERROR = 1
-MTS_IO_ERROR = 2
-MTS_SERIALIZATION_ERROR = 3
-MTS_BUFFER_SIZE_ERROR = 254
-MTS_INTERNAL_ERROR = 255
 
 
 mts_status_t = ctypes.c_int32
@@ -52,6 +46,16 @@ class DLDataTypeCode(enum.Enum):
     kDLFloat6_e2m3fn = 15
     kDLFloat6_e3m2fn = 16
     kDLFloat4_e2m1fn = 17
+
+
+mts_status_t = ctypes.c_int
+MTS_SUCCESS = 0
+MTS_INVALID_PARAMETER_ERROR = 1
+MTS_IO_ERROR = 2
+MTS_SERIALIZATION_ERROR = 3
+MTS_BUFFER_SIZE_ERROR = 4
+MTS_CALLBACK_ERROR = 254
+MTS_INTERNAL_ERROR = 255
 
 
 # ============================================================================ #
@@ -159,8 +163,19 @@ def setup_functions(lib):
     lib.mts_version.restype = ctypes.c_char_p
 
     lib.mts_last_error.argtypes = [
+        POINTER(ctypes.c_char_p),
+        POINTER(ctypes.c_char_p),
+        POINTER(POINTER(None)),
     ]
-    lib.mts_last_error.restype = ctypes.c_char_p
+    lib.mts_last_error.restype = mts_status_t
+
+    lib.mts_set_last_error.argtypes = [
+        ctypes.c_char_p,
+        ctypes.c_char_p,
+        ctypes.c_void_p,
+        CFUNCTYPE(None, ctypes.c_void_p),
+    ]
+    lib.mts_set_last_error.restype = _check_status
 
     lib.mts_labels.argtypes = [
         POINTER(ctypes.c_char_p),

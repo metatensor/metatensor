@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cstring>
+#include <cstdio>
+
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -15,49 +18,26 @@ namespace metatensor {
     };
 
     namespace details {
-        /// Singleton class storing the last exception throw by a C++ callback.
-        ///
-        /// When passing callbacks from C++ to Rust, we need to convert exceptions
-        /// into status code (see the `catch` blocks in this file). This class
-        /// allows to save the message associated with an exception, and rethrow an
-        /// exception with the same message later (the actual exception type is lost
-        /// in the process).
-        class LastCxxError {
-        public:
-            /// Set the last error message to `message`
-            static void set_message(std::string message) {
-                auto& stored_message = LastCxxError::get();
-                stored_message = std::move(message);
-            }
-
-            /// Get the last error message
-            static const std::string& message() {
-                return LastCxxError::get();
-            }
-
-        private:
-            static std::string& get() {
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Wexit-time-destructors"
-                /// we are using a per-thread static value to store the last C++
-                /// exception.
-                static thread_local std::string STORED_MESSAGE;
-                #pragma clang diagnostic pop
-
-                return STORED_MESSAGE;
-            }
-        };
-
         /// Check if a return status from the C API indicates an error, and if it is
         /// the case, throw an exception of type `metatensor::Error` with the last
         /// error message from the library.
         inline void check_status(mts_status_t status) {
             if (status == MTS_SUCCESS) {
                 return;
-            } else if (status > 0) {
-                throw Error(mts_last_error());
-            } else { // status < 0
-                throw Error("error in C++ callback: " + LastCxxError::message());
+            } else if (status == MTS_CALLBACK_ERROR) {
+                const char* message = nullptr;
+                const char* origin = nullptr;
+                void* data = nullptr;
+                mts_last_error(&message, &origin, &data);
+                if (origin != nullptr &&std::strcmp(origin, "C++ exception") == 0 && data != nullptr) {
+                    std::rethrow_exception(*static_cast<std::exception_ptr*>(data));
+                } else {
+                    throw Error(message == nullptr ? "unknown error" : message);
+                }
+            } else {
+                const char* message = nullptr;
+                mts_last_error(&message, nullptr, nullptr);
+                throw Error(message == nullptr ? "unknown error" : message);
             }
         }
 
@@ -71,23 +51,57 @@ namespace metatensor {
             try {
                 function(std::move(args)...);
                 return MTS_SUCCESS;
-            } catch (const std::exception& e) {
-                details::LastCxxError::set_message(e.what());
-                return -1;
             } catch (...) {
-                details::LastCxxError::set_message("error was not an std::exception");
-                return -128;
+                auto* exception_ptr = new std::exception_ptr(std::current_exception());
+
+                const char* message = nullptr;
+                try {
+                    std::rethrow_exception(*exception_ptr);
+                } catch (const std::exception& e) {
+                    message = e.what();
+                } catch (...) {
+                    message = "C++ code threw an exception that was not an std::exception";
+                }
+
+                auto status = mts_set_last_error(
+                    message,
+                    "C++ exception",
+                    exception_ptr,
+                    [](void *ptr) { delete static_cast<std::exception_ptr*>(ptr); }
+                );
+
+                if (status != MTS_SUCCESS) {
+                    // If we failed to set the error, we are in a very bad state,
+                    // but we should still try to report the original error
+                    // message if possible.
+                    std::fprintf(stderr, "INTERNAL ERROR: unable to set last error after C++ callback failure (status: %d). ", status);
+                    if (message != nullptr) {
+                        fprintf(stderr, "C++ error was: %s\n", message);
+                    } else {
+                        fprintf(stderr, "Unknown C++ error\n");
+                    }
+                    delete exception_ptr;
+                }
+
+                return MTS_CALLBACK_ERROR;
             }
         }
 
         /// Check if a pointer allocated by the C API is null, and if it is the
-        /// case, throw an exception of type `metatensor::Error` with the last error
-        /// message from the library.
+        /// case, throw an exception of type `metatensor::Error` with the last
+        /// error message from the library.
         inline void check_pointer(const void* pointer) {
             if (pointer == nullptr) {
-                throw Error(mts_last_error());
+                const char* message = nullptr;
+                const char* origin = nullptr;
+                void* data = nullptr;
+                mts_last_error(&message, &origin, &data);
+                if (std::strcmp(origin, "C++ exception") == 0 && data != nullptr) {
+                    std::rethrow_exception(*static_cast<std::exception_ptr*>(data));
+                } else {
+                    throw Error(message);
+                }
             }
         }
-
     } // namespace details
 } // namespace metatensor

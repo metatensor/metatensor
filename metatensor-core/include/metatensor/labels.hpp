@@ -57,9 +57,7 @@ public:
         labels_ = mts_labels(
             c_dimensions.data(), c_dimensions.size(), std::move(values).release()
         );
-        if (labels_ == nullptr) {
-            throw Error(mts_last_error());
-        }
+        details::check_pointer(labels_);
     }
 
     /// Create a new set of Labels from the given `names` and `values`.
@@ -95,9 +93,7 @@ public:
         labels_ = mts_labels_assume_unique(
             c_dimensions.data(), c_dimensions.size(), std::move(array).release()
         );
-        if (labels_ == nullptr) {
-            throw Error(mts_last_error());
-        }
+        details::check_pointer(labels_);
     }
 
     /// Create an empty set of Labels with the given dimension names.
@@ -138,9 +134,7 @@ public:
         }
 
         labels_ = mts_labels_clone(other.labels_);
-        if (labels_ == nullptr) {
-            throw Error(mts_last_error());
-        }
+        details::check_pointer(labels_);
         return *this;
     }
 

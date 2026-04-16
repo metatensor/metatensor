@@ -19,7 +19,7 @@ except ImportError:
         pass
 
 
-from ._c_api import MTS_BUFFER_SIZE_ERROR
+from ._c_api import MTS_BUFFER_SIZE_ERROR, MTS_CALLBACK_ERROR, MTS_SUCCESS
 from .status import MetatensorError, _save_exception
 
 
@@ -47,8 +47,8 @@ def catch_exceptions(function):
             function(*args, **kwargs)
         except Exception as e:
             _save_exception(e)
-            return -1
-        return 0
+            return MTS_CALLBACK_ERROR
+        return MTS_SUCCESS
 
     return inner
 
