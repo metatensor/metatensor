@@ -701,9 +701,7 @@ public:
 
 private:
     /// Construct from an owning raw pointer (takes ownership)
-    explicit Labels(const mts_labels_t* ptr): labels_(ptr) {
-        assert(labels_ != nullptr);
-    }
+    explicit Labels(const mts_labels_t* ptr): labels_(ptr) {}
 
     // the constructor below is ambiguous with the public constructor taking
     // `std::initializer_list`, so we use a private dummy struct argument to

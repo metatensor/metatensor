@@ -117,11 +117,11 @@ LabelsHolder::LabelsHolder(
 {
     // basic checks in debug mode to make sure everything is fine
     assert(values_.sizes().size() == 2);
-    assert(values_.size(0) == labels_->count());
-    assert(values_.size(1) == labels_->size());
-    assert(names_.size() == labels_->size());
+    assert(values_.size(0) == labels_.count());
+    assert(values_.size(1) == labels_.size());
+    assert(names_.size() == labels_.size());
     for (size_t i=0; i<names.size(); i++) {
-        assert(names_[i] == labels_->names()[i]);
+        assert(names_[i] == labels_.names()[i]);
     }
     assert(values_.scalar_type() == torch::kInt32);
 }
@@ -129,7 +129,7 @@ LabelsHolder::LabelsHolder(
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     names_(details::normalize_names(names, "names")),
     values_(normalize_int32_tensor(values, 2, "Labels values")),
-    labels_(torch::nullopt)
+    labels_(nullptr)
 {
     if (values_.sizes()[1] != names_.size()) {
         C10_THROW_ERROR(ValueError,
@@ -146,7 +146,7 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):
     names_(details::normalize_names(names, "names")),
     values_(normalize_int32_tensor(values, 2, "Labels values")),
-    labels_(torch::nullopt)
+    labels_(nullptr)
 {
     if (values_.sizes()[1] != names_.size()) {
         C10_THROW_ERROR(ValueError,
@@ -168,13 +168,13 @@ Labels LabelsHolder::create(
 
 LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)) {
     // extract the names
-    for (const auto* name: this->labels_->names()) {
+    for (const auto* name: this->labels_.names()) {
         this->names_.emplace_back(name);
     }
 
     // check if the values array is backed by a torch tensor
-    auto origin = this->labels_->mts_array().origin();
-    auto* array_ptr = this->labels_->mts_array().as_mts_array_t().ptr;
+    auto origin = this->labels_.mts_array().origin();
+    auto* array_ptr = this->labels_.mts_array().as_mts_array_t().ptr;
 
     if (origin == metatensor_torch::TORCH_DATA_ORIGIN && array_ptr != nullptr) {
         // recover the torch tensor from the values array.
@@ -185,7 +185,7 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
         assert(torch_array != nullptr);
         this->values_ = torch_array->tensor();
     } else {
-        metatensor::Labels clone = this->labels_.value();
+        metatensor::Labels clone = this->labels_;
         // otherwise create a new tensor which shares memory with the Labels.
         auto cloned_values = clone.values(clone.device());
         const auto* values = cloned_values.data();
@@ -252,7 +252,7 @@ torch::Tensor LabelsHolder::column(std::string dimension) {
 }
 
 const metatensor::Labels& LabelsHolder::as_metatensor() const {
-    return labels_.value();
+    return labels_;
 }
 
 Labels LabelsHolder::append(std::string name, torch::Tensor values) const {
@@ -471,7 +471,7 @@ Labels LabelsHolder::set_union(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_union(other->labels_.value()));
+    auto result = LabelsHolder(labels_.set_union(other->labels_));
     return result.to(device);
 }
 
@@ -488,8 +488,8 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_union(
-        other->labels_.value(),
+    auto result = LabelsHolder(labels_.set_union(
+        other->labels_,
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
@@ -512,7 +512,7 @@ Labels LabelsHolder::set_intersection(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_intersection(other->labels_.value()));
+    auto result = LabelsHolder(labels_.set_intersection(other->labels_));
     return result.to(device);
 }
 
@@ -529,8 +529,8 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_intersection(
-        other->labels_.value(),
+    auto result = LabelsHolder(labels_.set_intersection(
+        other->labels_,
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
         second_mapping.data_ptr<int64_t>(),
@@ -553,7 +553,7 @@ Labels LabelsHolder::set_difference(const Labels& other) const {
         );
     }
 
-    auto result = LabelsHolder(labels_->set_difference(other->labels_.value()));
+    auto result = LabelsHolder(labels_.set_difference(other->labels_));
     return result.to(device);
 }
 
@@ -569,8 +569,8 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto mapping = torch::zeros({this->count()}, options);
 
-    auto result = LabelsHolder(labels_->set_difference(
-        other->labels_.value(),
+    auto result = LabelsHolder(labels_.set_difference(
+        other->labels_,
         mapping.data_ptr<int64_t>(),
         mapping.size(0)
     ));
@@ -598,8 +598,8 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
         return selected;
     }
 
-    labels_->select(
-        selection->labels_.value(),
+    labels_.select(
+        selection->labels_,
         selected.data_ptr<int64_t>(),
         &selected_count
     );
