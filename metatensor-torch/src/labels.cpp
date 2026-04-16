@@ -138,9 +138,13 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     }
 
     auto array = torch_tensor_to_labels_mts_array(values_);
-    // Always verify uniqueness: from_array{} moves data to CPU internally
-    // if needed. Only the explicit assume_unique constructor skips this.
-    labels_ = metatensor::Labels(names_, std::move(array));
+    if (values.is_meta()) {
+        // do not check for uniqueness if the tensor is on meta device,
+        // since it does not contain real data.
+        labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
+    } else {
+        labels_ = metatensor::Labels(names_, std::move(array));
+    }
 }
 
 LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values, metatensor::assume_unique):
@@ -258,7 +262,6 @@ const metatensor::Labels& LabelsHolder::as_metatensor() const {
 Labels LabelsHolder::append(std::string name, torch::Tensor values) const {
     return this->insert(this->size(), std::move(name), std::move(values));
 }
-
 
 Labels LabelsHolder::insert(int64_t index, std::string name, torch::Tensor values) const {
     if (index < 0 || index > this->size()) {
