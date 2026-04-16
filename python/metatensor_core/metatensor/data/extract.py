@@ -112,7 +112,10 @@ def _is_python_origin(origin):
 def data_origin(mts_array):
     """Get the data origin of an mts_array"""
     origin = mts_data_origin_t()
-    mts_array.origin(mts_array.ptr, origin)
+
+    status = mts_array.origin(mts_array.ptr, origin)
+    _check_status(status)
+
     return origin.value
 
 

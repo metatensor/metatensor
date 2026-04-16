@@ -33,17 +33,11 @@ Error handling
 
 .. doxygenfunction:: mts_last_error
 
+.. doxygenfunction:: mts_set_last_error
+
 .. doxygenfunction:: mts_disable_panic_printing
 
-.. doxygentypedef:: mts_status_t
-
-.. doxygendefine:: MTS_SUCCESS
-
-.. doxygendefine:: MTS_INVALID_PARAMETER_ERROR
-
-.. doxygendefine:: MTS_BUFFER_SIZE_ERROR
-
-.. doxygendefine:: MTS_INTERNAL_ERROR
+.. doxygenenum:: mts_status_t
 
 
 Serialization

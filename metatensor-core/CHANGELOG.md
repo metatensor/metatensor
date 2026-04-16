@@ -39,6 +39,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   allowing to remove the need to copy all data back to CPU when creating labels.
   As part of this, `mts_labels_create` is now `mts_labels`, and
   `mts_labels_create_assume_unique` is now `mts_labels_assume_unique`.
+- `mts_last_error` can now return custom data and error origin together with the
+  last error message. These can be set by a new function `mts_set_last_error`.
 
 #### Added
 
@@ -46,6 +48,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `mts_block_dtype`, `mts_tensormap_dtype` to access dtype and device of metatensor data.
 - There are new functions to work with `mts_labels_t`: `mts_labels_dimensions`,
   `mts_labels_values`, and `mts_labels_values_cpu`.
+- `mts_set_last_error` to set the last error that occured in a callback before
+  transferring control back to libmetatensor. The data set by this function can
+  then be retrieved with `mts_last_error` and used to store and rethrow
+  exceptions across the C API boundary.
 
 ### metatensor-core C++
 

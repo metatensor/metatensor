@@ -481,3 +481,25 @@ def test_parent_keepalive():
     assert tensor_ref() is None
 
     assert np.isclose(transformed, 1.1596965632269784)
+
+
+class CustomError(RuntimeError):
+    pass
+
+
+@metatensor.utils.catch_exceptions
+def error_origin(this, origin):
+    raise CustomError("This is a test error from Python callback")
+
+
+ERROR_ORIGIN = metatensor.data.array._cast_to_ctype_functype(error_origin, "origin")
+
+
+def test_error_capture():
+    mts_array = metatensor.data.create_mts_array(np.array([1, 2, 3]))
+    mts_array.origin = ERROR_ORIGIN
+
+    with pytest.raises(CustomError, match="This is a test error from Python callback"):
+        _ = metatensor.data.data_origin(mts_array)
+
+    free_mts_array(mts_array)
