@@ -135,10 +135,7 @@ TensorBlock TensorBlockHolder::to_positional(
 }
 
 torch::Tensor TensorBlockHolder::values() const {
-    // const_cast is fine here, because the returned torch::Tensor does not
-    // allow modifications to the underlying mts_array (only to the values
-    // inside the tensor).
-    auto array = const_cast<metatensor::TensorBlock&>(block_).mts_array();
+    auto array = block_.const_mts_array();
 
     if (array.origin() != TORCH_DATA_ORIGIN) {
         C10_THROW_ERROR(ValueError,

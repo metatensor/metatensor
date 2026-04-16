@@ -7,14 +7,15 @@ use dlpk::sys::DLDevice;
 
 use crate::c_api::{mts_array_t, mts_data_origin_t, mts_data_movement_t};
 use crate::Error;
+use crate::errors::check_status;
 
-use super::external::{check_status_external, MtsArray};
+use super::external::MtsArray;
 use super::origin::get_data_origin;
 
 /// Reference to a data array in metatensor-core
 ///
 /// The data array can come from any origin, this struct provides facilities to
-/// access data that was created through the [`Array`] trait, and in particular
+/// access data that was created through the [`crate::Array`] trait, and in particular
 /// as `ndarray::ArrayD` instances.
 #[derive(Debug, Clone, Copy)]
 pub struct ArrayRef<'a> {
@@ -45,7 +46,7 @@ impl<'a> ArrayRef<'a> {
     /// Get the underlying array as an `&dyn Any` instance.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn as_any(&self) -> &dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -65,7 +66,7 @@ impl<'a> ArrayRef<'a> {
     /// re-using the same lifetime as the `ArrayRef`.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn to_any(self) -> &'a dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -114,10 +115,7 @@ impl<'a> ArrayRef<'a> {
 
         let mut origin = 0;
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut origin),
-                "mts_array_t.origin",
-            )?;
+            check_status(function(self.array.ptr, &mut origin))?;
         }
 
         return Ok(origin);
@@ -131,10 +129,7 @@ impl<'a> ArrayRef<'a> {
 
         let mut device = DLDevice::cpu();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut device),
-                "mts_array_t.device",
-            )?;
+            check_status(function(self.array.ptr, &mut device))?;
         }
 
         return Ok(device);
@@ -148,10 +143,7 @@ impl<'a> ArrayRef<'a> {
 
         let mut dtype = dlpk::sys::DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 0, lanes: 0 };
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut dtype),
-                "mts_array_t.dtype",
-            )?;
+            check_status(function(self.array.ptr, &mut dtype))?;
         }
 
         return Ok(dtype);
@@ -172,10 +164,7 @@ impl<'a> ArrayRef<'a> {
         let stream_c = stream.as_ref().map_or(std::ptr::null(), |s| s as *const i64);
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut tensor, device, stream_c, max_version),
-                "mts_array_t.as_dlpack",
-            )?;
+            check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
         }
 
         let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
@@ -196,10 +185,7 @@ impl<'a> ArrayRef<'a> {
         let mut shape_count: usize = 0;
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut shape, &mut shape_count),
-                "mts_array_t.shape"
-            )?;
+            check_status(function(self.array.ptr, &mut shape, &mut shape_count))?;
         }
 
         if shape_count == 0 {
@@ -222,16 +208,13 @@ impl<'a> ArrayRef<'a> {
 
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(
-                    self.array.ptr,
-                    shape.as_ptr(),
-                    shape.len(),
-                    *fill_value.as_raw(),
-                    &mut new_array
-                ),
-                "mts_array_t.create",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                shape.as_ptr(),
+                shape.len(),
+                *fill_value.as_raw(),
+                &mut new_array
+            ))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -244,10 +227,7 @@ impl<'a> ArrayRef<'a> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut new_array),
-                "mts_array_t.copy",
-            )?;
+            check_status(function(self.array.ptr, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -257,8 +237,8 @@ impl<'a> ArrayRef<'a> {
 /// Mutable reference to a data array in metatensor-core
 ///
 /// The data array can come from any origin, this struct provides facilities to
-/// access data that was created through the [`Array`] trait, and in particular
-/// as `ndarray::ArrayD` instances.
+/// access data that was created through the [`crate::Array`] trait, and in
+/// particular as `ndarray::ArrayD` instances.
 #[derive(Debug)]
 pub struct ArrayRefMut<'a> {
     array: mts_array_t,
@@ -291,7 +271,7 @@ impl<'a> ArrayRefMut<'a> {
     /// Get the underlying array as an `&dyn Any` instance.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn as_any(&self) -> &dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -311,7 +291,7 @@ impl<'a> ArrayRefMut<'a> {
     /// re-using the same lifetime as the `ArrayRefMut`.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn to_any(self) -> &'a dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -330,7 +310,7 @@ impl<'a> ArrayRefMut<'a> {
     /// Get the underlying array as an `&mut dyn Any` instance.
     ///
     /// This function panics if the array was not created though this crate and
-    /// the [`Array`] trait.
+    /// the [`crate::Array`] trait.
     #[inline]
     pub fn to_any_mut(self) -> &'a mut dyn std::any::Any {
         let origin = self.origin().unwrap_or(0);
@@ -401,10 +381,7 @@ impl<'a> ArrayRefMut<'a> {
 
         let mut origin = 0;
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut origin),
-                "mts_array_t.origin",
-            )?;
+            check_status(function(self.array.ptr, &mut origin))?;
         }
 
         return Ok(origin);
@@ -418,10 +395,7 @@ impl<'a> ArrayRefMut<'a> {
 
         let mut device = DLDevice::cpu();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut device),
-                "mts_array_t.device",
-            )?;
+            check_status(function(self.array.ptr, &mut device))?;
         }
 
         return Ok(device);
@@ -435,10 +409,7 @@ impl<'a> ArrayRefMut<'a> {
 
         let mut dtype = dlpk::sys::DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 0, lanes: 0 };
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut dtype),
-                "mts_array_t.dtype",
-            )?;
+            check_status(function(self.array.ptr, &mut dtype))?;
         }
 
         return Ok(dtype);
@@ -459,10 +430,13 @@ impl<'a> ArrayRefMut<'a> {
         let stream_c = stream.as_ref().map_or(std::ptr::null(), |s| s as *const i64);
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut tensor, device, stream_c, max_version),
-                "mts_array_t.as_dlpack",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                &mut tensor,
+                device,
+                stream_c,
+                max_version
+            ))?;
         }
 
         let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
@@ -483,10 +457,7 @@ impl<'a> ArrayRefMut<'a> {
         let mut shape_count: usize = 0;
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut shape, &mut shape_count),
-                "mts_array_t.shape"
-            )?;
+            check_status(function(self.array.ptr, &mut shape, &mut shape_count))?;
         }
 
         if shape_count == 0 {
@@ -507,10 +478,7 @@ impl<'a> ArrayRefMut<'a> {
         let function = self.array.reshape.expect("mts_array_t.reshape function is NULL");
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, shape.as_ptr(), shape.len()),
-                "mts_array_t.reshape",
-            )?;
+            check_status(function(self.array.ptr, shape.as_ptr(), shape.len()))?;
         }
 
         return Ok(());
@@ -523,10 +491,7 @@ impl<'a> ArrayRefMut<'a> {
         let function = self.array.swap_axes.expect("mts_array_t.swap_axes function is NULL");
 
         unsafe {
-            check_status_external(
-                function(self.array.ptr, axis_1, axis_2),
-                "mts_array_t.swap_axes",
-            )?;
+            check_status(function(self.array.ptr, axis_1, axis_2))?;
         }
 
         return Ok(());
@@ -541,16 +506,13 @@ impl<'a> ArrayRefMut<'a> {
 
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(
-                    self.array.ptr,
-                    shape.as_ptr(),
-                    shape.len(),
-                    *fill_value.as_raw(),
-                    &mut new_array
-                ),
-                "mts_array_t.create",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                shape.as_ptr(),
+                shape.len(),
+                *fill_value.as_raw(),
+                &mut new_array
+            ))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -563,10 +525,7 @@ impl<'a> ArrayRefMut<'a> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, &mut new_array),
-                "mts_array_t.copy",
-            )?;
+            check_status(function(self.array.ptr, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -584,10 +543,12 @@ impl<'a> ArrayRefMut<'a> {
 
         let input = input.into();
         unsafe {
-            check_status_external(
-                function(self.array.ptr, input.as_raw().ptr, moves.as_ptr(), moves.len()),
-                "mts_array_t.move_data",
-            )?;
+            check_status(function(
+                self.array.ptr,
+                input.as_raw().ptr,
+                moves.as_ptr(),
+                moves.len(),
+            ))?;
         }
 
         return Ok(());

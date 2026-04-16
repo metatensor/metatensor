@@ -82,9 +82,13 @@ pub struct mts_array_t {
     pub destroy: Option<unsafe extern "C" fn(array: *mut c_void)>,
 
     /// This function needs to store the "data origin" for this array in
-    /// `origin`. Users of `mts_array_t` should register a single data
-    /// origin with `mts_register_data_origin`, and use it for all compatible
-    /// arrays.
+    /// `origin`. Users of `mts_array_t` should register a single data origin
+    /// with `mts_register_data_origin`, and use it for all compatible arrays.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub origin: Option<unsafe extern "C" fn(
         array: *const c_void,
         origin: *mut mts_data_origin_t
@@ -94,6 +98,11 @@ pub struct mts_array_t {
     /// via DLPack.
     ///
     /// The implementation must store the device information in `*device`.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub device: Option<unsafe extern "C" fn(
         array: *const c_void,
         device: *mut DLDevice,
@@ -102,6 +111,11 @@ pub struct mts_array_t {
     /// Query the data type of this array without a full DLPack export.
     ///
     /// The implementation must store the data type in `*dtype`.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub dtype: Option<unsafe extern "C" fn(
         array: *const c_void,
         dtype: *mut DLDataType,
@@ -143,6 +157,11 @@ pub struct mts_array_t {
     /// responsible for calling its `deleter` function when the tensor is no
     /// longer needed. The lifetime of the `DLManagedTensorVersioned` must not
     /// exceed the lifetime of the `mts_array_t` it was created from.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub as_dlpack: Option<unsafe extern "C" fn(
         array: *mut c_void,
         dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
@@ -155,6 +174,11 @@ pub struct mts_array_t {
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`. If the array is a single scalar, `shape_count` should be
     /// set to 0, and the shape pointer to `NULL`.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub shape: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *mut *const usize,
@@ -164,6 +188,11 @@ pub struct mts_array_t {
     /// Change the shape of the array managed by this `mts_array_t` to the given
     /// `shape`. `shape_count` must contain the number of elements in the
     /// `shape` array.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub reshape: Option<unsafe extern "C" fn(
         array: *mut c_void,
         shape: *const usize,
@@ -171,6 +200,11 @@ pub struct mts_array_t {
     ) -> mts_status_t>,
 
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub swap_axes: Option<unsafe extern "C" fn(
         array: *mut c_void,
         axis_1: usize,
@@ -187,6 +221,11 @@ pub struct mts_array_t {
     /// with the same dtype as this array. This function should call
     /// `fill_value.destroy` if the function pointer is not `NULL` when
     /// `fill_value` is no longer needed.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub create: Option<unsafe extern "C" fn(
         array: *const c_void,
         shape: *const usize,
@@ -199,6 +238,11 @@ pub struct mts_array_t {
     ///
     /// The new array is expected to have the same data origin and parameters
     /// (data type, data location, etc.)
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub copy: Option<unsafe extern "C" fn(
         array: *const c_void,
         new_array: *mut mts_array_t,
@@ -217,6 +261,11 @@ pub struct mts_array_t {
     /// `array[movements[i].sample_out, ..., movements[i].properties_start_out +
     /// x]` for `i` up to `movements_count` and `x` up to
     /// `movements[i].properties_length`. All indexes are 0-based.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
     pub move_data: Option<unsafe extern "C" fn(
         output: *mut c_void,
         input: *const c_void,
@@ -317,9 +366,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.origin failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.origin failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(origin);
@@ -335,9 +383,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.device failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.device failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(device);
@@ -350,9 +397,8 @@ impl mts_array_t {
         let mut dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
         let status = unsafe { function(self.ptr, &mut dtype) };
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.dtype failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.dtype failed");
+            return Err(Error::CallbackError);
         }
         return Ok(dtype);
     }
@@ -377,9 +423,8 @@ impl mts_array_t {
             function(self.ptr, &mut dl_managed_tensor, device, stream_c, max_version)
         };
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.as_dlpack failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.as_dlpack failed");
+            return Err(Error::CallbackError);
         }
         assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
         let ptr = NonNull::new(dl_managed_tensor).expect("pointer is null, this should not happen");
@@ -407,9 +452,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.shape failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.shape failed");
+            return Err(Error::CallbackError);
         }
 
         if shape_count == 0 {
@@ -436,9 +480,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.reshape failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.reshape failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(());
@@ -457,9 +500,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.swap_axes failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.swap_axes failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(());
@@ -512,9 +554,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.create failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(data_storage);
@@ -531,9 +572,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.create failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.copy failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(new_array);
@@ -569,9 +609,8 @@ impl mts_array_t {
         };
 
         if !status.is_success() {
-            return Err(Error::External {
-                status, context: "calling mts_array_t.move_data failed".into()
-            });
+            crate::c_api::add_error_context("calling mts_array_t.move_data failed");
+            return Err(Error::CallbackError);
         }
 
         return Ok(());
@@ -583,8 +622,6 @@ pub(crate) use self::tests::TestArray;
 
 #[cfg(test)]
 mod tests {
-    use crate::c_api::MTS_SUCCESS;
-
     use super::*;
 
     pub struct TestArray {
@@ -674,33 +711,33 @@ mod tests {
         unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
             *origin = register_data_origin("rust.TestArray".into());
 
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
             *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
 
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn device_cpu(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
             *device = DLDevice::cpu();
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn device_cuda(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
             *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLCUDA, device_id: 0 };
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn dtype_f64(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
             *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn dtype_f32(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
             *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 32, lanes: 1 };
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn shape(ptr: *const c_void, shape: *mut *const usize, shape_count: *mut usize) -> mts_status_t {
@@ -709,7 +746,7 @@ mod tests {
             *shape = (*ptr).shape.as_ptr();
             *shape_count = (*ptr).shape.len();
 
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn reshape(ptr: *mut c_void, shape_ptr: *const usize, shape_count: usize) -> mts_status_t {
@@ -722,7 +759,7 @@ mod tests {
                 shape.push(shape_ptr.add(i).read());
             }
 
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn swap_axes(ptr: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t {
@@ -731,7 +768,7 @@ mod tests {
             let shape = &mut (*ptr).shape;
             shape.swap(axis_1, axis_2);
 
-            return mts_status_t(MTS_SUCCESS);
+            return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn destroy(ptr: *mut c_void) {

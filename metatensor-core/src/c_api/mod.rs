@@ -7,9 +7,7 @@ use once_cell::sync::Lazy;
 #[macro_use]
 mod status;
 pub use self::status::{catch_unwind, mts_status_t};
-
-#[cfg(test)]
-pub use self::status::MTS_SUCCESS;
+pub(crate) use self::status::add_error_context;
 
 mod labels;
 mod data;

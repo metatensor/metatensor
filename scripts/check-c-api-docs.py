@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 A small script checking that all the C API functions are documented
 """
@@ -48,6 +49,7 @@ def functions_in_outline():
     functions = [
         "mts_version",
         "mts_last_error",
+        "mts_set_last_error",
         "mts_disable_panic_printing",
         "mts_get_data_origin",
         "mts_register_data_origin",
@@ -73,6 +75,9 @@ def all_functions():
 
     class AstVisitor(c_ast.NodeVisitor):
         def visit_Decl(self, node):
+            if not isinstance(node.type, c_ast.FuncDecl):
+                return
+
             if not node.name.startswith("mts_"):
                 return
 

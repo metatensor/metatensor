@@ -20,12 +20,14 @@ use dlpk::sys::*;
 )]
 extern "C" {}
 
-pub const MTS_SUCCESS: i32 = 0;
-pub const MTS_INVALID_PARAMETER_ERROR: i32 = 1;
-pub const MTS_IO_ERROR: i32 = 2;
-pub const MTS_SERIALIZATION_ERROR: i32 = 3;
-pub const MTS_BUFFER_SIZE_ERROR: i32 = 254;
-pub const MTS_INTERNAL_ERROR: i32 = 255;
+pub const MTS_SUCCESS: mts_status_t = 0;
+pub const MTS_INVALID_PARAMETER_ERROR: mts_status_t = 1;
+pub const MTS_IO_ERROR: mts_status_t = 2;
+pub const MTS_SERIALIZATION_ERROR: mts_status_t = 3;
+pub const MTS_BUFFER_SIZE_ERROR: mts_status_t = 4;
+pub const MTS_CALLBACK_ERROR: mts_status_t = 254;
+pub const MTS_INTERNAL_ERROR: mts_status_t = 255;
+pub type mts_status_t = i32;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_block_t {
@@ -41,7 +43,6 @@ pub struct mts_labels_t {
 pub struct mts_tensormap_t {
     _unused: [u8; 0],
 }
-pub type mts_status_t = i32;
 pub type mts_data_origin_t = u64;
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
@@ -262,7 +263,21 @@ pub type mts_create_array_callback_t = ::std::option::Option<
 extern "C" {
     pub fn mts_disable_panic_printing();
     pub fn mts_version() -> *const ::std::os::raw::c_char;
-    pub fn mts_last_error() -> *const ::std::os::raw::c_char;
+    #[must_use]
+    pub fn mts_last_error(
+        message: *mut *const ::std::os::raw::c_char,
+        origin: *mut *const ::std::os::raw::c_char,
+        data: *mut *mut ::std::os::raw::c_void,
+    ) -> mts_status_t;
+    #[must_use]
+    pub fn mts_set_last_error(
+        message: *const ::std::os::raw::c_char,
+        origin: *const ::std::os::raw::c_char,
+        data: *mut ::std::os::raw::c_void,
+        data_deleter: ::std::option::Option<
+            unsafe extern "C" fn(arg1: *mut ::std::os::raw::c_void),
+        >,
+    ) -> mts_status_t;
     pub fn mts_labels(
         dimensions: *const *const ::std::os::raw::c_char,
         dimensions_count: usize,

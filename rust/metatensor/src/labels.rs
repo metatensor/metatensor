@@ -5,6 +5,7 @@ use std::iter::FusedIterator;
 
 use crate::MtsArray;
 use crate::c_api::mts_labels_t;
+use crate::errors::check_ptr;
 use crate::errors::{Error, check_status};
 
 /// A single value inside a label.
@@ -864,16 +865,7 @@ impl LabelsBuilder {
                 array.into_raw(),
             )
         };
-
-        if ptr.is_null() {
-            let error = unsafe { crate::c_api::mts_last_error() };
-            let message = if error.is_null() {
-                "failed to create labels".to_string()
-            } else {
-                unsafe { std::ffi::CStr::from_ptr(error) }.to_string_lossy().into_owned()
-            };
-            panic!("{}", message);
-        }
+        check_ptr(ptr).expect("invalid labels");
 
         unsafe { Labels::from_raw(ptr) }
     }

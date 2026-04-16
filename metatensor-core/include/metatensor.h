@@ -17,36 +17,54 @@
 typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
- * Status code used when a function succeeded
+ * Status type returned by all functions in the C API.
+ *
+ * The value 0 (`MTS_SUCCESS`) is used to indicate successful operations.
  */
-#define MTS_SUCCESS 0
-
-/**
- * Status code used when a function got an invalid parameter
- */
-#define MTS_INVALID_PARAMETER_ERROR 1
-
-/**
- * Status code indicating I/O error when loading/writing `mts_tensormap_t` to a file
- */
-#define MTS_IO_ERROR 2
-
-/**
- * Status code indicating errors in the serialization format when
- * loading/writing `mts_tensormap_t` to a file
- */
-#define MTS_SERIALIZATION_ERROR 3
-
-/**
- * Status code used when a memory buffer is too small to fit the requested data
- */
-#define MTS_BUFFER_SIZE_ERROR 254
-
-/**
- * Status code used when there was an internal error, i.e. there is a bug
- * inside metatensor itself
- */
-#define MTS_INTERNAL_ERROR 255
+enum mts_status_t
+#ifdef __cplusplus
+  : int32_t
+#endif // __cplusplus
+ {
+  /**
+   * Status code used when a function succeeded
+   */
+  MTS_SUCCESS = 0,
+  /**
+   * Status code used when a function got an invalid parameter
+   */
+  MTS_INVALID_PARAMETER_ERROR = 1,
+  /**
+   * Status code indicating I/O error when loading/writing `mts_tensormap_t`
+   * to a file
+   */
+  MTS_IO_ERROR = 2,
+  /**
+   * Status code indicating errors in the serialization format when
+   * loading/writing `mts_tensormap_t` to a file
+   */
+  MTS_SERIALIZATION_ERROR = 3,
+  /**
+   * Status code used when a memory buffer is too small to fit the requested
+   * data
+   */
+  MTS_BUFFER_SIZE_ERROR = 4,
+  /**
+   * Status code indicating errors that comes from callbacks provided by the
+   * user of metatensor. The error message and arbitrary custom data can be
+   * stored using `mts_set_last_error` inside the callback, and retrieved
+   * later with `mts_last_error`.
+   */
+  MTS_CALLBACK_ERROR = 254,
+  /**
+   * Status code used when there was an internal error, i.e. there is a bug
+   * inside metatensor itself
+   */
+  MTS_INTERNAL_ERROR = 255,
+};
+#ifndef __cplusplus
+typedef int32_t mts_status_t;
+#endif // __cplusplus
 
 /**
  * Basic building block for tensor map. A single block contains a n-dimensional
@@ -73,16 +91,6 @@ typedef struct mts_labels_t mts_labels_t;
  * Opaque type representing a `TensorMap`.
  */
 typedef struct mts_tensormap_t mts_tensormap_t;
-
-/**
- * Status type returned by all functions in the C API.
- *
- * The value 0 (`MTS_SUCCESS`) is used to indicate successful operations,
- * positive values are used by this library to indicate errors, while negative
- * values are reserved for users of this library to indicate their own errors
- * in callbacks.
- */
-typedef int32_t mts_status_t;
 
 /**
  * A single 64-bit integer representing a data origin (numpy ndarray, rust
@@ -144,9 +152,13 @@ typedef struct mts_array_t {
   void (*destroy)(void *array);
   /**
    * This function needs to store the "data origin" for this array in
-   * `origin`. Users of `mts_array_t` should register a single data
-   * origin with `mts_register_data_origin`, and use it for all compatible
-   * arrays.
+   * `origin`. Users of `mts_array_t` should register a single data origin
+   * with `mts_register_data_origin`, and use it for all compatible arrays.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*origin)(const void *array, mts_data_origin_t *origin);
   /**
@@ -154,12 +166,22 @@ typedef struct mts_array_t {
    * via DLPack.
    *
    * The implementation must store the device information in `*device`.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*device)(const void *array, DLDevice *device);
   /**
    * Query the data type of this array without a full DLPack export.
    *
    * The implementation must store the data type in `*dtype`.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*dtype)(const void *array, DLDataType *dtype);
   /**
@@ -199,6 +221,11 @@ typedef struct mts_array_t {
    * responsible for calling its `deleter` function when the tensor is no
    * longer needed. The lifetime of the `DLManagedTensorVersioned` must not
    * exceed the lifetime of the `mts_array_t` it was created from.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*as_dlpack)(void *array,
                             DLManagedTensorVersioned **dl_managed_tensor,
@@ -210,16 +237,31 @@ typedef struct mts_array_t {
    * pointer, and the number of dimension (size of the `*shape` array) in
    * `*shape_count`. If the array is a single scalar, `shape_count` should be
    * set to 0, and the shape pointer to `NULL`.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*shape)(const void *array, const uintptr_t **shape, uintptr_t *shape_count);
   /**
    * Change the shape of the array managed by this `mts_array_t` to the given
    * `shape`. `shape_count` must contain the number of elements in the
    * `shape` array.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*reshape)(void *array, const uintptr_t *shape, uintptr_t shape_count);
   /**
    * Swap the axes `axis_1` and `axis_2` in this `array`.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*swap_axes)(void *array, uintptr_t axis_1, uintptr_t axis_2);
   /**
@@ -233,6 +275,11 @@ typedef struct mts_array_t {
    * with the same dtype as this array. This function should call
    * `fill_value.destroy` if the function pointer is not `NULL` when
    * `fill_value` is no longer needed.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*create)(const void *array,
                          const uintptr_t *shape,
@@ -244,6 +291,11 @@ typedef struct mts_array_t {
    *
    * The new array is expected to have the same data origin and parameters
    * (data type, data location, etc.)
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*copy)(const void *array, struct mts_array_t *new_array);
   /**
@@ -260,6 +312,11 @@ typedef struct mts_array_t {
    * `array[movements[i].sample_out, ..., movements[i].properties_start_out +
    * x]` for `i` up to `movements_count` and `x` up to
    * `movements[i].properties_length`. All indexes are 0-based.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
    */
   mts_status_t (*move_data)(void *output,
                             const void *input,
@@ -291,6 +348,11 @@ typedef uint8_t *(*mts_realloc_buffer_t)(void *user_data, uint8_t *ptr, uintptr_
  *
  * The newly created array should live on CPU, since metatensor will use
  * `mts_array_t.data` to get the data pointer and write to it.
+ *
+ * This function should return `MTS_SUCCESS` on success, or
+ * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+ * should call `mts_set_last_error` with an appropriate error message before
+ * returning.
  */
 typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     uintptr_t shape_count,
@@ -321,9 +383,28 @@ const char *mts_version(void);
 /**
  * Get the last error message that was created on the current thread.
  *
- * @returns the last error message, as a NULL-terminated string
+ * @param message if not NULL, this will be set to the last error message, as a
+ *        NULL-terminated string
+ * @param origin if not NULL, this will be set to the origin of the last error,
+ *        as a NULL-terminated string
+ * @param data if not NULL, this will be set to the custom data of the last error
+ *
+ * @returns The status code of this operation.
  */
-const char *mts_last_error(void);
+mts_status_t mts_last_error(const char **message, const char **origin, void **data);
+
+/**
+ * Set the last error message for the current thread.
+ *
+ * This is useful when the error is created in a callback provided by the user
+ * of metatensor.
+ *
+ * @param message the error message to set, as a NULL-terminated string
+ */
+mts_status_t mts_set_last_error(const char *message,
+                                const char *origin,
+                                void *data,
+                                void (*data_deleter)(void*));
 
 /**
  * Create a new set of Labels from the given dimension names and values
