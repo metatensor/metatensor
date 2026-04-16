@@ -217,9 +217,8 @@ private:
     /// Keep the values of the Labels inside a Tensor as well
     torch::Tensor values_;
 
-    /// Underlying metatensor labels, this is undefined when the Labels is
-    /// actually a view (with selected columns) into another Labels
-    torch::optional<metatensor::Labels> labels_;
+    /// Underlying metatensor labels
+    metatensor::Labels labels_;
 };
 
 /// Check two `LabelsHolder` for equality
