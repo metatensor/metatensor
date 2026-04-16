@@ -135,12 +135,21 @@ TEST_CASE("Labels") {
         auto values = torch::tensor({{0, 1}, {2, 3}}, torch::kInt32);
         auto meta_values = values.to(torch::kMeta);
 
-        // assume_unique skips data access for uniqueness checking
         auto labels = LabelsHolder(
             std::vector<std::string>{"a", "b"},
             meta_values,
             metatensor::assume_unique{}
         );
+
+        CHECK(labels.count() == 2);
+        CHECK(labels.size() == 2);
+        CHECK(labels.names()[0] == "a");
+        CHECK(labels.names()[1] == "b");
+        // values tensor should be on meta device
+        CHECK(labels.values().device().is_meta());
+
+        // meta tensors should also work without an explicit assume_unique
+        labels = LabelsHolder(std::vector<std::string>{"a", "b"}, meta_values);
 
         CHECK(labels.count() == 2);
         CHECK(labels.size() == 2);
