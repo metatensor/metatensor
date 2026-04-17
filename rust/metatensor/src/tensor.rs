@@ -204,7 +204,8 @@ impl TensorMap {
     unsafe fn raw_block_mut_by_id<'a>(ptr: *mut mts_tensormap_t, index: usize) -> TensorBlockRefMut<'a> {
         let mut block = std::ptr::null_mut();
 
-        check_status(crate::c_api::mts_tensormap_block_by_id(
+        check_status(
+            crate::c_api::mts_tensormap_block_by_id(
             ptr,
             &mut block,
             index,

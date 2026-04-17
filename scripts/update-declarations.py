@@ -81,13 +81,27 @@ class AstVisitor(c_ast.NodeVisitor):
         self.defines = {}
 
     def visit_Decl(self, node):
-        if not node.name.startswith("mts_"):
+        node_name = node.name
+        if node_name is None:
+            node_name = node.type.name
+
+        if not node_name.startswith("mts_"):
             return
 
-        function = Function(node.name, node.type.type)
-        for parameter in node.type.args.params:
-            function.add_arg(parameter.name, parameter.type)
-        self.functions.append(function)
+        if isinstance(node.type, c_ast.Enum):
+            enum = Enum(node_name)
+            for enumerator in node.type.values.enumerators:
+                # Strip C unsigned/long suffixes (e.g. 0U, 1UL)
+                value = enumerator.value.value.rstrip("UuLl")
+                enum.add_value(enumerator.name, value)
+            self.enums.append(enum)
+        elif isinstance(node.type, c_ast.FuncDecl):
+            function = Function(node.name, node.type.type)
+            for parameter in node.type.args.params:
+                function.add_arg(parameter.name, parameter.type)
+            self.functions.append(function)
+        else:
+            raise RuntimeError(f"Unknown declaration type for {node_name}")
 
     def visit_Typedef(self, node):
         # Extract mts_* types and DLDataTypeCode enum
@@ -265,11 +279,18 @@ elif arch == "64bit":
                 continue
             f.write(f"{name} = {_py_type(c_type)}\n")
 
-        # Auto-generated enums (DLDataTypeCode)
+        # Enums
         for enum in data.enums:
-            f.write(f"\n\nclass {enum.name}(enum.Enum):\n")
-            for name, value in enum.values.items():
-                f.write(f"    {name} = {value}\n")
+            if enum.name == "mts_status_t":
+                # mts_status_t is a special case, we want it to be an int for better
+                # interop with C
+                f.write(f"\n\n{enum.name} = ctypes.c_int\n")
+                for name, value in enum.values.items():
+                    f.write(f"{name} = {value}\n")
+            else:
+                f.write(f"\n\nclass {enum.name}(enum.Enum):\n")
+                for name, value in enum.values.items():
+                    f.write(f"    {name} = {value}\n")
 
         # Manual DLPack struct definitions
         f.write("""
@@ -349,7 +370,7 @@ DLManagedTensorVersioned._fields_ = [
                 f.write(f"\n        {arg},")
             f.write("\n    ]\n")
             restype = _py_type(function.restype)
-            if restype == "mts_status_t":
+            if restype == "mts_status_t" and function.name != "mts_last_error":
                 restype = "_check_status"
             f.write(f"    lib.{function.name}.restype = {restype}\n")
 
@@ -437,7 +458,6 @@ else
 end
 
 Cbool = Cuchar
-mts_status_t = Int32
 mts_data_origin_t = UInt64
 
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
@@ -534,16 +554,16 @@ def generate_rust():
                 os.path.join(tmpdir, "c_api.rs"),
                 "--disable-header-comment",
                 "--no-doc-comments",
-                "--default-macro-constant-type=signed",
                 "--merge-extern-blocks",
+                "--must-use-type",
+                "mts_status_t",
                 "--allowlist-function",
                 "^mts_.*",
                 "--allowlist-type",
                 "^mts_.*",
                 "--allowlist-var",
                 "^MTS_.*",
-                "--must-use-type",
-                "mts_status_t",
+                "--no-prepend-enum-name",
                 "--blocklist-type",
                 "DL.*",
                 "--rust-target",

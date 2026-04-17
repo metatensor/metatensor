@@ -198,10 +198,8 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
         if status.is_success() {
             return Ok(array);
         } else {
-            return Err(Error::External {
-                status: status,
-                context: "failed to create a new array in mts_tensormap_load".into()
-            });
+            crate::c_api::add_error_context("failed to create a new array in mts_tensormap_load");
+            return Err(Error::CallbackError);
         }
     }
 }
