@@ -19,30 +19,30 @@ mts_data_origin_t = UInt64
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
 mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
-# DLPack types
-struct DLPackVersion
-    major :: UInt32
-    minor :: UInt32
-end
-
-struct DLDevice
-    device_type :: Int32
-    device_id :: Int32
-end
-
-struct DLDataType
-    code :: UInt8
-    bits :: UInt8
-    lanes :: UInt16
-end
-
 # ====== End of manual definitions ====== #
 
 
-# ===== Macros definitions
-
-
 # ===== Enum definitions
+
+
+# enum DLDeviceType
+const DLDeviceType = UInt32
+const kDLCPU = DLDeviceType(1)
+const kDLCUDA = DLDeviceType(2)
+const kDLCUDAHost = DLDeviceType(3)
+const kDLOpenCL = DLDeviceType(4)
+const kDLVulkan = DLDeviceType(7)
+const kDLMetal = DLDeviceType(8)
+const kDLVPI = DLDeviceType(9)
+const kDLROCM = DLDeviceType(10)
+const kDLROCMHost = DLDeviceType(11)
+const kDLExtDev = DLDeviceType(12)
+const kDLCUDAManaged = DLDeviceType(13)
+const kDLOneAPI = DLDeviceType(14)
+const kDLWebGPU = DLDeviceType(15)
+const kDLHexagon = DLDeviceType(16)
+const kDLMAIA = DLDeviceType(17)
+const kDLTrn = DLDeviceType(18)
 
 
 # enum DLDataTypeCode
@@ -79,6 +79,46 @@ const MTS_INTERNAL_ERROR = mts_status_t(255)
 
 
 # ===== Struct definitions
+struct DLPackVersion
+    major :: UInt32
+    minor :: UInt32
+end
+
+struct DLDevice
+    device_type :: DLDeviceType
+    device_id :: Int32
+end
+
+struct DLDataType
+    code :: UInt8
+    bits :: UInt8
+    lanes :: UInt16
+end
+
+struct DLTensor
+    data :: Ptr{Cvoid}
+    device :: DLDevice
+    ndim :: Int32
+    dtype :: DLDataType
+    shape :: Ptr{Int64}
+    strides :: Ptr{Int64}
+    byte_offset :: UInt64
+end
+
+struct DLManagedTensor
+    dl_tensor :: DLTensor
+    manager_ctx :: Ptr{Cvoid}
+    deleter :: Ptr{Cvoid} #= (Ptr{DLManagedTensor}) -> Cvoid =#
+end
+
+struct DLManagedTensorVersioned
+    version :: DLPackVersion
+    manager_ctx :: Ptr{Cvoid}
+    deleter :: Ptr{Cvoid} #= (Ptr{DLManagedTensorVersioned}) -> Cvoid =#
+    flags :: UInt64
+    dl_tensor :: DLTensor
+end
+
 struct mts_block_t
 end
 
@@ -110,7 +150,6 @@ struct mts_array_t
     copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
-
 
 
 # ===== Function definitions

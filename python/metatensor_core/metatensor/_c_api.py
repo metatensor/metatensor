@@ -9,9 +9,45 @@ do not edit it manually!
 """
 
 import ctypes
-import enum
 import platform
 from ctypes import CFUNCTYPE, POINTER
+
+
+class EnumType(type(ctypes.c_int32)):
+    def __new__(metacls, name, bases, dict):
+        if "_members_" not in dict:
+            _members_ = {}
+            for key, value in dict.items():
+                if not key.startswith("_"):
+                    _members_[key] = value
+
+            dict["_members_"] = _members_
+        else:
+            _members_ = dict["_members_"]
+
+        dict["_reverse_map_"] = {v: k for k, v in _members_.items()}
+        cls = type(ctypes.c_int32).__new__(metacls, name, bases, dict)
+        for key, value in cls._members_.items():
+            globals()[key] = value
+        return cls
+
+    def __repr__(self):
+        return "<Enumeration %s>" % self.__name__
+
+
+class Enum(ctypes.c_int32):
+    __metaclass__ = EnumType
+    _members_ = {}
+
+    def __repr__(self):
+        value_str = self._reverse_map_.get(self.value, str(self.value))
+        return f"{self.__class__.__name__}.{value_str}"
+
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.value == other
+
+        return type(self) is type(other) and self.value == other.value
 
 
 arch = platform.architecture()[0]
@@ -22,12 +58,26 @@ elif arch == "64bit":
 
 
 
-mts_status_t = ctypes.c_int32
-mts_data_origin_t = ctypes.c_uint64
-mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
+class DLDeviceType(Enum):
+    kDLCPU = 1
+    kDLCUDA = 2
+    kDLCUDAHost = 3
+    kDLOpenCL = 4
+    kDLVulkan = 7
+    kDLMetal = 8
+    kDLVPI = 9
+    kDLROCM = 10
+    kDLROCMHost = 11
+    kDLExtDev = 12
+    kDLCUDAManaged = 13
+    kDLOneAPI = 14
+    kDLWebGPU = 15
+    kDLHexagon = 16
+    kDLMAIA = 17
+    kDLTrn = 18
 
 
-class DLDataTypeCode(enum.Enum):
+class DLDataTypeCode(Enum):
     kDLInt = 0
     kDLUInt = 1
     kDLFloat = 2
@@ -48,61 +98,38 @@ class DLDataTypeCode(enum.Enum):
     kDLFloat4_e2m1fn = 17
 
 
-mts_status_t = ctypes.c_int
-MTS_SUCCESS = 0
-MTS_INVALID_PARAMETER_ERROR = 1
-MTS_IO_ERROR = 2
-MTS_SERIALIZATION_ERROR = 3
-MTS_BUFFER_SIZE_ERROR = 4
-MTS_CALLBACK_ERROR = 254
-MTS_INTERNAL_ERROR = 255
+class mts_status_t(Enum):
+    MTS_SUCCESS = 0
+    MTS_INVALID_PARAMETER_ERROR = 1
+    MTS_IO_ERROR = 2
+    MTS_SERIALIZATION_ERROR = 3
+    MTS_BUFFER_SIZE_ERROR = 4
+    MTS_CALLBACK_ERROR = 254
+    MTS_INTERNAL_ERROR = 255
 
 
-# ============================================================================ #
-# DLPack types
-# ============================================================================ #
 class DLPackVersion(ctypes.Structure):
-    _fields_ = [
-        ("major", ctypes.c_uint32),
-        ("minor", ctypes.c_uint32),
-    ]
+    pass
+
 
 class DLDevice(ctypes.Structure):
-    _fields_ = [
-        ("device_type", ctypes.c_int32),
-        ("device_id", ctypes.c_int32),
-    ]
+    pass
+
 
 class DLDataType(ctypes.Structure):
-    _fields_ = [
-        ("code", ctypes.c_uint8),
-        ("bits", ctypes.c_uint8),
-        ("lanes", ctypes.c_uint16),
-    ]
+    pass
+
 
 class DLTensor(ctypes.Structure):
-    _fields_ = [
-        ("data", ctypes.c_void_p),
-        ("device", DLDevice),
-        ("ndim", ctypes.c_int32),
-        ("dtype", DLDataType),
-        ("shape", POINTER(ctypes.c_int64)),
-        ("strides", POINTER(ctypes.c_int64)),
-        ("byte_offset", ctypes.c_uint64),
-    ]
+    pass
+
+
+class DLManagedTensor(ctypes.Structure):
+    pass
+
 
 class DLManagedTensorVersioned(ctypes.Structure):
     pass
-
-_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))
-
-DLManagedTensorVersioned._fields_ = [
-    ("version", DLPackVersion),
-    ("manager_ctx", ctypes.c_void_p),
-    ("deleter", _DLManagedTensorVersionedDeleter),
-    ("flags", ctypes.c_uint64),
-    ("dl_tensor", DLTensor),
-]
 
 
 class mts_block_t(ctypes.Structure):
@@ -120,6 +147,61 @@ class mts_tensormap_t(ctypes.Structure):
 class mts_data_movement_t(ctypes.Structure):
     pass
 
+
+class mts_array_t(ctypes.Structure):
+    pass
+
+
+DLPackManagedTensorAllocator = CFUNCTYPE(ctypes.c_int, POINTER(DLTensor), POINTER(POINTER(DLManagedTensorVersioned)), ctypes.c_void_p, CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p))
+DLPackManagedTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)))
+DLPackDLTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(DLTensor))
+DLPackCurrentWorkStream = CFUNCTYPE(ctypes.c_int, DLDeviceType, ctypes.c_int32, POINTER(POINTER(None)))
+DLPackManagedTensorToPyObjectNoSync = CFUNCTYPE(ctypes.c_int, POINTER(DLManagedTensorVersioned), POINTER(POINTER(None)))
+mts_data_origin_t = ctypes.c_uint64
+mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
+mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
+
+
+DLPackVersion._fields_ = [
+    ("major", ctypes.c_uint32),
+    ("minor", ctypes.c_uint32),
+]
+
+DLDevice._fields_ = [
+    ("device_type", DLDeviceType),
+    ("device_id", ctypes.c_int32),
+]
+
+DLDataType._fields_ = [
+    ("code", ctypes.c_uint8),
+    ("bits", ctypes.c_uint8),
+    ("lanes", ctypes.c_uint16),
+]
+
+DLTensor._fields_ = [
+    ("data", ctypes.c_void_p),
+    ("device", DLDevice),
+    ("ndim", ctypes.c_int32),
+    ("dtype", DLDataType),
+    ("shape", POINTER(ctypes.c_int64)),
+    ("strides", POINTER(ctypes.c_int64)),
+    ("byte_offset", ctypes.c_uint64),
+]
+
+DLManagedTensor._fields_ = [
+    ("dl_tensor", DLTensor),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensor))),
+]
+
+DLManagedTensorVersioned._fields_ = [
+    ("version", DLPackVersion),
+    ("manager_ctx", ctypes.c_void_p),
+    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))),
+    ("flags", ctypes.c_uint64),
+    ("dl_tensor", DLTensor),
+]
+
 mts_data_movement_t._fields_ = [
     ("sample_in", c_uintptr_t),
     ("sample_out", c_uintptr_t),
@@ -127,10 +209,6 @@ mts_data_movement_t._fields_ = [
     ("properties_start_out", c_uintptr_t),
     ("properties_length", c_uintptr_t),
 ]
-
-
-class mts_array_t(ctypes.Structure):
-    pass
 
 mts_array_t._fields_ = [
     ("ptr", ctypes.c_void_p),
@@ -146,9 +224,6 @@ mts_array_t._fields_ = [
     ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
     ("move_data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_data_movement_t), c_uintptr_t)),
 ]
-
-
-mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
 
 
 def setup_functions(lib):

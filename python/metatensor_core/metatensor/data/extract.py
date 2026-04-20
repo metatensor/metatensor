@@ -5,6 +5,7 @@ import numpy as np
 
 from .._c_api import (
     DLDevice,
+    DLDeviceType,
     DLManagedTensorVersioned,
     DLPackVersion,
     c_uintptr_t,
@@ -161,7 +162,7 @@ class ExternalCpuArray(np.ndarray):
 
         # Use as_dlpack to get data pointer and dtype
         dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
-        device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+        device = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
         version = DLPackVersion(major=1, minor=0)
         status = mts_array.as_dlpack(
             mts_array.ptr,

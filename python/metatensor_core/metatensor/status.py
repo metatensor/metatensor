@@ -4,7 +4,7 @@ import ctypes
 import sys
 from typing import Optional
 
-from ._c_api import MTS_SUCCESS
+from ._c_api import mts_status_t
 
 
 class MetatensorError(Exception):
@@ -21,7 +21,7 @@ class MetatensorError(Exception):
 
 
 def _check_status(status):
-    if status == MTS_SUCCESS:
+    if status == mts_status_t.MTS_SUCCESS:
         return
     else:
         raise _get_exception(status)
@@ -92,7 +92,7 @@ def _get_exception(status=None):
         ctypes.byref(message), ctypes.byref(origin), ctypes.byref(user_data)
     )
 
-    if status != MTS_SUCCESS:
+    if status != mts_status_t.MTS_SUCCESS:
         return MetatensorError(
             "INTERNAL ERROR: failed to get the last error", status=status
         )
@@ -116,7 +116,7 @@ def _clear_last_error():
         lib = _get_library()
         origin = ctypes.c_char_p()
         status = lib.mts_last_error(None, ctypes.byref(origin), None)
-        if status == MTS_SUCCESS and origin.value == b"Python exception":
+        if status == mts_status_t.MTS_SUCCESS and origin.value == b"Python exception":
             lib.mts_set_last_error(None, None, None, None)
     except Exception:
         pass
