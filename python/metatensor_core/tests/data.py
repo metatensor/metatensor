@@ -16,6 +16,7 @@ except ImportError:
     HAS_TORCH = False
 
 import metatensor
+from metatensor import ExternalCpuArray, ExternalCudaArray
 from metatensor._c_api import (
     DLDevice,
     DLDeviceType,
@@ -25,7 +26,7 @@ from metatensor._c_api import (
     mts_array_t,
     mts_data_movement_t,
 )
-from metatensor.status import _check_status
+from metatensor._status import catch_exceptions, check_status
 
 
 # Kanged from the metatensor-torch _test_utils
@@ -46,21 +47,21 @@ def free_mts_array(array):
 class MtsArrayMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
-        assert id(metatensor.data.mts_array_to_python_array(mts_array)) == id(array)
+        assert id(metatensor._data.mts_array_to_python_array(mts_array)) == id(array)
 
-        origin = metatensor.data.data_origin(mts_array)
-        assert metatensor.data.data_origin_name(origin) == self.expected_origin()
+        origin = metatensor._data.data_origin(mts_array)
+        assert metatensor._data.data_origin_name(origin) == self.expected_origin()
 
         free_mts_array(mts_array)
 
     def test_device(self):
         array = self.create_array((2, 3))
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         device = DLDevice()
-        _check_status(mts_array.device(mts_array.ptr, device))
+        check_status(mts_array.device(mts_array.ptr, device))
         assert device.device_type == DLDeviceType.kDLCPU
         assert device.device_id == 0
 
@@ -68,12 +69,12 @@ class MtsArrayMixin:
 
     def test_shape(self):
         array = self.create_array((2, 3, 4))
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         assert _get_shape(mts_array, self) == [2, 3, 4]
 
         new_shape = ctypes.ARRAY(c_uintptr_t, 4)(2, 3, 2, 2)
-        _check_status(mts_array.reshape(mts_array.ptr, new_shape, len(new_shape)))
+        check_status(mts_array.reshape(mts_array.ptr, new_shape, len(new_shape)))
 
         assert _get_shape(mts_array, self) == [2, 3, 2, 2]
 
@@ -81,7 +82,7 @@ class MtsArrayMixin:
 
     def test_swap_axes(self):
         array = self.create_array((2, 3, 18, 23))
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         mts_array.swap_axes(mts_array.ptr, 1, 3)
         assert _get_shape(mts_array, self) == [2, 23, 18, 3]
@@ -93,15 +94,15 @@ class MtsArrayMixin:
             array = self.create_array((2, 3), dtype=dtype)
             array_ref = weakref.ref(array)
 
-            mts_array = metatensor.data.create_mts_array(array)
+            mts_array = metatensor._data.create_mts_array(array)
 
             new_mts_array = mts_array_t()
             new_shape = ctypes.ARRAY(c_uintptr_t, 2)(18, 4)
 
             fill_value_array = self.create_array((), dtype=dtype)
-            fill_value_mts = metatensor.data.create_mts_array(fill_value_array)
+            fill_value_mts = metatensor._data.create_mts_array(fill_value_array)
 
-            _check_status(
+            check_status(
                 mts_array.create(
                     mts_array.ptr,
                     new_shape,
@@ -111,7 +112,7 @@ class MtsArrayMixin:
                 )
             )
 
-            new_array = metatensor.data.mts_array_to_python_array(new_mts_array)
+            new_array = metatensor._data.mts_array_to_python_array(new_mts_array)
             assert id(new_array) != id(array)
 
             assert_equal(
@@ -137,12 +138,12 @@ class MtsArrayMixin:
         array = self.create_array((2, 3, 4))
         array[1, :, :] = 3
         array[1, 2, :] = 5
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         copy = mts_array_t()
-        _check_status(mts_array.copy(mts_array.ptr, copy))
+        check_status(mts_array.copy(mts_array.ptr, copy))
 
-        array_copy = metatensor.data.mts_array_to_python_array(copy)
+        array_copy = metatensor._data.mts_array_to_python_array(copy)
         assert id(array_copy) != id(array)
 
         assert_equal(self.to_numpy(array_copy), self.to_numpy(array))
@@ -153,11 +154,11 @@ class MtsArrayMixin:
     def test_move_data(self):
         array = self.create_array((2, 3, 8))
         array[:] = 4.0
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         other = self.create_array((1, 3, 4))
         other[:] = 2.0
-        mts_array_other = metatensor.data.create_mts_array(other)
+        mts_array_other = metatensor._data.create_mts_array(other)
 
         move = mts_data_movement_t(
             sample_in=0,
@@ -210,19 +211,19 @@ class MtsArrayMixin:
 
         # Create a sample array
         array = self.create_array((2, 3))
-        if self.expected_origin() == "metatensor.data.array.numpy" and device != "cpu":
+        if self.expected_origin() == "python.numpy" and device != "cpu":
             pytest.skip("NumPy only supports CPU")
         if not device:
             pytest.skip()
         if isinstance(array, torch.Tensor):
             array = torch.asarray(array, device=device)
-        mts_array = metatensor.data.create_mts_array(array)
+        mts_array = metatensor._data.create_mts_array(array)
 
         # Prepare a pointer to receive the DLManagedTensorVersioned
         dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
         version = DLPackVersion(1, 0)
 
-        _check_status(
+        check_status(
             mts_array.as_dlpack(
                 mts_array.ptr,
                 ctypes.byref(dl_managed_ptr),
@@ -247,9 +248,9 @@ class MtsArrayMixin:
         assert dl_tensor.shape[1] == 3
 
         # Verify Data Pointer matches the source array
-        if self.expected_origin() == "metatensor.data.array.numpy":
+        if self.expected_origin() == "python.numpy":
             assert dl_tensor.data == array.ctypes.data
-        elif self.expected_origin() == "metatensor.data.array.torch":
+        elif self.expected_origin() == "python.torch":
             assert dl_tensor.data == array.data_ptr()
 
         # IMPORTANT: Call the deleter to cleanup the C-side resources (and refcounts)
@@ -277,7 +278,7 @@ class TestNumpyData(MtsArrayMixin):
     ]
 
     def expected_origin(self):
-        return "metatensor.data.array.numpy"
+        return "python.numpy"
 
     def create_array(self, shape, dtype=np.float64):
         if dtype == np.bool_:
@@ -328,7 +329,7 @@ if HAS_TORCH:
         ]
 
         def expected_origin(self):
-            return "metatensor.data.array.torch"
+            return "python.torch"
 
         def create_array(self, shape, dtype=torch.float32):
             if dtype == torch.bool:
@@ -354,7 +355,7 @@ if HAS_TORCH:
 def _get_shape(mts_array, test):
     shape_ptr = ctypes.POINTER(c_uintptr_t)()
     shape_count = c_uintptr_t()
-    _check_status(mts_array.shape(mts_array.ptr, shape_ptr, shape_count))
+    check_status(mts_array.shape(mts_array.ptr, shape_ptr, shape_count))
 
     shape = []
     for i in range(shape_count.value):
@@ -363,18 +364,9 @@ def _get_shape(mts_array, test):
     return shape
 
 
-def test_external_cuda_array_importable():
-    """ExternalCudaArray should be importable from the public API."""
-    from metatensor.data import ExternalCudaArray
-
-    assert ExternalCudaArray is not None
-
-
 def test_external_cuda_array_requires_torch(monkeypatch):
     """ExternalCudaArray.__new__ should raise ImportError when torch is missing."""
     import builtins
-
-    from metatensor.data import extract
 
     real_import = builtins.__import__
 
@@ -387,17 +379,15 @@ def test_external_cuda_array_requires_torch(monkeypatch):
 
     dummy_mts_array = mts_array_t()  # won't be used — error raised first
     with pytest.raises(ImportError, match="ExternalCudaArray requires PyTorch"):
-        extract.ExternalCudaArray(dummy_mts_array, parent=None)
+        ExternalCudaArray(dummy_mts_array, parent=None)
 
 
 @pytest.mark.skipif(not HAS_TORCH, reason="requires PyTorch")
 def test_external_cuda_array_cpu_path():
     """ExternalCudaArray should work with device_type=1 (CPU) for testing."""
-    from metatensor.data.extract import ExternalCudaArray
-
     # Create a numpy array and wrap it as mts_array
     arr = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
-    mts_array = metatensor.data.create_mts_array(arr)
+    mts_array = metatensor._data.create_mts_array(arr)
 
     # Use kDLCP) to test the full code path without a GPU
     result = ExternalCudaArray(
@@ -412,31 +402,31 @@ def test_external_cuda_array_cpu_path():
     free_mts_array(mts_array)
 
 
-TEST_ORIGIN = metatensor.data.array._register_origin("python.test-origin")
-metatensor.data.register_external_data_wrapper(
+TEST_ORIGIN = metatensor._data._array._register_origin("python.test-origin")
+metatensor._data.register_external_data_wrapper(
     "python.test-origin",
-    metatensor.data.extract.ExternalCpuArray,
+    ExternalCpuArray,
 )
 
 
-@metatensor.utils.catch_exceptions
+@catch_exceptions
 def get_test_origin(this, origin):
     origin[0] = TEST_ORIGIN
 
 
-GET_TEST_ORIGIN = metatensor.data.array._cast_to_ctype_functype(
+GET_TEST_ORIGIN = metatensor._data._array._cast_to_ctype_functype(
     get_test_origin, "origin"
 )
 
 
-@metatensor.utils.catch_exceptions
+@catch_exceptions
 def create_test_array(shape_ptr, shape_count, dtype, array):
     shape = []
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
     data = np.zeros(shape)
-    mts_array = metatensor.data.create_mts_array(data)
+    mts_array = metatensor._data.create_mts_array(data)
     mts_array.origin = GET_TEST_ORIGIN
 
     array[0] = mts_array
@@ -455,7 +445,7 @@ def test_parent_keepalive():
     tensor = metatensor.io.load_custom_array(path.encode("utf8"), create_test_array)
 
     values = tensor.block(0).values
-    assert isinstance(values, metatensor.data.extract.ExternalCpuArray)
+    assert isinstance(values, ExternalCpuArray)
     assert values._parent is not None
 
     tensor_ref = weakref.ref(tensor)
@@ -486,19 +476,19 @@ class CustomError(RuntimeError):
     pass
 
 
-@metatensor.utils.catch_exceptions
+@catch_exceptions
 def error_origin(this, origin):
     raise CustomError("This is a test error from Python callback")
 
 
-ERROR_ORIGIN = metatensor.data.array._cast_to_ctype_functype(error_origin, "origin")
+ERROR_ORIGIN = metatensor._data._array._cast_to_ctype_functype(error_origin, "origin")
 
 
 def test_error_capture():
-    mts_array = metatensor.data.create_mts_array(np.array([1, 2, 3]))
+    mts_array = metatensor._data.create_mts_array(np.array([1, 2, 3]))
     mts_array.origin = ERROR_ORIGIN
 
     with pytest.raises(CustomError, match="This is a test error from Python callback"):
-        _ = metatensor.data.data_origin(mts_array)
+        _ = metatensor._data.data_origin(mts_array)
 
     free_mts_array(mts_array)

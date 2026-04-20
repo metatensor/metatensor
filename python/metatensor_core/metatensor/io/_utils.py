@@ -1,7 +1,7 @@
 import ctypes
 
 from .._c_api import c_uintptr_t
-from ..status import _save_exception
+from .._status import save_exception
 
 
 def _resize_array(array, new_size):
@@ -25,7 +25,7 @@ def _save_buffer_raw(mts_function, data) -> ctypes.Array:
             # here, save the error and return a NULL pointer
             error = RuntimeError("failed to allocate more memory in realloc")
             error.__cause__ = e
-            _save_exception(error)
+            save_exception(error)
             return None
 
     # start with a buffer of 128 bytes in a ctypes string buffer (i.e. array of c_char)

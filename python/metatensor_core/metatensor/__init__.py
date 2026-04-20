@@ -19,13 +19,30 @@ import sys
 import warnings
 
 from . import utils  # noqa: F401
-from .block import TensorBlock  # noqa: F401
-from .data import DeviceWarning  # noqa: F401
+from ._block import TensorBlock  # noqa: F401
+from ._data import (  # noqa: F401
+    Array,
+    DeviceWarning,
+    ExternalCpuArray,
+    ExternalCudaArray,
+    register_external_data_wrapper,
+)
+from ._labels import Labels, LabelsEntry
+from ._status import MetatensorError
+from ._tensor import TensorMap
+from ._version import __version__  # noqa: F401
 from .io import load, load_block, load_labels, save  # noqa: F401
-from .labels import Labels, LabelsEntry  # noqa: F401
-from .status import MetatensorError  # noqa: F401
-from .tensor import TensorMap  # noqa: F401
-from .version import __version__  # noqa: F401
+
+
+# pretend the classes are defined in the top-level module for better error messages
+Labels.__module__ = __name__
+LabelsEntry.__module__ = __name__
+TensorBlock.__module__ = __name__
+TensorMap.__module__ = __name__
+MetatensorError.__module__ = __name__
+DeviceWarning.__module__ = __name__
+ExternalCpuArray.__module__ = __name__
+ExternalCudaArray.__module__ = __name__
 
 
 # Define the map between old namespace paths and new flat packages

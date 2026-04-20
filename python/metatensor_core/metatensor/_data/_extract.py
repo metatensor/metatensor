@@ -11,16 +11,16 @@ from .._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_data_origin_t,
+    mts_status_t,
 )
-from ..status import _check_status
-from ..utils import _call_with_growing_buffer
-from ._dlpack import DLPackArray, wrap_versioned_as_unversioned
-from .array import (
+from .._status import MetatensorError, check_status
+from ._array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
     _origin_pytorch,
     _register_origin,
 )
+from ._dlpack import DLPackArray, wrap_versioned_as_unversioned
 
 
 try:
@@ -115,7 +115,7 @@ def data_origin(mts_array):
     origin = mts_data_origin_t()
 
     status = mts_array.origin(mts_array.ptr, origin)
-    _check_status(status)
+    check_status(status)
 
     return origin.value
 
@@ -154,7 +154,7 @@ class ExternalCpuArray(np.ndarray):
         shape_ptr = ctypes.POINTER(c_uintptr_t)()
         shape_count = c_uintptr_t()
         status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
-        _check_status(status)
+        check_status(status)
 
         shape = []
         for i in range(shape_count.value):
@@ -171,7 +171,7 @@ class ExternalCpuArray(np.ndarray):
             None,
             version,
         )
-        _check_status(status)
+        check_status(status)
 
         array = np.from_dlpack(DLPackArray(dl_managed_ptr))
         obj = array.view(cls)
@@ -250,7 +250,7 @@ class ExternalCudaArray:
             None,
             version,
         )
-        _check_status(status)
+        check_status(status)
 
         dlpack_array = DLPackArray(dl_managed_ptr)
 
@@ -281,3 +281,20 @@ class ExternalCudaArray:
         tensor._parent = parent
 
         return tensor
+
+
+def _call_with_growing_buffer(callback, initial=1024):
+    bufflen = initial
+
+    while True:
+        buffer = ctypes.create_string_buffer(bufflen)
+        try:
+            callback(buffer, bufflen)
+            break
+        except MetatensorError as e:
+            if e.status == mts_status_t.MTS_BUFFER_SIZE_ERROR:
+                # grow the buffer and retry
+                bufflen *= 2
+            else:
+                raise
+    return buffer.value.decode("utf8")

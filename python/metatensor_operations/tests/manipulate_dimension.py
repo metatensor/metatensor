@@ -5,7 +5,7 @@ import pytest
 from numpy.testing import assert_equal
 
 import metatensor as mts
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
@@ -304,7 +304,7 @@ def test_not_unique_after(tensor):
         r"invalid parameter: can not have the same label entry multiple times"
         r": \[1, 1\] is already present"
     )
-    with pytest.raises(mts.status.MetatensorError, match=match):
+    with pytest.raises(MetatensorError, match=match):
         mts.remove_dimension(tensor, axis="keys", name="center_type")
 
 

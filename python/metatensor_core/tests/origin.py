@@ -29,7 +29,7 @@ def test_different_origins():
 
     message = (
         "all blocks in a TensorMap must have the same origin, "
-        "got 'metatensor.data.array.numpy' and 'metatensor.data.array.torch'"
+        "got 'python.numpy' and 'python.torch'"
     )
 
     with pytest.raises(ValueError, match=message):

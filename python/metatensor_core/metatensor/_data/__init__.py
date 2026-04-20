@@ -1,4 +1,4 @@
-from .array import (  # noqa: F401
+from ._array import (  # noqa: F401
     Device,
     DeviceWarning,
     DType,
@@ -10,7 +10,7 @@ from .array import (  # noqa: F401
     array_dtype,
     create_mts_array,
 )
-from .extract import (  # noqa: F401
+from ._extract import (  # noqa: F401
     Array,
     ExternalCpuArray,
     ExternalCudaArray,

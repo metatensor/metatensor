@@ -14,8 +14,7 @@ from .._c_api import (
     mts_data_movement_t,
     mts_data_origin_t,
 )
-from ..status import _check_status
-from ..utils import catch_exceptions
+from .._status import catch_exceptions, check_status
 from ._dlpack import (
     DLPACK_NAME,
     DLPACK_VERSIONED_NAME,
@@ -63,7 +62,7 @@ _TORCH_STORAGE_ORIGIN = None
 def _origin_numpy():
     global _NUMPY_STORAGE_ORIGIN
     if _NUMPY_STORAGE_ORIGIN is None:
-        _NUMPY_STORAGE_ORIGIN = _register_origin(__name__ + ".numpy")
+        _NUMPY_STORAGE_ORIGIN = _register_origin("python.numpy")
 
     return _NUMPY_STORAGE_ORIGIN
 
@@ -71,7 +70,7 @@ def _origin_numpy():
 def _origin_pytorch():
     global _TORCH_STORAGE_ORIGIN
     if _TORCH_STORAGE_ORIGIN is None:
-        _TORCH_STORAGE_ORIGIN = _register_origin(__name__ + ".torch")
+        _TORCH_STORAGE_ORIGIN = _register_origin("python.torch")
 
     return _TORCH_STORAGE_ORIGIN
 
@@ -277,7 +276,7 @@ def _extract_scalar_from_mts_array(mts_array):
     status = mts_array.shape(
         mts_array.ptr, ctypes.byref(shape_ptr), ctypes.byref(shape_count)
     )
-    _check_status(status)
+    check_status(status)
 
     if shape_count.value != 0:
         shape = [shape_ptr[i] for i in range(shape_count.value)]
@@ -294,7 +293,7 @@ def _extract_scalar_from_mts_array(mts_array):
         None,
         version,
     )
-    _check_status(status)
+    check_status(status)
 
     array = np.from_dlpack(DLPackArray(dl_managed_ptr))
     return array[()]
@@ -467,10 +466,9 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
             or actual_device.device_id != device.device_id
         ):
             raise ValueError(
-                f"DLPack device mismatch: expected type {device.device_type}"
-                f" id {device.device_id}, "
-                f"got type {actual_device.device_type}"
-                f" id {actual_device.device_id}"
+                f"DLPack device mismatch: expected type={device.device_type} "
+                f"id={device.device_id}, got type={actual_device.device_type} "
+                f"id={actual_device.device_id}"
             )
 
         status = PYTHON_API.PyCapsule_SetName(capsule, USED_DLPACK_VERSIONED_NAME)
