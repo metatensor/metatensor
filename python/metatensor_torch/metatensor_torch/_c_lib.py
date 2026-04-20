@@ -8,11 +8,23 @@ import torch
 import metatensor
 
 from ._build_versions import BUILD_METATENSOR_CORE_VERSION
-from .utils import parse_version, version_compatible
-from .version import __version__
+from ._version import __version__
+from .utils import _parse_version
 
 
-if not version_compatible(metatensor.__version__, BUILD_METATENSOR_CORE_VERSION):
+def _version_compatible(actual, required):
+    actual = _parse_version(actual)
+    required = _parse_version(required)
+
+    if actual.major != required.major:
+        return False
+    elif actual.minor != required.minor:
+        return False
+    else:
+        return True
+
+
+if not _version_compatible(metatensor.__version__, BUILD_METATENSOR_CORE_VERSION):
     raise ImportError(
         "Trying to load metatensor-torch with metatensor-core "
         f"v{metatensor.__version__}, but it was compiled against "
@@ -24,7 +36,7 @@ _HERE = os.path.realpath(os.path.dirname(__file__))
 
 
 def _lib_path():
-    torch_version = parse_version(torch.__version__)
+    torch_version = _parse_version(torch.__version__)
     install_prefix = os.path.join(
         _HERE, f"torch-{torch_version.major}.{torch_version.minor}"
     )
@@ -139,7 +151,7 @@ def _load_library():
             raise e
 
     lib_version = torch.ops.metatensor.version()
-    if not version_compatible(lib_version, __version__):
+    if not _version_compatible(lib_version, __version__):
         raise ImportError(
             f"Trying to load the Python package metatensor-torch v{__version__} "
             f"with the incompatible metatensor-torch C++ library v{lib_version}"
