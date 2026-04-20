@@ -5,8 +5,8 @@ import torch
 from .._backend import Labels, TensorMap
 from .._dispatch import int_array_like
 from ._module import Module
+from ._module_map import ModuleMap
 from ._utils import _check_module_map_parameter
-from .module_map import ModuleMap
 
 
 class EquivariantTransformation(Module):

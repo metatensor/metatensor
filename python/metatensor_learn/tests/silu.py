@@ -9,7 +9,7 @@ from metatensor import Labels
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn.silu import InvariantSiLU  # noqa: E402
+from metatensor.learn.nn import InvariantSiLU  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 

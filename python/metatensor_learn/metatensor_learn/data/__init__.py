@@ -1,6 +1,6 @@
-from .collate import group, group_and_join
-from .dataloader import DataLoader
-from .dataset import Dataset, IndexedDataset
+from ._collate import group, group_and_join
+from ._dataloader import DataLoader
+from ._dataset import Dataset, IndexedDataset
 
 
 __all__ = [

@@ -9,9 +9,7 @@ from metatensor import Labels
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn.equivariant_transformation import (  # noqa: E402
-    EquivariantTransformation,
-)
+from metatensor.learn.nn import EquivariantTransformation  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 
