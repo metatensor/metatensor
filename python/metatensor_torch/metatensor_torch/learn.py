@@ -2,7 +2,6 @@ import importlib
 import sys
 from typing import Union
 
-import metatensor_learn
 import torch
 
 from . import Labels, LabelsEntry, TensorBlock, TensorMap
@@ -12,21 +11,30 @@ from . import Labels, LabelsEntry, TensorBlock, TensorMap
 # see operations.py for an explanation of what's going on here.                        #
 # ==================================================================================== #
 
+try:
+    import metatensor_learn
+except ImportError as e:
+    raise ImportError(
+        "metatensor-learn is required to use the metatensor.torch.learn module. "
+        "Please install it with `pip install metatensor-learn` or using "
+        "your favorite Python package manager."
+    ) from e
+
 
 # Step 1: create the `_backend` module as an empty module
 spec = importlib.util.spec_from_loader(
-    "metatensor.torch.learn._backend",
+    "metatensor_torch.learn._backend",
     loader=None,
 )
-module = importlib.util.module_from_spec(spec)
+backend_module = importlib.util.module_from_spec(spec)
 # This module only exposes a handful of things, defined here. Any changes here MUST also
 # be made to the `metatensor/learn/_backend.py` file, which is used in non
 # TorchScript mode.
-module.__dict__["Labels"] = Labels
-module.__dict__["LabelsEntry"] = LabelsEntry
-module.__dict__["TensorBlock"] = TensorBlock
-module.__dict__["TensorMap"] = TensorMap
-module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
+backend_module.__dict__["Labels"] = Labels
+backend_module.__dict__["LabelsEntry"] = LabelsEntry
+backend_module.__dict__["TensorBlock"] = TensorBlock
+backend_module.__dict__["TensorMap"] = TensorMap
+backend_module.__dict__["torch_jit_is_scripting"] = torch.jit.is_scripting
 
 
 def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename: str):
@@ -51,25 +59,25 @@ def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename
     return False
 
 
-module.__dict__["isinstance_metatensor"] = isinstance_metatensor
+backend_module.__dict__["isinstance_metatensor"] = isinstance_metatensor
 
 # register the module in sys.modules, so future import find it directly
-sys.modules[spec.name] = module
+sys.modules[spec.name] = backend_module
 
 
-# Step 2: create a module named `metatensor.torch.learn` (like the one that will be
+# Step 2: create a module named `metatensor_torch.learn` (like the one that will be
 # created by importing the current file), but using code from `metatensor.learn`
 spec = importlib.util.spec_from_file_location(
     # create a module with this name
-    "metatensor.torch.learn",
+    "metatensor_torch.learn",
     # using the code from there
     metatensor_learn.__file__,
 )
 
 module = importlib.util.module_from_spec(spec)
-# override `metatensor.torch.learn` (the module associated with the current file)
+# override `metatensor_torch.learn` (the module associated with the current file)
 # with the newly created module
 sys.modules[spec.name] = module
-# also register as metatensor.learn for backward compat with flat package layout
-sys.modules["metatensor.learn"] = module
 spec.loader.exec_module(module)
+
+module._backend = backend_module
