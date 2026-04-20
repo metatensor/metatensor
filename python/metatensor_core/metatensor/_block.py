@@ -5,10 +5,12 @@ import warnings
 from pickle import PickleBuffer
 from typing import BinaryIO, Generator, List, Sequence, Tuple, Union
 
-from . import data
+import numpy as np
+
+from . import _data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
-from .data import (
+from ._data import (
     Array,
     Device,
     DeviceWarning,
@@ -16,9 +18,8 @@ from .data import (
     create_mts_array,
     mts_array_to_python_array,
 )
-from .labels import Labels
-from .status import _check_pointer
-from .utils import _to_arguments_parse
+from ._labels import Labels
+from ._status import check_pointer
 
 
 class TensorBlock:
@@ -116,12 +117,12 @@ class TensorBlock:
             len(components_array),
             properties._as_mts_labels_t(),
         )
-        _check_pointer(self._actual_ptr)
+        check_pointer(self._actual_ptr)
 
-        self._cached_dtype = data.array_dtype(values)
-        self._cached_device = data.array_device(values)
+        self._cached_dtype = _data.array_dtype(values)
+        self._cached_device = _data.array_device(values)
 
-        if not data.array_device_is_cpu(values):
+        if not _data.array_device_is_cpu(values):
             warnings.warn(
                 "Values and labels for this block are on different devices: "
                 f"labels are always on CPU, and values are on device '{self.device}'. "
@@ -137,7 +138,7 @@ class TensorBlock:
         create a block from a pointer, either owning its data (new block as a
         copy of an existing one) or not (block inside a :py:class:`TensorMap`)
         """
-        _check_pointer(ptr)
+        check_pointer(ptr)
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
         obj._gradient_parameters = []
@@ -315,7 +316,7 @@ class TensorBlock:
 
     def _labels(self, axis) -> Labels:
         result = self._lib.mts_block_labels(self._ptr, axis)
-        _check_pointer(result)
+        check_pointer(result)
         return Labels._from_mts_labels_t(result)
 
     def gradient(self, parameter: str) -> "TensorBlock":
@@ -496,7 +497,7 @@ class TensorBlock:
         :py:class:`TensorBlock`.
         """
         if self._cached_dtype is None:
-            self._cached_dtype = data.array_dtype(self.values)
+            self._cached_dtype = _data.array_dtype(self.values)
         return self._cached_dtype
 
     @property
@@ -506,7 +507,7 @@ class TensorBlock:
         :py:class:`TensorBlock`.
         """
         if self._cached_device is None:
-            self._cached_device = data.array_device(self.values)
+            self._cached_device = _data.array_device(self.values)
         return self._cached_device
 
     def to(self, *args, **kwargs) -> "TensorBlock":
@@ -532,13 +533,15 @@ class TensorBlock:
         values = self.values
 
         if arrays is not None:
-            values = data.array_change_backend(values, arrays)
+            values = _data.array_change_backend(values, arrays)
 
         if dtype is not None:
-            values = data.array_change_dtype(values, dtype, non_blocking=non_blocking)
+            values = _data.array_change_dtype(values, dtype, non_blocking=non_blocking)
 
         if device is not None:
-            values = data.array_change_device(values, device, non_blocking=non_blocking)
+            values = _data.array_change_device(
+                values, device, non_blocking=non_blocking
+            )
 
         block = TensorBlock(values, self.samples, self.components, self.properties)
         for parameter, gradient in self.gradients():
@@ -637,3 +640,42 @@ class TensorBlock:
         from .io import save_buffer
 
         return save_buffer(data=self, use_numpy=use_numpy)
+
+
+def _to_arguments_parse(context, *args, **kwargs):
+    """Parse arguments to the various `to()` functions"""
+    dtype = kwargs.get("dtype")
+    device = kwargs.get("device")
+
+    for positional in args:
+        if isinstance(positional, Device):
+            if device is None:
+                device = positional
+                continue
+            else:
+                raise ValueError(f"can not give a device twice in {context}")
+        elif isinstance(positional, DType):
+            if dtype is None:
+                dtype = positional
+                continue
+            else:
+                raise ValueError(f"can not give a dtype twice in {context}")
+        else:
+            # checking for numpy dtype is a bit more complex,
+            # since a lof of things can be dtypes in numpy
+            try:
+                positional_as_dtype = np.dtype(positional)
+            except TypeError:
+                # failed to parse as a dtype, this should end up in the TypeError below
+                positional_as_dtype = np.object_
+
+            if np.issubdtype(positional_as_dtype, np.number):
+                if dtype is None:
+                    dtype = positional
+                    continue
+                else:
+                    raise ValueError(f"can not give a dtype twice in {context}")
+
+        raise TypeError(f"unexpected type in {context}: {type(positional)}")
+
+    return dtype, device

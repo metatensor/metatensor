@@ -5,8 +5,8 @@ from collections import namedtuple
 from ctypes import cdll
 
 from ._c_api import setup_functions
-from .data.extract import ExternalCpuArray, register_external_data_wrapper
-from .version import __version__
+from ._data._extract import ExternalCpuArray, register_external_data_wrapper
+from ._version import __version__
 
 
 _HERE = os.path.realpath(os.path.dirname(__file__))

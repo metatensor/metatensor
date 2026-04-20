@@ -10,7 +10,7 @@ import numpy as np
 
 from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
-from ..tensor import TensorMap
+from .._tensor import TensorMap
 from ._block import (
     CreateArrayCallback,
     _block_to_dict,

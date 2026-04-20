@@ -623,8 +623,7 @@ def test_slice_errors(tensor):
     )
 
     message = (
-        "`tensor` must be a metatensor TensorMap, "
-        "not <class 'metatensor.block.TensorBlock'>"
+        "`tensor` must be a metatensor TensorMap, not <class 'metatensor.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
         mts.slice(tensor.block(0), axis="samples", selection=samples)
@@ -646,8 +645,7 @@ def test_slice_block_errors(tensor):
     )
 
     message = (
-        "`block` must be a metatensor TensorBlock, "
-        "not <class 'metatensor.tensor.TensorMap'>"
+        "`block` must be a metatensor TensorBlock, not <class 'metatensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
         mts.slice_block(tensor, axis="samples", selection=samples)

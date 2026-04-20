@@ -6,8 +6,8 @@ from typing import BinaryIO, Union
 import numpy as np
 
 from .._c_lib import _get_library
-from ..labels import Labels
-from ..status import _check_pointer
+from .._labels import Labels
+from .._status import check_pointer
 from ._utils import _save_buffer_raw
 
 
@@ -28,7 +28,7 @@ def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
             path = bytes(file)
 
         ptr = lib.mts_labels_load(path)
-        _check_pointer(ptr)
+        check_pointer(ptr)
         return Labels._from_mts_labels_t(ptr)
 
     else:
@@ -52,7 +52,7 @@ def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
         array.ctypes.data_as(ctypes.c_char_p),
         array.nbytes,
     )
-    _check_pointer(ptr)
+    check_pointer(ptr)
 
     return Labels._from_mts_labels_t(ptr)
 

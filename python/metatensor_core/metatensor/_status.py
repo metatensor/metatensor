@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import atexit
 import ctypes
+import functools
 import sys
 from typing import Optional
 
@@ -20,14 +21,14 @@ class MetatensorError(Exception):
         """status code for this exception"""
 
 
-def _check_status(status):
+def check_status(status):
     if status == mts_status_t.MTS_SUCCESS:
         return
     else:
         raise _get_exception(status)
 
 
-def _check_pointer(pointer):
+def check_pointer(pointer):
     if not pointer:
         raise _get_exception()
 
@@ -41,7 +42,20 @@ def _delete_exception(exception):
 _DELETE_EXCEPTION = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(_delete_exception)
 
 
-def _save_exception(e):
+def catch_exceptions(function):
+    @functools.wraps(function)
+    def inner(*args, **kwargs):
+        try:
+            function(*args, **kwargs)
+        except Exception as e:
+            save_exception(e)
+            return mts_status_t.MTS_CALLBACK_ERROR
+        return mts_status_t.MTS_SUCCESS
+
+    return inner
+
+
+def save_exception(e):
     """
     Save the given exception in metatensor's thread-local storage, so that it can be
     retrieved later with `_get_exception()`.

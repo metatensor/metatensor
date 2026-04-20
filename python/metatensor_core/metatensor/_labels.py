@@ -14,8 +14,8 @@ from ._c_api import (
     mts_labels_t,
 )
 from ._c_lib import _get_library
-from .data import Array, create_mts_array, mts_array_to_python_array
-from .status import _check_pointer
+from ._data import Array, create_mts_array, mts_array_to_python_array
+from ._status import check_pointer
 
 
 class LabelsEntry:
@@ -314,7 +314,7 @@ class Labels:
     @classmethod
     def _from_mts_labels_t(cls, labels):
         """Create Labels from an opaque mts_labels_t pointer."""
-        _check_pointer(labels)
+        check_pointer(labels)
 
         obj = cls.__new__(cls)
         obj._lib = _get_library()
@@ -340,7 +340,7 @@ class Labels:
 
     def __deepcopy__(self, _memodict):
         ptr = self._lib.mts_labels_clone(self._ptr)
-        _check_pointer(ptr)
+        check_pointer(ptr)
         return Labels._from_mts_labels_t(ptr)
 
     def __copy__(self):
@@ -1103,7 +1103,7 @@ def _create_new_labels(
     else:
         ptr = lib.mts_labels(c_names, len(names), array)
 
-    _check_pointer(ptr)
+    check_pointer(ptr)
     return ptr
 
 

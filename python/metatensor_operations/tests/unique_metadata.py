@@ -160,15 +160,13 @@ def test_unique_metadata(tensor, large_tensor):
 
 def test_unique_metadata_block_errors(real_tensor):
     message = (
-        "`block` must be a metatensor TensorBlock, "
-        "not <class 'metatensor.tensor.TensorMap'>"
+        "`block` must be a metatensor TensorBlock, not <class 'metatensor.TensorMap'>"
     )
     with pytest.raises(TypeError, match=message):
         mts.unique_metadata_block(real_tensor, "samples", ["system"])
 
     message = (
-        "`tensor` must be a metatensor TensorMap, "
-        "not <class 'metatensor.block.TensorBlock'>"
+        "`tensor` must be a metatensor TensorMap, not <class 'metatensor.TensorBlock'>"
     )
     with pytest.raises(TypeError, match=message):
         mts.unique_metadata(real_tensor.block(0), "samples", ["system"])

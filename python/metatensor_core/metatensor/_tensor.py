@@ -7,14 +7,13 @@ from typing import BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
-from . import data
+from . import _data
+from ._block import TensorBlock, _to_arguments_parse
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t
 from ._c_lib import _get_library
-from .block import TensorBlock
-from .data import Device, DeviceWarning, DType
-from .labels import Labels, LabelsEntry
-from .status import _check_pointer
-from .utils import _to_arguments_parse
+from ._data import Device, DeviceWarning, DType
+from ._labels import Labels, LabelsEntry
+from ._status import check_pointer
 
 
 class TensorMap:
@@ -72,13 +71,13 @@ class TensorMap:
                     "use TensorBlock.copy() to make a copy of each block first"
                 )
 
-            block_origin = data.data_origin(block._raw_values)
-            first_block_origin = data.data_origin(blocks[0]._raw_values)
+            block_origin = _data.data_origin(block._raw_values)
+            first_block_origin = _data.data_origin(blocks[0]._raw_values)
             if block_origin != first_block_origin:
                 raise ValueError(
                     "all blocks in a TensorMap must have the same origin, "
-                    f"got '{data.data_origin_name(first_block_origin)}' "
-                    f"and '{data.data_origin_name(block_origin)}'"
+                    f"got '{_data.data_origin_name(first_block_origin)}' "
+                    f"and '{_data.data_origin_name(block_origin)}'"
                 )
 
             if block.device != blocks[0].device:
@@ -93,7 +92,7 @@ class TensorMap:
                     f"got {blocks[0].dtype} and {block.dtype}"
                 )
 
-        if len(blocks) > 0 and not data.array_device_is_cpu(blocks[0].values):
+        if len(blocks) > 0 and not _data.array_device_is_cpu(blocks[0].values):
             warnings.warn(
                 "Blocks values and keys for this TensorMap are on different devices: "
                 f"keys are always on CPU, and blocks values are on device "
@@ -112,7 +111,7 @@ class TensorMap:
         self._ptr = self._lib.mts_tensormap(
             keys._as_mts_labels_t(), blocks_array, len(blocks)
         )
-        _check_pointer(self._ptr)
+        check_pointer(self._ptr)
 
         for block in blocks:
             block._is_inside_map = True
@@ -120,7 +119,7 @@ class TensorMap:
     @staticmethod
     def _from_ptr(ptr):
         """Create a tensor map from a pointer owning its data"""
-        _check_pointer(ptr)
+        check_pointer(ptr)
         obj = TensorMap.__new__(TensorMap)
         obj._lib = _get_library()
         obj._ptr = ptr
@@ -297,7 +296,7 @@ class TensorMap:
     def keys(self) -> Labels:
         """The set of keys labeling the blocks in this tensor map."""
         result = self._lib.mts_tensormap_keys(self._ptr)
-        _check_pointer(result)
+        check_pointer(result)
         return Labels._from_mts_labels_t(result)
 
     def block_by_id(self, index: int) -> TensorBlock:
@@ -795,7 +794,7 @@ def _make_fill_value_array(tensor, fill_value):
     # conversion when the C API passes it to the array implementation's create
     # callback, so there is no need to match the original array type here.
     fill_value_array = np.array(fill_value, dtype=values.dtype)
-    return data.create_mts_array(fill_value_array)
+    return _data.create_mts_array(fill_value_array)
 
 
 def _normalize_keys_to_move(keys_to_move: Union[str, Sequence[str], Labels]) -> Labels:

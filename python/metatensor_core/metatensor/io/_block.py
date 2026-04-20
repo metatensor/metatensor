@@ -8,6 +8,7 @@ from typing import BinaryIO, Callable, Union
 
 import numpy as np
 
+from .._block import TensorBlock
 from .._c_api import (
     DLDataType,
     DLDataTypeCode,
@@ -16,9 +17,8 @@ from .._c_api import (
     mts_create_array_callback_t,
 )
 from .._c_lib import _get_library
-from ..block import TensorBlock
-from ..data.array import _is_numpy_array, _is_torch_array, create_mts_array
-from ..utils import catch_exceptions
+from .._data._array import _is_numpy_array, _is_torch_array, create_mts_array
+from .._status import catch_exceptions
 from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 

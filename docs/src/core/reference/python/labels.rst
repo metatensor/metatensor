@@ -6,6 +6,6 @@ Labels
     :special-members: __len__, __getitem__, __contains__, __eq__, __ne__
 
 
-.. autoclass:: metatensor.labels.LabelsEntry
+.. autoclass:: metatensor.LabelsEntry
     :members:
     :special-members: __len__, __getitem__, __eq__, __ne__

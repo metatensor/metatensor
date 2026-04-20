@@ -269,11 +269,10 @@ class EnumType(type(ctypes.c_int32)):
         return cls
 
     def __repr__(self):
-        return "<Enumeration %s>" % self.__name__
+        return "<Enum %s>" % self.__name__
 
 
-class Enum(ctypes.c_int32):
-    __metaclass__ = EnumType
+class Enum(ctypes.c_int32, metaclass=EnumType):
     _members_ = {}
 
     def __repr__(self):
@@ -327,7 +326,7 @@ elif arch == "64bit":
 
         # Functions
         f.write("\n\ndef setup_functions(lib):\n")
-        f.write("    from .status import _check_status\n")
+        f.write("    from ._status import check_status\n")
         for function in data.functions:
             f.write(f"\n    lib.{function.name}.argtypes = [")
             args = [_py_type(arg[1]) for arg in function.args]
@@ -338,7 +337,7 @@ elif arch == "64bit":
             f.write("\n    ]\n")
             restype = _py_type(function.restype)
             if restype == "mts_status_t" and function.name != "mts_last_error":
-                restype = "_check_status"
+                restype = "check_status"
             f.write(f"    lib.{function.name}.restype = {restype}\n")
 
 
