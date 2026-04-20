@@ -12,7 +12,7 @@ from setuptools.command.sdist import sdist
 ROOT = pathlib.Path(__file__).parent.resolve()
 METATENSOR_CORE = (ROOT / ".." / "metatensor_core").resolve()
 
-METATENSOR_OPERATIONS_VERSION = "0.5.0.rc1"
+METATENSOR_OPERATIONS_VERSION = "0.5.0.rc2"
 
 
 class bdist_egg_disabled(bdist_egg):
@@ -137,7 +137,7 @@ if __name__ == "__main__":
         install_requires.append(f"metatensor-core @ {METATENSOR_CORE.as_uri()}")
     else:
         # we are building from a sdist/installing from a wheel
-        install_requires.append("metatensor-core >=0.2.0rc1,<0.3.0")
+        install_requires.append("metatensor-core >=0.2.0rc2,<0.3.0")
 
     setup(
         version=create_version_number(METATENSOR_OPERATIONS_VERSION),
