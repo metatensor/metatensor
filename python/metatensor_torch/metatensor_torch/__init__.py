@@ -4,12 +4,18 @@ from typing import TYPE_CHECKING
 
 import torch
 
-from . import utils  # noqa: F401
-from ._c_lib import _load_library
-from ._version import __version__  # noqa: F401
+import metatensor
 
 
 sys.modules["metatensor.torch"] = sys.modules[__name__]
+if not hasattr(metatensor, "torch"):
+    metatensor.torch = sys.modules[__name__]
+
+
+from . import utils  # noqa: E402, F401
+from ._c_lib import _load_library  # noqa: E402
+from ._version import __version__  # noqa: E402, F401
+
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
     from ._documentation import (
@@ -55,12 +61,13 @@ except ImportError:
 
 if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa: F401
+    from .operations import *  # noqa: F401, F403
 
-    _ops = sys.modules["metatensor.torch.operations"]
-    for _name in getattr(
-        _ops, "__all__", [n for n in dir(_ops) if not n.startswith("_")]
-    ):
-        globals()[_name] = getattr(_ops, _name)
+    sys.modules["metatensor.torch.operations"] = operations
+    metatensor.torch.operations = operations
+
+    sys.modules["metatensor.torch.operations._backend"] = operations._backend
+    metatensor.torch.operations._backend = operations._backend
 else:
     # __getattr__ is called when a module attribute can not be found, we use it to
     # give the user a better error message if they don't have metatensor-operations
@@ -75,6 +82,12 @@ try:
     import metatensor_learn  # noqa: F401
 
     from . import learn  # noqa: F401
+
+    sys.modules["metatensor.torch.learn"] = learn
+    metatensor.torch.learn = learn
+
+    sys.modules["metatensor.torch.learn._backend"] = learn._backend
+    metatensor.torch.learn._backend = learn._backend
 except ImportError:
     pass
 

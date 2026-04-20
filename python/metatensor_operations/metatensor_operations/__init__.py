@@ -1,5 +1,9 @@
+# ruff: disable[E402]
 import importlib.metadata
 import sys
+
+
+sys.modules["metatensor.operations"] = sys.modules[__name__]
 
 from ._abs import abs  # noqa: F401
 from ._add import add  # noqa: F401
@@ -83,5 +87,3 @@ from ._zeros_like import zeros_like, zeros_like_block  # noqa: F401
 
 
 __version__ = importlib.metadata.version("metatensor-operations")
-
-sys.modules["metatensor.operations"] = sys.modules[__name__]

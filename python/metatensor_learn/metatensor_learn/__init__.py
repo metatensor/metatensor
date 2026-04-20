@@ -2,6 +2,9 @@ import importlib.metadata
 import sys
 
 
+sys.modules["metatensor.learn"] = sys.modules[__name__]
+
+
 try:
     import torch  # noqa
 
@@ -17,5 +20,3 @@ if HAS_TORCH:
 
 
 __version__ = importlib.metadata.version("metatensor-learn")
-
-sys.modules["metatensor.learn"] = sys.modules[__name__]

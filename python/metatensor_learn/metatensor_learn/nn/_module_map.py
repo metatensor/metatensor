@@ -3,8 +3,7 @@ from typing import List, Optional, Union
 
 import torch
 
-from metatensor.operations import _dispatch
-
+from .. import _dispatch
 from .._backend import Labels, LabelsEntry, TensorBlock, TensorMap
 from ._module import Module
 
