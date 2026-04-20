@@ -219,6 +219,13 @@ pub unsafe extern "C" fn mts_last_error(
 /// of metatensor.
 ///
 /// @param message the error message to set, as a NULL-terminated string
+/// @param origin the origin of the error, as a NULL-terminated string. This
+///        can be used to check if the `data` field was defined by the same
+///        code that is calling `mts_last_error` to when retrieving custom data.
+/// @param data an arbitrary pointer that can be retrieved later with `mts_last_error`.
+/// @param data_deleter deleter for the custom data, this function will be
+///        called with `data` as argument when the last error is replaced by
+///        another one.
 #[no_mangle]
 pub unsafe extern "C" fn mts_set_last_error(
     message: *const c_char,
