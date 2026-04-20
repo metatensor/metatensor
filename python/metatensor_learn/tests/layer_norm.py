@@ -9,7 +9,8 @@ from metatensor import Labels
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn.layer_norm import InvariantLayerNorm, _LayerNorm  # noqa: E402
+from metatensor.learn.nn import InvariantLayerNorm  # noqa: E402
+from metatensor.learn.nn._layer_norm import _LayerNorm  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
 

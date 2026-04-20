@@ -4,7 +4,7 @@ import torch
 
 from .._backend import Labels, TensorMap, isinstance_metatensor
 from ._module import Module
-from .module_map import ModuleMap
+from ._module_map import ModuleMap
 
 
 class Sequential(Module):

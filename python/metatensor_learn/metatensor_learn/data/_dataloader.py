@@ -4,7 +4,7 @@ Module containing the DataLoader.
 
 import torch
 
-from .collate import group_and_join
+from ._collate import group_and_join
 
 
 class DataLoader(torch.utils.data.DataLoader):
