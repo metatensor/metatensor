@@ -19,7 +19,7 @@ except ImportError:
         pass
 
 
-from ._c_api import MTS_BUFFER_SIZE_ERROR, MTS_CALLBACK_ERROR, MTS_SUCCESS
+from ._c_api import mts_status_t
 from .status import MetatensorError, _save_exception
 
 
@@ -32,7 +32,7 @@ def _call_with_growing_buffer(callback, initial=1024):
             callback(buffer, bufflen)
             break
         except MetatensorError as e:
-            if e.status == MTS_BUFFER_SIZE_ERROR:
+            if e.status == mts_status_t.MTS_BUFFER_SIZE_ERROR:
                 # grow the buffer and retry
                 bufflen *= 2
             else:
@@ -47,8 +47,8 @@ def catch_exceptions(function):
             function(*args, **kwargs)
         except Exception as e:
             _save_exception(e)
-            return MTS_CALLBACK_ERROR
-        return MTS_SUCCESS
+            return mts_status_t.MTS_CALLBACK_ERROR
+        return mts_status_t.MTS_SUCCESS
 
     return inner
 

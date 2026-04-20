@@ -17,14 +17,15 @@ except ImportError:
 
 import metatensor
 from metatensor._c_api import (
-    MTS_SUCCESS,
     DLDevice,
+    DLDeviceType,
     DLManagedTensorVersioned,
     DLPackVersion,
     c_uintptr_t,
     mts_array_t,
     mts_data_movement_t,
 )
+from metatensor.status import _check_status
 
 
 # Kanged from the metatensor-torch _test_utils
@@ -59,9 +60,8 @@ class MtsArrayMixin:
         mts_array = metatensor.data.create_mts_array(array)
 
         device = DLDevice()
-        status = mts_array.device(mts_array.ptr, device)
-        assert status == MTS_SUCCESS
-        assert device.device_type == 1  # kDLCPU
+        _check_status(mts_array.device(mts_array.ptr, device))
+        assert device.device_type == DLDeviceType.kDLCPU
         assert device.device_id == 0
 
         free_mts_array(mts_array)
@@ -73,8 +73,7 @@ class MtsArrayMixin:
         assert _get_shape(mts_array, self) == [2, 3, 4]
 
         new_shape = ctypes.ARRAY(c_uintptr_t, 4)(2, 3, 2, 2)
-        status = mts_array.reshape(mts_array.ptr, new_shape, len(new_shape))
-        assert status == MTS_SUCCESS
+        _check_status(mts_array.reshape(mts_array.ptr, new_shape, len(new_shape)))
 
         assert _get_shape(mts_array, self) == [2, 3, 2, 2]
 
@@ -102,15 +101,15 @@ class MtsArrayMixin:
             fill_value_array = self.create_array((), dtype=dtype)
             fill_value_mts = metatensor.data.create_mts_array(fill_value_array)
 
-            status = mts_array.create(
-                mts_array.ptr,
-                new_shape,
-                len(new_shape),
-                fill_value_mts,
-                new_mts_array,
+            _check_status(
+                mts_array.create(
+                    mts_array.ptr,
+                    new_shape,
+                    len(new_shape),
+                    fill_value_mts,
+                    new_mts_array,
+                )
             )
-
-            assert status == MTS_SUCCESS
 
             new_array = metatensor.data.mts_array_to_python_array(new_mts_array)
             assert id(new_array) != id(array)
@@ -141,8 +140,7 @@ class MtsArrayMixin:
         mts_array = metatensor.data.create_mts_array(array)
 
         copy = mts_array_t()
-        status = mts_array.copy(mts_array.ptr, copy)
-        assert status == MTS_SUCCESS
+        _check_status(mts_array.copy(mts_array.ptr, copy))
 
         array_copy = metatensor.data.mts_array_to_python_array(copy)
         assert id(array_copy) != id(array)
@@ -224,16 +222,17 @@ class MtsArrayMixin:
         dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
         version = DLPackVersion(1, 0)
 
-        status = mts_array.as_dlpack(
-            mts_array.ptr,
-            ctypes.byref(dl_managed_ptr),
-            dldevice,
-            None,  # stream
-            version,
+        _check_status(
+            mts_array.as_dlpack(
+                mts_array.ptr,
+                ctypes.byref(dl_managed_ptr),
+                dldevice,
+                None,  # stream
+                version,
+            )
         )
 
         # Check we got a valid pointer back
-        assert status == MTS_SUCCESS
         assert bool(dl_managed_ptr)
 
         # Dereference to check contents
@@ -355,9 +354,7 @@ if HAS_TORCH:
 def _get_shape(mts_array, test):
     shape_ptr = ctypes.POINTER(c_uintptr_t)()
     shape_count = c_uintptr_t()
-    status = mts_array.shape(mts_array.ptr, shape_ptr, shape_count)
-
-    assert status == MTS_SUCCESS
+    _check_status(mts_array.shape(mts_array.ptr, shape_ptr, shape_count))
 
     shape = []
     for i in range(shape_count.value):
@@ -402,8 +399,10 @@ def test_external_cuda_array_cpu_path():
     arr = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float64)
     mts_array = metatensor.data.create_mts_array(arr)
 
-    # Use device_type=1 (kDLCPU) to test the full code path without a GPU
-    result = ExternalCudaArray(mts_array, parent=None, device_type=1, device_id=0)
+    # Use kDLCP) to test the full code path without a GPU
+    result = ExternalCudaArray(
+        mts_array, parent=None, device_type=DLDeviceType.kDLCPU, device_id=0
+    )
 
     assert isinstance(result, torch.Tensor)
     assert result.shape == (2, 2)

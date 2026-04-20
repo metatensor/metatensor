@@ -6,6 +6,7 @@ import numpy as np
 from .._c_api import (
     DLDataType,
     DLDevice,
+    DLDeviceType,
     DLManagedTensorVersioned,
     DLPackVersion,
     c_uintptr_t,
@@ -284,7 +285,7 @@ def _extract_scalar_from_mts_array(mts_array):
 
     # Use as_dlpack to get the data
     dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
-    device = DLDevice(device_type=1, device_id=0)  # kDLCPU
+    device = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
     version = DLPackVersion(major=1, minor=0)
     status = mts_array.as_dlpack(
         mts_array.ptr,
@@ -430,7 +431,7 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
     array = wrapper.array
 
-    dl_device = (device.device_type, device.device_id)
+    dl_device = (device.device_type.value, device.device_id)
     stream = stream.contents if stream else None
     max_version = (max_version.major, max_version.minor)
 
@@ -443,7 +444,6 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
         )
     except Exception as _:
         # Fallback to legacy signatures. Each fallback drops one parameter.
-        # Warn so users know their array library doesn't support full DLPack.
         try:
             capsule = array.__dlpack__(stream=stream, dl_device=dl_device)
         except Exception:
@@ -556,11 +556,6 @@ _MTS_ARRAY_ORIGIN_NUMPY = _cast_to_ctype_functype(mts_array_origin_numpy, "origi
 _MTS_ARRAY_ORIGIN_PYTORCH = _cast_to_ctype_functype(mts_array_origin_pytorch, "origin")
 
 
-# DLPack device type codes (from dlpack.h DLDeviceType enum)
-_KDLCPU = 1
-_KDLCUDA = 2
-
-
 @catch_exceptions
 def _mts_array_device_numpy(this, device_ptr):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
@@ -570,7 +565,7 @@ def _mts_array_device_numpy(this, device_ptr):
         device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
     except Exception:
         # Fallback for older numpy versions that don't have __dlpack_device__
-        device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+        device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
 
 
 @catch_exceptions
@@ -584,15 +579,15 @@ def _mts_array_device_pytorch(this, device_ptr):
         # Fallback for older torch version that don't have __dlpack_device__
         torch_dev = tensor.device
         if torch_dev.type == "cpu":
-            device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
         elif torch_dev.type == "cuda":
             device_ptr[0] = DLDevice(
-                device_type=_KDLCUDA, device_id=torch_dev.index or 0
+                device_type=DLDeviceType.kDLCUDA, device_id=torch_dev.index or 0
             )
         elif torch_dev.type == "meta":
-            device_ptr[0] = DLDevice(device_type=12, device_id=0)  # kDLExtDev
+            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLExtDev, device_id=0)
         else:
-            device_ptr[0] = DLDevice(device_type=_KDLCPU, device_id=0)
+            raise ValueError(f"unsupported torch device type: {torch_dev.type}")
 
 
 _MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")

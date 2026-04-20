@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include "metatensor/version.h"
 #include "metatensor/dlpack/dlpack.h"
-typedef struct DLManagedTensorVersioned DLManagedTensorVersioned;
 
 /**
  * Status type returned by all functions in the C API.

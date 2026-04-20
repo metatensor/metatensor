@@ -27,17 +27,6 @@ METATENSOR_HEADER = os.path.relpath(
     os.path.join(ROOT, "metatensor-core", "include", "metatensor.h")
 )
 
-# DL types that appear in the mts_array_t vtable and public API
-DLPACK_TYPES = frozenset(
-    {
-        "DLDevice",
-        "DLPackVersion",
-        "DLDataType",
-        "DLDataTypeCode",
-        "DLManagedTensorVersioned",
-    }
-)
-
 
 # ============================================================================ #
 # Shared AST parsing
@@ -104,8 +93,8 @@ class AstVisitor(c_ast.NodeVisitor):
             raise RuntimeError(f"Unknown declaration type for {node_name}")
 
     def visit_Typedef(self, node):
-        # Extract mts_* types and DLDataTypeCode enum
-        if not (node.name.startswith("mts_") or node.name == "DLDataTypeCode"):
+        # Extract metatensor and dlpack stuff only
+        if not (node.name.startswith("mts_") or node.name.startswith("DL")):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -117,6 +106,9 @@ class AstVisitor(c_ast.NodeVisitor):
             self.enums.append(enum)
 
         elif isinstance(node.type.type, c_ast.Struct):
+            if node.name.startswith("DLPackExchangeAPI"):
+                return
+
             struct = Struct(node.name)
             for _, member in node.type.type.children():
                 struct.add_member(member.name, member.type)
@@ -164,7 +156,7 @@ def parse_header(file):
 
 
 def _py_type_name(name):
-    if name.startswith("mts_") or name in DLPACK_TYPES:
+    if name.startswith("mts_") or name.startswith("DL"):
         return name
     elif name == "uintptr_t":
         return "c_uintptr_t"
@@ -254,9 +246,45 @@ do not edit it manually!
 \"\"\"
 
 import ctypes
-import enum
 import platform
 from ctypes import CFUNCTYPE, POINTER
+
+
+class EnumType(type(ctypes.c_int32)):
+    def __new__(metacls, name, bases, dict):
+        if "_members_" not in dict:
+            _members_ = {}
+            for key, value in dict.items():
+                if not key.startswith("_"):
+                    _members_[key] = value
+
+            dict["_members_"] = _members_
+        else:
+            _members_ = dict["_members_"]
+
+        dict["_reverse_map_"] = {v: k for k, v in _members_.items()}
+        cls = type(ctypes.c_int32).__new__(metacls, name, bases, dict)
+        for key, value in cls._members_.items():
+            globals()[key] = value
+        return cls
+
+    def __repr__(self):
+        return "<Enumeration %s>" % self.__name__
+
+
+class Enum(ctypes.c_int32):
+    __metaclass__ = EnumType
+    _members_ = {}
+
+    def __repr__(self):
+        value_str = self._reverse_map_.get(self.value, str(self.value))
+        return f"{self.__class__.__name__}.{value_str}"
+
+    def __eq__(self, other):
+        if isinstance(other, int):
+            return self.value == other
+
+        return type(self) is type(other) and self.value == other.value
 
 
 arch = platform.architecture()[0]
@@ -268,95 +296,34 @@ elif arch == "64bit":
 """
         )
 
-        # #define constants
-        for name, value in data.defines.items():
-            f.write(f"{name} = {value}\n")
-        f.write("\n\n")
-
-        # Simple typedefs (mts_status_t, etc.) -- skip callback, generated later
-        for name, c_type in data.types.items():
-            if name == "mts_create_array_callback_t":
-                continue
-            f.write(f"{name} = {_py_type(c_type)}\n")
-
         # Enums
         for enum in data.enums:
-            if enum.name == "mts_status_t":
-                # mts_status_t is a special case, we want it to be an int for better
-                # interop with C
-                f.write(f"\n\n{enum.name} = ctypes.c_int\n")
-                for name, value in enum.values.items():
-                    f.write(f"{name} = {value}\n")
-            else:
-                f.write(f"\n\nclass {enum.name}(enum.Enum):\n")
-                for name, value in enum.values.items():
-                    f.write(f"    {name} = {value}\n")
+            f.write(f"\n\nclass {enum.name}(Enum):\n")
+            for name, value in enum.values.items():
+                f.write(f"    {name} = {value}\n")
 
-        # Manual DLPack struct definitions
-        f.write("""
-
-# ============================================================================ #
-# DLPack types
-# ============================================================================ #
-class DLPackVersion(ctypes.Structure):
-    _fields_ = [
-        ("major", ctypes.c_uint32),
-        ("minor", ctypes.c_uint32),
-    ]
-
-class DLDevice(ctypes.Structure):
-    _fields_ = [
-        ("device_type", ctypes.c_int32),
-        ("device_id", ctypes.c_int32),
-    ]
-
-class DLDataType(ctypes.Structure):
-    _fields_ = [
-        ("code", ctypes.c_uint8),
-        ("bits", ctypes.c_uint8),
-        ("lanes", ctypes.c_uint16),
-    ]
-
-class DLTensor(ctypes.Structure):
-    _fields_ = [
-        ("data", ctypes.c_void_p),
-        ("device", DLDevice),
-        ("ndim", ctypes.c_int32),
-        ("dtype", DLDataType),
-        ("shape", POINTER(ctypes.c_int64)),
-        ("strides", POINTER(ctypes.c_int64)),
-        ("byte_offset", ctypes.c_uint64),
-    ]
-
-class DLManagedTensorVersioned(ctypes.Structure):
-    pass
-
-_DLManagedTensorVersionedDeleter = CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))
-
-DLManagedTensorVersioned._fields_ = [
-    ("version", DLPackVersion),
-    ("manager_ctx", ctypes.c_void_p),
-    ("deleter", _DLManagedTensorVersionedDeleter),
-    ("flags", ctypes.c_uint64),
-    ("dl_tensor", DLTensor),
-]
-""")
-
-        # mts_* structs
+        # structs declartions, without fields
         for struct in data.structs:
             f.write(f"\n\nclass {struct.name}(ctypes.Structure):\n")
             f.write("    pass\n")
+
+        # typedefs
+        f.write("\n\n")
+        for name, c_type in data.types.items():
+            if name == "mts_status_t":
+                # this is already defined as an enum
+                continue
+            f.write(f"{name} = {_py_type(c_type)}\n")
+
+        # structs fields definitions
+        f.write("\n")
+        for struct in data.structs:
             if len(struct.members) == 0:
                 continue
             f.write(f"\n{struct.name}._fields_ = [\n")
             for name, type in struct.members.items():
                 f.write(f'    ("{name}", {_py_type(type)}),\n')
             f.write("]\n")
-
-        # Callback typedef (depends on structs above)
-        f.write("\n\n")
-        callback_type = _py_type(data.types["mts_create_array_callback_t"])
-        f.write(f"mts_create_array_callback_t = {callback_type}\n")
 
         # Functions
         f.write("\n\ndef setup_functions(lib):\n")
@@ -393,7 +360,7 @@ CTYPES_TO_JULIA = {
 
 
 def _jl_type_name(name):
-    if name.startswith("mts_") or name in DLPACK_TYPES:
+    if name.startswith("mts_") or name.startswith("DL"):
         return name
     if name in CTYPES_TO_JULIA:
         return CTYPES_TO_JULIA[name]
@@ -463,33 +430,11 @@ mts_data_origin_t = UInt64
 mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
 mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 
-# DLPack types
-struct DLPackVersion
-    major :: UInt32
-    minor :: UInt32
-end
-
-struct DLDevice
-    device_type :: Int32
-    device_id :: Int32
-end
-
-struct DLDataType
-    code :: UInt8
-    bits :: UInt8
-    lanes :: UInt16
-end
-
 # ====== End of manual definitions ====== #
 """
         )
 
-        # #define constants
-        f.write("\n\n# ===== Macros definitions\n")
-        for name, value in data.defines.items():
-            f.write(f"{name} = {value}\n")
-
-        # Enums (DLDataTypeCode if extracted)
+        # Enums
         f.write("\n\n# ===== Enum definitions\n")
         for enum in data.enums:
             f.write(f"\n\n# enum {enum.name}\nconst {enum.name} = UInt32\n")
@@ -505,7 +450,7 @@ end
             f.write("end\n\n")
 
         # Functions
-        f.write("\n\n# ===== Function definitions\n")
+        f.write("\n# ===== Function definitions\n")
         for function in data.functions:
             args = [(arg[0], _jl_type(arg[1])) for arg in function.args]
             if args == [(None, "Cvoid")]:
