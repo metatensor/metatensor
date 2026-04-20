@@ -14,7 +14,7 @@ license = "BSD-3-Clause"
 bench = false
 
 [dependencies]
-metatensor-sys = {version = "0.2.0-rc1", path="../metatensor-sys"}
+metatensor-sys = {version = "0.2.0-rc2", path="../metatensor-sys"}
 dlpk = { version = "0.1.5", features = ["ndarray", "half", "sync"]}
 half = "<2.5"
 

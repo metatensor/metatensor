@@ -28,7 +28,7 @@ elif not METATENSOR_NO_LOCAL_DEPS and METATENSOR_CORE.exists():
     METATENSOR_CORE_DEP = f"metatensor-core @ {METATENSOR_CORE.as_uri()}"
 else:
     # we are building from a sdist
-    METATENSOR_CORE_DEP = "metatensor-core >=0.2.0rc1,<0.3.0"
+    METATENSOR_CORE_DEP = "metatensor-core >=0.2.0rc2,<0.3.0"
 
 
 FORCED_TORCH_VERSION = os.environ.get("METATENSOR_TORCH_BUILD_WITH_TORCH_VERSION")
