@@ -9,7 +9,7 @@ import torch
 Version = namedtuple("Version", ["major", "minor", "patch"])
 
 
-def parse_version(version):
+def _parse_version(version):
     match = re.match(r"(\d+)\.(\d+)\.(\d+).*", version)
     if match:
         return Version(*map(int, match.groups()))
@@ -17,20 +17,8 @@ def parse_version(version):
         raise ValueError("Invalid version string format")
 
 
-def version_compatible(actual, required):
-    actual = parse_version(actual)
-    required = parse_version(required)
-
-    if actual.major != required.major:
-        return False
-    elif actual.minor != required.minor:
-        return False
-    else:
-        return True
-
-
 _HERE = os.path.dirname(__file__)
-_TORCH_VERSION = parse_version(torch.__version__)
+_TORCH_VERSION = _parse_version(torch.__version__)
 install_prefix = os.path.join(
     _HERE, f"torch-{_TORCH_VERSION.major}.{_TORCH_VERSION.minor}"
 )

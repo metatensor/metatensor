@@ -6,13 +6,13 @@ import torch
 
 from . import utils  # noqa: F401
 from ._c_lib import _load_library
-from .version import __version__  # noqa: F401
+from ._version import __version__  # noqa: F401
 
 
 sys.modules["metatensor.torch"] = sys.modules[__name__]
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0" or TYPE_CHECKING:
-    from .documentation import (
+    from ._documentation import (
         Labels,
         LabelsEntry,
         TensorBlock,
@@ -38,7 +38,7 @@ else:
     load_labels_buffer = torch.ops.metatensor.load_labels_buffer
     save_buffer = torch.ops.metatensor.save_buffer
 
-from .serialization import (  # noqa: F401, E402
+from .io import (  # noqa: F401, E402
     load,
     load_block,
     load_labels,
@@ -79,11 +79,10 @@ except ImportError:
     pass
 
 
-from . import atomistic  # noqa: F401, E402
-from ._module import _patch_torch_jit_module  # noqa:  E402
+from . import _module  # noqa: E402
 
 
-_patch_torch_jit_module()
+_module.patch_torch_jit_module()
 
 __all__ = [
     "Labels",

@@ -7,15 +7,13 @@ import torch
 
 
 if os.environ.get("METATENSOR_IMPORT_FOR_SPHINX", "0") != "0":
-    from .documentation import (
+    from ._documentation import (
         Labels,
-        LabelsEntry,
         TensorBlock,
         TensorMap,
     )
 else:
     Labels = torch.classes.metatensor.Labels
-    LabelsEntry = torch.classes.metatensor.LabelsEntry
     TensorBlock = torch.classes.metatensor.TensorBlock
     TensorMap = torch.classes.metatensor.TensorMap
 

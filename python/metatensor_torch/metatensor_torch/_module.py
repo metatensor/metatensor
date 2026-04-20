@@ -2,7 +2,7 @@ from typing import Union
 
 import torch
 
-from metatensor.torch import Labels, TensorBlock, TensorMap
+from . import Labels, TensorBlock, TensorMap
 
 
 def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename: str):
@@ -182,7 +182,7 @@ def _parse_rsm_attributes(string):
     raise RuntimeError(f"failed to parse attributes section in:\n{string}")
 
 
-def _patch_torch_jit_module():
+def patch_torch_jit_module():
     """
     Monkey-patch `torch.jit.RecursiveScriptModule._apply` to also handle metatensor
     data, similar to what's happening in `metatensor.learn.nn.Module._apply`
