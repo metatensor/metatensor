@@ -4,6 +4,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 @pytest.fixture
 def tensor():
@@ -407,3 +409,9 @@ def test_raise_error(tensor, tensor_sorted_ascending):
     )
     with pytest.raises(ValueError, match=error_message):
         mts.operations.sort(tensor, axes=[5])
+
+
+def test_sort_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.sort(t)
+    _tests_utils.check_info(result, {"description": "test_value"})

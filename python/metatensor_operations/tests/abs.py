@@ -82,3 +82,9 @@ def test_abs(gradients):
 
     # Check the tensors haven't be modified in place
     assert not mts.equal(tensor_abs, tensor)
+
+
+def test_abs_info():
+    t = _tests_utils.tensor_with_info()
+    result = mts.abs(t)
+    _tests_utils.check_info(result, _tests_utils._INFO)

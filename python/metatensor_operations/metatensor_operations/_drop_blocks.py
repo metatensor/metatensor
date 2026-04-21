@@ -98,7 +98,10 @@ def drop_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> TensorMa
             ),
         )
 
-    return TensorMap(keys=new_keys, blocks=new_blocks)
+    result = TensorMap(keys=new_keys, blocks=new_blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
@@ -174,4 +177,7 @@ def drop_empty_blocks(tensor: TensorMap, copy: bool = False) -> TensorMap:
                 tensor.keys.values, (0, len(tensor.keys.names))
             ),
         )
-    return TensorMap(keys=new_keys, blocks=new_blocks)
+    result = TensorMap(keys=new_keys, blocks=new_blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

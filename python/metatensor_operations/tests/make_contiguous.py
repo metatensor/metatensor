@@ -5,6 +5,8 @@ import pytest
 import metatensor as mts
 from metatensor import TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -66,3 +68,9 @@ def test_make_contiguous_block(tensor):
 def test_make_contiguous(non_contiguous_tensor):
     assert not mts.is_contiguous(non_contiguous_tensor)
     assert mts.is_contiguous(mts.make_contiguous(non_contiguous_tensor))
+
+
+def test_make_contiguous_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.make_contiguous(t)
+    _tests_utils.check_info(result, {"description": "test_value"})

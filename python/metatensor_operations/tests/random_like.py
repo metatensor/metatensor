@@ -5,6 +5,8 @@ import pytest
 
 import metatensor as mts
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -38,3 +40,9 @@ def test_random_uniform_like_error():
     )
     with pytest.raises(ValueError, match=message):
         tensor = mts.random_uniform_like(tensor, gradients=["positions", "err"])
+
+
+def test_random_uniform_like_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.random_uniform_like(t)
+    _tests_utils.check_info(result, {"description": "test_value"})

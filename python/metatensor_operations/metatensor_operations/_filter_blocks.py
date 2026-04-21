@@ -94,4 +94,7 @@ def filter_blocks(tensor: TensorMap, keys: Labels, copy: bool = False) -> Tensor
             ),
         )
 
-    return TensorMap(keys=new_keys, blocks=new_blocks)
+    result = TensorMap(keys=new_keys, blocks=new_blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

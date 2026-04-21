@@ -2,6 +2,8 @@ import os
 
 import metatensor as mts
 
+from . import _tests_utils
+
 
 try:
     import torch  # noqa
@@ -34,3 +36,9 @@ def test_detach():
         detached = mts.detach(output)
         for block in detached:
             assert not block.values.requires_grad
+
+
+def test_detach_info():
+    t = _tests_utils.tensor_with_info()
+    result = mts.detach(t)
+    _tests_utils.check_info(result, _tests_utils._INFO)

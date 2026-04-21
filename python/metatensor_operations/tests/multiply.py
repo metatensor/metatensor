@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -342,3 +344,22 @@ def test_self_multiply_error():
     )
     with pytest.raises(TypeError, match=message):
         keys = mts.multiply(tensor, np.ones((3, 4)))
+
+
+def test_multiply_scalar_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.multiply(t, 2.0)
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_multiply_tensormap_no_info():
+    t = _tests_utils.simple_tensor()
+    block = TensorBlock(
+        values=np.array([[2.0, 3.0], [4.0, 5.0]]),
+        samples=Labels(["s"], np.array([[0], [1]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    B = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    result = mts.multiply(t, B)
+    assert "description" not in result.info()

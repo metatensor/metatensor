@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -70,6 +72,16 @@ def test_larger_filter(tensor):
 
     assert test_filter.keys == tensor.keys
     assert mts.equal(test_filter, tensor)
+
+
+def test_filter_blocks_info():
+    t = _tests_utils.tensor_with_info()
+    keys_to_keep = Labels(
+        names=["key_1", "key_2"],
+        values=np.array([[0, 0], [1, 0]]),
+    )
+    result = mts.filter_blocks(t, keys_to_keep)
+    _tests_utils.check_info(result, _tests_utils._INFO)
 
 
 def test_copy_flag(tensor):

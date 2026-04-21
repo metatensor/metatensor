@@ -88,4 +88,7 @@ def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
     for block_A in A.blocks():
         blocks.append(_pow_block_constant(block=block_A, constant=B))
 
-    return TensorMap(A.keys, blocks)
+    result = TensorMap(A.keys, blocks)
+    for name, value in A.info().items():
+        result.set_info(name, value)
+    return result

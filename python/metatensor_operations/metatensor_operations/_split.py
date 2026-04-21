@@ -163,10 +163,13 @@ def split(
         for group_i, new_block in enumerate(new_blocks):
             all_new_blocks[group_i].append(new_block)
 
-    return [
-        TensorMap(keys=tensor.keys, blocks=all_new_blocks[group_i])
-        for group_i in range(len(selections))
-    ]
+    result_tensors: List[TensorMap] = []
+    for group_i in range(len(selections)):
+        new_tensor = TensorMap(keys=tensor.keys, blocks=all_new_blocks[group_i])
+        for name, value in tensor.info().items():
+            new_tensor.set_info(name, value)
+        result_tensors.append(new_tensor)
+    return result_tensors
 
 
 @torch_jit_script

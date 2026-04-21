@@ -5,6 +5,8 @@ import numpy as np
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -326,3 +328,22 @@ def test_reduction_block_multi_properties():
     assert reduce_X_12.block(0).properties == properties_12
     assert reduce_X_23.block(0).properties == properties_23
     assert reduce_X_2.block(0).properties == properties_2
+
+
+def test_sum_over_samples_info():
+    t = _tests_utils.multi_sample_tensor()
+    result = mts.sum_over_samples(t, sample_names="atom")
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_sum_over_properties_info():
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0, 3.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p", "q"], np.array([[0, 0], [0, 1], [1, 0]])),
+    )
+    t = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    t.set_info("description", "test_value")
+    result = mts.sum_over_properties(t, property_names="q")
+    _tests_utils.check_info(result, {"description": "test_value"})

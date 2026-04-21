@@ -5,6 +5,8 @@ import pytest
 
 import metatensor as mts
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -36,3 +38,9 @@ def test_ones_like_error():
     message = "requested gradient 'err' in 'ones_like' is not defined in this tensor"
     with pytest.raises(ValueError, match=message):
         tensor = mts.ones_like(tensor, gradients=["positions", "err"])
+
+
+def test_ones_like_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.ones_like(t)
+    _tests_utils.check_info(result, {"description": "test_value"})

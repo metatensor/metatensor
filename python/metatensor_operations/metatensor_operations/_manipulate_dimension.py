@@ -125,7 +125,10 @@ def insert_dimension(
 
         blocks.append(new_block)
 
-    return TensorMap(keys=keys, blocks=blocks)
+    result = TensorMap(keys=keys, blocks=blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
@@ -269,7 +272,10 @@ def permute_dimensions(
 
         blocks.append(new_block)
 
-    return TensorMap(keys=keys, blocks=blocks)
+    result = TensorMap(keys=keys, blocks=blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
@@ -364,7 +370,10 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
 
         blocks.append(new_block)
 
-    return TensorMap(keys=keys, blocks=blocks)
+    result = TensorMap(keys=keys, blocks=blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
@@ -456,4 +465,7 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
 
         blocks.append(new_block)
 
-    return TensorMap(keys=keys, blocks=blocks)
+    result = TensorMap(keys=keys, blocks=blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

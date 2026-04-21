@@ -336,7 +336,10 @@ def _reduce_over_properties(
                 remaining_properties=remaining_properties,
             )
         )
-    return TensorMap(tensor.keys, blocks)
+    result = TensorMap(tensor.keys, blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
