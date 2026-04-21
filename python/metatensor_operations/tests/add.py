@@ -4,7 +4,7 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
-from . import _gradcheck
+from . import _gradcheck, _tests_utils
 
 
 try:
@@ -285,3 +285,18 @@ def test_finite_difference():
         rng.manual_seed(123456)
         array = torch.rand(50, 3, dtype=torch.float64, generator=rng)
         _gradcheck.check_finite_differences(function, array, parameter="g")
+
+
+def test_add_scalar_info():
+    t = _tests_utils.tensor_with_info()
+    result = mts.add(t, 1.0)
+    _tests_utils.check_info(result, _tests_utils._INFO)
+
+
+def test_add_tensormap_no_info():
+    """When B is a TensorMap, info must NOT be propagated (ambiguous source)."""
+    t = _tests_utils.tensor_with_info()
+    B = _tests_utils.tensor()
+    B.set_info("description", "other_value")
+    result = mts.add(t, B)
+    assert result.info() == {}, f"Expected empty info, got {result.info()}"

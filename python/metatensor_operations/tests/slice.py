@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 try:
     import torch  # noqa
@@ -666,3 +668,10 @@ def test_slice_block_errors(tensor):
             axis="samples",
             selection=np.array([[1], [2]]),
         )
+
+
+def test_slice_info():
+    t = _tests_utils.simple_tensor()
+    selection = Labels(["s"], np.array([[0]]))
+    result = mts.slice(t, axis="samples", selection=selection)
+    _tests_utils.check_info(result, {"description": "test_value"})

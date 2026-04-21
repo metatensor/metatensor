@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -358,3 +360,9 @@ def test_self_pow_error():
     message = "`B` must be a scalar value, not <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
         keys = mts.pow(tensor, np.ones((3, 4)))
+
+
+def test_pow_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.pow(t, 2)
+    _tests_utils.check_info(result, {"description": "test_value"})

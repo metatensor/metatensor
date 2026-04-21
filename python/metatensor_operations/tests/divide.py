@@ -4,6 +4,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 def test_self_divide_tensors_no_gradient():
     block_1 = TensorBlock(
@@ -355,3 +357,17 @@ def test_self_divide_error():
     )
     with pytest.raises(TypeError, match=message):
         mts.divide(tensor, np.ones((3, 4)))
+
+
+def test_divide_scalar_info():
+    t = _tests_utils.tensor_with_info()
+    result = mts.divide(t, 2.0)
+    _tests_utils.check_info(result, _tests_utils._INFO)
+
+
+def test_divide_tensormap_no_info():
+    t = _tests_utils.tensor_with_info()
+    B = _tests_utils.tensor()
+    B.set_info("description", "other_value")
+    result = mts.divide(t, B)
+    assert result.info() == {}, f"Expected empty info, got {result.info()}"

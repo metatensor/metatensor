@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -193,3 +195,16 @@ def test_copy_flag(tensor):
         assert np.all(
             new_tensor_not_copied[key].values == new_tensor_copied[key].values[:] + 3.14
         )
+
+
+def test_drop_blocks_info():
+    t = _tests_utils.tensor_with_info()
+    keys_to_drop = Labels(names=["key_1", "key_2"], values=np.array([[2, 3]]))
+    result = mts.drop_blocks(t, keys_to_drop)
+    _tests_utils.check_info(result, _tests_utils._INFO)
+
+
+def test_drop_empty_blocks_info():
+    t = _tests_utils.tensor_with_info()
+    result = mts.drop_empty_blocks(t)
+    _tests_utils.check_info(result, _tests_utils._INFO)

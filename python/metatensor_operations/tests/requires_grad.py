@@ -4,6 +4,8 @@ import pytest
 
 import metatensor as mts
 
+from . import _tests_utils
+
 
 torch = pytest.importorskip("torch")
 
@@ -30,3 +32,10 @@ def test_requires_grad():
     tensor = mts.requires_grad(tensor, requires_grad=False)
     for block in tensor:
         assert not block.values.requires_grad
+
+
+def test_requires_grad_info():
+    t = _tests_utils.simple_tensor()
+    t = t.to(arrays="torch")
+    result = mts.requires_grad(t)
+    _tests_utils.check_info(result, {"description": "test_value"})

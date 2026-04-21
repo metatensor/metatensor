@@ -127,3 +127,55 @@ def large_tensor():
         ),
     )
     return TensorMap(keys, blocks)
+
+
+# ---------------------------------------------------------------------------
+# Shared helpers for info propagation tests
+# ---------------------------------------------------------------------------
+
+_INFO = {"description": "test_value", "key2": "value2"}
+
+
+def tensor_with_info() -> TensorMap:
+    """Return the standard test tensor with two info entries set."""
+    t = tensor()
+    t.set_info("description", "test_value")
+    t.set_info("key2", "value2")
+    return t
+
+
+def simple_tensor() -> TensorMap:
+    """Return a minimal one-block TensorMap with info set."""
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0], [3.0, 4.0]]),
+        samples=Labels(["s"], np.array([[0], [1]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    t = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    t.set_info("description", "test_value")
+    return t
+
+
+def multi_sample_tensor() -> TensorMap:
+    """Tensor with 'system'+'atom' sample axes for reduction tests."""
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]]),
+        samples=Labels(
+            ["system", "atom"],
+            np.array([[0, 0], [0, 1], [1, 0]]),
+        ),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    t = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    t.set_info("description", "test_value")
+    return t
+
+
+def check_info(result: TensorMap, expected: dict):
+    """Assert that result.info() contains exactly the expected key/value pairs."""
+    info = result.info()
+    for key, val in expected.items():
+        assert key in info, f"info key '{key}' missing from result"
+        assert info[key] == val, f"info['{key}'] = {info[key]!r}, expected {val!r}"

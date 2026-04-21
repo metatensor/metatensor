@@ -58,4 +58,7 @@ def requires_grad(tensor: TensorMap, requires_grad: bool = True) -> TensorMap:
     for block in tensor.blocks():
         blocks.append(requires_grad_block(block, requires_grad=requires_grad))
 
-    return TensorMap(tensor.keys, blocks)
+    result = TensorMap(tensor.keys, blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

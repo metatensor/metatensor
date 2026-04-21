@@ -7,6 +7,8 @@ from numpy.testing import assert_equal
 import metatensor as mts
 from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -331,3 +333,41 @@ def test_insert_dimension_wrong_size(tensor):
         values=0,
         index=0,
     )
+
+
+def test_insert_dimension_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.insert_dimension(t, axis="keys", index=0, name="new_key", values=0)
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_append_dimension_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.append_dimension(t, axis="keys", name="new_key", values=0)
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_permute_dimensions_info():
+    t = _tests_utils.tensor_with_info()
+    # tensor_with_info has keys ["key_1", "key_2"] — permute to [1, 0]
+    result = mts.permute_dimensions(t, axis="keys", dimensions_indexes=[1, 0])
+    _tests_utils.check_info(result, _tests_utils._INFO)
+
+
+def test_remove_dimension_info():
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    t = TensorMap(Labels(["key", "extra"], np.array([[0, 0]])), [block])
+    t.set_info("description", "test_value")
+    result = mts.remove_dimension(t, axis="keys", name="extra")
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_rename_dimension_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.rename_dimension(t, axis="keys", old="key", new="new_key")
+    _tests_utils.check_info(result, {"description": "test_value"})

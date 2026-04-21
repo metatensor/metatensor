@@ -141,4 +141,8 @@ def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
 
         raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
 
-    return TensorMap(A.keys, blocks)
+    result = TensorMap(A.keys, blocks)
+    if not is_tensor_map:
+        for name, value in A.info().items():
+            result.set_info(name, value)
+    return result

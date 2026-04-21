@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -290,3 +292,22 @@ def test_self_subtract_error():
     )
     with pytest.raises(TypeError, match=message):
         keys = mts.subtract(tensor, np.ones((3, 4)))
+
+
+def test_subtract_scalar_info():
+    t = _tests_utils.simple_tensor()
+    result = mts.subtract(t, 1.0)
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_subtract_tensormap_no_info():
+    t = _tests_utils.simple_tensor()
+    block = TensorBlock(
+        values=np.array([[0.5, 1.0], [1.5, 2.0]]),
+        samples=Labels(["s"], np.array([[0], [1]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    B = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    result = mts.subtract(t, B)
+    assert "description" not in result.info()

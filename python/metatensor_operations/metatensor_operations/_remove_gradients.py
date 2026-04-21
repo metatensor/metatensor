@@ -83,4 +83,7 @@ def remove_gradients(
     for block in tensor.blocks():
         blocks.append(remove_gradients_block(block, remove))
 
-    return TensorMap(tensor.keys, blocks)
+    result = TensorMap(tensor.keys, blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

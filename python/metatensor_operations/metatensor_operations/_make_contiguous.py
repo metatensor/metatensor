@@ -46,4 +46,7 @@ def make_contiguous(tensor: TensorMap) -> TensorMap:
     for block in tensor.blocks():
         new_blocks.append(make_contiguous_block(block))
 
-    return TensorMap(tensor.keys, new_blocks)
+    result = TensorMap(tensor.keys, new_blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

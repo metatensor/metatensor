@@ -399,4 +399,7 @@ def sort(
             )
         )
 
-    return TensorMap(new_keys, new_blocks)
+    result = TensorMap(new_keys, new_blocks)
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result

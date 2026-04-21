@@ -6,6 +6,8 @@ import pytest
 import metatensor as mts
 from metatensor import Labels
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -260,3 +262,15 @@ def test_split_errors():
     )
     with pytest.raises(TypeError, match=message):
         mts.split_block(tensor, axis="samples", selections=[])
+
+
+def test_split_info():
+    t = _tests_utils.simple_tensor()
+    # simple_tensor has 1 block with samples s=0 and s=1
+    selections = [
+        Labels(["s"], np.array([[0]])),
+        Labels(["s"], np.array([[1]])),
+    ]
+    results = mts.split(t, axis="samples", selections=selections)
+    for result in results:
+        _tests_utils.check_info(result, {"description": "test_value"})

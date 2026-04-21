@@ -5,6 +5,8 @@ import numpy as np
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
+from . import _tests_utils
+
 
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
@@ -539,3 +541,41 @@ def get_XdX(block, gradient, der_index):
         idx = gradient.samples[ig][0]
         XdX.append(block.values[idx] * gradient.values[ig])
     return np.stack(XdX)
+
+
+def test_std_over_samples_info():
+    t = _tests_utils.multi_sample_tensor()
+    result = mts.std_over_samples(t, sample_names="atom")
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_std_over_properties_info():
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0, 3.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p", "q"], np.array([[0, 0], [0, 1], [1, 0]])),
+    )
+    t = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    t.set_info("description", "test_value")
+    result = mts.std_over_properties(t, property_names="q")
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_var_over_samples_info():
+    t = _tests_utils.multi_sample_tensor()
+    result = mts.var_over_samples(t, sample_names="atom")
+    _tests_utils.check_info(result, {"description": "test_value"})
+
+
+def test_var_over_properties_info():
+    block = TensorBlock(
+        values=np.array([[1.0, 2.0, 3.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p", "q"], np.array([[0, 0], [0, 1], [1, 0]])),
+    )
+    t = TensorMap(Labels(["key"], np.array([[0]])), [block])
+    t.set_info("description", "test_value")
+    result = mts.var_over_properties(t, property_names="q")
+    _tests_utils.check_info(result, {"description": "test_value"})

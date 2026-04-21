@@ -244,13 +244,16 @@ def slice(tensor: TensorMap, axis: str, selection: Labels) -> TensorMap:
 
     _check_slice_args(tensor.block(0), axis=axis, selection=selection)
 
-    return TensorMap(
+    result = TensorMap(
         keys=tensor.keys,
         blocks=[
             _slice_block(tensor[tensor.keys.entry(i)], axis, selection)
             for i in range(len(tensor.keys))
         ],
     )
+    for name, value in tensor.info().items():
+        result.set_info(name, value)
+    return result
 
 
 @torch_jit_script
