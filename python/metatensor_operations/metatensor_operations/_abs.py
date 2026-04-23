@@ -68,5 +68,5 @@ def abs(A: TensorMap) -> TensorMap:
     blocks: List[TensorBlock] = []
     keys = A.keys
     for i in range(len(keys)):
-        blocks.append(_abs_block(block=A.block(keys.entry(i))))
+        blocks.append(_abs_block(block=A.block_by_id(i)))
     return TensorMap(keys, blocks)
