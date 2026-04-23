@@ -31,9 +31,13 @@ def _equal_metadata_impl(
     if message != "":
         return message
 
-    for key in [tensor_1.keys[i] for i in range(len(tensor_1.keys))]:
+    keys_1 = tensor_1.keys
+    for i in range(len(keys_1)):
         message = _equal_metadata_block_impl(
-            tensor_1[key], tensor_2[key], check=check, check_gradients=check_gradients
+            tensor_1.block_by_id(i),
+            tensor_2.block(keys_1.entry(i)),
+            check=check,
+            check_gradients=check_gradients,
         )
         if message != "":
             return message

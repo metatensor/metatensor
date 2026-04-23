@@ -247,7 +247,7 @@ def slice(tensor: TensorMap, axis: str, selection: Labels) -> TensorMap:
     return TensorMap(
         keys=tensor.keys,
         blocks=[
-            _slice_block(tensor[tensor.keys.entry(i)], axis, selection)
+            _slice_block(tensor.block_by_id(i), axis, selection)
             for i in range(len(tensor.keys))
         ],
     )

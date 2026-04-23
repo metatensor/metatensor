@@ -157,8 +157,7 @@ def split(
         all_new_blocks[group_i] = empty_list
 
     for key_index in range(len(tensor.keys)):
-        key = tensor.keys.entry(key_index)
-        new_blocks = _split_block(tensor[key], axis, selections)
+        new_blocks = _split_block(tensor.block_by_id(key_index), axis, selections)
 
         for group_i, new_block in enumerate(new_blocks):
             all_new_blocks[group_i].append(new_block)
