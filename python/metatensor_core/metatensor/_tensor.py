@@ -363,18 +363,13 @@ class TensorMap:
         When ``selection`` is an ``int``, this is equivalent to
         :py:func:`TensorMap.block_by_id`.
 
-        When ``selection`` is an :py:class:`Labels`, it should only contain a single
-        entry, which will be used for the selection.
-
-        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
-        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
-        being joined together to form the :py:class:`LabelsEntry` values), which is then
-        used for the selection.
-
-        When ``selection`` is a :py:class:`LabelsEntry`, this function finds the key in
-        this :py:class:`TensorMap` with the same values as ``selection`` for the
-        dimensions/names contained in the ``selection``; and return the corresponding
-        indexes.
+        When ``selection`` is a :py:class:`Labels`, :py:class:`LabelsEntry` or
+        ``Dict[str, int]``, this function finds the key in this :py:class:`TensorMap`
+        with the same values as ``selection`` for the dimensions/names contained in the
+        ``selection`` (which can be a subset of the dimensions of the keys); and return
+        the corresponding block. This performs a lookup in the keys, so it will be
+        slower than :py:func:`TensorMap.block_by_id`, but it is more convenient when the
+        position of the block is not known.
 
         If ``selection`` is :py:obj:`None`, the selection can be passed as keyword
         arguments, which will be converted to a ``Dict[str, int]``.
@@ -461,18 +456,13 @@ class TensorMap:
         :py:func:`TensorMap.block_by_id`; and for a ``List[int]`` this is equivalent to
         :py:func:`TensorMap.blocks_by_id`.
 
-        When ``selection`` is an :py:class:`Labels`, it should only contain a single
-        entry, which will be used for the selection.
-
-        When ``selection`` is a ``Dict[str, int]``, it is converted into a single single
-        :py:class:`LabelsEntry` (the dict keys becoming the names and the dict values
-        being joined together to form the :py:class:`LabelsEntry` values), which is then
-        used for the selection.
-
-        When ``selection`` is a :py:class:`LabelsEntry`, this function finds all keys in
-        this :py:class:`TensorMap` with the same values as ``selection`` for the
-        dimensions/names contained in the ``selection``; and return the corresponding
-        blocks.
+        When ``selection`` is a :py:class:`Labels`, :py:class:`LabelsEntry` or
+        ``Dict[str, int]``, this function finds the keys in this :py:class:`TensorMap`
+        with the same values as ``selection`` for the dimensions/names contained in the
+        ``selection`` (which can be a subset of the dimensions of the keys); and return
+        the corresponding blocks. This performs a lookup in the keys, so it will be
+        slower than :py:func:`TensorMap.blocks_by_id`, but it is more convenient when
+        the position of the blocks is not known.
 
         If ``selection`` is :py:obj:`None`, the selection can be passed as keyword
         arguments, which will be converted to a ``Dict[str, int]``.
