@@ -992,13 +992,13 @@ class Labels:
         :return: 1-dimensional ndarray containing the integer indices of selected
             entries
         """
-        selected = np.zeros((len(self)), dtype=np.int64)
+        selected = np.zeros((len(self)), dtype=ctypes.c_uint64)
         selected_count = c_uintptr_t(len(self))
 
         self._lib.mts_labels_select(
             self._as_mts_labels_t(),
             selection._as_mts_labels_t(),
-            selected.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
+            selected.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64)),
             ctypes.pointer(selected_count),
         )
 

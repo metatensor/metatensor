@@ -333,7 +333,7 @@ def setup_functions(lib):
     lib.mts_labels_select.argtypes = [
         POINTER(mts_labels_t),
         POINTER(mts_labels_t),
-        POINTER(ctypes.c_int64),
+        POINTER(ctypes.c_uint64),
         POINTER(c_uintptr_t),
     ]
     lib.mts_labels_select.restype = check_status

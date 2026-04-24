@@ -474,8 +474,9 @@ impl Labels {
     /// All entries in these `Labels` that match one of the entry in the
     /// `selection` for all the selection's dimension will be picked. Any entry
     /// in the `selection` but not in these `Labels` will be ignored.
-    pub fn select(&self, selection: &Labels) -> Result<Vec<i64>, Error> {
-        let mut selected = vec![-1; self.count()];
+    #[allow(clippy::cast_possible_truncation)]
+    pub fn select(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
+        let mut selected = vec![0; self.count()];
         let mut selected_count = selected.len();
 
         unsafe {
@@ -489,7 +490,7 @@ impl Labels {
 
         selected.resize(selected_count, 0);
 
-        return Ok(selected);
+        return Ok(selected.into_iter().map(|s| s as usize).collect());
     }
 
     pub fn to_cpu(&self) -> CpuLabels<'_> {

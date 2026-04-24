@@ -41,6 +41,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `mts_labels_create_assume_unique` is now `mts_labels_assume_unique`.
 - `mts_last_error` can now return custom data and error origin together with the
   last error message. These can be set by a new function `mts_set_last_error`.
+- `mts_labels_select` now takes and returns the selection as an array of
+  `size_t`, not `int64_t`.
 
 #### Added
 
@@ -64,6 +66,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `Labels::select` now returns a `std::optional<size_t>` instead of relying on
   -1 as a sentinel value. The overloads taking `int64_t` pointers are still
   available for a zero overhead version.
+- `Labels::select` now takes and returns the selection as an array of
+  `size_t`, not `int64_t`.
 
 #### Added
 
@@ -85,6 +89,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
+
 
 ## [Version 0.1.20](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.20) - 2026-02-27
 

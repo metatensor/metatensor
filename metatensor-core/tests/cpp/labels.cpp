@@ -167,14 +167,14 @@ TEST_CASE("Set operations") {
 
         auto selected = labels.select(selection);
         CHECK(selected.size() == 3);
-        CHECK(selected == std::vector<size_t>{0, 1, 3});
+        CHECK(selected == std::vector<uint64_t>{0, 1, 3});
 
         // selection with the same names
         selection = Labels({"aa", "bb"}, {{1, 1}, {2, 1}, {5, 1}, {1, 2}});
 
         selected = labels.select(selection);
         CHECK(selected.size() == 3);
-        CHECK(selected == std::vector<size_t>{0, 3, 1});
+        CHECK(selected == std::vector<uint64_t>{0, 3, 1});
 
         // empty selection
         selection = Labels({"aa"}, {});
