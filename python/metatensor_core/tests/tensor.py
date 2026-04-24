@@ -511,7 +511,7 @@ def test_empty_tensor():
     assert empty_tensor.blocks() == []
 
     assert empty_tensor.blocks(key=3) == []
-    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    message = "invalid parameter: 'not_a_key' in selection is not part of these Labels"
     with pytest.raises(MetatensorError, match=message):
         empty_tensor.blocks(not_a_key=3)
 
@@ -523,16 +523,9 @@ def test_empty_tensor():
     with pytest.raises(ValueError, match=message):
         empty_tensor.block(key=3)
 
-    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
+    message = "invalid parameter: 'not_a_key' in selection is not part of these Labels"
     with pytest.raises(MetatensorError, match=message):
         empty_tensor.block(not_a_key=3)
-
-    # check the `blocks_matching` function
-    assert empty_tensor.blocks_matching(Labels("key", np.array([[3]]))) == []
-
-    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
-    with pytest.raises(MetatensorError, match=message):
-        empty_tensor.blocks_matching(Labels("not_a_key", np.array([[3]])))
 
     message = "block index out of bounds: we have 0 blocks but the index is 3"
     with pytest.raises(IndexError, match=message):

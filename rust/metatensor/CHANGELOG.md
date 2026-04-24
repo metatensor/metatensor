@@ -34,6 +34,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Removed `Array::data()` trait method and all implementations. Use
   `mts_array_t.as_dlpack` instead, which supports all numeric types via the
   DLPack standard rather than only float64.
+- Removed `TensorMap::blocks_matching`, the same behavior can be achieved
+  with `TensorMap::keys().select(...)`.
 
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.2.4) - 2026-03-05
 

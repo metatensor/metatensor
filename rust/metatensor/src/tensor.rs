@@ -214,35 +214,10 @@ impl TensorMap {
         return TensorBlockRefMut::from_raw(block);
     }
 
-    /// Get the index of blocks matching the given selection.
-    ///
-    /// The selection must contains a single entry, defining the requested key
-    /// or keys. If the selection contains only a subset of the dimensions of the
-    /// keys, there can be multiple matching blocks.
+    /// Get a reference to the block matching the given selection.
     #[inline]
-    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
-        let mut indexes = vec![0; self.keys().count()];
-        let mut matching = indexes.len();
-        unsafe {
-            check_status(crate::c_api::mts_tensormap_blocks_matching(
-                self.ptr,
-                indexes.as_mut_ptr(),
-                &mut matching,
-                selection.as_mts_labels_t(),
-            ))?;
-        }
-        indexes.resize(matching, 0);
-
-        return Ok(indexes);
-    }
-
-    /// Get the index of the single block matching the given selection.
-    ///
-    /// This function is similar to [`TensorMap::blocks_matching`], but also
-    /// returns an error if more than one block matches the selection.
-    #[inline]
-    pub fn block_matching(&self, selection: &Labels) -> Result<usize, Error> {
-        let matching = self.blocks_matching(selection)?;
+    pub fn block(&self, selection: &Labels) -> Result<TensorBlockRef<'_>, Error> {
+        let matching = self.keys.select(selection)?;
         if matching.len() != 1 {
             let selection_str = selection.names()
                 .iter()
@@ -250,7 +225,6 @@ impl TensorMap {
                 .map(|(name, value)| format!("{} = {}", name, value))
                 .collect::<Vec<_>>()
                 .join(", ");
-
 
             if matching.is_empty() {
                 return Err(Error {
@@ -272,17 +246,7 @@ impl TensorMap {
             }
         }
 
-        return Ok(matching[0])
-    }
-
-    /// Get a reference to the block matching the given selection.
-    ///
-    /// This function uses [`TensorMap::blocks_matching`] under the hood to find
-    /// the matching block.
-    #[inline]
-    pub fn block(&self, selection: &Labels) -> Result<TensorBlockRef<'_>, Error> {
-        let id = self.block_matching(selection)?;
-        return Ok(self.block_by_id(id));
+        return Ok(self.block_by_id(matching[0]));
     }
 
     /// Get a reference to every blocks in this `TensorMap`
@@ -770,18 +734,12 @@ mod tests {
         assert_eq!(block.values().shape().unwrap(), [3, 2]);
 
         let selection = Labels::new(["key"], &[[1]]);
-        assert_eq!(tensor.block_matching(&selection).unwrap(), 0);
-        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0]);
 
         let block = tensor.block(&selection).unwrap();
         {
             let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
             assert_eq!(values.shape(), [2, 3]);
         }
-
-        let selection = Labels::new(["other"], &[[0]]);
-        assert!(tensor.block_matching(&selection).is_err());
-        assert_eq!(tensor.blocks_matching(&selection).unwrap(), [0, 2]);
 
         let blocks = tensor.blocks();
         assert_eq!(blocks[0].values().shape().unwrap(), [2, 3]);

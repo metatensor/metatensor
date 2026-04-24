@@ -326,32 +326,6 @@ class TensorMap:
         """
         return [self.block_by_id(i) for i in indices]
 
-    def blocks_matching(self, selection: Labels) -> List[int]:
-        """
-        Get a (possibly empty) list of block indexes matching the ``selection``.
-
-        This function finds all keys in this :py:class:`TensorMap` with the same values
-        as ``selection`` for the dimensions/names contained in the ``selection``; and
-        return the corresponding indexes.
-
-        The ``selection`` should contain a single entry.
-        """
-        block_indexes = ctypes.ARRAY(c_uintptr_t, len(self.keys))()
-        count = c_uintptr_t(block_indexes._length_)
-
-        self._lib.mts_tensormap_blocks_matching(
-            self._ptr,
-            block_indexes,
-            count,
-            selection._as_mts_labels_t(),
-        )
-
-        result = []
-        for i in range(count.value):
-            result.append(int(block_indexes[i]))
-
-        return result
-
     def block(
         self,
         selection: Union[None, int, Labels, LabelsEntry, Dict[str, int]] = None,
@@ -423,10 +397,11 @@ class TensorMap:
         else:
             selection = _normalize_selection(selection)
 
-        matching = self.blocks_matching(selection)
+        keys = self.keys
+        matching = keys.select(selection)
 
         if len(matching) == 0:
-            if len(self.keys) == 0:
+            if len(keys) == 0:
                 raise ValueError("there are no blocks in this TensorMap")
             else:
                 raise ValueError(
@@ -476,9 +451,10 @@ class TensorMap:
         else:
             selection = _normalize_selection(selection)
 
-        matching = self.blocks_matching(selection)
+        keys = self.keys
+        matching = keys.select(selection)
 
-        if len(self.keys) == 0:
+        if len(keys) == 0:
             # return an empty list here instead of the top of this function to make sure
             # the selection was validated
             return []

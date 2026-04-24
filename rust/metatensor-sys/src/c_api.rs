@@ -409,13 +409,6 @@ extern "C" {
         block: *mut *mut mts_block_t,
         index: usize,
     ) -> mts_status_t;
-    #[must_use]
-    pub fn mts_tensormap_blocks_matching(
-        tensor: *const mts_tensormap_t,
-        block_indexes: *mut usize,
-        count: *mut usize,
-        selection: *const mts_labels_t,
-    ) -> mts_status_t;
     pub fn mts_tensormap_keys_to_properties(
         tensor: *const mts_tensormap_t,
         keys_to_move: *const mts_labels_t,

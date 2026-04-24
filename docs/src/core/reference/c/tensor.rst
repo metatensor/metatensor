@@ -10,7 +10,6 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 - :c:func:`mts_tensormap_free`: free allocated tensor maps
 - :c:func:`mts_tensormap_keys`: get the keys defined in a tensor map as :c:type:`mts_labels_t`
 - :c:func:`mts_tensormap_block_by_id`: get a :c:type:`mts_block_t` in a tensor map from its index
-- :c:func:`mts_tensormap_blocks_matching`: get a list of block indexes matching a selection
 - :c:func:`mts_tensormap_keys_to_samples`: move entries from keys to sample labels
 - :c:func:`mts_tensormap_keys_to_properties`: move entries from keys to properties labels
 - :c:func:`mts_tensormap_components_to_properties`: move entries from component labels to properties labels
@@ -32,8 +31,6 @@ The following functions operate on :c:type:`mts_tensormap_t`:
 .. doxygenfunction:: mts_tensormap_keys
 
 .. doxygenfunction:: mts_tensormap_block_by_id
-
-.. doxygenfunction:: mts_tensormap_blocks_matching
 
 .. doxygenfunction:: mts_tensormap_keys_to_samples
 

@@ -77,18 +77,6 @@ Labels TensorMapHolder::keys() const {
     return torch::make_intrusive<LabelsHolder>(this->tensor_.keys());
 }
 
-std::vector<int64_t> TensorMapHolder::blocks_matching(const Labels& selection) const {
-    auto results = tensor_.blocks_matching(selection->as_metatensor());
-
-    auto results_int64 = std::vector<int64_t>();
-    results_int64.reserve(results.size());
-    for (auto matching: results) {
-        results_int64.push_back(static_cast<int64_t>(matching));
-    }
-
-    return results_int64;
-}
-
 TensorBlock TensorMapHolder::block_by_id(TensorMap self, int64_t index) {
     if (index >= self->keys()->count()) {
         // this needs to be an IndexError to enable iteration over a TensorMap
@@ -131,7 +119,7 @@ TensorBlock TensorMapHolder::block(TensorMap self, LabelsEntry torch_selection) 
         torch_selection->names(), cpu_values.data_ptr<int32_t>(), 1
     );
 
-    auto matching = self->tensor_.blocks_matching(selection);
+    auto matching = self->tensor_.keys().select(selection);
     if (matching.empty()) {
         C10_THROW_ERROR(ValueError,
             "could not find blocks matching the selection " + torch_selection->print()
@@ -245,7 +233,7 @@ std::vector<TensorBlock> TensorMapHolder::blocks(TensorMap self, LabelsEntry tor
     );
 
     auto matching = std::vector<int64_t>();
-    for (auto m: self->tensor_.blocks_matching(selection)) {
+    for (auto m: self->tensor_.keys().select(selection)) {
         matching.push_back(static_cast<int64_t>(m));
     }
 
