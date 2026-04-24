@@ -569,7 +569,9 @@ impl Labels {
     /// valid indexes in `selected`.
     pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
         assert!(selected.len() == self.count());
-        selected.fill(u64::MAX);
+        if cfg!(debug_assertions) {
+            selected.fill(u64::MAX);
+        }
 
         let mut n_selected = 0;
         if selection.dimensions == self.dimensions {
@@ -594,16 +596,25 @@ impl Labels {
                 dimensions_to_match.push(i);
             }
 
-            let mut candidate = vec![0; dimensions_to_match.len()];
-            for (entry_i, entry) in self.to_cpu().iter().enumerate() {
-                for (i, &d) in dimensions_to_match.iter().enumerate() {
-                    candidate[i] = entry[d];
+            if dimensions_to_match.is_empty() {
+                assert!(selection.count() == 0);
+                // all labels match an empty selection
+                for (i, s) in selected.iter_mut().enumerate() {
+                    *s = i as u64;
                 }
+                n_selected = self.count();
+            } else {
+                let mut candidate = vec![0; dimensions_to_match.len()];
+                for (entry_i, entry) in self.to_cpu().iter().enumerate() {
+                    for (i, &d) in dimensions_to_match.iter().enumerate() {
+                        candidate[i] = entry[d];
+                    }
 
-                #[allow(clippy::cast_possible_wrap)]
-                if selection.contains(&candidate) {
-                    selected[n_selected] = entry_i as u64;
-                    n_selected += 1;
+                    #[allow(clippy::cast_possible_wrap)]
+                    if selection.contains(&candidate) {
+                        selected[n_selected] = entry_i as u64;
+                        n_selected += 1;
+                    }
                 }
             }
         }
