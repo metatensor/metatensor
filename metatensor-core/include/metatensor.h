@@ -976,33 +976,6 @@ mts_status_t mts_tensormap_block_by_id(struct mts_tensormap_t *tensor,
                                        uintptr_t index);
 
 /**
- * Get indices of the blocks in this `tensor` corresponding to the given
- * `selection`. The `selection` should have a subset of the names/dimensions of
- * the keys for this tensor map, and only one entry, describing the requested
- * blocks.
- *
- * When calling this function, `*count` should contain the number of entries in
- * `block_indexes`. When the function returns successfully, `*count` will
- * contain the number of blocks matching the selection, i.e. how many values
- * were written to `block_indexes`.
- *
- * @param tensor pointer to an existing tensor map
- * @param block_indexes array to be filled with indexes of blocks in the tensor
- *                      map matching the `selection`
- * @param count number of entries in `block_indexes`
- * @param selection pointer to labels with a single entry describing which
- *                  blocks are requested
- *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
-                                           uintptr_t *block_indexes,
-                                           uintptr_t *count,
-                                           const struct mts_labels_t *selection);
-
-/**
  * Merge blocks with the same value for selected keys dimensions along the
  * property axis.
  *

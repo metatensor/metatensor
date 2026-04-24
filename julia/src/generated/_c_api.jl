@@ -418,14 +418,6 @@ function mts_tensormap_block_by_id(tensor::Ptr{mts_tensormap_t}, block::Ptr{Ptr{
     )
 end
 
-function mts_tensormap_blocks_matching(tensor::Ptr{mts_tensormap_t}, block_indexes::Ptr{UIntptr}, count::Ptr{UIntptr}, selection::Ptr{mts_labels_t})
-    ccall((:mts_tensormap_blocks_matching, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_tensormap_t}, Ptr{UIntptr}, Ptr{UIntptr}, Ptr{mts_labels_t},),
-        tensor, block_indexes, count, selection
-    )
-end
-
 function mts_tensormap_keys_to_properties(tensor::Ptr{mts_tensormap_t}, keys_to_move::Ptr{mts_labels_t}, fill_value::mts_array_t, sort_samples::Cbool)
     ccall((:mts_tensormap_keys_to_properties, libmetatensor), 
         Ptr{mts_tensormap_t},

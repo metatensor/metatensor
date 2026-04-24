@@ -216,23 +216,6 @@ public:
         return Labels(ptr);
     }
 
-    /// Get a (possibly empty) list of block indexes matching the `selection`
-    std::vector<uintptr_t> blocks_matching(const Labels& selection) const {
-        auto matching = std::vector<uintptr_t>(this->keys().count());
-        uintptr_t count = matching.size();
-
-        details::check_status(mts_tensormap_blocks_matching(
-            tensor_,
-            matching.data(),
-            &count,
-            selection.as_mts_labels_t()
-        ));
-
-        assert(count <= matching.size());
-        matching.resize(count);
-        return matching;
-    }
-
     /// Get a block inside this TensorMap by it's index/the index of the
     /// corresponding key.
     ///

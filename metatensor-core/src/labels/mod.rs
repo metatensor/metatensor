@@ -125,15 +125,18 @@ impl std::fmt::Debug for Labels {
 }
 
 fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, LabelsHasher> {
-    assert!(values.len() % size == 0);
-
     let mut positions = HashMap::with_hasher(LabelsHasher::default());
-    for (i, entry) in values.chunks_exact(size).enumerate() {
-        // entries should be unique!
-        unsafe {
-            positions.insert_unique_unchecked(entry.into(), i);
+
+    if size != 0 {
+        assert!(values.len() % size == 0);
+        for (i, entry) in values.chunks_exact(size).enumerate() {
+            // entries should be unique!
+            unsafe {
+                positions.insert_unique_unchecked(entry.into(), i);
+            }
         }
     }
+
     return positions;
 }
 
@@ -576,7 +579,6 @@ impl Labels {
         let mut n_selected = 0;
         if selection.dimensions == self.dimensions {
             for entry in &selection.to_cpu() {
-                #[allow(clippy::cast_possible_wrap)]
                 if let Some(position) = self.position(entry) {
                     selected[n_selected] = position as u64;
                     n_selected += 1;

@@ -252,59 +252,6 @@ impl TensorMap {
         &self.keys
     }
 
-    /// Get the index of blocks matching the given selection.
-    ///
-    /// The selection must contains a single entry, defining the requested key
-    /// or keys. If the selection contains only a subset of the dimensions of the
-    /// keys, there can be multiple matching blocks.
-    pub fn blocks_matching(&self, selection: &Labels) -> Result<Vec<usize>, Error> {
-        if selection.size() == 0 {
-            return Ok((0..self.blocks().len()).collect());
-        }
-
-        if selection.count() != 1 {
-            return Err(Error::InvalidParameter(format!(
-                "block selection must contain exactly one entry, got {}",
-                selection.count()
-            )));
-        }
-
-        let mut dimensions = Vec::new();
-        'outer: for requested in selection.dimensions() {
-            for (i, &dimension) in self.keys.dimensions().iter().enumerate() {
-                if requested == dimension {
-                    dimensions.push(i);
-                    continue 'outer;
-                }
-            }
-
-            return Err(Error::InvalidParameter(format!(
-                "'{}' is not part of the keys for this tensor",
-                requested
-            )));
-        }
-
-        let mut matching = Vec::new();
-        let selection_cpu = selection.to_cpu();
-        let selection = selection_cpu.iter().next().expect("the selection should contain exactly one entry");
-
-        for (block_i, labels) in self.keys.to_cpu().iter().enumerate() {
-            let mut selected = true;
-            for (&requested_i, &value) in dimensions.iter().zip(selection) {
-                if labels[requested_i] != value {
-                    selected = false;
-                    break;
-                }
-            }
-
-            if selected {
-                matching.push(block_i);
-            }
-        }
-
-        return Ok(matching);
-    }
-
     /// Move the all the given dimensions from the components to the properties
     /// for each block in this `TensorMap`.
     pub fn components_to_properties(&self, dimensions: &[&str]) -> Result<TensorMap, Error> {
@@ -490,58 +437,6 @@ mod tests {
         );
 
         // TODO: check error messages for gradients
-    }
-
-    #[test]
-    fn blocks_matching() {
-        let mut blocks = Vec::new();
-        for _ in 0..6 {
-            blocks.push(TensorBlock::new(
-                TestArray::new(vec![1, 1]),
-                example_labels(&["samples"], &[0]),
-                vec![],
-                example_labels(&["properties"], &[0]),
-            ).unwrap());
-        }
-
-        let keys = example_labels(&["key_1", "key_2"], &[
-            0, 1, /**/ 0, 2, /**/ 1, 1, /**/ 1, 2, /**/ 3, 0, /**/ 4, 3
-        ]);
-
-        let tensor = TensorMap::new(keys, blocks).unwrap();
-
-        let selection = Labels::from_vec(&["key_1", "key_2"], vec![1, 1]).unwrap();
-        assert_eq!(
-            tensor.blocks_matching(&selection).unwrap(),
-            [2]
-        );
-
-        let selection = Labels::from_vec(&["key_1"], vec![1]).unwrap();
-        assert_eq!(
-            tensor.blocks_matching(&selection).unwrap(),
-            [2, 3]
-        );
-
-        let selection = Labels::from_vec(&["key_1"], vec![]).unwrap();
-        let result = tensor.blocks_matching(&selection);
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "invalid parameter: block selection must contain exactly one entry, got 0"
-        );
-
-        let selection = Labels::from_vec(&["key_1", "key_2"], vec![3, 4, 1, 2]).unwrap();
-        let result = tensor.blocks_matching(&selection);
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "invalid parameter: block selection must contain exactly one entry, got 2"
-        );
-
-        let selection = Labels::from_vec(&["key_3"], vec![1]).unwrap();
-        let result = tensor.blocks_matching(&selection);
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "invalid parameter: 'key_3' is not part of the keys for this tensor"
-        );
     }
 
     #[test]

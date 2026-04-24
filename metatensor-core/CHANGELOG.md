@@ -55,6 +55,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   then be retrieved with `mts_last_error` and used to store and rethrow
   exceptions across the C API boundary.
 
+#### Removed
+
+- Removed `mts_tensormap_blocks_matching`, the same behavior can be achieved
+  with `mts_labels_selection`.
+
 ### metatensor-core C++
 
 #### Changed
@@ -76,6 +81,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - The `MtsArray` class, which provides a RAII wrapper and more convenient way to
   use `mts_array_t` from C++
 
+#### Removed
+
+- Removed `TensorMap::blocks_matching`, the same behavior can be achieved
+  with `TensorMap::keys().select(...)`.
+
 ### metatensor-core Python
 
 #### Added
@@ -89,6 +99,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
+- Removed `TensorMap.blocks_matching`, the same behavior can be achieved
+  with `TensorMap.keys.select(...)`.
 
 
 ## [Version 0.1.20](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.20) - 2026-02-27

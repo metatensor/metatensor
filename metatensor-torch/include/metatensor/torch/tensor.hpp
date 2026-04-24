@@ -40,9 +40,6 @@ public:
     /// Get the keys for this `TensorMap`
     Labels keys() const;
 
-    /// Get a (possibly empty) list of block indexes matching the `selection`
-    std::vector<int64_t> blocks_matching(const Labels& selection) const;
-
     /// Get a block inside this TensorMap by it's index/the index of the
     /// corresponding key.
     ///

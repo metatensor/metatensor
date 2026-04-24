@@ -1269,18 +1269,6 @@ class TensorMap:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def blocks_matching(self, selection: Labels) -> List[int]:
-        """
-        Get a (possibly empty) list of block indexes matching the ``selection``.
-
-        This function finds all keys in this :py:class:`TensorMap` with the same
-        values as ``selection`` for the dimensions/names contained in the
-        ``selection``; and return the corresponding indexes.
-
-        The ``selection`` should contain a single entry.
-        """
-        raise THIS_CODE_SHOULD_NOT_RUN
-
     def block_by_id(self, index: int) -> TensorBlock:
         """
         Get the block at ``index`` in this :py:class:`TensorMap`.

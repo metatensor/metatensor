@@ -260,9 +260,6 @@ TORCH_LIBRARY(metatensor, m) {
         .def_static("load_buffer", &TensorMapHolder::load_buffer)
         .def("items", &TensorMapHolder::items)
         .def_property("keys", &TensorMapHolder::keys)
-        .def("blocks_matching", &TensorMapHolder::blocks_matching, DOCSTRING,
-            {torch::arg("selection")}
-        )
         .def("block_by_id", &TensorMapHolder::block_by_id, DOCSTRING,
             {torch::arg("index")}
         )

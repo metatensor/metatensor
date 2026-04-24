@@ -449,14 +449,6 @@ def setup_functions(lib):
     ]
     lib.mts_tensormap_block_by_id.restype = check_status
 
-    lib.mts_tensormap_blocks_matching.argtypes = [
-        POINTER(mts_tensormap_t),
-        POINTER(c_uintptr_t),
-        POINTER(c_uintptr_t),
-        POINTER(mts_labels_t),
-    ]
-    lib.mts_tensormap_blocks_matching.restype = check_status
-
     lib.mts_tensormap_keys_to_properties.argtypes = [
         POINTER(mts_tensormap_t),
         POINTER(mts_labels_t),

@@ -393,14 +393,6 @@ def test_empty_tensor():
 
     assert empty_tensor.blocks() == []
 
-    selection = Labels(names="key", values=torch.tensor([[3]]))
-    assert empty_tensor.blocks_matching(selection) == []
-
-    message = "invalid parameter: 'not_a_key' is not part of the keys for this tensor"
-    with pytest.raises(RuntimeError, match=message):
-        selection = Labels(names="not_a_key", values=torch.tensor([[3]]))
-        empty_tensor.blocks_matching(selection)
-
     message = "block index out of bounds: we have 0 blocks but the index is 3"
     with pytest.raises(IndexError, match=message):
         empty_tensor.block_by_id(3)
@@ -594,9 +586,6 @@ class TensorMapWrap:
 
     def keys(self) -> Labels:
         return self._c.keys
-
-    def blocks_matching(self, selection: Labels) -> List[int]:
-        return self._c.blocks_matching(selection=selection)
 
     def block_by_id(self, index: int) -> TensorBlock:
         return self._c.block_by_id(index=index)
