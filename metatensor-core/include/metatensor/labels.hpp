@@ -569,7 +569,7 @@ public:
     ///        values will contain the index in `labels` of selected entries.
     /// @param selected_count on input, size of the `selected` array. On output,
     ///        this will contain the number of selected entries.
-    void select(const Labels& selection, int64_t* selected, size_t *selected_count) const {
+    void select(const Labels& selection, uint64_t* selected, size_t *selected_count) const {
         details::check_status(mts_labels_select(
             labels_,
             selection.labels_,
@@ -582,27 +582,12 @@ public:
     ///
     /// This function does the same thing as the one above, but allocates and
     /// return the list of selected indexes in a `std::vector`
-    std::vector<size_t> select(const Labels& selection) const {
+    std::vector<uint64_t> select(const Labels& selection) const {
         auto selected_count = this->count();
-        auto selected = std::vector<size_t>(selected_count, static_cast<size_t>(-1));
-        std::vector<int64_t> selected_i64;
+        auto selected = std::vector<uint64_t>(selected_count, static_cast<uint64_t>(-1));
 
-        int64_t* selected_ptr = nullptr;
-        if (sizeof(size_t) == sizeof(int64_t)) {
-            selected_ptr = reinterpret_cast<int64_t*>(selected.data());
-        } else {
-            selected_i64.resize(selected_count, -1);
-            selected_ptr = selected_i64.data();
-        }
-
-        this->select(selection, selected_ptr, &selected_count);
+        this->select(selection, selected.data(), &selected_count);
         selected.resize(selected_count);
-
-        if (sizeof(size_t) != sizeof(int64_t)) {
-            for (size_t i = 0; i < selected_count; i++) {
-                selected[i] = static_cast<size_t>(selected_ptr[i]);
-            }
-        }
 
         return selected;
     }

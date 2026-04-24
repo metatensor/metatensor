@@ -27,6 +27,7 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The default array is now based on `Arc<RwLock<ndarray::ArrayD<T>>>`, to allow
   passing data back to other languages through DLPack while enforcing Rust's
   mutable XOR shared rules.
+- `Labels::select` now returns a `Vec<usize>` instead of a `Vec<i64>`
 
 ### Removed
 

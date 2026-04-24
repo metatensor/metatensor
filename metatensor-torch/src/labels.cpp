@@ -603,7 +603,10 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
 
     labels_.select(
         selection->labels_,
-        selected.data_ptr<int64_t>(),
+        // we assume that we can pass a pointer to `int64_t` instead of
+        // `uint64_t`, which should be fine on all platforms since they all use
+        // 2-complement representation and the values should always be positive.
+        reinterpret_cast<uint64_t*>(selected.mutable_data_ptr()),
         &selected_count
     );
 

@@ -567,16 +567,16 @@ impl Labels {
     /// output, it will contain the indexes in `self` that match the selection.
     /// This function returns the number of selected entries, i.e. the number of
     /// valid indexes in `selected`.
-    pub fn select(&self, selection: &Labels, selected: &mut [i64]) -> Result<usize, Error> {
+    pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
         assert!(selected.len() == self.count());
-        selected.fill(-1);
+        selected.fill(u64::MAX);
 
         let mut n_selected = 0;
         if selection.dimensions == self.dimensions {
             for entry in &selection.to_cpu() {
                 #[allow(clippy::cast_possible_wrap)]
                 if let Some(position) = self.position(entry) {
-                    selected[n_selected] = position as i64;
+                    selected[n_selected] = position as u64;
                     n_selected += 1;
                 }
             }
@@ -602,7 +602,7 @@ impl Labels {
 
                 #[allow(clippy::cast_possible_wrap)]
                 if selection.contains(&candidate) {
-                    selected[n_selected] = entry_i as i64;
+                    selected[n_selected] = entry_i as u64;
                     n_selected += 1;
                 }
             }

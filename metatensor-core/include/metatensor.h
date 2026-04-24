@@ -673,7 +673,7 @@ mts_status_t mts_labels_difference(const struct mts_labels_t *first,
  */
 mts_status_t mts_labels_select(const struct mts_labels_t *labels,
                                const struct mts_labels_t *selection,
-                               int64_t *selected,
+                               uint64_t *selected,
                                uintptr_t *selected_count);
 
 /**

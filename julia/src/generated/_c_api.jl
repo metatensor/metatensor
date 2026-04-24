@@ -266,10 +266,10 @@ function mts_labels_difference(first::Ptr{mts_labels_t}, second::Ptr{mts_labels_
     )
 end
 
-function mts_labels_select(labels::Ptr{mts_labels_t}, selection::Ptr{mts_labels_t}, selected::Ptr{Int64}, selected_count::Ptr{UIntptr})
+function mts_labels_select(labels::Ptr{mts_labels_t}, selection::Ptr{mts_labels_t}, selected::Ptr{UInt64}, selected_count::Ptr{UIntptr})
     ccall((:mts_labels_select, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{mts_labels_t}, Ptr{Int64}, Ptr{UIntptr},),
+        (Ptr{mts_labels_t}, Ptr{mts_labels_t}, Ptr{UInt64}, Ptr{UIntptr},),
         labels, selection, selected, selected_count
     )
 end
