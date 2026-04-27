@@ -102,11 +102,17 @@ public:
 
     /// Create labels with the given `dimensions` and `values`. `values` must be
     /// an array with `count x dimensions.size()` elements.
+    ///
+    /// This function makes a copy of the data. Use constructor taking an
+    /// `MtsArray` for zero-copy construction.
     Labels(const std::vector<std::string>& dimensions, const int32_t* values, size_t count):
         Labels(details::labels_from_cxx(dimensions, values, count, false)) {}
 
     /// Unchecked variant, caller promises the labels are unique. Calling with
     /// non-unique entries is invalid and can lead to crashes or infinite loops.
+    ///
+    /// This function makes a copy of the data. Use constructor taking an
+    /// `MtsArray` for zero-copy construction.
     Labels(const std::vector<std::string>& dimensions, const int32_t* values, size_t count, assume_unique):
         Labels(details::labels_from_cxx(dimensions, values, count, true)) {}
 

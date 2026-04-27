@@ -1,0 +1,132 @@
+name: Other tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Check all PR
+
+concurrency:
+  group: other-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # check that the C API declarations are correctly used by Rust and Python
+  prevent-bitrot:
+    runs-on: ubuntu-24.04
+    name: check C API declarations
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.14"
+          enable-cache: true
+          activate-environment: true
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          components: rustfmt
+
+      - name: install python dependencies
+        run: |
+          uv pip install pycparser
+
+      - name: install bindgen
+        run: |
+          cargo install bindgen-cli --version ^0.72.1
+
+      - name: check that Rust/Python/Julia C API declarations are up to date
+        run: |
+          ./scripts/update-declarations.py
+          git diff --exit-code
+
+      - name: check that C API functions are all documented
+        run: |
+          python scripts/check-c-api-docs.py
+
+  # make sure no debug print stays in the code
+  check-debug-prints:
+    runs-on: ubuntu-24.04
+    name: check leftover debug print
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: install ripgrep
+        run: |
+          sudo apt install ripgrep
+
+      - name: check for leftover dbg!
+        run: |
+          # use ripgrep (rg) to check for instances of `dbg!` in rust files.
+          # rg will return 1 if it fails to find a match, so we invert it again
+          # with the `!` builtin to get the error/success in CI
+
+          ! rg "dbg!" --type=rust --quiet
+
+      - name: check for leftover \#include <iostream>
+        run: |
+          ! rg "<iostream>" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet
+
+      - name: check for leftover std::cout
+        run: |
+          ! rg "cout" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet
+
+      - name: check for leftover std::cerr
+        run: |
+          ! rg "cerr" --iglob "\!metatensor-core/tests/cpp/external/catch/catch.hpp" --quiet
+
+  # check that benchmarks compile and run once without crashing
+  check-benchmarks:
+    runs-on: ubuntu-24.04
+    name: check benchmarks
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          activate-environment: true
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
+
+      - name: Setup sccache
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.10.0"
+
+      - name: setup MSVC command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
+      - name: install tests dependencies
+        run: |
+          uv tool install tox --with tox-uv
+
+      - name: run benchmarks in test mode
+        run: tox -e bench -- --test
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
