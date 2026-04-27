@@ -59,6 +59,7 @@ set(PROJECT_VERSION ${METATENSOR_FULL_VERSION})
 # an installed library (see cmake/metatensor-config.cmake)
 option(BUILD_SHARED_LIBS "Use a shared library by default instead of a static one" ON)
 option(METATENSOR_INSTALL_BOTH_STATIC_SHARED "Install both shared and static libraries" ON)
+option(METATENSOR_BUILD_BENCHMARKS "Build benchmark executables" OFF)
 
 set(RUST_BUILD_TARGET "${RUST_BUILD_TARGET}" CACHE STRING "Cross-compilation target for rust code. Leave empty to build for the host")
 set(EXTRA_RUST_FLAGS "${EXTRA_RUST_FLAGS}" CACHE STRING "Flags used to build rust code")
@@ -258,9 +259,9 @@ if (CARGO_VERSION_CHANGED)
         list(REMOVE_DUPLICATES stripped_lib_list)
         set(CARGO_DEFAULT_LIBRARIES "${stripped_lib_list}" CACHE INTERNAL "list of implicitly linked libraries")
 
-        # if (${METATENSOR_MAIN_PROJECT})
+        if (${METATENSOR_MAIN_PROJECT})
             message(STATUS "Cargo default link libraries are: ${CARGO_DEFAULT_LIBRARIES}")
-        # endif()
+        endif()
     else()
         message(FATAL_ERROR "could not find default static libs: `native-static-libs` not found in: `${cargo_static_libs_stderr}`")
     endif()
@@ -404,6 +405,11 @@ if (BUILD_SHARED_LIBS)
     add_library(metatensor ALIAS metatensor::shared)
 else()
     add_library(metatensor ALIAS metatensor::static)
+endif()
+
+
+if (METATENSOR_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
 
 #------------------------------------------------------------------------------#

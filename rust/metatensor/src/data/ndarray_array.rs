@@ -8,9 +8,12 @@ use crate::c_api::mts_data_movement_t;
 
 use super::{Array, MtsArray};
 
-impl<T> From<ndarray::ArrayD<T>> for MtsArray where T: 'static + Clone + Send + Default + Sync + GetDLPackDataType + DLPackPointerCast {
-    fn from(value: ndarray::ArrayD<T>) -> Self {
-        let array = Arc::new(RwLock::new(value));
+impl<T, D> From<ndarray::Array<T, D>> for MtsArray where
+    T: 'static + Clone + Send + Default + Sync + GetDLPackDataType + DLPackPointerCast,
+    D: ndarray::Dimension
+{
+    fn from(value: ndarray::Array<T, D>) -> Self {
+        let array = Arc::new(RwLock::new(value.into_dyn()));
         let boxed: Box<dyn Array> = Box::new(array);
         return MtsArray::from(boxed);
     }
