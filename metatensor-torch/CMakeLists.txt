@@ -30,6 +30,7 @@ project(metatensor_torch
 set(PROJECT_VERSION ${METATENSOR_TORCH_FULL_VERSION})
 
 option(METATENSOR_TORCH_TESTS "Build metatensor-torch C++ tests" OFF)
+option(METATENSOR_TORCH_BUILD_BENCHMARKS "Build metatensor-torch C++ benchmarks" OFF)
 include(GNUInstallDirs)
 
 # Set a default build type if none was specified
@@ -171,6 +172,10 @@ file(COPY_FILE ${_path_} ${_destination_} ONLY_IF_DIFFERENT)
 if (METATENSOR_TORCH_TESTS)
     enable_testing()
     add_subdirectory(tests)
+endif()
+
+if (METATENSOR_TORCH_BUILD_BENCHMARKS)
+    add_subdirectory(benchmarks)
 endif()
 
 #------------------------------------------------------------------------------#
