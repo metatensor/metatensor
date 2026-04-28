@@ -2,8 +2,6 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::ffi::CString;
 
-use dlpk::DLDevice;
-
 use crate::utils::ConstCString;
 use crate::TensorBlock;
 use crate::{Labels, Error};
@@ -36,15 +34,17 @@ pub struct TensorMap {
 
 fn check_labels_dimensions(
     block: &TensorBlock,
-    sample_dimensions: &[&str],
-    component_dimensions: &[Vec<&str>],
+    sample_dimensions: &[ConstCString],
+    component_dimensions: &[Vec<ConstCString>],
     context: &str,
 ) -> Result<(), Error> {
-    if block.samples.dimensions() != sample_dimensions {
+    if block.samples.c_dimensions() != sample_dimensions {
+        let got = block.samples.dimensions().join(", ");
+        let expected = sample_dimensions.iter().map(ConstCString::as_str).collect::<Vec<_>>().join(", ");
         return Err(Error::InvalidParameter(format!(
             "all blocks must have the same sample dimensions, got [{}] and [{}]{}",
-            block.samples.dimensions().join(", "),
-            sample_dimensions.join(", "),
+            got,
+            expected,
             context,
         )));
     }
@@ -60,11 +60,13 @@ fn check_labels_dimensions(
     }
 
     for (component_i, component) in block.components.iter().enumerate() {
-        if component.dimensions() != component_dimensions[component_i] {
+        if component.c_dimensions() != component_dimensions[component_i] {
+            let got = component.dimensions().join(", ");
+            let expected = component_dimensions[component_i].iter().map(ConstCString::as_str).collect::<Vec<_>>().join(", ");
             return Err(Error::InvalidParameter(format!(
                 "all blocks must have the same component dimensions, got [{}] and [{}]{}",
-                component.dimensions().join(", "),
-                component_dimensions[component_i].join(", "),
+                got,
+                expected,
                 context,
             )));
         }
@@ -73,10 +75,15 @@ fn check_labels_dimensions(
     Ok(())
 }
 
-fn check_blocks_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
-    assert!(!blocks.is_empty());
+fn check_origin_device_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
+    if blocks.is_empty() {
+        return Ok(());
+    }
 
     let first_origin = blocks[0].values.origin()?;
+    let first_device = blocks[0].values.device()?;
+    let first_dtype = blocks[0].values.dtype()?;
+
     for block in blocks.iter().skip(1) {
         let block_origin = block.values.origin()?;
         if first_origin != block_origin {
@@ -87,15 +94,7 @@ fn check_blocks_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
                 get_data_origin(block_origin),
             )));
         }
-    }
 
-    return Ok(());
-}
-
-fn check_blocks_device(blocks: &[TensorBlock]) -> Result<DLDevice, Error> {
-    assert!(!blocks.is_empty());
-    let first_device = blocks[0].values.device()?;
-    for block in blocks.iter().skip(1) {
         let block_device = block.values.device()?;
         if first_device != block_device {
             return Err(Error::InvalidParameter(format!(
@@ -104,15 +103,7 @@ fn check_blocks_device(blocks: &[TensorBlock]) -> Result<DLDevice, Error> {
                 first_device, block_device,
             )));
         }
-    }
 
-    return Ok(first_device);
-}
-
-fn check_blocks_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
-    assert!(!blocks.is_empty());
-    let first_dtype = blocks[0].values.dtype()?;
-    for block in blocks.iter().skip(1) {
         let block_dtype = block.values.dtype()?;
         if first_dtype != block_dtype {
             return Err(Error::InvalidParameter(format!(
@@ -172,12 +163,12 @@ impl TensorMap {
             )))
         }
 
+
         if !blocks.is_empty() {
-            check_blocks_origin(&blocks)?;
-            let blocks_device = check_blocks_device(&blocks)?;
-            check_blocks_dtype(&blocks)?;
+            check_origin_device_dtype(&blocks)?;
 
             let keys_devices = keys.values().device()?;
+            let blocks_device = blocks[0].values.device()?;
             if keys_devices != blocks_device {
                 return Err(Error::InvalidParameter(format!(
                     "tried to build a TensorMap from keys and blocks on different devices: \
@@ -188,28 +179,37 @@ impl TensorMap {
             }
 
             // extract metadata from the first block
-            let sample_dimensions = blocks[0].samples.dimensions();
+            let sample_dimensions = blocks[0].samples.c_dimensions().to_vec();
             let component_dimensions = blocks[0].components.iter()
-                .map(|c| c.dimensions())
+                .map(|c| c.c_dimensions().to_vec())
                 .collect::<Vec<_>>();
-            let property_dimensions = blocks[0].properties.dimensions();
+            let property_dimensions = blocks[0].properties.c_dimensions().to_vec();
             let gradient_map = GradientMap::new(&blocks[0]);
+            let first_block_has_gradients = !blocks[0].gradients().is_empty();
 
             for block in &blocks {
                 // check samples and components are the same as those of the first block
                 check_labels_dimensions(block, &sample_dimensions, &component_dimensions, "")?;
 
                 // check properties are the same as those of the first block
-                if block.properties.dimensions() != property_dimensions {
+                if block.properties.c_dimensions() != property_dimensions {
+                    let got = block.properties.dimensions().join(", ");
+                    let expected = property_dimensions.iter().map(ConstCString::as_str).collect::<Vec<_>>().join(", ");
                     return Err(Error::InvalidParameter(format!(
                         "all blocks must have the same property dimensions, got [{}] and [{}]",
-                        block.properties.dimensions().join(", "),
-                        property_dimensions.join(", "),
+                        got,
+                        expected,
                     )));
                 }
 
                 // check gradients are the same as those of the first block
-                if GradientMap::new(block) != gradient_map {
+                let gradients_match = if first_block_has_gradients {
+                    GradientMap::new(block) == gradient_map
+                } else {
+                    block.gradients().is_empty()
+                };
+
+                if !gradients_match {
                     return Err(Error::InvalidParameter(
                         "all blocks must have the same set of gradients, with \
                         the same sample, property and component dimensions, \

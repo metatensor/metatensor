@@ -1,9 +1,12 @@
 use std::os::raw::c_char;
 use std::sync::Arc;
+use std::hash::BuildHasherDefault;
 use std::ffi::CStr;
 use std::ffi::CString;
 use crate::utils::ConstCString;
-use std::collections::BTreeSet;
+use hashbrown::HashSet;
+
+type FastHasher = BuildHasherDefault<ahash::AHasher>;
 
 use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
 
@@ -78,17 +81,25 @@ pub unsafe extern "C" fn mts_tensormap(
     let status = catch_unwind(move || {
         check_pointers_non_null!(keys);
 
-        let mut blocks_vec = Vec::new();
+        let mut blocks_vec = Vec::with_capacity(blocks_count);
         if blocks_count != 0 {
             check_pointers_non_null!(blocks);
 
             let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count);
             // check for uniqueness of the pointers: we don't want to move out
             // the same value twice
-            if blocks_slice.iter().collect::<BTreeSet<_>>().len() != blocks_slice.len() {
-                return Err(Error::InvalidParameter(
-                    "got the same block more than once when constructing a tensor map".into()
-                ));
+            if blocks_count > 1 {
+                let mut block_ptrs = HashSet::<*const mts_block_t, FastHasher>::with_capacity_and_hasher(
+                    blocks_count,
+                    FastHasher::default(),
+                );
+                for block in blocks_slice.iter() {
+                    if !block_ptrs.insert((*block).cast_const()) {
+                        return Err(Error::InvalidParameter(
+                            "got the same block more than once when constructing a tensor map".into()
+                        ));
+                    }
+                }
             }
 
             for block_ptr in blocks_slice {
