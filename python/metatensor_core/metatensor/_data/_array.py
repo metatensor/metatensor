@@ -573,19 +573,23 @@ def _mts_array_device_pytorch(this, device_ptr):
     try:
         device_type, device_id = tensor.__dlpack_device__()
         device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
-    except Exception:
-        # Fallback for older torch version that don't have __dlpack_device__
+    except Exception as e:
+        # Fallback for older torch version that don't support all devices in
+        # `__dlpack_device__``
         torch_dev = tensor.device
-        if torch_dev.type == "cpu":
-            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
-        elif torch_dev.type == "cuda":
+        device_id = torch_dev.index if torch_dev.index is not None else 0
+        if torch_dev.type == "meta":
             device_ptr[0] = DLDevice(
-                device_type=DLDeviceType.kDLCUDA, device_id=torch_dev.index or 0
+                device_type=DLDeviceType.kDLExtDev, device_id=device_id
             )
-        elif torch_dev.type == "meta":
-            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLExtDev, device_id=0)
+        elif torch_dev.type == "mps":
+            device_ptr[0] = DLDevice(
+                device_type=DLDeviceType.kDLMetal, device_id=device_id
+            )
         else:
-            raise ValueError(f"unsupported torch device type: {torch_dev.type}")
+            raise ValueError(
+                f"__dlpack_device__ failed for tensor with device={torch_dev}"
+            ) from e
 
 
 _MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")
