@@ -1,6 +1,6 @@
 use std::sync::Arc;
 use std::ffi::CString;
-use std::collections::{HashMap, BTreeSet};
+use std::collections::HashMap;
 
 use crate::labels::CpuLabels;
 use crate::utils::ConstCString;
@@ -55,11 +55,15 @@ fn check_data_and_labels(
     }
 
     // ensure that all component labels have different dimensions
-    let n_components = components.iter().map(|c| c.dimensions()).collect::<BTreeSet<_>>().len();
-    if n_components != components.len() {
-        return Err(Error::InvalidParameter(
-            "invalid block: some of the component dimensions appear more than once in component labels".into(),
-        ));
+    for i in 0..components.len() {
+        for j in (i + 1)..components.len() {
+            if components[i].c_dimensions() == components[j].c_dimensions() {
+                return Err(Error::InvalidParameter(
+                    "invalid block: some of the component dimensions appear \
+                    more than once in component labels".into()
+                ));
+            }
+        }
     }
 
     let mut axis = 1;

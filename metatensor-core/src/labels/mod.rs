@@ -1,6 +1,5 @@
 #![allow(clippy::default_trait_access)]
 use std::{ffi::CString, sync::Arc};
-use std::collections::BTreeSet;
 
 use dlpk::{DLDevice, DLDeviceType, DLPackVersion};
 use hashbrown::HashMap;
@@ -144,6 +143,46 @@ fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, us
     return positions;
 }
 
+/// Check values for uniqueness, and return whether they are sorted.
+fn check_unique_entries(values: &[LabelValue], size: usize) -> Result<bool, Error> {
+    let mut entries = values.chunks_exact(size);
+    let mut previous = match entries.next() {
+        Some(entry) => entry,
+        None => return Ok(true),
+    };
+
+    for entry in entries {
+        // check for unique entries assuming sorted data
+        if previous == entry {
+            let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+            return Err(Error::InvalidParameter(format!(
+                "can not have the same label entry multiple times: [{}] is already present",
+                entry_display
+            )));
+        }
+
+        // the data is not sorted, so we sort and check for unique entries.
+        if previous > entry {
+            let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
+            entries.sort_unstable();
+            if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
+                let repeated = entries[identical];
+                let entry_display = repeated.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
+                return Err(Error::InvalidParameter(format!(
+                    "can not have the same label entry multiple times: [{}] is already present",
+                    entry_display
+                )));
+            }
+
+            return Ok(false);
+        }
+
+        previous = entry;
+    }
+
+    Ok(true)
+}
+
 impl Labels {
     pub fn empty(dimensions: &[&str]) -> Result<Labels, Error> {
         return Labels::from_vec(dimensions, Vec::new());
@@ -210,17 +249,10 @@ impl Labels {
         let size = dimensions.len();
         let count = values.len() / size;
 
+        let mut sorted = OnceCell::new();
         if check_unique {
-            let mut entries = values.chunks_exact(size).collect::<Vec<_>>();
-            entries.sort_unstable();
-            if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
-                let entry = entries[identical];
-                let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
-                return Err(Error::InvalidParameter(format!(
-                    "can not have the same label entry multiple times: [{}] is already present",
-                    entry_display
-                )));
-            }
+            let is_sorted = check_unique_entries(&values, size)?;
+            sorted = OnceCell::with_value(is_sorted);
         }
 
         let cpu_values = values.clone();
@@ -231,7 +263,7 @@ impl Labels {
             values,
             count,
             cpu_values: OnceCell::with_value(cpu_values),
-            sorted: OnceCell::new(),
+            sorted,
             positions: OnceCell::new(),
         })
     }
@@ -246,12 +278,13 @@ impl Labels {
             }
         }
 
-        let mut unique_dimensions = BTreeSet::new();
-        for dimension in dimensions {
-            if !unique_dimensions.insert(dimension) {
-                return Err(Error::InvalidParameter(format!(
-                    "label dimensions must be unique, got '{}' multiple times", dimension
-                )));
+        for i in 0..dimensions.len() {
+            for j in (i + 1)..dimensions.len() {
+                if dimensions[i] == dimensions[j] {
+                    return Err(Error::InvalidParameter(format!(
+                        "label dimensions must be unique, got '{}' multiple times", dimensions[i]
+                    )));
+                }
             }
         }
 
@@ -283,18 +316,13 @@ impl Labels {
         assert_eq!(shape[1], size);
 
         let mut cpu_values = OnceCell::new();
+        let mut sorted = OnceCell::new();
+
         if check_unique {
             cpu_values = OnceCell::with_value(load_values_from_array(&values, size)?);
-            let mut entries = cpu_values.get_mut().expect("we just initialized these").chunks_exact(size).collect::<Vec<_>>();
-            entries.sort_unstable();
-            if let Some(identical) = entries.windows(2).position(|w| w[0] == w[1]) {
-                let entry = entries[identical];
-                let entry_display = entry.iter().map(|v| v.to_string()).collect::<Vec<_>>().join(", ");
-                return Err(Error::InvalidParameter(format!(
-                    "can not have the same label entry multiple times: [{}] is already present",
-                    entry_display
-                )));
-            }
+            let values = cpu_values.get_mut().expect("we just initialized these");
+            let is_sorted = check_unique_entries(values, size)?;
+            sorted = OnceCell::with_value(is_sorted);
         }
 
         Ok(Labels {
@@ -302,7 +330,7 @@ impl Labels {
             values,
             count,
             cpu_values,
-            sorted: OnceCell::new(),
+            sorted,
             positions: OnceCell::new(),
         })
     }
@@ -828,9 +856,8 @@ mod tests {
             vec![0, 1, /**/ 1, 2]
         ).unwrap();
 
-        assert!(labels.sorted.get().is_none());
-        assert!(labels.is_sorted());
-        assert!(labels.sorted.get().is_some());
+        // `sorted` should be initialized by `from_vec`
+        assert!(labels.sorted.get() == Some(&true));
 
         let labels = Labels::from_vec(&["aa", "bb"],
             vec![0, 1, /**/ 1, 2, /**/ 0, 2]
