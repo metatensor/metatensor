@@ -63,6 +63,8 @@ pub struct Labels {
     /// The values of the labels, one row per entry. This is stored in a
     /// `mts_array_t` to allow it to live on GPU if needed.
     values: mts_array_t,
+    /// Number of rows in `values`.
+    count: usize,
     /// CPU values, lazily materialized from array via DLPack
     cpu_values: OnceCell<Vec<LabelValue>>,
     /// Whether the entries of the labels (i.e. the rows of the 2D array) are
@@ -125,6 +127,8 @@ impl std::fmt::Debug for Labels {
 }
 
 fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, LabelsHasher> {
+    debug_assert!(values.len() % size == 0);
+
     let mut positions = HashMap::with_hasher(LabelsHasher::default());
 
     if size != 0 {
@@ -196,6 +200,7 @@ impl Labels {
             return Ok(Labels {
                 dimensions: Vec::new(),
                 values: create_array_from_vec(Vec::new(), 0, 0),
+                count: 0,
                 cpu_values: OnceCell::with_value(Vec::new()),
                 sorted: OnceCell::with_value(true),
                 positions: Default::default(),
@@ -203,7 +208,6 @@ impl Labels {
         }
 
         let size = dimensions.len();
-        assert!(dimensions.len() % size == 0);
         let count = values.len() / size;
 
         if check_unique {
@@ -225,6 +229,7 @@ impl Labels {
         Ok(Labels {
             dimensions,
             values,
+            count,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted: OnceCell::new(),
             positions: OnceCell::new(),
@@ -265,6 +270,7 @@ impl Labels {
             return Ok(Labels {
                 dimensions: Vec::new(),
                 values: create_array_from_vec(Vec::new(), 0, 0),
+                count: 0,
                 cpu_values: OnceCell::with_value(Vec::new()),
                 sorted: OnceCell::with_value(true),
                 positions: Default::default(),
@@ -272,7 +278,9 @@ impl Labels {
         }
 
         let size = dimensions.len();
-        assert!(dimensions.len() % size == 0);
+        let shape = values.shape()?;
+        let count = shape[0];
+        assert_eq!(shape[1], size);
 
         let mut cpu_values = OnceCell::new();
         if check_unique {
@@ -292,6 +300,7 @@ impl Labels {
         Ok(Labels {
             dimensions,
             values,
+            count,
             cpu_values,
             sorted: OnceCell::new(),
             positions: OnceCell::new(),
@@ -369,7 +378,7 @@ impl Labels {
 
     /// Get the total number of entries in this set of labels.
     pub fn count(&self) -> usize {
-        self.values.shape().expect("could not get the shape of labels")[0]
+        self.count
     }
 
     /// Check if this set of Labels is empty (contains no entry)
@@ -421,7 +430,7 @@ impl Labels {
         let mut values = self.values_cpu().to_vec();
 
         if !first_mapping.is_empty() {
-            assert!(first_mapping.len() == self.count());
+            debug_assert!(first_mapping.len() == self.count());
             #[allow(clippy::cast_possible_wrap)]
             for i in 0..self.count() {
                 first_mapping[i] = i as i64;
@@ -455,6 +464,7 @@ impl Labels {
         let result = Labels {
             dimensions: self.dimensions.clone(),
             values,
+            count,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted: OnceCell::new(),
             positions: OnceCell::with_value(positions),
@@ -538,6 +548,7 @@ impl Labels {
         let result = Labels {
             dimensions: self.dimensions.clone(),
             values,
+            count,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted,
             positions: OnceCell::new(),
@@ -610,9 +621,10 @@ impl Labels {
 
         let result = Labels {
             dimensions: self.dimensions.clone(),
-            values,
+            values: values,
+            count: count,
             cpu_values: OnceCell::with_value(cpu_values),
-            sorted,
+            sorted: sorted,
             positions: OnceCell::new(),
         };
 
