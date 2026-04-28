@@ -35,7 +35,8 @@ impl Array for EmptyArray {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
-    fn copy(&self) -> Box<dyn Array> {
+    fn copy(&self, device: DLDevice) -> Box<dyn Array> {
+        assert_eq!(device, DLDevice::cpu());
         Box::new(EmptyArray { shape: self.shape.clone() })
     }
 

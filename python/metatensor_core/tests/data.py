@@ -136,20 +136,24 @@ class MtsArrayMixin:
 
     def test_copy(self):
         array = self.create_array((2, 3, 4))
-        array[1, :, :] = 3
-        array[1, 2, :] = 5
         mts_array = metatensor._data.create_mts_array(array)
 
-        copy = mts_array_t()
-        check_status(mts_array.copy(mts_array.ptr, copy))
+        for device, dl_device in self.available_devices():
+            if device == "mps" and torch.__version__ < "2.8.0":
+                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
 
-        array_copy = metatensor._data.mts_array_to_python_array(copy)
-        assert id(array_copy) != id(array)
+            copy = mts_array_t()
+            # copy from CPU to the given device
+            check_status(mts_array.copy(mts_array.ptr, dl_device, copy))
 
-        assert_equal(self.to_numpy(array_copy), self.to_numpy(array))
+            array_copy = metatensor._data.mts_array_to_python_array(copy)
+            assert id(array_copy) != id(array)
+
+            assert_equal(self.to_numpy(array_copy), self.to_numpy(array))
+
+            free_mts_array(copy)
 
         free_mts_array(mts_array)
-        free_mts_array(copy)
 
     def test_move_data(self):
         array = self.create_array((2, 3, 8))
@@ -196,68 +200,81 @@ class MtsArrayMixin:
         free_mts_array(mts_array)
         free_mts_array(mts_array_other)
 
-    def get_available_devices():
-        devices = [("cpu", DLDevice(1, 0))]
-        if HAS_TORCH and torch.cuda.is_available():
-            devices.append(("cuda", DLDevice(2, 0)))
-        if can_use_mps_backend():
-            devices.append(("mps", DLDevice(8, 0)))
-        return devices
+    def test_dlpack(self):
+        for device, dl_device in self.available_devices():
+            if device == "mps" and torch.__version__ < "2.8.0":
+                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
 
-    @pytest.mark.parametrize("device, dldevice", get_available_devices())
-    def test_dlpack(self, device, dldevice):
-        if device == "mps" and torch.__version__ < "2.8.0":
-            pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
+            # Create a sample array
+            array = self.create_array((2, 3), device=device)
+            mts_array = metatensor._data.create_mts_array(array)
 
-        # Create a sample array
-        array = self.create_array((2, 3))
-        if self.expected_origin() == "python.numpy" and device != "cpu":
-            pytest.skip("NumPy only supports CPU")
-        if not device:
-            pytest.skip()
-        if isinstance(array, torch.Tensor):
-            array = torch.asarray(array, device=device)
-        mts_array = metatensor._data.create_mts_array(array)
+            # Prepare a pointer to receive the DLManagedTensorVersioned
+            dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+            version = DLPackVersion(1, 0)
 
-        # Prepare a pointer to receive the DLManagedTensorVersioned
-        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
-        version = DLPackVersion(1, 0)
-
-        check_status(
-            mts_array.as_dlpack(
-                mts_array.ptr,
-                ctypes.byref(dl_managed_ptr),
-                dldevice,
-                None,  # stream
-                version,
+            check_status(
+                mts_array.as_dlpack(
+                    mts_array.ptr,
+                    ctypes.byref(dl_managed_ptr),
+                    dl_device,
+                    None,  # stream
+                    version,
+                )
             )
-        )
 
-        # Check we got a valid pointer back
-        assert bool(dl_managed_ptr)
+            # Check we got a valid pointer back
+            assert bool(dl_managed_ptr)
 
-        # Dereference to check contents
-        managed = dl_managed_ptr.contents
-        dl_tensor = managed.dl_tensor
+            # Dereference to check contents
+            managed = dl_managed_ptr.contents
+            dl_tensor = managed.dl_tensor
 
-        # Verify Metadata
-        assert managed.version.major == 1
-        assert managed.version.minor <= 3
-        assert dl_tensor.ndim == 2
-        assert dl_tensor.shape[0] == 2
-        assert dl_tensor.shape[1] == 3
+            # Verify Metadata
+            assert managed.version.major == 1
+            assert managed.version.minor <= 3
+            assert dl_tensor.ndim == 2
+            assert dl_tensor.shape[0] == 2
+            assert dl_tensor.shape[1] == 3
 
-        # Verify Data Pointer matches the source array
-        if self.expected_origin() == "python.numpy":
-            assert dl_tensor.data == array.ctypes.data
-        elif self.expected_origin() == "python.torch":
-            assert dl_tensor.data == array.data_ptr()
+            # Verify Data Pointer matches the source array
+            if self.expected_origin() == "python.numpy":
+                assert dl_tensor.data == array.ctypes.data
+            elif self.expected_origin() == "python.torch":
+                assert dl_tensor.data == array.data_ptr()
 
-        # IMPORTANT: Call the deleter to cleanup the C-side resources (and refcounts)
-        # This emulates what a consumer (like another library) would do.
-        managed.deleter(dl_managed_ptr)
+            # IMPORTANT: Call the deleter to cleanup the C-side resources (and
+            # refcounts) This emulates what a consumer (like another library) would do.
+            managed.deleter(dl_managed_ptr)
 
-        free_mts_array(mts_array)
+            # also check getting the data back to CPU
+            check_status(
+                mts_array.as_dlpack(
+                    mts_array.ptr,
+                    ctypes.byref(dl_managed_ptr),
+                    DLDevice(DLDeviceType.kDLCPU, 0),
+                    None,  # stream
+                    version,
+                )
+            )
+
+            # Check we got a valid pointer back
+            assert bool(dl_managed_ptr)
+
+            # Dereference to check contents
+            managed = dl_managed_ptr.contents
+            dl_tensor = managed.dl_tensor
+
+            # Verify Metadata
+            assert managed.version.major == 1
+            assert managed.version.minor <= 3
+            assert dl_tensor.ndim == 2
+            assert dl_tensor.shape[0] == 2
+            assert dl_tensor.shape[1] == 3
+
+            managed.deleter(dl_managed_ptr)
+
+            free_mts_array(mts_array)
 
 
 class TestNumpyData(MtsArrayMixin):
@@ -280,7 +297,9 @@ class TestNumpyData(MtsArrayMixin):
     def expected_origin(self):
         return "python.numpy"
 
-    def create_array(self, shape, dtype=np.float64):
+    def create_array(self, shape, dtype=np.float64, device="cpu"):
+        assert device == "cpu"
+
         if dtype == np.bool_:
             return np.ones(shape, dtype=dtype)
         elif dtype in [
@@ -299,6 +318,9 @@ class TestNumpyData(MtsArrayMixin):
 
     def to_numpy(self, array):
         return np.array(array)
+
+    def available_devices(self):
+        return [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
 
 
 if HAS_TORCH:
@@ -331,9 +353,9 @@ if HAS_TORCH:
         def expected_origin(self):
             return "python.torch"
 
-        def create_array(self, shape, dtype=torch.float32):
+        def create_array(self, shape, dtype=torch.float32, device="cpu"):
             if dtype == torch.bool:
-                return torch.ones(shape, dtype=dtype)
+                return torch.ones(shape, dtype=dtype, device=device)
             elif dtype in [
                 torch.int64,
                 torch.int32,
@@ -344,12 +366,20 @@ if HAS_TORCH:
                 torch.uint16,
                 torch.uint8,
             ]:
-                return torch.randint(0, 42, shape, dtype=dtype)
+                return torch.randint(0, 42, shape, dtype=dtype, device=device)
             else:
-                return torch.rand(shape, dtype=dtype)
+                return torch.rand(shape, dtype=dtype, device=device)
 
         def to_numpy(self, array):
-            return array.numpy()
+            return array.cpu().numpy()
+
+        def available_devices(self):
+            devices = [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
+            if HAS_TORCH and torch.cuda.is_available():
+                devices.append(("cuda", DLDevice(DLDeviceType.kDLCUDA, 0)))
+            if can_use_mps_backend():
+                devices.append(("mps", DLDevice(DLDeviceType.kDLMetal, 0)))
+            return devices
 
 
 def _get_shape(mts_array, test):

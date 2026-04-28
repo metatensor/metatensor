@@ -674,7 +674,7 @@ public:
             throw Error("invalid mts_array_t: null copy function pointer");
         }
         mts_array_t new_array;
-        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+        details::check_status(other.array_.copy(other.array_.ptr, other.device(), &new_array));
 
         *this = MtsArray(new_array);
     }
@@ -685,7 +685,7 @@ public:
             throw Error("invalid mts_array_t: null copy function pointer");
         }
         mts_array_t new_array;
-        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+        details::check_status(other.array_.copy(other.array_.ptr, other.device(), &new_array));
 
         *this = MtsArray(new_array);
         return *this;
@@ -931,13 +931,13 @@ public:
             }, array, dtype);
         };
 
-        array.copy = [](const void* array, mts_array_t* new_array) {
-            return details::catch_exceptions([](const void* array, mts_array_t* new_array){
+        array.copy = [](const void* array, DLDevice device, mts_array_t* new_array) {
+            return details::catch_exceptions([](const void* array, DLDevice device, mts_array_t* new_array){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                auto copy = cxx_array->copy();
+                auto copy = cxx_array->copy(device);
                 auto new_array_cxx = DataArrayBase::to_mts_array(std::move(copy));
                 *new_array = std::move(new_array_cxx).release();
-            }, array, new_array);
+            }, array, device, new_array);
         };
 
         array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t fill_value, mts_array_t* new_array) {
@@ -1054,9 +1054,9 @@ public:
     ) = 0;
 
     /// Make a copy of this DataArrayBase and return the new array. The new
-    /// array is expected to have the same data origin and parameters (data
-    /// type, data location, etc.)
-    virtual std::unique_ptr<DataArrayBase> copy() const = 0;
+    /// array is expected to have the same data origin and dtype, but live on
+    /// the given `device`.
+    virtual std::unique_ptr<DataArrayBase> copy(DLDevice device) const = 0;
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
@@ -1176,7 +1176,10 @@ public:
         data_ = std::make_shared<std::vector<T>>(std::move(new_data));
     }
 
-    std::unique_ptr<DataArrayBase> copy() const override {
+    std::unique_ptr<DataArrayBase> copy(DLDevice device) const override {
+        if (device.device_type != kDLCPU) {
+            throw Error("SimpleDataArray only supports copying to CPU");
+        }
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
     }
 
@@ -1507,7 +1510,10 @@ public:
         std::swap(shape_[axis_1], shape_[axis_2]);
     }
 
-    std::unique_ptr<DataArrayBase> copy() const override {
+    std::unique_ptr<DataArrayBase> copy(DLDevice device) const override {
+        if (device.device_type != kDLCPU) {
+            throw Error("EmptyDataArray only supports copying to CPU");
+        }
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
     }
 

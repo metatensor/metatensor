@@ -158,6 +158,7 @@ pub struct mts_array_t {
     pub copy: ::std::option::Option<
         unsafe extern "C" fn(
             array: *const ::std::os::raw::c_void,
+            device: DLDevice,
             new_array: *mut mts_array_t,
         ) -> mts_status_t,
     >,

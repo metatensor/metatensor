@@ -147,7 +147,7 @@ struct mts_array_t
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
     create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, mts_array_t, Ptr{mts_array_t}) -> mts_status_t =#
-    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
+    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, DLDevice, Ptr{mts_array_t}) -> mts_status_t =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
 

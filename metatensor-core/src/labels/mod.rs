@@ -916,7 +916,7 @@ mod tests {
     fn from_array_lazy_values() {
         // Create a labels array, then build Labels from it
         let original = Labels::from_vec(&["x", "y"], vec![1, 2, 3, 4]).unwrap();
-        let array = original.values().try_clone().unwrap();
+        let array = original.values().copy(DLDevice::cpu()).unwrap();
 
         let labels = Labels::new(&["x", "y"], array).unwrap();
         assert_eq!(labels.count(), 2);
@@ -933,10 +933,10 @@ mod tests {
         let values = vec![1, 10, 2, 20, 3, 30];
         let labels = Labels::from_vec(dimensions, values.clone()).unwrap();
 
-        let values = labels.values().try_clone().unwrap();
+        let values = labels.values().copy(DLDevice::cpu()).unwrap();
         let labels_safe = Labels::new(dimensions, values).unwrap();
 
-        let values = labels.values().try_clone().unwrap();
+        let values = labels.values().copy(DLDevice::cpu()).unwrap();
         let labels_unchecked = unsafe {
             Labels::new_unchecked_uniqueness(dimensions, values).unwrap()
         };

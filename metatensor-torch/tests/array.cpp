@@ -5,8 +5,24 @@ using namespace metatensor_torch;
 
 #include <catch.hpp>
 
+static std::vector<std::pair<torch::Device, DLDevice>> available_devices() {
+    auto devices = std::vector<std::pair<torch::Device, DLDevice>>();
+
+    devices.emplace_back(torch::kCPU, DLDevice{kDLCPU, 0});
+
+    if (torch::cuda::is_available()) {
+        devices.emplace_back(torch::Device(torch::kCUDA, 0), DLDevice{kDLCUDA, 0});
+    }
+
+    if (torch::mps::is_available()) {
+        devices.emplace_back(torch::Device(torch::kMPS, 0), DLDevice{kDLMetal, 0});
+    }
+
+    return devices;
+}
+
 TEST_CASE("Arrays") {
-    auto tensor = torch::zeros({2, 3, 4}, torch::TensorOptions().dtype(torch::kF64));
+    auto tensor = torch::zeros({2, 3, 4}, torch::TensorOptions().dtype(torch::kF32));
     auto array = TorchDataArray(tensor);
 
     SECTION("origin") {
@@ -49,21 +65,32 @@ TEST_CASE("Arrays") {
     }
 
     SECTION("new arrays") {
-        auto copy = array.copy();
+        auto copy = array.copy({kDLCPU, 0});
         auto* copy_ptr = dynamic_cast<TorchDataArray*>(copy.get());
 
         CHECK(copy_ptr->tensor().data_ptr() != array.tensor().data_ptr());
-        CHECK((copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4}));
-        CHECK(copy_ptr->tensor().dtype() == torch::kF64);
+        CHECK(copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4});
+        CHECK(copy_ptr->tensor().dtype() == torch::kF32);
+
+
+        // make a copy on device
+        for (auto [device, dl_device]: available_devices()) {
+            auto device_copy = array.copy(dl_device);
+            auto* device_copy_ptr = dynamic_cast<TorchDataArray*>(device_copy.get());
+
+            CHECK(device_copy_ptr->tensor().sizes() == std::vector<int64_t>{2, 3, 4});
+            CHECK(device_copy_ptr->tensor().dtype() == torch::kF32);
+            CHECK(device_copy_ptr->tensor().device() == device);
+        }
 
         auto fill_value = metatensor::DataArrayBase::to_mts_array(
-            std::make_unique<TorchDataArray>(torch::zeros({}, torch::kF64))
+            std::make_unique<TorchDataArray>(torch::zeros({}, torch::kF32))
         );
         auto created = array.create({5, 6}, std::move(fill_value));
         auto* created_ptr = dynamic_cast<TorchDataArray*>(created.get());
 
         CHECK((created_ptr->tensor().sizes() == std::vector<int64_t>{5, 6}));
-        CHECK(created_ptr->tensor().dtype() == torch::kF64);
+        CHECK(created_ptr->tensor().dtype() == torch::kF32);
     }
 
     SECTION("create with any dtype") {
@@ -289,38 +316,43 @@ TEST_CASE("DLPack conversion") {
     }
 
     SECTION("device transfer") {
-        if (torch::cuda::is_available()) {
-            auto opts = torch::TensorOptions().dtype(torch::kF64);
-            auto cuda_tensor = torch::rand({10}, opts.device(torch::kCUDA));
+        for (auto [device, dl_device]: available_devices()) {
+            if (device.is_mps() && TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR < 8) {
+                // MPS DLPack support was added in PyTorch 2.8
+                continue;
+            }
+
+            auto opts = torch::TensorOptions().dtype(torch::kF32);
+            auto cuda_tensor = torch::rand({10}, opts.device(device));
             auto cuda_array = TorchDataArray(cuda_tensor);
 
-            // CUDA -> CUDA (Same device)
-            auto* dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
-            CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+            // transfer to the same device
+            auto* dl_managed = cuda_array.as_dlpack(/*device=*/dl_device, /*stream=*/nullptr, /*max_version=*/version);
+            CHECK(dl_managed->dl_tensor.device.device_type == dl_device.device_type);
             dl_managed->deleter(dl_managed);
 
-            // CUDA -> CPU (Explicit Transfer)
+            // transfer to CPU
             dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/nullptr, /*max_version=*/version);
 
             CHECK(dl_managed->dl_tensor.device.device_type == kDLCPU);
 
             // Verify data is readable on CPU
-            auto* data = static_cast<double*>(dl_managed->dl_tensor.data);
+            auto* data = static_cast<float*>(dl_managed->dl_tensor.data);
             REQUIRE(data != nullptr);
 
             auto cpu_reference = cuda_tensor.to(torch::kCPU);
             for (int64_t i = 0; i < cpu_reference.numel(); ++i) {
-                CHECK(data[i] == cpu_reference[i].item<double>());
+                CHECK(data[i] == cpu_reference[i].item<float>());
             }
 
             dl_managed->deleter(dl_managed);
 
-            // CPU -> CUDA (Explicit Transfer)
+            // cpu to device
             auto cpu_tensor = torch::rand({10, 10}, opts.device(torch::kCPU));
             auto cpu_array = TorchDataArray(cpu_tensor);
 
-            dl_managed = cpu_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
-            CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+            dl_managed = cpu_array.as_dlpack(/*device=*/dl_device, /*stream=*/nullptr, /*max_version=*/version);
+            CHECK(dl_managed->dl_tensor.device.device_type == dl_device.device_type);
             dl_managed->deleter(dl_managed);
         }
     }

@@ -52,7 +52,7 @@ public:
 
     DLDataType dtype() const override;
 
-    std::unique_ptr<metatensor::DataArrayBase> copy() const override;
+    std::unique_ptr<metatensor::DataArrayBase> copy(DLDevice device) const override;
 
     std::unique_ptr<metatensor::DataArrayBase> create(
         std::vector<uintptr_t> shape,

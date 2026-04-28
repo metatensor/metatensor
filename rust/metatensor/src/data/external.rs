@@ -237,11 +237,11 @@ impl MtsArray {
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<MtsArray, Error> {
+    pub fn copy(&self, device: DLDevice) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status(function(self.array.ptr, &mut new_array))?;
+            check_status(function(self.array.ptr, device, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));

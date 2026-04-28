@@ -88,8 +88,10 @@ mts_data_origin_t TorchDataArray::origin() const {
     return TORCH_DATA_ORIGIN;
 }
 
-std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy() const {
-    return std::unique_ptr<DataArrayBase>(new TorchDataArray(this->tensor().clone()));
+std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy(DLDevice device) const {
+    auto torch_device = dlpack_device_to_torch(device);
+    auto tensor_copy = this->tensor().to(torch_device, /*non_blocking=*/true, /*copy=*/true);
+    return std::unique_ptr<DataArrayBase>(new TorchDataArray(std::move(tensor_copy)));
 }
 
 std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::create(

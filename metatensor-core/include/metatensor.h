@@ -264,10 +264,10 @@ typedef struct mts_array_t {
    */
   mts_status_t (*swap_axes)(void *array, uintptr_t axis_1, uintptr_t axis_2);
   /**
-   * Create a new array with the same options as the current one (data type,
-   * data location, etc.) and the requested `shape`; and store it in
-   * `new_array`. The number of elements in the `shape` array should be given
-   * in `shape_count`.
+   * Create a new array with the same options as the current one (array
+   * origin, data type, device, etc.) and the requested `shape`; and store it
+   * in `new_array`. The number of elements in the `shape` array should be
+   * given in `shape_count`.
    *
    * The new array should be filled with the scalar value from `fill_value`,
    * which must be an `mts_array_t` containing a single scalar (empty shape)
@@ -288,15 +288,15 @@ typedef struct mts_array_t {
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
    *
-   * The new array is expected to have the same data origin and parameters
-   * (data type, data location, etc.)
+   * The new array is expected to have the same array origin and data type as
+   * the original one, but live on the given `device`.
    *
    * This function should return `MTS_SUCCESS` on success, or
    * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
    * should call `mts_set_last_error` with an appropriate error message
    * before returning.
    */
-  mts_status_t (*copy)(const void *array, struct mts_array_t *new_array);
+  mts_status_t (*copy)(const void *array, DLDevice device, struct mts_array_t *new_array);
   /**
    * Set entries in the `output` array (the current array) taking data from
    * the `input` array. The `output` array is guaranteed to be created by

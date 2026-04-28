@@ -44,7 +44,8 @@ where
         return Box::new(Arc::new(RwLock::new(array)));
     }
 
-    fn copy(&self) -> Box<dyn Array> {
+    fn copy(&self, device: DLDevice) -> Box<dyn Array> {
+        assert_eq!(device, DLDevice::cpu(), "Rust ndarray data can only be copied to CPU device");
         return Box::new(self.clone());
     }
 

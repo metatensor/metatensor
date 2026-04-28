@@ -284,7 +284,7 @@ TEST_CASE("TensorMap") {
             BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray<double>(std::move(shape)) {}
 
             [[noreturn]]
-            std::unique_ptr<DataArrayBase> copy() const override {
+            std::unique_ptr<DataArrayBase> copy(DLDevice) const override {
                 throw std::runtime_error("can not copy this!");
             }
         };
