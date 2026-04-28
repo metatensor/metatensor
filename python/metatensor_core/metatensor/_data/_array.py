@@ -323,13 +323,33 @@ def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
 
 
 @catch_exceptions
-def _mts_array_copy(this, new_array):
+def _mts_array_copy(this, device, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     if _is_numpy_array(wrapper.array):
+        if device.device_type != DLDeviceType.kDLCPU:
+            raise ValueError(
+                f"can not copy numpy array to non-cpu device: {device.device_type}"
+            )
         array = wrapper.array.copy()
     elif _is_torch_array(wrapper.array):
-        array = wrapper.array.clone()
+        array = wrapper.array
+
+        if array.device.type == "meta":
+            # for some reason, meta device is not supported by __dlpack_device__
+            current_device = DLDeviceType.kDLExtDev
+            current_id = 0
+        else:
+            (current_device, current_id) = wrapper.array.__dlpack_device__()
+
+        if current_device != device.device_type or current_id != device.device_id:
+            dlpack = wrapper.array.__dlpack__(
+                dl_device=(device.device_type.value, int(device.device_id)),
+                max_version=(1, 0),
+            )
+            array = torch.from_dlpack(dlpack)
+        else:
+            array = wrapper.array.clone()
 
     new_array[0] = create_mts_array(array)
 

@@ -274,10 +274,17 @@ unsafe extern "C" fn labels_array_shape(
 
 unsafe extern "C" fn labels_array_copy(
     array: *const c_void,
+    device: DLDevice,
     new_array: *mut mts_array_t,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(array, new_array);
+
+        if device != DLDevice::cpu() {
+            return Err(Error::InvalidParameter(
+                "labels values owned by metatensor-core only exist on CPU".into()
+            ))
+        }
 
         let array = array.cast::<LabelsValuesArray>();
         Arc::increment_strong_count(array);

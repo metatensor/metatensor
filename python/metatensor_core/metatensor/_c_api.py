@@ -220,7 +220,7 @@ mts_array_t._fields_ = [
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
     ("create", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, mts_array_t, POINTER(mts_array_t))),
-    ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
+    ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, DLDevice, POINTER(mts_array_t))),
     ("move_data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_data_movement_t), c_uintptr_t)),
 ]
 

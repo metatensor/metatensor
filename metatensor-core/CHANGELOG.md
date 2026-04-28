@@ -26,6 +26,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `mts_data_movement_t`.
 - `mts_array_t.data` has been replaced by `mts_array_t.as_dlpack`, returning the
   data using the [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock can now contain data on different devices and with varied dtypes.
+- `mts_array_t.copy` now takes a `device` parameter, indicating on which device
+  the copy should live.
 - Serialization of `mts_tensor_t`, `mts_block_t` and `mts_labels_t` can now be
   done even if the data lives on a different device or uses a dtype other than
   float64. `mts_create_array_callback_t` now takes an extra parameter for the

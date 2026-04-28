@@ -150,7 +150,7 @@ impl TensorBlock {
     /// one of the underlying `mts_array_t` data arrays
     pub fn try_clone(&self) -> Result<TensorBlock, Error> {
         // Try to clone the values
-        let values = self.values.try_clone()?;
+        let values = self.values.copy(self.values.device()?)?;
 
         // Try to clone all gradient blocks
         let mut gradients = HashMap::new();

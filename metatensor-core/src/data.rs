@@ -211,10 +211,10 @@ pub struct mts_array_t {
         axis_2: usize,
     ) -> mts_status_t>,
 
-    /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `shape`; and store it in
-    /// `new_array`. The number of elements in the `shape` array should be given
-    /// in `shape_count`.
+    /// Create a new array with the same options as the current one (array
+    /// origin, data type, device, etc.) and the requested `shape`; and store it
+    /// in `new_array`. The number of elements in the `shape` array should be
+    /// given in `shape_count`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`,
     /// which must be an `mts_array_t` containing a single scalar (empty shape)
@@ -236,8 +236,8 @@ pub struct mts_array_t {
 
     /// Make a copy of this `array` and return the new array in `new_array`.
     ///
-    /// The new array is expected to have the same data origin and parameters
-    /// (data type, data location, etc.)
+    /// The new array is expected to have the same array origin and data type as
+    /// the original one, but live on the given `device`.
     ///
     /// This function should return `MTS_SUCCESS` on success, or
     /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
@@ -245,6 +245,7 @@ pub struct mts_array_t {
     /// before returning.
     pub copy: Option<unsafe extern "C" fn(
         array: *const c_void,
+        device: DLDevice,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
 
@@ -563,12 +564,12 @@ impl mts_array_t {
 
     /// Try to copy this `mts_array_t`. This can fail if the external data can
     /// not be copied for some reason
-    pub fn try_clone(&self) -> Result<mts_array_t, Error> {
+    pub fn copy(&self, device: DLDevice) -> Result<mts_array_t, Error> {
         let function = self.copy.expect("mts_array_t.copy function is NULL");
 
         let mut new_array = mts_array_t::null();
         let status = unsafe {
-            function(self.ptr, &mut new_array)
+            function(self.ptr, device, &mut new_array)
         };
 
         if !status.is_success() {
