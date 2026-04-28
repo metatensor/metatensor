@@ -13,14 +13,6 @@ struct LastError {
     custom_data_deleter: Option<unsafe extern "C" fn(*mut c_void)>,
 }
 
-impl std::ops::Drop for LastError {
-    fn drop(&mut self) {
-        if let Some(deleter) = self.custom_data_deleter {
-            unsafe { deleter(self.custom_data) };
-        }
-    }
-}
-
 // Save the last error message in thread local storage.
 //
 // This is marginally better than a standard global static value because it
@@ -118,11 +110,21 @@ impl From<Error> for mts_status_t {
             return mts_status_t::MTS_CALLBACK_ERROR;
         }
 
-        LAST_ERROR.set(LastError {
-            message: CString::new(format!("{}", error)).expect("error message contains a null byte"),
-            origin: CString::new("metatensor-core").expect("invalid C string"),
-            custom_data: std::ptr::null_mut(),
-            custom_data_deleter: None,
+        LAST_ERROR.with(|last_error| {
+            let mut last_error = last_error.borrow_mut();
+            // if there is a custom data deleter, call it to free the custom data
+            if let Some(deleter) = last_error.custom_data_deleter {
+                unsafe {
+                    deleter(last_error.custom_data);
+                }
+            }
+
+            *last_error = LastError {
+                message: CString::new(format!("{}", error)).expect("error message contains a null byte"),
+                origin: CString::new("metatensor-core").expect("invalid C string"),
+                custom_data: std::ptr::null_mut(),
+                custom_data_deleter: None,
+            };
         });
 
         match error {
@@ -182,14 +184,15 @@ pub unsafe extern "C" fn mts_last_error(
 ) -> mts_status_t {
     let status = std::panic::catch_unwind(|| {
         LAST_ERROR.with(|last_error| {
+            let last_error = last_error.borrow();
             if !message.is_null() {
-                *message = last_error.borrow().message.as_ptr();
+                *message = last_error.message.as_ptr();
             }
             if !origin.is_null() {
-                *origin = last_error.borrow().origin.as_ptr();
+                *origin = last_error.origin.as_ptr();
             }
             if !data.is_null() {
-                *data = last_error.borrow().custom_data;
+                *data = last_error.custom_data;
             }
         });
     });
@@ -246,11 +249,22 @@ pub unsafe extern "C" fn mts_set_last_error(
             CString::from(CStr::from_ptr(origin))
         };
 
-        LAST_ERROR.set(LastError {
-            message: message,
-            origin: origin,
-            custom_data: data,
-            custom_data_deleter: data_deleter,
+        LAST_ERROR.with(|last_error| {
+            let mut last_error = last_error.borrow_mut();
+
+            // if there is a custom data deleter, call it to free the custom data
+            if let Some(deleter) = last_error.custom_data_deleter {
+                unsafe {
+                    deleter(last_error.custom_data);
+                }
+            }
+
+            *last_error = LastError {
+                message: message,
+                origin: origin,
+                custom_data: data,
+                custom_data_deleter: data_deleter,
+            };
         });
         Ok(())
     })
