@@ -1,0 +1,149 @@
+name: Other tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Check all PR
+
+concurrency:
+  group: other-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  # check that the C API declarations are correctly used by Rust and Python
+  prevent-bitrot:
+    runs-on: ubuntu-24.04
+    name: check C API declarations
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.11"
+          enable-cache: true
+          activate-environment: true
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+          target: x86_64-unknown-linux-gnu
+          components: rustfmt
+
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
+
+      - name: install python dependencies
+        run: |
+          uv pip install pycparser
+
+      - name: install bindgen conditionally
+        run: |
+          if ! cargo install --list | grep "bindgen-cli v0.72.1"; then
+            echo "Installing bindgen-cli v0.72.1 from git to use Cargo.lock"
+            git clone --depth 1 --branch v0.72.1 https://github.com/rust-lang/rust-bindgen
+            # Install from the local git clone using its Cargo.lock file
+            # This pins an older 'toml' version compatible with Rust 1.74.1
+            cargo install --path rust-bindgen/bindgen-cli --locked --force
+            rm -rf rust-bindgen
+          fi
+
+      - name: check that Rust/Python/Julia C API declarations are up to date
+        run: |
+          ./scripts/update-declarations.py
+          git diff --exit-code
+
+      - name: check that C API functions are all documented
+        run: |
+          python scripts/check-c-api-docs.py
+
+  # make sure no debug print stays in the code
+  check-debug-prints:
+    runs-on: ubuntu-24.04
+    name: check leftover debug print
+    env:
+      RG_EXCLUDED_PATHS: >-
+        --iglob "!metatensor-core/tests/cpp/external/catch/catch.hpp"
+        --iglob "!metatensor-core/benchmarks/bench_utils.cpp"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: install ripgrep
+        run: |
+          wget https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          tar xf ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
+          echo "$(pwd)/ripgrep-13.0.0-x86_64-unknown-linux-musl" >> $GITHUB_PATH
+
+      - name: check for leftover dbg!
+        run: |
+          # use ripgrep (rg) to check for instances of `dbg!` in rust files.
+          # rg will return 1 if it fails to find a match, so we invert it again
+          # with the `!` builtin to get the error/success in CI
+
+          ! rg "dbg!" --type=rust --quiet
+
+      - name: check for leftover \#include <iostream>
+        run: |
+          ! rg "<iostream>" $RG_EXCLUDED_PATHS --quiet
+
+      - name: check for leftover std::cout
+        run: |
+          ! rg "cout" $RG_EXCLUDED_PATHS --quiet
+
+      - name: check for leftover std::cerr
+        run: |
+          ! rg "cerr" $RG_EXCLUDED_PATHS --quiet
+
+  # check that benchmarks compile and run once without crashing
+  check-benchmarks:
+    runs-on: ubuntu-24.04
+    name: check benchmarks
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          activate-environment: true
+
+      - name: setup rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+
+      - name: Cache Rust dependencies
+        uses: Leafwing-Studios/cargo-cache@v2.6.1
+        with:
+          sweep-cache: true
+
+      - name: Setup sccache
+        if: ${{ !env.ACT }}
+        uses: mozilla-actions/sccache-action@v0.0.9
+        with:
+          version: "v0.10.0"
+
+      - name: setup MSVC command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup sccache environnement variables
+        if: ${{ !env.ACT }}
+        run: |
+          echo "SCCACHE_GHA_ENABLED=true" >> $GITHUB_ENV
+          echo "RUSTC_WRAPPER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+          echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
+
+      - name: install tests dependencies
+        run: |
+          uv tool install tox --with tox-uv
+
+      - name: run benchmarks in test mode
+        run: tox -e bench -- --test
+        env:
+          PIP_EXTRA_INDEX_URL: https://download.pytorch.org/whl/cpu
