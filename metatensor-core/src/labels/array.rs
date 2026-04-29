@@ -371,72 +371,72 @@ unsafe extern "C" fn labels_array_move_data(
     })
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::labels::Labels;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::labels::Labels;
 
-//     #[test]
-//     fn labels_values_array_shape() {
-//         let labels = Labels::new(&["x", "y"], vec![1.into(), 2.into(), 3.into(), 4.into()]).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn labels_values_array_shape() {
+        let labels = Labels::from_vec(&["x", "y"], vec![1, 2, 3, 4]).unwrap();
+        let values = labels.values();
 
-//         let shape = arr.shape().unwrap();
-//         assert_eq!(shape, &[2, 2]);
-//     }
+        let shape = values.shape().unwrap();
+        assert_eq!(shape, &[2, 2]);
+    }
 
-//     #[test]
-//     fn labels_values_array_origin() {
-//         let labels = Labels::new(&["a"], vec![10.into()]).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn labels_values_array_origin() {
+        let labels = Labels::from_vec(&["a"], vec![10]).unwrap();
+        let values = labels.values();
 
-//         let origin = arr.origin().unwrap();
-//         let name = crate::data::get_data_origin(origin);
-//         assert_eq!(name, "metatensor.labels");
-//     }
+        let origin = values.origin().unwrap();
+        let name = crate::data::get_data_origin(origin);
+        assert_eq!(name, "metatensor.Labels");
+    }
 
-//     #[test]
-//     fn labels_values_array_copy() {
-//         let labels = Labels::new(&["a"], vec![10.into(), 20.into()]).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn labels_values_array_copy() {
+        let labels = Labels::from_vec(&["a"], vec![10, 20]).unwrap();
+        let values = labels.values();
 
-//         let cloned = arr.try_clone().unwrap();
-//         let shape = cloned.shape().unwrap();
-//         assert_eq!(shape, &[2, 1]);
-//     }
+        let cloned = values.copy(DLDevice::cpu()).unwrap();
+        let shape = cloned.shape().unwrap();
+        assert_eq!(shape, &[2, 1]);
+    }
 
-//     #[test]
-//     fn empty_labels_values_array() {
-//         let labels = Labels::new(&["a", "b"], Vec::new()).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn empty_labels_values_array() {
+        let labels = Labels::from_vec(&["a", "b"], Vec::new()).unwrap();
+        let values = labels.values();
 
-//         let shape = arr.shape().unwrap();
-//         assert_eq!(shape, &[0, 2]);
-//     }
+        let shape = values.shape().unwrap();
+        assert_eq!(shape, &[0, 2]);
+    }
 
-//     #[test]
-//     fn labels_values_array_device() {
-//         let labels = Labels::new(&["x"], vec![1.into(), 2.into()]).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn labels_values_array_device() {
+        let labels = Labels::from_vec(&["x"], vec![1, 2]).unwrap();
+        let values = labels.values();
 
-//         let device = arr.device().unwrap();
-//         let cpu = DLDevice::cpu();
-//         assert_eq!(device.device_type, cpu.device_type);
-//         assert_eq!(device.device_id, cpu.device_id);
-//     }
+        let device = values.device().unwrap();
+        let cpu = DLDevice::cpu();
+        assert_eq!(device.device_type, cpu.device_type);
+        assert_eq!(device.device_id, cpu.device_id);
+    }
 
-//     #[test]
-//     fn labels_values_array_as_dlpack() {
-//         let labels = Labels::new(&["a", "b"], vec![1.into(), 2.into(), 3.into(), 4.into()]).unwrap();
-//         let arr = labels.values();
+    #[test]
+    fn labels_values_array_as_dlpack() {
+        let labels = Labels::from_vec(&["a", "b"], vec![1, 2, 3, 4]).unwrap();
+        let values = labels.values();
 
-//         let cpu = DLDevice::cpu();
-//         let version = DLPackVersion::current();
-//         let tensor = arr.as_dlpack(cpu, None, version).unwrap();
+        let cpu = DLDevice::cpu();
+        let version = DLPackVersion::current();
+        let tensor = values.as_dlpack(cpu, None, version).unwrap();
 
-//         assert_eq!(tensor.n_dims(), 2);
-//         assert_eq!(tensor.dtype().code, DLDataTypeCode::kDLInt);
-//         assert_eq!(tensor.dtype().bits, 32);
-//         assert_eq!(tensor.shape(), &[2, 2]);
-//     }
-// }
+        assert_eq!(tensor.n_dims(), 2);
+        assert_eq!(tensor.dtype().code, DLDataTypeCode::kDLInt);
+        assert_eq!(tensor.dtype().bits, 32);
+        assert_eq!(tensor.shape(), &[2, 2]);
+    }
+}
