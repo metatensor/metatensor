@@ -14,6 +14,7 @@ using namespace metatensor_torch;
 
 static std::vector<metatensor::Labels> components_from_torch(const std::vector<Labels>& components) {
     auto result = std::vector<metatensor::Labels>();
+    result.reserve(components.size());
     for (const auto& component: components) {
         result.push_back(component->as_metatensor());
     }
