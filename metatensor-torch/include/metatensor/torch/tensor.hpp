@@ -25,14 +25,7 @@ using TensorMap = torch::intrusive_ptr<TensorMapHolder>;
 class METATENSOR_TORCH_EXPORT TensorMapHolder: public torch::CustomClassHolder {
 public:
     /// Create a new `TensorMapHolder` for TorchScript.
-    ///
-    /// In contrast to the TensorMap constructor, this does not move from the
-    /// different blocks, but instead create new ones using the same data and
-    /// metadata, but with incremented reference count.
-    TensorMapHolder(
-        Labels keys,
-        const std::vector<TensorBlock>& blocks
-    );
+    TensorMapHolder(Labels keys, std::vector<TensorBlock> blocks);
 
     /// Make a copy of this `TensorMap`, including all the data contained inside
     TensorMap copy() const;

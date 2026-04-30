@@ -161,10 +161,6 @@ public:
     /// Implementation of __repr__/__str__ for Python
     std::string repr() const;
 
-    /// Get the underlying metatensor TensorBlock
-    const metatensor::TensorBlock& as_metatensor() const {
-        return block_;
-    }
 
     /// Load a serialized TensorBlock from the given path
     static TensorBlock load(const std::string& path);
@@ -179,6 +175,12 @@ public:
     /// Serialize and save a TensorBlock to an in-memory buffer (represented as
     /// a `torch::Tensor` of bytes)
     torch::Tensor save_buffer() const;
+
+    /// Move the `metatensor::TensorBlock` out of this class.
+    ///
+    /// This leaves the `TensorBlockHolder` in an empty state that should no
+    /// longer be used.
+    metatensor::TensorBlock release();
 
 private:
     /// Create a TensorBlockHolder containing gradients with respect to

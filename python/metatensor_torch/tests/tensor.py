@@ -465,7 +465,7 @@ def test_different_device(device_tensor):
         TensorMap(
             keys=device_tensor.keys,
             blocks=[
-                device_tensor.blocks()[0],
+                device_tensor[0].copy(),
                 TensorBlock(
                     values=torch.tensor([[[3.0, 4.0]]]),
                     samples=Labels.range("samples", 1),

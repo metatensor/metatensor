@@ -5,7 +5,7 @@ import pytest
 import torch
 
 import metatensor.torch as mts
-from metatensor.torch import Labels, TensorMap
+from metatensor.torch import Labels, TensorBlock, TensorMap
 
 
 def get_tensor_map():
@@ -26,8 +26,12 @@ def get_tensor_map():
     )
     keys = Labels.range("block", 2)
     blocks = [
-        tensor.block({"center_type": 6, "neighbor_1_type": 1, "neighbor_2_type": 1}),
-        tensor.block({"center_type": 6, "neighbor_1_type": 6, "neighbor_2_type": 6}),
+        tensor.block(
+            {"center_type": 6, "neighbor_1_type": 1, "neighbor_2_type": 1}
+        ).copy(),
+        tensor.block(
+            {"center_type": 6, "neighbor_1_type": 6, "neighbor_2_type": 6}
+        ).copy(),
     ]
     return TensorMap(keys, blocks)
 
@@ -70,39 +74,40 @@ def test_insert():
 def test_insert_dimension_on_empty_labels():
     """https://github.com/metatensor/metatensor/issues/600"""
 
-    s = mts.Labels.empty(["a", "b"])
-    k = mts.Labels(names=["key"], values=torch.tensor([[0], [1]]))
-    b = mts.TensorBlock(
-        samples=s,
+    samples = Labels.empty(["a", "b"])
+    block = TensorBlock(
+        values=torch.zeros((len(samples), 1)),
+        samples=samples,
         components=[],
-        properties=mts.Labels.single(),
-        values=torch.zeros((len(s), 1)),
+        properties=Labels.single(),
     )
 
-    t = mts.TensorMap(
-        keys=k,
-        blocks=[b, b],
+    tensor = TensorMap(
+        keys=Labels(names=["key"], values=torch.tensor([[0], [1]])),
+        blocks=[block.copy(), block.copy()],
     )
 
-    for block in t:
+    for block in tensor:
         assert block.samples.names == ["a", "b"]
-        assert block.samples.values.shape == (len(s), 2)
+        assert block.samples.values.shape == (len(samples), 2)
 
-    tt = mts.insert_dimension(t, axis="samples", name="d", index=2, values=42)
+    tensor = mts.insert_dimension(tensor, axis="samples", name="d", index=2, values=42)
 
-    for block in tt:
+    for block in tensor:
         assert block.samples.names == ["a", "b", "d"]
-        assert block.samples.values.shape == (len(s), 3)
+        assert block.samples.values.shape == (len(samples), 3)
 
-    tt = mts.insert_dimension(t, axis="properties", name="d", index=0, values=42)
+    tensor = mts.insert_dimension(
+        tensor, axis="properties", name="d", index=0, values=42
+    )
 
-    for block in tt:
+    for block in tensor:
         assert block.properties.names == ["d", "_"]
         assert block.properties.values.shape == (1, 2)
 
     # RuntimeError from the TorchScript interpreter
     with pytest.raises(RuntimeError, match="index 42 is out of bounds"):
-        mts.insert_dimension(t, axis="samples", name="d", index=42, values=42)
+        mts.insert_dimension(tensor, axis="samples", name="d", index=42, values=42)
 
 
 def test_permute():

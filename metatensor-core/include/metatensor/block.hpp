@@ -97,7 +97,7 @@ public:
     TensorBlock clone() const {
         auto copy = TensorBlock();
         copy.is_view_ = false;
-        copy.block_ = mts_block_copy(this->block_);
+        copy.block_ = mts_block_copy(this->as_mts_block_t());
         details::check_pointer(copy.block_);
         return copy;
     }
@@ -109,7 +109,7 @@ public:
     /// does not contain any data.
     TensorBlock clone_metadata_only() const {
         auto block = TensorBlock(
-            std::unique_ptr<EmptyDataArray>(new EmptyDataArray(this->values_shape())),
+            std::make_unique<EmptyDataArray>(EmptyDataArray(this->values_shape())),
             this->samples(),
             this->components(),
             this->properties()
@@ -205,15 +205,10 @@ public:
     ///                 before those; its properties must match those of the
     ///                 original `TensorBlock`.
     void add_gradient(const std::string& parameter, TensorBlock gradient) {
-        if (is_view_) {
-            throw Error(
-                "can not call TensorBlock::add_gradient on this block since "
-                "it is a view inside a TensorMap"
-            );
-        }
+        this->check_not_view("add_gradient");
 
         details::check_status(mts_block_add_gradient(
-            block_,
+            this->as_mts_block_t(),
             parameter.c_str(),
             gradient.release()
         ));
@@ -224,7 +219,7 @@ public:
         const char*const * parameters = nullptr;
         uintptr_t count = 0;
         details::check_status(mts_block_gradients_list(
-            block_,
+            this->as_mts_block_t(),
             &parameters,
             &count
         ));
@@ -245,7 +240,13 @@ public:
     TensorBlock gradient(const std::string& parameter) const {
         mts_block_t* gradient_block = nullptr;
         details::check_status(
-            mts_block_gradient(block_, parameter.c_str(), &gradient_block)
+            mts_block_gradient(
+                // const cast is fine here because we return a view,
+                // which can not be modified
+                const_cast<TensorBlock*>(this)->as_mts_block_t(),
+                parameter.c_str(),
+                &gradient_block
+            )
         );
         details::check_pointer(gradient_block);
         return TensorBlock::unsafe_view_from_ptr(gradient_block);
@@ -255,17 +256,25 @@ public:
     ///
     /// The block pointer is still managed by the current `TensorBlock`
     mts_block_t* as_mts_block_t() & {
-        if (is_view_) {
+        if (block_ == nullptr) {
             throw Error(
-                "can not call non-const TensorBlock::as_mts_block_t on this "
-                "block since it is a view inside a TensorMap"
+                "Can not access this TensorBlock, it has been moved inside a "
+                "TensorMap or another TensorBlock"
             );
         }
+
         return block_;
     }
 
     /// const version of `as_mts_block_t`
     const mts_block_t* as_mts_block_t() const & {
+        if (block_ == nullptr) {
+            throw Error(
+                "Can not access this TensorBlock, it has been moved inside a "
+                "TensorMap or another TensorBlock"
+            );
+        }
+
         return block_;
     }
 
@@ -294,14 +303,14 @@ public:
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
-            mts_block_data(block_, &array)
+            mts_block_data(this->as_mts_block_t(), &array)
         );
         return MtsArray(array);
     }
 
     /// Get the labels in this block associated with the given `axis`.
     Labels labels(uintptr_t axis) const {
-        const auto* ptr = mts_block_labels(block_, axis);
+        const auto* ptr = mts_block_labels(this->as_mts_block_t(), axis);
         details::check_pointer(ptr);
         return Labels(ptr);
     }
@@ -424,9 +433,21 @@ private:
         std::memset(&array, 0, sizeof(array));
 
         details::check_status(
-            mts_block_data(block_, &array)
+            mts_block_data(
+                const_cast<TensorBlock*>(this)->as_mts_block_t(),
+                &array
+            )
         );
         return MtsArray(array);
+    }
+
+    void check_not_view(const char* method_name) const {
+        if (is_view_) {
+            throw Error(
+                "can not call TensorBlock::" + std::string(method_name) +
+                " on this block since it is inside a TensorMap or another TensorBlock"
+            );
+        }
     }
 
     /// Release the `mts_block_t` pointer corresponding to this `TensorBlock`.
@@ -434,12 +455,7 @@ private:
     /// The block pointer is **no longer** managed by the current `TensorBlock`,
     /// and should manually be freed when no longer required.
     mts_block_t* release() {
-         if (is_view_) {
-            throw Error(
-                "can not call TensorBlock::release on this "
-                "block since it is a view inside a TensorMap"
-            );
-        }
+        this->check_not_view("release");
         auto* ptr = block_;
         block_ = nullptr;
         is_view_ = false;
