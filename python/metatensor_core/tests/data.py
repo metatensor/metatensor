@@ -44,6 +44,20 @@ def free_mts_array(array):
     array.destroy(array.ptr)
 
 
+def call_as_dlpack(mts_array, dl_device):
+    dl_tensor = ctypes.POINTER(DLManagedTensorVersioned)()
+    check_status(
+        mts_array.as_dlpack(
+            mts_array.ptr,
+            ctypes.byref(dl_tensor),
+            dl_device,
+            None,  # stream
+            DLPackVersion(1, 0),
+        )
+    )
+    return dl_tensor
+
+
 class MtsArrayMixin:
     def test_origin(self):
         array = self.create_array((2, 3, 4))
@@ -200,7 +214,7 @@ class MtsArrayMixin:
         free_mts_array(mts_array)
         free_mts_array(mts_array_other)
 
-    def test_dlpack(self):
+    def test_as_dlpack(self):
         for device, dl_device in self.available_devices():
             if device == "mps" and torch.__version__ < "2.8.0":
                 pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
@@ -209,25 +223,13 @@ class MtsArrayMixin:
             array = self.create_array((2, 3), device=device)
             mts_array = metatensor._data.create_mts_array(array)
 
-            # Prepare a pointer to receive the DLManagedTensorVersioned
-            dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
-            version = DLPackVersion(1, 0)
-
-            check_status(
-                mts_array.as_dlpack(
-                    mts_array.ptr,
-                    ctypes.byref(dl_managed_ptr),
-                    dl_device,
-                    None,  # stream
-                    version,
-                )
-            )
+            dl_managed_tensor = call_as_dlpack(mts_array, dl_device)
 
             # Check we got a valid pointer back
-            assert bool(dl_managed_ptr)
+            assert bool(dl_managed_tensor)
 
             # Dereference to check contents
-            managed = dl_managed_ptr.contents
+            managed = dl_managed_tensor.contents
             dl_tensor = managed.dl_tensor
 
             # Verify Metadata
@@ -245,24 +247,18 @@ class MtsArrayMixin:
 
             # IMPORTANT: Call the deleter to cleanup the C-side resources (and
             # refcounts) This emulates what a consumer (like another library) would do.
-            managed.deleter(dl_managed_ptr)
+            managed.deleter(dl_managed_tensor)
 
             # also check getting the data back to CPU
-            check_status(
-                mts_array.as_dlpack(
-                    mts_array.ptr,
-                    ctypes.byref(dl_managed_ptr),
-                    DLDevice(DLDeviceType.kDLCPU, 0),
-                    None,  # stream
-                    version,
-                )
+            dl_managed_tensor = call_as_dlpack(
+                mts_array, DLDevice(DLDeviceType.kDLCPU, 0)
             )
 
             # Check we got a valid pointer back
-            assert bool(dl_managed_ptr)
+            assert bool(dl_managed_tensor)
 
             # Dereference to check contents
-            managed = dl_managed_ptr.contents
+            managed = dl_managed_tensor.contents
             dl_tensor = managed.dl_tensor
 
             # Verify Metadata
@@ -272,9 +268,61 @@ class MtsArrayMixin:
             assert dl_tensor.shape[0] == 2
             assert dl_tensor.shape[1] == 3
 
-            managed.deleter(dl_managed_ptr)
+            managed.deleter(dl_managed_tensor)
 
             free_mts_array(mts_array)
+
+    def test_from_dlpack(self):
+        for device, dl_device in self.available_devices():
+            if device == "mps" and torch.__version__ < "2.8.0":
+                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
+
+                f32_array = self.create_array(
+                    (2, 3), device=device, dtype=self.dtype_from_numpy(np.float32)
+                )
+                mts_f32_array = metatensor._data.create_mts_array(f32_array)
+
+                i8_array = self.create_array(
+                    (20, 2, 7), device=device, dtype=self.dtype_from_numpy(np.int8)
+                )
+                mts_i8_array = metatensor._data.create_mts_array(i8_array)
+
+                f32_dl_tensor = call_as_dlpack(mts_f32_array, dl_device)
+                i8_dl_tensor = call_as_dlpack(mts_i8_array, dl_device)
+
+                new_f32_array = mts_array_t()
+                check_status(
+                    mts_f32_array.from_dlpack(
+                        mts_f32_array.ptr, f32_dl_tensor, new_f32_array
+                    )
+                )
+
+                new_i8_array = mts_array_t()
+                check_status(
+                    mts_f32_array.from_dlpack(
+                        mts_f32_array.ptr, i8_dl_tensor, new_i8_array
+                    )
+                )
+
+                assert_equal(
+                    self.to_numpy(f32_array),
+                    self.to_numpy(
+                        metatensor._data.mts_array_to_python_array(new_f32_array)
+                    ),
+                )
+
+                assert_equal(
+                    self.to_numpy(i8_array),
+                    self.to_numpy(
+                        metatensor._data.mts_array_to_python_array(new_i8_array)
+                    ),
+                )
+
+                free_mts_array(mts_f32_array)
+                free_mts_array(mts_i8_array)
+
+                free_mts_array(new_f32_array)
+                free_mts_array(new_i8_array)
 
 
 class TestNumpyData(MtsArrayMixin):
@@ -318,6 +366,9 @@ class TestNumpyData(MtsArrayMixin):
 
     def to_numpy(self, array):
         return np.array(array)
+
+    def dtype_from_numpy(self, dtype):
+        return dtype
 
     def available_devices(self):
         return [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
@@ -372,6 +423,9 @@ if HAS_TORCH:
 
         def to_numpy(self, array):
             return array.cpu().numpy()
+
+        def dtype_from_numpy(self, dtype):
+            return torch.tensor(np.array([], dtype=dtype)).dtype
 
         def available_devices(self):
             devices = [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]

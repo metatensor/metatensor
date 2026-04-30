@@ -77,6 +77,10 @@ impl Array for EmptyArray {
     ) -> Result<DLPackTensor, Error> {
         panic!("can not call Array::as_dlpack() for EmptyArray");
     }
+
+    fn from_dlpack(&self, _dlpack_tensor: DLPackTensor) -> Result<Box<dyn Array>, Error> {
+        panic!("can not call Array::from_dlpack() for EmptyArray");
+    }
 }
 
 #[cfg(test)]

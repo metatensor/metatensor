@@ -3,6 +3,7 @@
 use std::os::raw::c_void;
 use std::sync::{Arc, OnceLock};
 
+use dlpk::DLPackTensor;
 use dlpk::sys::{
     DLDataType, DLDataTypeCode, DLDevice, DLManagedTensorVersioned,
     DLPackVersion, DLTensor,
@@ -43,6 +44,7 @@ pub(super) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size:
         device: Some(labels_array_device),
         dtype: Some(labels_array_dtype),
         as_dlpack: Some(labels_array_as_dlpack),
+        from_dlpack: Some(labels_array_from_dlpack),
         shape: Some(labels_array_shape),
         reshape: Some(labels_array_reshape),
         swap_axes: Some(labels_array_swap_axes),
@@ -258,6 +260,81 @@ unsafe extern "C" fn labels_array_as_dlpack(
     })
 }
 
+
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+unsafe extern "C" fn labels_array_from_dlpack(
+    array: *const c_void,
+    dl_managed_tensor: *mut DLManagedTensorVersioned,
+    new_array: *mut mts_array_t,
+) -> mts_status_t {
+    catch_unwind(|| {
+        check_pointers_non_null!(array, new_array, dl_managed_tensor);
+
+        let dl_tensor = std::ptr::NonNull::new(dl_managed_tensor)
+            .ok_or_else(|| Error::InvalidParameter("dl_managed_tensor pointer is null".into()))?;
+
+        let dl_tensor = DLPackTensor::from_raw(dl_tensor);
+
+        let version = dl_tensor.version();
+        let current_dl_version = DLPackVersion::current();
+        if version.major != current_dl_version.major {
+            return Err(Error::InvalidParameter(format!(
+                "unsupported DLPack version: got {}.{}, expected major version {}",
+                version.major, version.minor, current_dl_version.major
+            )));
+        }
+
+        if dl_tensor.device() != DLDevice::cpu() {
+            return Err(Error::InvalidParameter(
+                "labels values can not be created from dlpack tensors that are not on CPU".into()
+            ))
+        }
+
+        let values_ptr: *const i32 = dl_tensor.data_ptr()
+            .map_err(|e| Error::InvalidParameter(format!("failed to get data pointer from DLPack tensor: {}", e)))?;
+
+        let shape = dl_tensor.shape();
+        if shape.len() != 2 {
+            return Err(Error::InvalidParameter(format!(
+                "expected 2D tensor for labels values, got shape={:?}", shape
+            )));
+        }
+
+        let strides = dl_tensor.strides().map_or_else(|| {
+                // If strides are not provided, we assume the tensor is contiguous
+                // in row-major order.
+                [shape[1], 1]
+            }, |s| {
+                assert!(s.len() == 2, "expected 2D tensor for labels values, got strides={:?}", s);
+                [s[0], s[1]]
+            });
+
+        let mut values;
+        if (strides == [shape[1], 1]) || (shape[0] == 1 && strides[1] == 1) || shape[2] == 1 {
+            // If the data is contiguous, we can read it directly as a single slice.
+            let slice = unsafe { std::slice::from_raw_parts(values_ptr, (shape[0] * shape[1]) as usize) };
+            values = slice.to_vec();
+        } else {
+            // otherwise we need to copy the data into a contiguous Vec one element at a time.
+            values = vec![0; (shape[0] * shape[1]) as usize];
+            for i in 0..shape[0] {
+                for j in 0..shape[1] {
+                    let offset = i * strides[0] + j * strides[1];
+                    let value = unsafe {
+                        values_ptr.offset(offset as isize).read()
+                    };
+                    values[(i * shape[1] + j) as usize] = value;
+                }
+            }
+        }
+
+        *new_array = create_array_from_vec(values, shape[0] as usize, shape[1] as usize);
+
+        Ok(())
+    })
+}
+
+
 unsafe extern "C" fn labels_array_shape(
     array: *const c_void,
     shape: *mut *const usize,
@@ -296,6 +373,7 @@ unsafe extern "C" fn labels_array_copy(
             device: Some(labels_array_device),
             dtype: Some(labels_array_dtype),
             as_dlpack: Some(labels_array_as_dlpack),
+            from_dlpack: Some(labels_array_from_dlpack),
             shape: Some(labels_array_shape),
             reshape: Some(labels_array_reshape),
             swap_axes: Some(labels_array_swap_axes),
@@ -445,5 +523,29 @@ mod tests {
         assert_eq!(tensor.dtype().code, DLDataTypeCode::kDLInt);
         assert_eq!(tensor.dtype().bits, 32);
         assert_eq!(tensor.shape(), &[2, 2]);
+    }
+
+    #[test]
+    fn labels_values_array_from_dlpack() {
+        let labels = Labels::from_vec(&["a", "b"], vec![1, 2, 3, 4]).unwrap();
+        let values = labels.values();
+
+        let cpu = DLDevice::cpu();
+        let version = DLPackVersion::current();
+        let dl_tensor = values.as_dlpack(cpu, None, version).unwrap();
+
+        let new_array = values.from_dlpack(dl_tensor).unwrap();
+
+        let shape = new_array.shape().unwrap();
+        assert_eq!(shape, &[2, 2]);
+
+        let new_array_dlpack = new_array.as_dlpack(cpu, None, version).unwrap();
+        let new_array_slice = unsafe {
+            std::slice::from_raw_parts(
+                new_array_dlpack.data_ptr::<i32>().unwrap(),
+                4
+            )
+        };
+        assert_eq!(labels.values_cpu(), new_array_slice);
     }
 }

@@ -356,4 +356,63 @@ TEST_CASE("DLPack conversion") {
             dl_managed->deleter(dl_managed);
         }
     }
+
+    SECTION("create from dlpack") {
+        auto float_tensor = torch::rand({2, 3}, torch::TensorOptions().dtype(torch::kF32));
+        auto float_array = TorchDataArray(float_tensor);
+
+        auto int_tensor = torch::ones({4, 7, 8, 1}, torch::TensorOptions().dtype(torch::kI32));
+        auto int_array = TorchDataArray(int_tensor);
+
+        auto* float_dlpack = float_array.as_dlpack(
+            /*device=*/{kDLCPU, 0},
+            /*stream=*/nullptr,
+            /*max_version=*/version
+        );
+
+        auto* int_dlpack = int_array.as_dlpack(
+            /*device=*/{kDLCPU, 0},
+            /*stream=*/nullptr,
+            /*max_version=*/version
+        );
+
+        auto new_float_array = float_array.from_dlpack(float_dlpack);
+        // use a different source array dtype
+        auto new_int_array = float_array.from_dlpack(int_dlpack);
+
+        auto new_float_tensor = dynamic_cast<TorchDataArray*>(new_float_array.get())->tensor();
+        auto new_int_tensor = dynamic_cast<TorchDataArray*>(new_int_array.get())->tensor();
+
+        CHECK(torch::all(new_float_tensor == float_tensor).item<bool>());
+        CHECK(torch::all(new_int_tensor == int_tensor).item<bool>());
+
+        // test SimpleDataArray::from_dlpack with a non-contiguous tensor created by torch
+        auto base_tensor = torch::zeros({10, 10}, torch::TensorOptions().dtype(torch::kF64));
+        auto sliced_tensor = base_tensor.slice(0, 0, 10, 2).slice(1, 0, 10, 2).t();
+        CHECK(!sliced_tensor.is_contiguous());
+        CHECK(sliced_tensor.strides() == std::vector<int64_t>{2, 20});
+
+        auto sliced_array = TorchDataArray(sliced_tensor);
+        auto* sliced_dlpack = sliced_array.as_dlpack(
+            /*device=*/{kDLCPU, 0},
+            /*stream=*/nullptr,
+            /*max_version=*/version
+        );
+
+        auto cxx_array = metatensor::DataArrayBase::to_mts_array(
+            std::make_unique<metatensor::SimpleDataArray<int8_t>>(metatensor::SimpleDataArray<int8_t>({}))
+        );
+
+        auto new_cxx_array = cxx_array.from_dlpack(sliced_dlpack);
+
+        CHECK(new_cxx_array.origin() == cxx_array.origin());
+        CHECK(new_cxx_array.origin() != float_array.origin());
+
+        auto* cxx_dlpack = cxx_array.as_dlpack({kDLCPU, 0}, nullptr, version);
+
+        auto tensor_from_cxx = float_array.from_dlpack(cxx_dlpack);
+
+        auto recovered_tensor = dynamic_cast<TorchDataArray*>(tensor_from_cxx.get())->tensor();
+        CHECK(torch::all(recovered_tensor == sliced_tensor).item<bool>());
+    }
 }

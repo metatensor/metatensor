@@ -1,4 +1,3 @@
-use std::ptr::NonNull;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
 
 use ndarray::ArrayD;
@@ -155,12 +154,22 @@ impl MtsArray {
             check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
         }
 
-        let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
         let tensor = unsafe {
             dlpk::DLPackTensor::from_ptr(tensor)
         };
 
         return Ok(tensor);
+    }
+
+    pub fn from_dlpack(&self, dlpack_tensor: dlpk::DLPackTensor) -> Result<MtsArray, Error> {
+        let function = self.array.from_dlpack.expect("mts_array_t.from_dlpack function is NULL");
+
+        let mut new_array = mts_array_t::null();
+        unsafe {
+            check_status(function(self.array.ptr, dlpack_tensor.into_raw().as_ptr(), &mut new_array))?;
+        }
+
+        return Ok(MtsArray::from_raw(new_array));
     }
 
     /// Get the shape of this array.

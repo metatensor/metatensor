@@ -51,6 +51,7 @@ impl mts_array_t {
             device: None,
             dtype: None,
             as_dlpack: None,
+            from_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
