@@ -537,6 +537,27 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
     )
 
 
+@catch_exceptions
+def _mts_array_from_dlpack(this, dl_tensor, new_array):
+    """
+    Implementation of `mts_array_t.from_dlpack`.
+
+    This function takes ownership of the given `DLManagedTensorVersioned` pointer
+    and creates a new array from it.
+    """
+
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+
+    if _is_numpy_array(wrapper.array):
+        array = np.from_dlpack(DLPackArray(dl_tensor))
+    elif _is_torch_array(wrapper.array):
+        array = torch.from_dlpack(DLPackArray(dl_tensor))
+    else:
+        raise ValueError(f"unknown array type: {type(wrapper.array)}")
+
+    new_array[0] = create_mts_array(array)
+
+
 # ============================================================================ #
 # Setup mts_array_t function pointers
 # ============================================================================ #
@@ -550,7 +571,6 @@ def _cast_to_ctype_functype(function, field_name):
     raise ValueError(f"no field named {field_name} in mts_array_t")
 
 
-_MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
 _MTS_ARRAY_SHAPE = _cast_to_ctype_functype(_mts_array_shape, "shape")
 _MTS_ARRAY_RESHAPE = _cast_to_ctype_functype(_mts_array_reshape, "reshape")
 _MTS_ARRAY_SWAP_AXES = _cast_to_ctype_functype(_mts_array_swap_axes, "swap_axes")
@@ -558,6 +578,8 @@ _MTS_ARRAY_CREATE = _cast_to_ctype_functype(_mts_array_create, "create")
 _MTS_ARRAY_COPY = _cast_to_ctype_functype(_mts_array_copy, "copy")
 _MTS_ARRAY_DESTROY = _cast_to_ctype_functype(_mts_array_destroy, "destroy")
 _MTS_ARRAY_MOVE_DATA = _cast_to_ctype_functype(_mts_array_move_data, "move_data")
+_MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
+_MTS_ARRAY_FROM_DLPACK = _cast_to_ctype_functype(_mts_array_from_dlpack, "from_dlpack")
 
 
 @catch_exceptions
@@ -706,6 +728,7 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     device=_MTS_ARRAY_DUMMY_DEVICE,
     dtype=_MTS_ARRAY_DUMMY_DTYPE,
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
+    from_dlpack=_MTS_ARRAY_FROM_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,
     swap_axes=_MTS_ARRAY_SWAP_AXES,

@@ -7,7 +7,7 @@
 using namespace metatensor;
 
 TEST_CASE("Data Array") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
+    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array(std::move(data));
 
     SECTION("origin") {
@@ -46,7 +46,7 @@ TEST_CASE("Data Array") {
 }
 
 TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3, 4}));
+    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
     {
         auto view = data->view();
         view(1, 1, 0) = 1.2345;
@@ -72,7 +72,7 @@ TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
 
 TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
     // Create float-backed array via C++ class, expose through mts_array_t
-    auto data = std::unique_ptr<SimpleDataArray<float>>(new SimpleDataArray<float>({2, 3, 4}));
+    auto data = std::make_unique<SimpleDataArray<float>>(SimpleDataArray<float>({2, 3, 4}));
     {
         auto view = data->view();
         view(1, 1, 0) = 3.1415F;
@@ -98,7 +98,7 @@ TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
 }
 
 TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
-    auto data = std::unique_ptr<SimpleDataArray<int32_t>>(new SimpleDataArray<int32_t>({2, 3, 4}));
+    auto data = std::make_unique<SimpleDataArray<int32_t>>(SimpleDataArray<int32_t>({2, 3, 4}));
     {
         auto view = data->view();
         view(1, 1, 0) = 42;
@@ -121,6 +121,34 @@ TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
 
     const auto* data_ptr = dlpack_array.data();
     CHECK(data_ptr[16] == 42);
+}
+
+TEST_CASE("SimpleDataArray - from_dlpack()") {
+    auto double_data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
+    auto double_array = DataArrayBase::to_mts_array(std::move(double_data));
+
+    auto int_data = std::make_unique<SimpleDataArray<int16_t>>(SimpleDataArray<int16_t>({2, 3, 4}));
+    auto int_array = DataArrayBase::to_mts_array(std::move(int_data));
+
+    auto* double_dl_tensor = double_array.as_dlpack({kDLCPU, 0}, nullptr, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
+    auto* int_dl_tensor = int_array.as_dlpack({kDLCPU, 0}, nullptr, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
+
+    auto new_double_array = double_array.from_dlpack(double_dl_tensor);
+    // create an array of a different type from the source array
+    auto new_int_array = double_array.from_dlpack(int_dl_tensor);
+
+    auto device = DLDevice{kDLCPU, 0};
+    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+
+    CHECK(
+        new_double_array.as_dlpack_array<double>(device, nullptr, version)
+        == double_array.as_dlpack_array<double>(device, nullptr, version)
+    );
+
+    CHECK(
+        new_int_array.as_dlpack_array<int16_t>(device, nullptr, version)
+        == int_array.as_dlpack_array<int16_t>(device, nullptr, version)
+    );
 }
 
 TEST_CASE("DLPackArray<T> - construction and access") {
@@ -240,7 +268,7 @@ TEST_CASE("DLPackArray<T> - nullptr construction") {
 }
 
 TEST_CASE("SimpleDataArray - device()") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3}));
 
     // direct call to device()
     CHECK(data->device().device_type == kDLCPU);
@@ -282,7 +310,7 @@ TEST_CASE("DLPackArray<T> - device()") {
 }
 
 TEST_CASE("TensorBlock::values() with device parameter") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}, 1.0));
+    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3}, 1.0));
     auto samples = Labels({"s"}, {{0}, {1}});
     auto properties = Labels({"p"}, {{0}, {1}, {2}});
 
@@ -310,7 +338,7 @@ TEST_CASE("TensorBlock::values() with device parameter") {
 }
 
 TEST_CASE("SimpleDataArray - DLPack version mismatch") {
-    auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 2}));
+    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 2}));
 
     DLDevice cpu_device = {kDLCPU, 0};
 
@@ -370,7 +398,7 @@ TEST_CASE("SimpleDataArray - dtype()") {
     }
 
     SECTION("via mts_array_t callback") {
-        auto data = std::unique_ptr<SimpleDataArray<double>>(new SimpleDataArray<double>({2, 3}));
+        auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3}));
         auto array = DataArrayBase::to_mts_array(std::move(data));
 
         CHECK(array.dtype().code == kDLFloat);

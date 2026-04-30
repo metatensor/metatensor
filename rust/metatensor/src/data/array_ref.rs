@@ -1,4 +1,3 @@
-use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 
 use ndarray::ArrayD;
@@ -167,7 +166,6 @@ impl<'a> ArrayRef<'a> {
             check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
         }
 
-        let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
         let tensor = unsafe {
             dlpk::DLPackTensor::from_ptr(tensor)
         };
@@ -439,7 +437,6 @@ impl<'a> ArrayRefMut<'a> {
             ))?;
         }
 
-        let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
         let tensor = unsafe {
             dlpk::DLPackTensor::from_ptr(tensor)
         };

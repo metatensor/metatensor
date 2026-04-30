@@ -24,8 +24,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `mts_array_t.move_samples_from` is now `mts_array_t.move_data`, and allows for
   more granular data movement. `mts_sample_mapping_t` has been renamed to
   `mts_data_movement_t`.
-- `mts_array_t.data` has been replaced by `mts_array_t.as_dlpack`, returning the
-  data using the [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock can now contain data on different devices and with varied dtypes.
 - `mts_array_t.copy` now takes a `device` parameter, indicating on which device
   the copy should live.
 - Serialization of `mts_tensor_t`, `mts_block_t` and `mts_labels_t` can now be
@@ -48,6 +46,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
+- `mts_array_t.as_dlpack` function, returning the data using the
+  [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock and Labels can
+  now contain data on different devices and with varied dtypes.
+- `mts_array_t.from_dlpack` function to create mts_array_t from a dlpack tensor.
 - There are new functions `mts_block_device`, `mts_tensormap_device`,
   `mts_block_dtype`, `mts_tensormap_dtype` to access dtype and device of metatensor data.
 - There are new functions to work with `mts_labels_t`: `mts_labels_dimensions`,
@@ -61,6 +63,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 - Removed `mts_tensormap_blocks_matching`, the same behavior can be achieved
   with `mts_labels_selection`.
+- Removed `mts_array_t.data`, users should use `mts_array_t.as_dlpack` instead.
 
 ### metatensor-core C++
 

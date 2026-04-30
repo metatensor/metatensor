@@ -143,6 +143,7 @@ struct mts_array_t
     device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDevice}) -> mts_status_t =#
     dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDataType}) -> mts_status_t =#
     as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{DLManagedTensorVersioned}}, DLDevice, Ptr{Int64}, DLPackVersion) -> mts_status_t =#
+    from_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLManagedTensorVersioned}, Ptr{mts_array_t}) -> mts_status_t =#
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#

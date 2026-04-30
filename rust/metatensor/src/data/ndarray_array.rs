@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock, TryLockError};
 
 use dlpk::sys::{DLDevice, DLPackVersion, DLDataType};
-use dlpk::{DLPackTensor, GetDLPackDataType, DLPackPointerCast};
+use dlpk::{DLDataTypeCode, DLPackPointerCast, DLPackTensor, GetDLPackDataType};
 
 use crate::errors::Error;
 use crate::c_api::mts_data_movement_t;
@@ -251,6 +251,65 @@ where
 
         Ok(tensor)
     }
+
+    #[allow(clippy::enum_glob_use)]
+    fn from_dlpack(&self, dlpack_tensor: DLPackTensor) -> Result<Box<dyn Array>, Error> {
+        use DLDataTypeCode::*;
+
+        let dtype = dlpack_tensor.dtype();
+
+        if dtype.lanes != 1 {
+            return Err(Error {
+                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+                message: "Only DLPack tensors with lanes == 1 are supported".into(),
+            });
+        }
+
+        let map_error = |e| Error {
+            code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+            message: format!("failed to convert DLPack to ndarray: {:?}", e),
+        };
+
+        if dtype.code == kDLFloat && dtype.bits == 64 {
+            let array: ndarray::ArrayD<f64> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLFloat && dtype.bits == 32 {
+            let array: ndarray::ArrayD<f32> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLInt && dtype.bits == 8 {
+            let array: ndarray::ArrayD<i8> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLInt && dtype.bits == 16 {
+            let array: ndarray::ArrayD<i16> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLInt && dtype.bits == 32 {
+            let array: ndarray::ArrayD<i32> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLInt && dtype.bits == 64 {
+            let array: ndarray::ArrayD<i64> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLUInt && dtype.bits == 8 {
+            let array: ndarray::ArrayD<u8> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLUInt && dtype.bits == 16 {
+            let array: ndarray::ArrayD<u16> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLUInt && dtype.bits == 32 {
+            let array: ndarray::ArrayD<u32> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLUInt && dtype.bits == 64 {
+            let array: ndarray::ArrayD<u64> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else if dtype.code == kDLBool && dtype.bits == 8 {
+            let array: ndarray::ArrayD<bool> = dlpack_tensor.try_into().map_err(map_error)?;
+            return Ok(Box::new(Arc::new(RwLock::new(array))));
+        } else {
+            return Err(Error {
+                code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
+                message: format!("Unsupported DLPack dtype {}", dtype),
+            });
+        }
+    }
 }
 
 #[cfg(test)]
@@ -367,5 +426,41 @@ mod tests {
             Err(e) => assert!(e.message.contains("version"), "{}", e.message),
             Ok(_) => panic!("expected error for incompatible DLPack version"),
         }
+    }
+
+    #[test]
+    #[allow(clippy::float_cmp)]
+    fn from_dlpack() {
+        let mut f64_data = ndarray::Array::<f64, _>::zeros(vec![2, 3]);
+        f64_data[[0, 0]] = 1.573;
+        f64_data[[1, 2]] = -42.0;
+        let f64_array = MtsArray::from(f64_data);
+
+        let mut i16_data = ndarray::Array::<i16, _>::zeros(vec![2, 5, 10]);
+        i16_data[[0, 1, 3]] = 3;
+        i16_data[[1, 2, 4]] = -42;
+        let i16_array = MtsArray::from(i16_data);
+
+        let f64_dl_tensor = f64_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+        let i16_dl_tensor = i16_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+
+        let new_f64_array = f64_array.from_dlpack(f64_dl_tensor).unwrap();
+        let new_i16_array = i16_array.from_dlpack(i16_dl_tensor).unwrap();
+
+        assert_eq!(f64_array.origin().unwrap(), i16_array.origin().unwrap());
+        assert_eq!(new_f64_array.origin().unwrap(), f64_array.origin().unwrap());
+        assert_eq!(new_i16_array.origin().unwrap(), i16_array.origin().unwrap());
+
+        let new_f64_dl_tensor = new_f64_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+        let new_i16_dl_tensor = new_i16_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+
+        let new_f64_data: ndarray::ArrayD<f64> = new_f64_dl_tensor.try_into().unwrap();
+        let new_i16_data: ndarray::ArrayD<i16> = new_i16_dl_tensor.try_into().unwrap();
+
+        assert_eq!(new_f64_data[[0, 0]], 1.573);
+        assert_eq!(new_f64_data[[1, 2]], -42.0);
+
+        assert_eq!(new_i16_data[[0, 1, 3]], 3);
+        assert_eq!(new_i16_data[[1, 2, 4]], -42);
     }
 }

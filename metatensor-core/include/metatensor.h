@@ -232,6 +232,28 @@ typedef struct mts_array_t {
                             const int64_t *stream,
                             DLPackVersion max_version);
   /**
+   * Create a new array from a DLPack tensor, taking ownership of the
+   * tensor's data.
+   *
+   * The `new_array` output parameter should be filled with an `mts_array_t`
+   * representing the new array, with the same array origin as the current
+   * one. The implementation should take ownership of the data in
+   * `dl_managed_tensor`, and is responsible for calling the tensor's
+   * `deleter` function when the data is no longer needed.
+   *
+   * Importantly, the `dl_managed_tensor` and thus the new array might have a
+   * different device and/or data type than the current one, and the
+   * implementation should handle this correctly or return an error.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
+   */
+  mts_status_t (*from_dlpack)(const void *array,
+                              DLManagedTensorVersioned *dl_managed_tensor,
+                              struct mts_array_t *new_array);
+  /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
    * `*shape_count`. If the array is a single scalar, `shape_count` should be

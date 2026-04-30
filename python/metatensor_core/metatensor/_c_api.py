@@ -216,6 +216,7 @@ mts_array_t._fields_ = [
     ("device", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDevice))),
     ("dtype", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDataType))),
     ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)), DLDevice, POINTER(ctypes.c_int64), DLPackVersion)),
+    ("from_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLManagedTensorVersioned), POINTER(mts_array_t))),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
