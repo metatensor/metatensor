@@ -314,6 +314,11 @@ static void dlpack_versioned_deleter(DLManagedTensorVersioned* self) {
 }
 
 DLDevice TorchDataArray::device() const {
+    if (!tensor_.has_storage()) {
+        // use the same device as "meta", since we can not access the
+        // corresponding data
+        return DLDevice{kDLExtDev, 0};
+    }
     return torch_device_to_dlpack(tensor_.device());
 }
 
@@ -334,6 +339,11 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
     }
     torch::Device target_device = dlpack_device_to_torch(device);
     torch::Tensor tensor_to_pack = this->tensor_;
+
+    if (!tensor_to_pack.has_storage()) {
+        // For tensors without storage, use the same code path as meta tensors
+        tensor_to_pack = tensor_to_pack.to(torch::kMeta);
+    }
 
     if (tensor_to_pack.device() != target_device) {
         tensor_to_pack = tensor_to_pack.to(target_device, /*non_blocking=*/false);
