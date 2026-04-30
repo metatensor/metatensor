@@ -138,9 +138,9 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     }
 
     auto array = torch_tensor_to_labels_mts_array(values_);
-    if (values.is_meta()) {
-        // do not check for uniqueness if the tensor is on meta device,
-        // since it does not contain real data.
+    if (values_.is_meta() || !values_.has_storage()) {
+        // do not check for uniqueness if the tensor is on meta device or does
+        // not have storage, since it does not contain real data.
         labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
     } else {
         labels_ = metatensor::Labels(names_, std::move(array));
