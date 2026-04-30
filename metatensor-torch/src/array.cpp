@@ -465,7 +465,7 @@ void TorchDataArray::reshape(const std::vector<uintptr_t>& shape) {
         sizes.push_back(static_cast<int64_t>(size));
     }
 
-    this->tensor_ = this->tensor().reshape(sizes).contiguous();
+    this->tensor_ = this->tensor().reshape(sizes);
 
     this->update_shape();
 }
@@ -474,7 +474,7 @@ void TorchDataArray::swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
     this->tensor_ = this->tensor().swapaxes(
         static_cast<int64_t>(axis_1),
         static_cast<int64_t>(axis_2)
-    ).contiguous();
+    );
 
     this->update_shape();
 }
@@ -620,8 +620,9 @@ void TorchDataArray::move_data(
 }
 
 void TorchDataArray::update_shape() {
-    shape_.clear();
-    for (auto size: this->tensor_.sizes()) {
-        shape_.push_back(static_cast<uintptr_t>(size));
+    auto sizes = this->tensor_.sizes();
+    shape_.resize(sizes.size());
+    for (size_t i = 0; i < shape_.size(); i++) {
+        shape_[i] = static_cast<uintptr_t>(sizes[static_cast<int64_t>(i)]);
     }
 }
