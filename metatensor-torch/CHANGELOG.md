@@ -24,6 +24,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   imported as `from metatensor.torch import ...`
 - `TensorMap.keys_to_samples` and `TensorMap.keys_to_properties` now take an
   optional `fill_value` parameter that will be used instead of 0 for missing entries when merging blocks.
+- `TensorBlock::as_metatensor()` in C++ has been replaced by
+  `TensorBlock::release`, which moves the data out of the `TensorBlockHolder`.
+- `TensorMap` now takes full ownership of the blocks passed to it, they are no
+  longer usable afterward.
 
 ### Removed
 

@@ -93,4 +93,24 @@ TEST_CASE("Blocks") {
             )
         );
     }
+
+    SECTION("Release") {
+        auto block = torch::make_intrusive<TensorBlockHolder>(
+            torch::full({3, 2}, 11.0),
+            LabelsHolder::create({"s"}, {{0}, {2}, {1}}),
+            std::vector<Labels>{},
+            LabelsHolder::create({"p"}, {{0}, {1}})
+        );
+
+        CHECK(block->samples()->names()[0] == "s");
+
+        auto mts_block = block->release();
+        CHECK(mts_block.samples().names()[0] == std::string("s"));
+
+        CHECK_THROWS_WITH(
+            block->samples(),
+            "Can not access this TensorBlock, it has been moved inside a "
+            "TensorMap or another TensorBlock"
+        );
+    }
 }

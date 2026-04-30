@@ -19,42 +19,7 @@ bool custom_class_is(torch::IValue ivalue) {
     return ivalue.type().get() == expected_type;
 }
 
-static metatensor::TensorBlock block_from_torch(const TensorBlock& block) {
-    auto components = std::vector<metatensor::Labels>();
-    for (const auto& component: block->components()) {
-        components.push_back(component->as_metatensor());
-    }
-
-    // use copy constructors of everything here, incrementing reference count
-    // of the data and metadata
-    auto result = metatensor::TensorBlock(
-        std::make_unique<TorchDataArray>(block->values()),
-        block->samples()->as_metatensor(),
-        components,
-        block->properties()->as_metatensor()
-    );
-
-    for (const auto& parameter: block->gradients_list()) {
-        auto gradient = block_from_torch(TensorBlockHolder::gradient(block, parameter));
-        result.add_gradient(parameter, std::move(gradient));
-    }
-
-    return result;
-}
-
-static std::vector<metatensor::TensorBlock> blocks_from_torch(const std::vector<TensorBlock>& blocks) {
-    auto results = std::vector<metatensor::TensorBlock>();
-    results.reserve(blocks.size());
-    for (const auto& block: blocks) {
-        results.emplace_back(block_from_torch(block));
-    }
-    return results;
-}
-
-
-TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& blocks):
-    tensor_(keys->as_metatensor(), blocks_from_torch(blocks))
-{
+static std::vector<metatensor::TensorBlock> blocks_from_torch(Labels keys, std::vector<TensorBlock> blocks) {
     // Block-vs-block device/dtype consistency is enforced by metatensor-core.
     // The torch-specific check below ensures keys (which may live on GPU) are
     // on the same device as the blocks.
@@ -67,7 +32,19 @@ TensorMapHolder::TensorMapHolder(Labels keys, const std::vector<TensorBlock>& bl
             );
         }
     }
+
+    auto results = std::vector<metatensor::TensorBlock>();
+    results.reserve(blocks.size());
+    for (const auto& block: blocks) {
+        results.emplace_back(block->release());
+    }
+    return results;
 }
+
+
+TensorMapHolder::TensorMapHolder(Labels keys, std::vector<TensorBlock> blocks):
+    tensor_(keys->as_metatensor(), blocks_from_torch(keys, std::move(blocks)))
+{}
 
 TensorMap TensorMapHolder::copy() const {
     return torch::make_intrusive<TensorMapHolder>(TensorMapHolder(this->tensor_.clone()));

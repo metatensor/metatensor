@@ -321,7 +321,7 @@ void TensorBlockHolder::save(const std::string& path) const {
         );
     }
 
-    metatensor::io::save(path, this->as_metatensor());
+    metatensor::io::save(path, this->block_);
 }
 
 torch::Tensor TensorBlockHolder::save_buffer() const {
@@ -339,7 +339,7 @@ torch::Tensor TensorBlockHolder::save_buffer() const {
             ", only float64 is supported"
         );
     }
-    auto buffer = metatensor::io::save_buffer(this->as_metatensor());
+    auto buffer = metatensor::io::save_buffer(this->block_);
     // move the buffer to the heap so it can escape this function
     // `torch::from_blob` does not take ownership of the data,
     // so we need to register a custom deleter to clean up when
@@ -358,4 +358,9 @@ torch::Tensor TensorBlockHolder::save_buffer() const {
         deleter,
         options
     );
+}
+
+metatensor::TensorBlock TensorBlockHolder::release() {
+    auto block = std::move(block_);
+    return block;
 }
