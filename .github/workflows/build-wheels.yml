@@ -394,7 +394,7 @@ jobs:
 
       - name: upload to GitHub release (metatensor-core)
         if: startsWith(github.ref, 'refs/tags/metatensor-core-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wheels/cxx/metatensor-core-cxx-*.tar.gz
@@ -405,7 +405,7 @@ jobs:
 
       - name: upload to GitHub release (metatensor-torch)
         if: startsWith(github.ref, 'refs/tags/metatensor-torch-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wheels/cxx/metatensor-torch-cxx-*.tar.gz
@@ -416,7 +416,7 @@ jobs:
 
       - name: upload to GitHub release (metatensor-operations)
         if: startsWith(github.ref, 'refs/tags/metatensor-operations-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wheels/metatensor_operations-*
@@ -426,7 +426,7 @@ jobs:
 
       - name: upload to GitHub release (metatensor-learn)
         if: startsWith(github.ref, 'refs/tags/metatensor-learn-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wheels/metatensor_learn-*
@@ -436,7 +436,7 @@ jobs:
 
       - name: upload to GitHub release (metatensor-python)
         if: startsWith(github.ref, 'refs/tags/metatensor-python-v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             wheels/metatensor-*
