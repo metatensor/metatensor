@@ -22,19 +22,19 @@ pub trait Array: std::any::Any + Send + Sync {
     /// Get the array as a mutable `Any` reference
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any;
 
-    /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `shape`.
+    /// Create a new array with the same array origin, data type, and device as
+    /// the current one, but with the requested `shape`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`,
-    /// which must be an `MtsArray` with shape `(1,)` and the same dtype as
-    /// this array.
+    /// which must be an `MtsArray` with shape `(1,)` and the same dtype as this
+    /// array.
     fn create(&self, shape: &[usize], fill_value: MtsArray) -> Box<dyn Array>;
 
     /// Make a copy of this `array`
     ///
-    /// The new array is expected to have the same data origin and parameters
-    /// (data type, data location, etc.)
-    fn copy(&self) -> Box<dyn Array>;
+    /// The new array is expected to have the same array origin and data type,
+    /// but live on the given device.
+    fn copy(&self, device: DLDevice) -> Box<dyn Array>;
 
     /// Get the shape of the array. This can be empty if the array has no shape
     /// (e.g. a scalar).
@@ -86,6 +86,11 @@ pub trait Array: std::any::Any + Send + Sync {
         stream: Option<i64>,
         max_version: DLPackVersion
     ) -> Result<DLPackTensor, Error>;
+
+    /// Create a new array from a `DLPack` tensor, taking ownership of the
+    /// tensor's data.
+    #[allow(clippy::wrong_self_convention)]
+    fn from_dlpack(&self, dl_tensor: DLPackTensor) -> Result<Box<dyn Array>, Error>;
 }
 
 pub (super) struct RustArray {
@@ -121,6 +126,7 @@ impl From<Box<dyn Array>> for MtsArray {
             device: Some(rust_array_device),
             dtype: Some(rust_array_dtype),
             as_dlpack: Some(rust_array_as_dlpack),
+            from_dlpack: Some(rust_array_from_dlpack),
             shape: Some(rust_array_shape),
             reshape: Some(rust_array_reshape),
             swap_axes: Some(rust_array_swap_axes),
@@ -293,15 +299,16 @@ unsafe extern "C" fn rust_array_create(
 /// Implementation of `mts_array_t.copy` using `RustArray`
 unsafe extern "C" fn rust_array_copy(
     array: *const c_void,
-    array_storage: *mut mts_array_t,
+    device: DLDevice,
+    new_array: *mut mts_array_t
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
-        check_pointers!(array, array_storage);
+        check_pointers!(array, new_array);
         let array = array.cast::<RustArray>();
 
-        let new_array = (*array).impl_.copy();
-        let new_array = MtsArray::from(new_array);
-        *array_storage = new_array.into_raw();
+        let copy = (*array).impl_.copy(device);
+        let copy = MtsArray::from(copy);
+        *new_array = copy.into_raw();
 
         Ok(())
     })
@@ -347,18 +354,37 @@ unsafe extern "C" fn rust_array_move_data(
 /// Implementation of `mts_array_t.as_dlpack` using `RustArray`
 unsafe extern "C" fn rust_array_as_dlpack(
     array: *mut c_void,
-    out: *mut *mut DLManagedTensorVersioned,
+    dl_tensor: *mut *mut DLManagedTensorVersioned,
     device: DLDevice,
     stream: *const i64,
     max_version: DLPackVersion,
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
-        check_pointers!(array, out);
+        check_pointers!(array, dl_tensor);
         let array = array.cast::<RustArray>();
         let stream_opt = stream.as_ref().copied();
         let tensor = (*array).impl_.as_dlpack(device, stream_opt, max_version)?;
 
-        *out = tensor.into_raw().as_ptr();
+        *dl_tensor = tensor.into_raw().as_ptr();
+
+        Ok(())
+    })
+}
+
+/// Implementation of `mts_array_t.from_dlpack` using `RustArray`
+unsafe extern "C" fn rust_array_from_dlpack(
+    array: *const c_void,
+    dl_tensor: *mut DLManagedTensorVersioned,
+    new_array: *mut mts_array_t,
+) -> mts_status_t {
+    crate::errors::catch_unwind(|| {
+        check_pointers!(array, dl_tensor, new_array);
+        let array = array.cast::<RustArray>();
+        let dl_tensor = DLPackTensor::from_ptr(dl_tensor);
+
+        let new_rust_array = (*array).impl_.from_dlpack(dl_tensor)?;
+
+        *new_array = MtsArray::from(new_rust_array).into_raw();
 
         Ok(())
     })

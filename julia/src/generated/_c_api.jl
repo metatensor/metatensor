@@ -143,11 +143,12 @@ struct mts_array_t
     device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDevice}) -> mts_status_t =#
     dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDataType}) -> mts_status_t =#
     as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{DLManagedTensorVersioned}}, DLDevice, Ptr{Int64}, DLPackVersion) -> mts_status_t =#
+    from_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLManagedTensorVersioned}, Ptr{mts_array_t}) -> mts_status_t =#
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
     create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, mts_array_t, Ptr{mts_array_t}) -> mts_status_t =#
-    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_array_t}) -> mts_status_t =#
+    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, DLDevice, Ptr{mts_array_t}) -> mts_status_t =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
 
@@ -266,10 +267,10 @@ function mts_labels_difference(first::Ptr{mts_labels_t}, second::Ptr{mts_labels_
     )
 end
 
-function mts_labels_select(labels::Ptr{mts_labels_t}, selection::Ptr{mts_labels_t}, selected::Ptr{Int64}, selected_count::Ptr{UIntptr})
+function mts_labels_select(labels::Ptr{mts_labels_t}, selection::Ptr{mts_labels_t}, selected::Ptr{UInt64}, selected_count::Ptr{UIntptr})
     ccall((:mts_labels_select, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_labels_t}, Ptr{mts_labels_t}, Ptr{Int64}, Ptr{UIntptr},),
+        (Ptr{mts_labels_t}, Ptr{mts_labels_t}, Ptr{UInt64}, Ptr{UIntptr},),
         labels, selection, selected, selected_count
     )
 end
@@ -415,14 +416,6 @@ function mts_tensormap_block_by_id(tensor::Ptr{mts_tensormap_t}, block::Ptr{Ptr{
         mts_status_t,
         (Ptr{mts_tensormap_t}, Ptr{Ptr{mts_block_t}}, UIntptr,),
         tensor, block, index
-    )
-end
-
-function mts_tensormap_blocks_matching(tensor::Ptr{mts_tensormap_t}, block_indexes::Ptr{UIntptr}, count::Ptr{UIntptr}, selection::Ptr{mts_labels_t})
-    ccall((:mts_tensormap_blocks_matching, libmetatensor), 
-        mts_status_t,
-        (Ptr{mts_tensormap_t}, Ptr{UIntptr}, Ptr{UIntptr}, Ptr{mts_labels_t},),
-        tensor, block_indexes, count, selection
     )
 end
 

@@ -35,7 +35,8 @@ impl Array for EmptyArray {
         Box::new(EmptyArray { shape: shape.to_vec() })
     }
 
-    fn copy(&self) -> Box<dyn Array> {
+    fn copy(&self, device: DLDevice) -> Box<dyn Array> {
+        assert_eq!(device, DLDevice::cpu());
         Box::new(EmptyArray { shape: self.shape.clone() })
     }
 
@@ -75,6 +76,10 @@ impl Array for EmptyArray {
         _max_version: DLPackVersion
     ) -> Result<DLPackTensor, Error> {
         panic!("can not call Array::as_dlpack() for EmptyArray");
+    }
+
+    fn from_dlpack(&self, _dlpack_tensor: DLPackTensor) -> Result<Box<dyn Array>, Error> {
+        panic!("can not call Array::from_dlpack() for EmptyArray");
     }
 }
 

@@ -125,15 +125,18 @@ impl std::fmt::Debug for Labels {
 }
 
 fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, LabelsHasher> {
-    assert!(values.len() % size == 0);
-
     let mut positions = HashMap::with_hasher(LabelsHasher::default());
-    for (i, entry) in values.chunks_exact(size).enumerate() {
-        // entries should be unique!
-        unsafe {
-            positions.insert_unique_unchecked(entry.into(), i);
+
+    if size != 0 {
+        assert!(values.len() % size == 0);
+        for (i, entry) in values.chunks_exact(size).enumerate() {
+            // entries should be unique!
+            unsafe {
+                positions.insert_unique_unchecked(entry.into(), i);
+            }
         }
     }
+
     return positions;
 }
 
@@ -567,16 +570,17 @@ impl Labels {
     /// output, it will contain the indexes in `self` that match the selection.
     /// This function returns the number of selected entries, i.e. the number of
     /// valid indexes in `selected`.
-    pub fn select(&self, selection: &Labels, selected: &mut [i64]) -> Result<usize, Error> {
+    pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
         assert!(selected.len() == self.count());
-        selected.fill(-1);
+        if cfg!(debug_assertions) {
+            selected.fill(u64::MAX);
+        }
 
         let mut n_selected = 0;
         if selection.dimensions == self.dimensions {
             for entry in &selection.to_cpu() {
-                #[allow(clippy::cast_possible_wrap)]
                 if let Some(position) = self.position(entry) {
-                    selected[n_selected] = position as i64;
+                    selected[n_selected] = position as u64;
                     n_selected += 1;
                 }
             }
@@ -594,16 +598,25 @@ impl Labels {
                 dimensions_to_match.push(i);
             }
 
-            let mut candidate = vec![0; dimensions_to_match.len()];
-            for (entry_i, entry) in self.to_cpu().iter().enumerate() {
-                for (i, &d) in dimensions_to_match.iter().enumerate() {
-                    candidate[i] = entry[d];
+            if dimensions_to_match.is_empty() {
+                assert!(selection.count() == 0);
+                // all labels match an empty selection
+                for (i, s) in selected.iter_mut().enumerate() {
+                    *s = i as u64;
                 }
+                n_selected = self.count();
+            } else {
+                let mut candidate = vec![0; dimensions_to_match.len()];
+                for (entry_i, entry) in self.to_cpu().iter().enumerate() {
+                    for (i, &d) in dimensions_to_match.iter().enumerate() {
+                        candidate[i] = entry[d];
+                    }
 
-                #[allow(clippy::cast_possible_wrap)]
-                if selection.contains(&candidate) {
-                    selected[n_selected] = entry_i as i64;
-                    n_selected += 1;
+                    #[allow(clippy::cast_possible_wrap)]
+                    if selection.contains(&candidate) {
+                        selected[n_selected] = entry_i as u64;
+                        n_selected += 1;
+                    }
                 }
             }
         }
@@ -903,7 +916,7 @@ mod tests {
     fn from_array_lazy_values() {
         // Create a labels array, then build Labels from it
         let original = Labels::from_vec(&["x", "y"], vec![1, 2, 3, 4]).unwrap();
-        let array = original.values().try_clone().unwrap();
+        let array = original.values().copy(DLDevice::cpu()).unwrap();
 
         let labels = Labels::new(&["x", "y"], array).unwrap();
         assert_eq!(labels.count(), 2);
@@ -920,10 +933,10 @@ mod tests {
         let values = vec![1, 10, 2, 20, 3, 30];
         let labels = Labels::from_vec(dimensions, values.clone()).unwrap();
 
-        let values = labels.values().try_clone().unwrap();
+        let values = labels.values().copy(DLDevice::cpu()).unwrap();
         let labels_safe = Labels::new(dimensions, values).unwrap();
 
-        let values = labels.values().try_clone().unwrap();
+        let values = labels.values().copy(DLDevice::cpu()).unwrap();
         let labels_unchecked = unsafe {
             Labels::new_unchecked_uniqueness(dimensions, values).unwrap()
         };

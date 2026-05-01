@@ -26,18 +26,6 @@ TEST_CASE("TensorMap") {
         auto block = TensorMapHolder::block_by_id(tensor, 2);
         const auto values = block->values();
         CHECK(values[0][0][0].item<double>() == 3);
-
-        // block by selection
-        auto selection = LabelsHolder::create({"key_1", "key_2"}, {{1, 0}});
-        auto matching = tensor->blocks_matching(selection);
-        CHECK(matching.size() == 1);
-        CHECK(matching[0] == 1);
-
-        selection = LabelsHolder::create({"key_2"}, {{0}});
-        matching = tensor->blocks_matching(selection);
-        CHECK(matching.size() == 2);
-        CHECK(matching[0] == 0);
-        CHECK(matching[1] == 1);
     }
 
     SECTION("keys_to_samples") {
@@ -282,7 +270,7 @@ TEST_CASE("fill_value") {
         auto result_default = tensor->keys_to_properties("key_1");
         auto result_explicit = tensor->keys_to_properties("key_1", /*fill_value*/ 0.0);
 
-        for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
+        for (int64_t i = 0; i < result_default->keys()->count(); i++) {
             auto block_default = TensorMapHolder::block_by_id(result_default, i);
             auto block_explicit = TensorMapHolder::block_by_id(result_explicit, i);
             CHECK(torch::all(block_default->values() == block_explicit->values()).item<bool>());
@@ -294,7 +282,7 @@ TEST_CASE("fill_value") {
         auto result_default = tensor->keys_to_samples("key_2");
         auto result_explicit = tensor->keys_to_samples("key_2", /*fill_value*/ 0.0);
 
-        for (int64_t i = 0; i < static_cast<int64_t>(result_default->keys()->count()); i++) {
+        for (int64_t i = 0; i < result_default->keys()->count(); i++) {
             auto block_default = TensorMapHolder::block_by_id(result_default, i);
             auto block_explicit = TensorMapHolder::block_by_id(result_explicit, i);
             CHECK(torch::all(block_default->values() == block_explicit->values()).item<bool>());

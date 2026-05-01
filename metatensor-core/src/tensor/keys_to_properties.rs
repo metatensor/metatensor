@@ -82,16 +82,21 @@ impl TensorMap {
             new_blocks.push(block);
         } else {
             assert!(splitted_keys.new_keys.count() > 1);
+            let mut matching = vec![0; self.keys.count()];
             for entry in &splitted_keys.new_keys.to_cpu() {
                 let selection = Labels::from_vec(
                     &splitted_keys.new_keys.dimensions(),
                     entry.to_vec(),
                 ).expect("invalid labels");
 
-                let matching = self.blocks_matching(&selection)?;
+                let n_matched = self.keys.select(&selection, &mut matching)?;
+
                 let cpu_keys = self.keys.to_cpu();
+                #[allow(clippy::cast_possible_truncation)]
                 let blocks_to_merge = matching.iter()
+                    .take(n_matched)
                     .map(|&i| {
+                        let i = i as usize;
                         let block = &self.blocks[i];
                         let key = &cpu_keys[i];
                         let mut moved_key = Vec::new();

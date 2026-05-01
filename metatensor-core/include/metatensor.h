@@ -232,6 +232,28 @@ typedef struct mts_array_t {
                             const int64_t *stream,
                             DLPackVersion max_version);
   /**
+   * Create a new array from a DLPack tensor, taking ownership of the
+   * tensor's data.
+   *
+   * The `new_array` output parameter should be filled with an `mts_array_t`
+   * representing the new array, with the same array origin as the current
+   * one. The implementation should take ownership of the data in
+   * `dl_managed_tensor`, and is responsible for calling the tensor's
+   * `deleter` function when the data is no longer needed.
+   *
+   * Importantly, the `dl_managed_tensor` and thus the new array might have a
+   * different device and/or data type than the current one, and the
+   * implementation should handle this correctly or return an error.
+   *
+   * This function should return `MTS_SUCCESS` on success, or
+   * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+   * should call `mts_set_last_error` with an appropriate error message
+   * before returning.
+   */
+  mts_status_t (*from_dlpack)(const void *array,
+                              DLManagedTensorVersioned *dl_managed_tensor,
+                              struct mts_array_t *new_array);
+  /**
    * Get the shape of the array managed by this `mts_array_t` in the `*shape`
    * pointer, and the number of dimension (size of the `*shape` array) in
    * `*shape_count`. If the array is a single scalar, `shape_count` should be
@@ -264,10 +286,10 @@ typedef struct mts_array_t {
    */
   mts_status_t (*swap_axes)(void *array, uintptr_t axis_1, uintptr_t axis_2);
   /**
-   * Create a new array with the same options as the current one (data type,
-   * data location, etc.) and the requested `shape`; and store it in
-   * `new_array`. The number of elements in the `shape` array should be given
-   * in `shape_count`.
+   * Create a new array with the same options as the current one (array
+   * origin, data type, device, etc.) and the requested `shape`; and store it
+   * in `new_array`. The number of elements in the `shape` array should be
+   * given in `shape_count`.
    *
    * The new array should be filled with the scalar value from `fill_value`,
    * which must be an `mts_array_t` containing a single scalar (empty shape)
@@ -288,15 +310,15 @@ typedef struct mts_array_t {
   /**
    * Make a copy of this `array` and return the new array in `new_array`.
    *
-   * The new array is expected to have the same data origin and parameters
-   * (data type, data location, etc.)
+   * The new array is expected to have the same array origin and data type as
+   * the original one, but live on the given `device`.
    *
    * This function should return `MTS_SUCCESS` on success, or
    * `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
    * should call `mts_set_last_error` with an appropriate error message
    * before returning.
    */
-  mts_status_t (*copy)(const void *array, struct mts_array_t *new_array);
+  mts_status_t (*copy)(const void *array, DLDevice device, struct mts_array_t *new_array);
   /**
    * Set entries in the `output` array (the current array) taking data from
    * the `input` array. The `output` array is guaranteed to be created by
@@ -673,7 +695,7 @@ mts_status_t mts_labels_difference(const struct mts_labels_t *first,
  */
 mts_status_t mts_labels_select(const struct mts_labels_t *labels,
                                const struct mts_labels_t *selection,
-                               int64_t *selected,
+                               uint64_t *selected,
                                uintptr_t *selected_count);
 
 /**
@@ -974,33 +996,6 @@ const struct mts_labels_t *mts_tensormap_keys(const struct mts_tensormap_t *tens
 mts_status_t mts_tensormap_block_by_id(struct mts_tensormap_t *tensor,
                                        struct mts_block_t **block,
                                        uintptr_t index);
-
-/**
- * Get indices of the blocks in this `tensor` corresponding to the given
- * `selection`. The `selection` should have a subset of the names/dimensions of
- * the keys for this tensor map, and only one entry, describing the requested
- * blocks.
- *
- * When calling this function, `*count` should contain the number of entries in
- * `block_indexes`. When the function returns successfully, `*count` will
- * contain the number of blocks matching the selection, i.e. how many values
- * were written to `block_indexes`.
- *
- * @param tensor pointer to an existing tensor map
- * @param block_indexes array to be filled with indexes of blocks in the tensor
- *                      map matching the `selection`
- * @param count number of entries in `block_indexes`
- * @param selection pointer to labels with a single entry describing which
- *                  blocks are requested
- *
- * @returns The status code of this operation. If the status is not
- *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
- *          error message.
- */
-mts_status_t mts_tensormap_blocks_matching(const struct mts_tensormap_t *tensor,
-                                           uintptr_t *block_indexes,
-                                           uintptr_t *count,
-                                           const struct mts_labels_t *selection);
 
 /**
  * Merge blocks with the same value for selected keys dimensions along the

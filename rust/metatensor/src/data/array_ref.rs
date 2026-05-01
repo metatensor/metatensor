@@ -1,4 +1,3 @@
-use std::ptr::NonNull;
 use std::sync::{Arc, RwLock};
 
 use ndarray::ArrayD;
@@ -167,7 +166,6 @@ impl<'a> ArrayRef<'a> {
             check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
         }
 
-        let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
         let tensor = unsafe {
             dlpk::DLPackTensor::from_ptr(tensor)
         };
@@ -223,11 +221,11 @@ impl<'a> ArrayRef<'a> {
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<MtsArray, Error> {
+    pub fn copy(&self, device: DLDevice) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status(function(self.array.ptr, &mut new_array))?;
+            check_status(function(self.array.ptr, device, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));
@@ -439,7 +437,6 @@ impl<'a> ArrayRefMut<'a> {
             ))?;
         }
 
-        let tensor = NonNull::new(tensor).expect("got a NULL DLManagedTensorVersioned from `as_dlpack`");
         let tensor = unsafe {
             dlpk::DLPackTensor::from_ptr(tensor)
         };
@@ -521,11 +518,11 @@ impl<'a> ArrayRefMut<'a> {
     /// Copy the data in this array, if supported by the underlying data.
     ///
     /// This corresponds to `mts_array_t.copy`, but with a more convenient API.
-    pub fn copy(&self) -> Result<MtsArray, Error> {
+    pub fn copy(&self, device: DLDevice) -> Result<MtsArray, Error> {
         let function = self.array.copy.expect("mts_array_t.copy function is NULL");
         let mut new_array = mts_array_t::null();
         unsafe {
-            check_status(function(self.array.ptr, &mut new_array))?;
+            check_status(function(self.array.ptr, device, &mut new_array))?;
         }
 
         return Ok(MtsArray::from_raw(new_array));

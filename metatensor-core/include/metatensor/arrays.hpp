@@ -174,6 +174,98 @@ namespace details {
             return true;
         }
     }
+
+    template <typename T>
+    std::vector<T> vector_from_dlpack(const DLTensor& dl_tensor) {
+        auto expected_dtype = dtype_of<T>();
+        if (dl_tensor.dtype.code != expected_dtype.code ||
+            dl_tensor.dtype.bits != expected_dtype.bits ||
+            dl_tensor.dtype.lanes != expected_dtype.lanes
+        ) {
+            throw Error(
+                "DLPack dtype does not match the requested C++ type: "
+                "DLPack tensor has dtype (code=" + std::to_string(dl_tensor.dtype.code)
+                + ", bits=" + std::to_string(dl_tensor.dtype.bits)
+                + ", lanes=" + std::to_string(dl_tensor.dtype.lanes)
+                + ") which does not match the expected dtype (code=" + std::to_string(dtype_of<T>().code)
+                + ", bits=" + std::to_string(dtype_of<T>().bits)
+                + ", lanes=" + std::to_string(dtype_of<T>().lanes) + ")"
+            );
+        }
+
+        const auto* byte_ptr = static_cast<const char*>(dl_tensor.data);
+        const auto* data_ptr = reinterpret_cast<const T*>(byte_ptr + dl_tensor.byte_offset);
+
+        if (dl_tensor.ndim == 0) {
+            return std::vector<T>{*static_cast<const T*>(dl_tensor.data)};
+        }
+
+        auto* shape = dl_tensor.shape;
+        assert(shape != nullptr);
+
+        auto* strides = dl_tensor.strides;
+        bool allocated_strides = false;
+        bool is_contiguous = true;
+        if (strides == nullptr) {
+            allocated_strides = true;
+            // If strides is null, the tensor is assumed to be contiguous in row-major order
+            strides = new int64_t[static_cast<size_t>(dl_tensor.ndim)];
+            strides[dl_tensor.ndim - 1] = 1;
+            for (int i = dl_tensor.ndim - 2; i >= 0; --i) {
+                strides[i] = strides[i + 1] * shape[i + 1];
+            }
+        } else {
+            // Check if the tensor is contiguous in row-major order
+            int64_t expected_stride = 1;
+            for (int i = dl_tensor.ndim - 1; i >= 0; --i) {
+                if (strides[i] != expected_stride) {
+                    is_contiguous = false;
+                    break;
+                }
+                expected_stride *= shape[i];
+            }
+        }
+
+        size_t num_elements = 1;
+        for (int i = 0; i < dl_tensor.ndim; i++) {
+            num_elements *= static_cast<size_t>(shape[i]);
+        }
+        auto ndim = static_cast<size_t>(dl_tensor.ndim);
+
+        std::vector<T> data;
+        if (is_contiguous) {
+            // If the tensor is contiguous, we can directly use the data pointer
+            data = std::vector<T> (data_ptr, data_ptr + num_elements);
+        } else {
+            // copy elements one by one using the shape and stride information
+            data.reserve(num_elements);
+
+            std::vector<int64_t> indices(ndim, 0);
+            for (size_t i = 0; i < num_elements; i++) {
+                // Calculate the offset for the current index
+                int64_t offset = 0;
+                for (size_t dim = 0; dim < ndim; dim++) {
+                    offset += indices[dim] * strides[dim];
+                }
+                data.push_back(data_ptr[offset]);
+
+                // Increment indices
+                for (size_t dim =0; dim < ndim; dim++) {
+                    indices[dim]++;
+                    if (indices[dim] < shape[dim]) {
+                        break;
+                    }
+                    indices[dim] = 0;
+                }
+            }
+        }
+
+        if (allocated_strides) {
+            delete[] strides;
+        }
+
+        return data;
+    }
 } // namespace details
 
 
@@ -674,7 +766,7 @@ public:
             throw Error("invalid mts_array_t: null copy function pointer");
         }
         mts_array_t new_array;
-        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+        details::check_status(other.array_.copy(other.array_.ptr, other.device(), &new_array));
 
         *this = MtsArray(new_array);
     }
@@ -685,7 +777,7 @@ public:
             throw Error("invalid mts_array_t: null copy function pointer");
         }
         mts_array_t new_array;
-        details::check_status(other.array_.copy(other.array_.ptr, &new_array));
+        details::check_status(other.array_.copy(other.array_.ptr, other.device(), &new_array));
 
         *this = MtsArray(new_array);
         return *this;
@@ -727,7 +819,7 @@ public:
     /// Get the data origin for this array.
     mts_data_origin_t origin() const {
         if (array_.origin == nullptr) {
-            throw Error("invalid mts_array_t: null origin function pointer");
+            throw Error("invalid mts_array_t: `origin` function pointer is null");
         }
         mts_data_origin_t origin;
         details::check_status(array_.origin(array_.ptr, &origin));
@@ -737,7 +829,7 @@ public:
     /// Get the device where this array's data resides.
     DLDevice device() const {
         if (array_.device == nullptr) {
-            throw Error("invalid mts_array_t: null device function pointer");
+            throw Error("invalid mts_array_t: `device` function pointer is null");
         }
         DLDevice device;
         details::check_status(array_.device(array_.ptr, &device));
@@ -747,7 +839,7 @@ public:
     /// Get the data type of this array.
     DLDataType dtype() const {
         if (array_.dtype == nullptr) {
-            throw Error("invalid mts_array_t: null dtype function pointer");
+            throw Error("invalid mts_array_t: `dtype` function pointer is null");
         }
         DLDataType dtype;
         details::check_status(array_.dtype(array_.ptr, &dtype));
@@ -768,13 +860,29 @@ public:
         DLPackVersion max_version
     ) {
         if (array_.as_dlpack == nullptr) {
-            throw Error("invalid mts_array_t: null as_dlpack function pointer");
+            throw Error("invalid mts_array_t: `as_dlpack` function pointer is null");
         }
         DLManagedTensorVersioned* dlpack;
         details::check_status(
             array_.as_dlpack(array_.ptr, &dlpack, device, stream, max_version)
         );
         return dlpack;
+    }
+
+    /// Create a new `MtsArray` from a DLPack tensor. The returned `MtsArray`
+    /// takes ownership of the DLPack tensor and will call its deleter when it
+    /// goes out of scope.
+    MtsArray from_dlpack(
+        DLManagedTensorVersioned* dl_tensor
+    ) {
+        if (array_.from_dlpack == nullptr) {
+            throw Error("invalid mts_array_t: `from_dlpack` function pointer is null");
+        }
+        mts_array_t new_array;
+        details::check_status(
+            array_.from_dlpack(array_.ptr, dl_tensor, &new_array)
+        );
+        return MtsArray(new_array);
     }
 
     /// Get a DLPackArray corresponding to this array
@@ -802,7 +910,7 @@ public:
         MtsArray fill_value
     ) const {
         if (array_.create == nullptr) {
-            throw Error("invalid mts_array_t: null create function pointer");
+            throw Error("invalid mts_array_t: `create` function pointer is null");
         }
         mts_array_t new_array;
         details::check_status(
@@ -814,7 +922,7 @@ public:
     /// Get the shape of this array
     std::vector<uintptr_t> shape() const {
         if (array_.shape == nullptr) {
-            throw Error("invalid mts_array_t: null shape function pointer");
+            throw Error("invalid mts_array_t: `shape` function pointer is null");
         }
         const uintptr_t* shape;
         uintptr_t shape_count;
@@ -827,7 +935,7 @@ public:
     /// Set the shape of this array to the given `shape`
     void reshape(const std::vector<uintptr_t>& shape) {
         if (array_.reshape == nullptr) {
-            throw Error("invalid mts_array_t: null reshape function pointer");
+            throw Error("invalid mts_array_t: `reshape` function pointer is null");
         }
         details::check_status(
             array_.reshape(array_.ptr, shape.data(), shape.size())
@@ -837,7 +945,7 @@ public:
     /// Swap the axes `axis_1` and `axis_2` in this `array`.
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) {
         if (array_.swap_axes == nullptr) {
-            throw Error("invalid mts_array_t: null swap_axes function pointer");
+            throw Error("invalid mts_array_t: `swap_axes` function pointer is null");
         }
         details::check_status(
             array_.swap_axes(array_.ptr, axis_1, axis_2)
@@ -861,7 +969,7 @@ public:
         std::vector<mts_data_movement_t> moves
     ) {
         if (array_.move_data == nullptr) {
-            throw Error("invalid mts_array_t: null move_data function pointer");
+            throw Error("invalid mts_array_t: `move_data` function pointer is null");
         }
         details::check_status(
             array_.move_data(array_.ptr, input.array_.ptr, moves.data(), moves.size())
@@ -931,13 +1039,13 @@ public:
             }, array, dtype);
         };
 
-        array.copy = [](const void* array, mts_array_t* new_array) {
-            return details::catch_exceptions([](const void* array, mts_array_t* new_array){
+        array.copy = [](const void* array, DLDevice device, mts_array_t* new_array) {
+            return details::catch_exceptions([](const void* array, DLDevice device, mts_array_t* new_array){
                 const auto* cxx_array = static_cast<const DataArrayBase*>(array);
-                auto copy = cxx_array->copy();
+                auto copy = cxx_array->copy(device);
                 auto new_array_cxx = DataArrayBase::to_mts_array(std::move(copy));
                 *new_array = std::move(new_array_cxx).release();
-            }, array, new_array);
+            }, array, device, new_array);
         };
 
         array.create = [](const void* array, const uintptr_t* shape, uintptr_t shape_count, mts_array_t fill_value, mts_array_t* new_array) {
@@ -961,7 +1069,7 @@ public:
 
         array.as_dlpack = [](
             void *array,
-            DLManagedTensorVersioned **dl_managed_tensor,
+            DLManagedTensorVersioned **dl_tensor,
             DLDevice device,
             const int64_t *stream,
             DLPackVersion max_version
@@ -969,15 +1077,35 @@ public:
             return details::catch_exceptions(
                 [](
                     void *array,
-                    DLManagedTensorVersioned **dl_managed_tensor,
+                    DLManagedTensorVersioned **dl_tensor,
                     DLDevice device,
                     const int64_t *stream,
                     DLPackVersion max_version
                 ) {
-                    auto *cxx_arr = static_cast<DataArrayBase *>(array);
-                    *dl_managed_tensor = cxx_arr->as_dlpack(device, stream, max_version);
+                    auto* cxx_arr = static_cast<DataArrayBase *>(array);
+                    *dl_tensor = cxx_arr->as_dlpack(device, stream, max_version);
                 },
-                array, dl_managed_tensor, device, stream, max_version);
+                array, dl_tensor, device, stream, max_version);
+        };
+
+        array.from_dlpack = [](
+            const void *array,
+            DLManagedTensorVersioned *dl_tensor,
+            mts_array_t *new_array
+        ) {
+            return details::catch_exceptions(
+                [](
+                    const void *array,
+                    DLManagedTensorVersioned *dl_tensor,
+                    mts_array_t *new_array
+                ) {
+                    const auto* cxx_arr = static_cast<const DataArrayBase *>(array);
+                    auto new_array_ptr = cxx_arr->from_dlpack(dl_tensor);
+
+                    auto new_array_cxx = DataArrayBase::to_mts_array(std::move(new_array_ptr));
+                    *new_array = std::move(new_array_cxx).release();
+                },
+                array, dl_tensor, new_array);
         };
 
         array.shape = [](const void* array, const uintptr_t** shape, uintptr_t* shape_count) {
@@ -1053,10 +1181,17 @@ public:
         DLPackVersion max_version
     ) = 0;
 
+    /// Create a new `DataArrayBase` from a DLPack tensor. The returned
+    /// `DataArrayBase` takes ownership of the DLPack tensor and will call its
+    /// deleter when it goes out of scope.
+    virtual std::unique_ptr<DataArrayBase> from_dlpack(
+        DLManagedTensorVersioned* dl_tensor
+    ) const = 0;
+
     /// Make a copy of this DataArrayBase and return the new array. The new
-    /// array is expected to have the same data origin and parameters (data
-    /// type, data location, etc.)
-    virtual std::unique_ptr<DataArrayBase> copy() const = 0;
+    /// array is expected to have the same data origin and dtype, but live on
+    /// the given `device`.
+    virtual std::unique_ptr<DataArrayBase> copy(DLDevice device) const = 0;
 
     /// Create a new array with the same options as the current one (data type,
     /// data location, etc.) and the requested `shape`.
@@ -1176,7 +1311,10 @@ public:
         data_ = std::make_shared<std::vector<T>>(std::move(new_data));
     }
 
-    std::unique_ptr<DataArrayBase> copy() const override {
+    std::unique_ptr<DataArrayBase> copy(DLDevice device) const override {
+        if (device.device_type != kDLCPU) {
+            throw Error("SimpleDataArray only supports copying to CPU");
+        }
         return std::unique_ptr<DataArrayBase>(new SimpleDataArray(*this));
     }
 
@@ -1370,6 +1508,112 @@ public:
         return managed.release();
     }
 
+    std::unique_ptr<DataArrayBase> from_dlpack(DLManagedTensorVersioned *dl_managed_tensor) const override {
+        // RAII guard to ensure dl_managed_tensor is deleted if any error occurs
+        struct AutoDeleteDLManagedTensor {
+            DLManagedTensorVersioned* ptr;
+            ~AutoDeleteDLManagedTensor() {
+                if (ptr != nullptr && ptr->deleter != nullptr) {
+                    ptr->deleter(ptr);
+                }
+            }
+        };
+
+        auto dl_managed_tensor_guard = AutoDeleteDLManagedTensor{dl_managed_tensor};
+
+        if (dl_managed_tensor == nullptr) {
+            throw Error("dlpack tensor is null in SimpleDataArray::from_dlpack");
+        }
+
+        if (dl_managed_tensor->version.major != DLPACK_MAJOR_VERSION) {
+            throw Error(
+                "DLPack version mismatch in SimpleDataArray::from_dlpack: expected major " +
+                std::to_string(DLPACK_MAJOR_VERSION) + ", got " +
+                std::to_string(dl_managed_tensor->version.major) + "." +
+                std::to_string(dl_managed_tensor->version.minor)
+            );
+        }
+
+        auto dl_tensor = dl_managed_tensor->dl_tensor;
+
+        if (dl_tensor.device.device_type != kDLCPU) {
+            throw Error(
+                "SimpleDataArray::from_dlpack only supports CPU device (kDLCPU), "
+                "got device type " + std::to_string(dl_tensor.device.device_type)
+            );
+        }
+
+        auto shape = std::vector<uintptr_t>();
+        for (int i = 0; i < dl_tensor.ndim; i++) {
+            shape.push_back(static_cast<uintptr_t>(dl_tensor.shape[i]));
+        }
+
+        auto dtype = dl_tensor.dtype;
+        if (dtype.lanes != 1) {
+            throw Error("SimpleDataArray::from_dlpack only supports DLPack tensors with lanes == 1");
+        }
+
+        std::unique_ptr<DataArrayBase> result;
+        if (dtype.code == kDLFloat && dtype.bits == 64) {
+            result = std::make_unique<SimpleDataArray<double>>(
+                std::move(shape),
+                details::vector_from_dlpack<double>(dl_tensor)
+            );
+        } else if (dtype.code == kDLFloat && dtype.bits == 32) {
+            result = std::make_unique<SimpleDataArray<float>>(
+                std::move(shape),
+                details::vector_from_dlpack<float>(dl_tensor)
+            );
+        } else if (dtype.code == kDLInt && dtype.bits == 8) {
+            result = std::make_unique<SimpleDataArray<int8_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<int8_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLInt && dtype.bits == 16) {
+            result = std::make_unique<SimpleDataArray<int16_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<int16_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLInt && dtype.bits == 32) {
+            result = std::make_unique<SimpleDataArray<int32_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<int32_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLInt && dtype.bits == 64) {
+            result = std::make_unique<SimpleDataArray<int64_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<int64_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLUInt && dtype.bits == 8) {
+            result = std::make_unique<SimpleDataArray<uint8_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<uint8_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLUInt && dtype.bits == 16) {
+            result = std::make_unique<SimpleDataArray<uint16_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<uint16_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLUInt && dtype.bits == 32) {
+            result = std::make_unique<SimpleDataArray<uint32_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<uint32_t>(dl_tensor)
+            );
+        } else if (dtype.code == kDLUInt && dtype.bits == 64) {
+            result = std::make_unique<SimpleDataArray<uint64_t>>(
+                std::move(shape),
+                details::vector_from_dlpack<uint64_t>(dl_tensor)
+            );
+        } else {
+            throw metatensor::Error(
+                "unsupported DLDataType in default_create_array: code="
+                + std::to_string(dtype.code) + " bits=" + std::to_string(dtype.bits)
+            );
+        }
+
+        return result;
+    }
+
     /// Get a pointer to the data managed by this SimpleDataArray
     T* data() {
         return data_->data();
@@ -1492,6 +1736,11 @@ public:
         throw metatensor::Error("can not call `as_dlpack` for an EmtpyDataArray");
     }
 
+    [[noreturn]]
+    std::unique_ptr<DataArrayBase> from_dlpack(DLManagedTensorVersioned*) const override {
+        throw metatensor::Error("can not call `from_dlpack` for an EmtpyDataArray");
+    }
+
     const std::vector<uintptr_t>& shape() const & override {
         return shape_;
     }
@@ -1507,7 +1756,10 @@ public:
         std::swap(shape_[axis_1], shape_[axis_2]);
     }
 
-    std::unique_ptr<DataArrayBase> copy() const override {
+    std::unique_ptr<DataArrayBase> copy(DLDevice device) const override {
+        if (device.device_type != kDLCPU) {
+            throw Error("EmptyDataArray only supports copying to CPU");
+        }
         return std::unique_ptr<DataArrayBase>(new EmptyDataArray(*this));
     }
 

@@ -30,18 +30,6 @@ TEST_CASE("TensorMap") {
         auto block = tensor.block_by_id(2);
         const auto values = block.values();
         CHECK(values(0, 0, 0) == 3);
-
-        // block by selection
-        auto selection = Labels({"key_1", "key_2"}, {{1, 0}});
-        auto matching = tensor.blocks_matching(selection);
-        CHECK(matching.size() == 1);
-        CHECK(matching[0] == 1);
-
-        selection = Labels({"key_2"}, {{0}});
-        matching = tensor.blocks_matching(selection);
-        CHECK(matching.size() == 2);
-        CHECK(matching[0] == 0);
-        CHECK(matching[1] == 1);
     }
 
     SECTION("info") {
@@ -296,7 +284,7 @@ TEST_CASE("TensorMap") {
             BrokenDataArray(std::vector<size_t> shape): metatensor::SimpleDataArray<double>(std::move(shape)) {}
 
             [[noreturn]]
-            std::unique_ptr<DataArrayBase> copy() const override {
+            std::unique_ptr<DataArrayBase> copy(DLDevice) const override {
                 throw std::runtime_error("can not copy this!");
             }
         };

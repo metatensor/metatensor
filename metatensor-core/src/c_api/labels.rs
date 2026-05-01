@@ -598,7 +598,7 @@ pub unsafe extern "C" fn mts_labels_difference(
 pub unsafe extern "C" fn mts_labels_select(
     labels: *const mts_labels_t,
     selection: *const mts_labels_t,
-    selected: *mut i64,
+    selected: *mut u64,
     selected_count: *mut usize,
 ) -> mts_status_t {
     catch_unwind(|| {

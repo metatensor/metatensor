@@ -40,50 +40,62 @@ class sdist_git_version(sdist):
     """
 
     def run(self):
-        with open("n_commits_since_last_tag", "w") as fd:
-            fd.write(str(n_commits_since_last_tag()))
+        n_commits, git_hash = git_version_info()
+        with open("git_version_info", "w") as fd:
+            fd.write(f"{n_commits}\n{git_hash}\n")
 
         # run original sdist
         super().run()
 
-        os.unlink("n_commits_since_last_tag")
+        os.unlink("git_version_info")
 
 
-def n_commits_since_last_tag():
+def git_version_info():
     """
     If git is available and we are building from a checkout, get the number of commits
-    since the last tag. Otherwise, this always returns 0.
+    since the last tag & full hash of the code. Otherwise, this always returns (0, "").
     """
-    script = ROOT / "scripts" / "n-commits-since-last-tag.py"
-    if not script.exists():
-        return 0
+    TAG_PREFIX = "metatensor-v"
 
-    TAG_PREFIX = "metatensor-python-v"
-    output = subprocess.run(
-        [sys.executable, script, TAG_PREFIX],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        check=True,
-        encoding="utf8",
-    )
-
-    if output.stderr:
-        print(output.stderr, file=sys.stderr)
-        return 0
+    if os.path.exists("git_version_info"):
+        # we are building from a sdist, without git available, but the git
+        # version was recorded in the `git_version_info` file
+        with open("git_version_info") as fd:
+            n_commits = int(fd.readline().strip())
+            git_hash = fd.readline().strip()
     else:
-        return int(output.stdout)
+        script = os.path.join(ROOT, "scripts", "git-version-info.py")
+        assert os.path.exists(script)
+
+        output = subprocess.run(
+            [sys.executable, script, TAG_PREFIX],
+            stderr=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            encoding="utf8",
+        )
+
+        if output.returncode != 0:
+            raise Exception(
+                "failed to get git version info.\n"
+                f"stdout: {output.stdout}\n"
+                f"stderr: {output.stderr}\n"
+            )
+        elif output.stderr:
+            print(output.stderr, file=sys.stderr)
+            n_commits = 0
+            git_hash = ""
+        else:
+            lines = output.stdout.splitlines()
+            n_commits = int(lines[0].strip())
+            git_hash = lines[1].strip()
+
+    return n_commits, git_hash
 
 
 def create_version_number(version):
     version = packaging.version.parse(version)
 
-    if pathlib.Path("n_commits_since_last_tag").exists():
-        # we are building from a sdist, without git available, but the git
-        # version was recorded in the `n_commits_since_last_tag` file
-        with open("n_commits_since_last_tag") as fd:
-            n_commits = int(fd.read().strip())
-    else:
-        n_commits = n_commits_since_last_tag()
+    n_commits, git_hash = git_version_info()
 
     if n_commits != 0:
         # if we have commits since the last tag, this mean we are in a pre-release of
@@ -94,16 +106,16 @@ def create_version_number(version):
             pre = ("rc", version.pre[1] + 1)
             release = version.release
         else:
-            major, minor, patch = version.release
+            major, minor, _ = version.release
             release = (major, minor + 1, 0)
             pre = None
 
-        # this is using a private API which is intended to become public soon:
-        # https://github.com/pypa/packaging/pull/698. In the mean time we'll
-        # use this
-        version._version = version._version._replace(release=release)
-        version._version = version._version._replace(pre=pre)
-        version._version = version._version._replace(dev=("dev", n_commits))
+        version = version.__replace__(
+            release=release,
+            pre=pre,
+            dev=n_commits,
+            local=git_hash,
+        )
 
     return str(version)
 

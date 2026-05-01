@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import atexit
 import ctypes
 import functools
 import sys
@@ -117,23 +116,3 @@ def _get_exception(status=None):
         return ctypes.cast(user_data, ctypes.py_object).value
 
     return MetatensorError(message.value.decode("utf8"), status=status)
-
-
-def _clear_last_error():
-    """
-    Clear the last error that happened if it was caused by a Python exception, to
-    avoid trying to free the exception object after Python itself is unloaded.
-    """
-    from ._c_lib import _get_library
-
-    try:
-        lib = _get_library()
-        origin = ctypes.c_char_p()
-        status = lib.mts_last_error(None, ctypes.byref(origin), None)
-        if status == mts_status_t.MTS_SUCCESS and origin.value == b"Python exception":
-            lib.mts_set_last_error(None, None, None, None)
-    except Exception:
-        pass
-
-
-atexit.register(_clear_last_error)

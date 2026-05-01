@@ -216,11 +216,12 @@ mts_array_t._fields_ = [
     ("device", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDevice))),
     ("dtype", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLDataType))),
     ("as_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)), DLDevice, POINTER(ctypes.c_int64), DLPackVersion)),
+    ("from_dlpack", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(DLManagedTensorVersioned), POINTER(mts_array_t))),
     ("shape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(POINTER(c_uintptr_t)), POINTER(c_uintptr_t))),
     ("reshape", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t)),
     ("swap_axes", CFUNCTYPE(mts_status_t, ctypes.c_void_p, c_uintptr_t, c_uintptr_t)),
     ("create", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, mts_array_t, POINTER(mts_array_t))),
-    ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(mts_array_t))),
+    ("copy", CFUNCTYPE(mts_status_t, ctypes.c_void_p, DLDevice, POINTER(mts_array_t))),
     ("move_data", CFUNCTYPE(mts_status_t, ctypes.c_void_p, ctypes.c_void_p, POINTER(mts_data_movement_t), c_uintptr_t)),
 ]
 
@@ -333,7 +334,7 @@ def setup_functions(lib):
     lib.mts_labels_select.argtypes = [
         POINTER(mts_labels_t),
         POINTER(mts_labels_t),
-        POINTER(ctypes.c_int64),
+        POINTER(ctypes.c_uint64),
         POINTER(c_uintptr_t),
     ]
     lib.mts_labels_select.restype = check_status
@@ -448,14 +449,6 @@ def setup_functions(lib):
         c_uintptr_t,
     ]
     lib.mts_tensormap_block_by_id.restype = check_status
-
-    lib.mts_tensormap_blocks_matching.argtypes = [
-        POINTER(mts_tensormap_t),
-        POINTER(c_uintptr_t),
-        POINTER(c_uintptr_t),
-        POINTER(mts_labels_t),
-    ]
-    lib.mts_tensormap_blocks_matching.restype = check_status
 
     lib.mts_tensormap_keys_to_properties.argtypes = [
         POINTER(mts_tensormap_t),

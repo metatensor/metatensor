@@ -138,9 +138,9 @@ LabelsHolder::LabelsHolder(torch::IValue names, torch::Tensor values):
     }
 
     auto array = torch_tensor_to_labels_mts_array(values_);
-    if (values.is_meta()) {
-        // do not check for uniqueness if the tensor is on meta device,
-        // since it does not contain real data.
+    if (values_.is_meta() || !values_.has_storage()) {
+        // do not check for uniqueness if the tensor is on meta device or does
+        // not have storage, since it does not contain real data.
         labels_ = metatensor::Labels(names_, std::move(array), metatensor::assume_unique{});
     } else {
         labels_ = metatensor::Labels(names_, std::move(array));
@@ -603,7 +603,10 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
 
     labels_.select(
         selection->labels_,
-        selected.data_ptr<int64_t>(),
+        // we assume that we can pass a pointer to `int64_t` instead of
+        // `uint64_t`, which should be fine on all platforms since they all use
+        // 2-complement representation and the values should always be positive.
+        reinterpret_cast<uint64_t*>(selected.mutable_data_ptr()),
         &selected_count
     );
 

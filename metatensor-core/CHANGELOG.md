@@ -24,8 +24,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `mts_array_t.move_samples_from` is now `mts_array_t.move_data`, and allows for
   more granular data movement. `mts_sample_mapping_t` has been renamed to
   `mts_data_movement_t`.
-- `mts_array_t.data` has been replaced by `mts_array_t.as_dlpack`, returning the
-  data using the [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock can now contain data on different devices and with varied dtypes.
+- `mts_array_t.copy` now takes a `device` parameter, indicating on which device
+  the copy should live.
 - Serialization of `mts_tensor_t`, `mts_block_t` and `mts_labels_t` can now be
   done even if the data lives on a different device or uses a dtype other than
   float64. `mts_create_array_callback_t` now takes an extra parameter for the
@@ -41,9 +41,15 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `mts_labels_create_assume_unique` is now `mts_labels_assume_unique`.
 - `mts_last_error` can now return custom data and error origin together with the
   last error message. These can be set by a new function `mts_set_last_error`.
+- `mts_labels_select` now takes and returns the selection as an array of
+  `size_t`, not `int64_t`.
 
 #### Added
 
+- `mts_array_t.as_dlpack` function, returning the data using the
+  [dlpack](https://github.com/dmlc/dlpack) standard. TensorBlock and Labels can
+  now contain data on different devices and with varied dtypes.
+- `mts_array_t.from_dlpack` function to create mts_array_t from a dlpack tensor.
 - There are new functions `mts_block_device`, `mts_tensormap_device`,
   `mts_block_dtype`, `mts_tensormap_dtype` to access dtype and device of metatensor data.
 - There are new functions to work with `mts_labels_t`: `mts_labels_dimensions`,
@@ -52,6 +58,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   transferring control back to libmetatensor. The data set by this function can
   then be retrieved with `mts_last_error` and used to store and rethrow
   exceptions across the C API boundary.
+
+#### Removed
+
+- Removed `mts_tensormap_blocks_matching`, the same behavior can be achieved
+  with `mts_labels_selection`.
+- Removed `mts_array_t.data`, users should use `mts_array_t.as_dlpack` instead.
 
 ### metatensor-core C++
 
@@ -64,6 +76,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `Labels::select` now returns a `std::optional<size_t>` instead of relying on
   -1 as a sentinel value. The overloads taking `int64_t` pointers are still
   available for a zero overhead version.
+- `Labels::select` now takes and returns the selection as an array of
+  `size_t`, not `int64_t`.
 
 #### Added
 
@@ -71,6 +85,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `TensorMap::dtype` functions.
 - The `MtsArray` class, which provides a RAII wrapper and more convenient way to
   use `mts_array_t` from C++
+
+#### Removed
+
+- Removed `TensorMap::blocks_matching`, the same behavior can be achieved
+  with `TensorMap::keys().select(...)`.
 
 ### metatensor-core Python
 
@@ -85,6 +104,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `LabelsView` has been removed, and with it the following functions:
   `Labels.is_view()`, `Labels.to_owned()`, `Labels.view()`, and
   `Labels.__getitem__(list[str])`. We recomend using `Labels.column()` instead to access the values of individual dimensions of Labels.
+- Removed `TensorMap.blocks_matching`, the same behavior can be achieved
+  with `TensorMap.keys.select(...)`.
+
 
 ## [Version 0.1.20](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.1.20) - 2026-02-27
 

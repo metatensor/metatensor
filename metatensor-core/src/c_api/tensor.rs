@@ -248,61 +248,6 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
 }
 
 
-/// Get indices of the blocks in this `tensor` corresponding to the given
-/// `selection`. The `selection` should have a subset of the names/dimensions of
-/// the keys for this tensor map, and only one entry, describing the requested
-/// blocks.
-///
-/// When calling this function, `*count` should contain the number of entries in
-/// `block_indexes`. When the function returns successfully, `*count` will
-/// contain the number of blocks matching the selection, i.e. how many values
-/// were written to `block_indexes`.
-///
-/// @param tensor pointer to an existing tensor map
-/// @param block_indexes array to be filled with indexes of blocks in the tensor
-///                      map matching the `selection`
-/// @param count number of entries in `block_indexes`
-/// @param selection pointer to labels with a single entry describing which
-///                  blocks are requested
-///
-/// @returns The status code of this operation. If the status is not
-///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
-///          error message.
-#[no_mangle]
-pub unsafe extern "C" fn mts_tensormap_blocks_matching(
-    tensor: *const mts_tensormap_t,
-    block_indexes: *mut usize,
-	count: *mut usize,
-    selection: *const mts_labels_t,
-) -> mts_status_t {
-    catch_unwind(|| {
-        check_pointers_non_null!(tensor, count, selection);
-
-        if *count != (*tensor).keys().count() {
-            return Err(Error::InvalidParameter(format!(
-                "expected space for {} indices as input to mts_tensormap_blocks_matching, got space for {}",
-                (*tensor).keys().count(), *count
-            )));
-        }
-
-        let rust_blocks = (*tensor).blocks_matching(&*selection)?;
-		*count = rust_blocks.len();
-
-        if (*tensor).keys().is_empty() {
-            return Ok(());
-        }
-
-        check_pointers_non_null!(block_indexes);
-        let block_indexes = std::slice::from_raw_parts_mut(block_indexes, *count);
-		for (idx,block) in rust_blocks.into_iter().enumerate() {
-            block_indexes[idx] = block;
-		}
-
-        Ok(())
-    })
-}
-
-
 /// Merge blocks with the same value for selected keys dimensions along the
 /// property axis.
 ///

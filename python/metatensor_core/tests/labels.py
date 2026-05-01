@@ -386,11 +386,11 @@ def test_select():
     labels = Labels(["aa", "bb"], np.array([[1, 1], [1, 2], [3, 2], [2, 1]]))
     selection = Labels(["aa"], np.array([[1], [2], [5]]))
 
-    assert np.all(labels.select(selection) == [0, 1, 3])
+    assert labels.select(selection).tolist() == [0, 1, 3]
 
     # selection with the same names
     selection = Labels(["aa", "bb"], np.array([[1, 1], [2, 1], [5, 1], [1, 2]]))
-    assert np.all(labels.select(selection) == [0, 3, 1])
+    assert labels.select(selection).tolist() == [0, 3, 1]
 
     # empty selection
     selection = Labels.empty(["aa"])
@@ -407,6 +407,11 @@ def test_select():
     labels = Labels(["aa", "bb"], np.empty((0, 2), dtype=np.int32))
     selection = Labels(["aa"], np.array([[1], [2], [5]]))
     assert len(labels.select(selection)) == 0
+
+    # empty selection
+    labels = Labels(["aa", "bb"], np.array([[1, 1], [1, 2], [3, 2], [2, 1]]))
+    selection = Labels([], np.zeros((0, 0), dtype=np.int32))
+    assert labels.select(selection).tolist() == [0, 1, 2, 3]
 
 
 def test_constructor_assume_unique():

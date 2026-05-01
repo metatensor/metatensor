@@ -1,6 +1,5 @@
 use std::os::raw::c_void;
 use std::sync::Mutex;
-use std::ptr::NonNull;
 
 use once_cell::sync::Lazy;
 
@@ -170,6 +169,29 @@ pub struct mts_array_t {
         max_version: DLPackVersion,
     ) -> mts_status_t>,
 
+    /// Create a new array from a DLPack tensor, taking ownership of the
+    /// tensor's data.
+    ///
+    /// The `new_array` output parameter should be filled with an `mts_array_t`
+    /// representing the new array, with the same array origin as the current
+    /// one. The implementation should take ownership of the data in
+    /// `dl_managed_tensor`, and is responsible for calling the tensor's
+    /// `deleter` function when the data is no longer needed.
+    ///
+    /// Importantly, the `dl_managed_tensor` and thus the new array might have a
+    /// different device and/or data type than the current one, and the
+    /// implementation should handle this correctly or return an error.
+    ///
+    /// This function should return `MTS_SUCCESS` on success, or
+    /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
+    /// should call `mts_set_last_error` with an appropriate error message
+    /// before returning.
+    pub from_dlpack: Option<unsafe extern "C" fn(
+        array: *const c_void,
+        dl_managed_tensor: *mut DLManagedTensorVersioned,
+        new_array: *mut mts_array_t,
+    ) -> mts_status_t>,
+
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
     /// pointer, and the number of dimension (size of the `*shape` array) in
     /// `*shape_count`. If the array is a single scalar, `shape_count` should be
@@ -211,10 +233,10 @@ pub struct mts_array_t {
         axis_2: usize,
     ) -> mts_status_t>,
 
-    /// Create a new array with the same options as the current one (data type,
-    /// data location, etc.) and the requested `shape`; and store it in
-    /// `new_array`. The number of elements in the `shape` array should be given
-    /// in `shape_count`.
+    /// Create a new array with the same options as the current one (array
+    /// origin, data type, device, etc.) and the requested `shape`; and store it
+    /// in `new_array`. The number of elements in the `shape` array should be
+    /// given in `shape_count`.
     ///
     /// The new array should be filled with the scalar value from `fill_value`,
     /// which must be an `mts_array_t` containing a single scalar (empty shape)
@@ -236,8 +258,8 @@ pub struct mts_array_t {
 
     /// Make a copy of this `array` and return the new array in `new_array`.
     ///
-    /// The new array is expected to have the same data origin and parameters
-    /// (data type, data location, etc.)
+    /// The new array is expected to have the same array origin and data type as
+    /// the original one, but live on the given `device`.
     ///
     /// This function should return `MTS_SUCCESS` on success, or
     /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation
@@ -245,6 +267,7 @@ pub struct mts_array_t {
     /// before returning.
     pub copy: Option<unsafe extern "C" fn(
         array: *const c_void,
+        device: DLDevice,
         new_array: *mut mts_array_t,
     ) -> mts_status_t>,
 
@@ -327,6 +350,7 @@ impl mts_array_t {
             device: self.device,
             dtype: self.dtype,
             as_dlpack: self.as_dlpack,
+            from_dlpack: self.from_dlpack,
             shape: self.shape,
             reshape: self.reshape,
             swap_axes: self.swap_axes,
@@ -346,6 +370,7 @@ impl mts_array_t {
             device: None,
             dtype: None,
             as_dlpack: None,
+            from_dlpack: None,
             shape: None,
             reshape: None,
             swap_axes: None,
@@ -426,12 +451,33 @@ impl mts_array_t {
             crate::c_api::add_error_context("calling mts_array_t.as_dlpack failed");
             return Err(Error::CallbackError);
         }
-        assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
-        let ptr = NonNull::new(dl_managed_tensor).expect("pointer is null, this should not happen");
+        debug_assert!(!dl_managed_tensor.is_null(), "mts_array_t.as_dlpack returned a null pointer on success");
         let tensor = unsafe {
-            DLPackTensor::from_ptr(ptr)
+            DLPackTensor::from_ptr(dl_managed_tensor)
         };
         return Ok(tensor);
+    }
+
+    /// Create a new array from a DLPack tensor, taking ownership of the
+    /// tensor's data.
+    #[allow(clippy::wrong_self_convention)]
+    pub fn from_dlpack(
+        &self,
+        tensor: DLPackTensor,
+    ) -> Result<mts_array_t, Error> {
+        let function = self.from_dlpack.expect("mts_array_t.from_dlpack function is NULL");
+
+        let mut new_array = mts_array_t::null();
+        let status = unsafe {
+            function(self.ptr, tensor.into_raw().as_ptr(), &mut new_array)
+        };
+
+        if !status.is_success() {
+            crate::c_api::add_error_context("calling mts_array_t.from_dlpack failed");
+            return Err(Error::CallbackError);
+        }
+
+        return Ok(new_array);
     }
 
     /// Get the shape of this array, this can be empty if the array has no shape
@@ -563,12 +609,12 @@ impl mts_array_t {
 
     /// Try to copy this `mts_array_t`. This can fail if the external data can
     /// not be copied for some reason
-    pub fn try_clone(&self) -> Result<mts_array_t, Error> {
+    pub fn copy(&self, device: DLDevice) -> Result<mts_array_t, Error> {
         let function = self.copy.expect("mts_array_t.copy function is NULL");
 
         let mut new_array = mts_array_t::null();
         let status = unsafe {
-            function(self.ptr, &mut new_array)
+            function(self.ptr, device, &mut new_array)
         };
 
         if !status.is_success() {
@@ -639,6 +685,7 @@ mod tests {
                 device: Some(TestArray::device_cpu),
                 dtype: Some(TestArray::dtype_f64),
                 as_dlpack: None,
+                from_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -658,6 +705,7 @@ mod tests {
                 device: Some(TestArray::device_cpu),
                 dtype: Some(TestArray::dtype_f64),
                 as_dlpack: None,
+                from_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -678,6 +726,7 @@ mod tests {
                 device: Some(TestArray::device_cuda),
                 dtype: Some(TestArray::dtype_f64),
                 as_dlpack: None,
+                from_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),
@@ -698,6 +747,7 @@ mod tests {
                 device: Some(TestArray::device_cpu),
                 dtype: Some(TestArray::dtype_f32),
                 as_dlpack: None,
+                from_dlpack: None,
                 shape: Some(TestArray::shape),
                 reshape: Some(TestArray::reshape),
                 swap_axes: Some(TestArray::swap_axes),

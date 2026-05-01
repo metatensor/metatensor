@@ -323,13 +323,33 @@ def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
 
 
 @catch_exceptions
-def _mts_array_copy(this, new_array):
+def _mts_array_copy(this, device, new_array):
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
 
     if _is_numpy_array(wrapper.array):
+        if device.device_type != DLDeviceType.kDLCPU:
+            raise ValueError(
+                f"can not copy numpy array to non-cpu device: {device.device_type}"
+            )
         array = wrapper.array.copy()
     elif _is_torch_array(wrapper.array):
-        array = wrapper.array.clone()
+        array = wrapper.array
+
+        if array.device.type == "meta":
+            # for some reason, meta device is not supported by __dlpack_device__
+            current_device = DLDeviceType.kDLExtDev
+            current_id = 0
+        else:
+            (current_device, current_id) = wrapper.array.__dlpack_device__()
+
+        if current_device != device.device_type or current_id != device.device_id:
+            dlpack = wrapper.array.__dlpack__(
+                dl_device=(device.device_type.value, int(device.device_id)),
+                max_version=(1, 0),
+            )
+            array = torch.from_dlpack(dlpack)
+        else:
+            array = wrapper.array.clone()
 
     new_array[0] = create_mts_array(array)
 
@@ -517,6 +537,27 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
     )
 
 
+@catch_exceptions
+def _mts_array_from_dlpack(this, dl_tensor, new_array):
+    """
+    Implementation of `mts_array_t.from_dlpack`.
+
+    This function takes ownership of the given `DLManagedTensorVersioned` pointer
+    and creates a new array from it.
+    """
+
+    wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+
+    if _is_numpy_array(wrapper.array):
+        array = np.from_dlpack(DLPackArray(dl_tensor))
+    elif _is_torch_array(wrapper.array):
+        array = torch.from_dlpack(DLPackArray(dl_tensor))
+    else:
+        raise ValueError(f"unknown array type: {type(wrapper.array)}")
+
+    new_array[0] = create_mts_array(array)
+
+
 # ============================================================================ #
 # Setup mts_array_t function pointers
 # ============================================================================ #
@@ -530,7 +571,6 @@ def _cast_to_ctype_functype(function, field_name):
     raise ValueError(f"no field named {field_name} in mts_array_t")
 
 
-_MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
 _MTS_ARRAY_SHAPE = _cast_to_ctype_functype(_mts_array_shape, "shape")
 _MTS_ARRAY_RESHAPE = _cast_to_ctype_functype(_mts_array_reshape, "reshape")
 _MTS_ARRAY_SWAP_AXES = _cast_to_ctype_functype(_mts_array_swap_axes, "swap_axes")
@@ -538,6 +578,8 @@ _MTS_ARRAY_CREATE = _cast_to_ctype_functype(_mts_array_create, "create")
 _MTS_ARRAY_COPY = _cast_to_ctype_functype(_mts_array_copy, "copy")
 _MTS_ARRAY_DESTROY = _cast_to_ctype_functype(_mts_array_destroy, "destroy")
 _MTS_ARRAY_MOVE_DATA = _cast_to_ctype_functype(_mts_array_move_data, "move_data")
+_MTS_ARRAY_AS_DLPACK = _cast_to_ctype_functype(_mts_array_as_dlpack, "as_dlpack")
+_MTS_ARRAY_FROM_DLPACK = _cast_to_ctype_functype(_mts_array_from_dlpack, "from_dlpack")
 
 
 @catch_exceptions
@@ -573,19 +615,23 @@ def _mts_array_device_pytorch(this, device_ptr):
     try:
         device_type, device_id = tensor.__dlpack_device__()
         device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
-    except Exception:
-        # Fallback for older torch version that don't have __dlpack_device__
+    except Exception as e:
+        # Fallback for older torch version that don't support all devices in
+        # `__dlpack_device__``
         torch_dev = tensor.device
-        if torch_dev.type == "cpu":
-            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
-        elif torch_dev.type == "cuda":
+        device_id = torch_dev.index if torch_dev.index is not None else 0
+        if torch_dev.type == "meta":
             device_ptr[0] = DLDevice(
-                device_type=DLDeviceType.kDLCUDA, device_id=torch_dev.index or 0
+                device_type=DLDeviceType.kDLExtDev, device_id=device_id
             )
-        elif torch_dev.type == "meta":
-            device_ptr[0] = DLDevice(device_type=DLDeviceType.kDLExtDev, device_id=0)
+        elif torch_dev.type == "mps":
+            device_ptr[0] = DLDevice(
+                device_type=DLDeviceType.kDLMetal, device_id=device_id
+            )
         else:
-            raise ValueError(f"unsupported torch device type: {torch_dev.type}")
+            raise ValueError(
+                f"__dlpack_device__ failed for tensor with device={torch_dev}"
+            ) from e
 
 
 _MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")
@@ -682,6 +728,7 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     device=_MTS_ARRAY_DUMMY_DEVICE,
     dtype=_MTS_ARRAY_DUMMY_DTYPE,
     as_dlpack=_MTS_ARRAY_AS_DLPACK,
+    from_dlpack=_MTS_ARRAY_FROM_DLPACK,
     shape=_MTS_ARRAY_SHAPE,
     reshape=_MTS_ARRAY_RESHAPE,
     swap_axes=_MTS_ARRAY_SWAP_AXES,

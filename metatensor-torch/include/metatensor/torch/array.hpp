@@ -52,7 +52,7 @@ public:
 
     DLDataType dtype() const override;
 
-    std::unique_ptr<metatensor::DataArrayBase> copy() const override;
+    std::unique_ptr<metatensor::DataArrayBase> copy(DLDevice device) const override;
 
     std::unique_ptr<metatensor::DataArrayBase> create(
         std::vector<uintptr_t> shape,
@@ -60,6 +60,8 @@ public:
     ) const override;
 
     DLManagedTensorVersioned* as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) override;
+
+    std::unique_ptr<DataArrayBase> from_dlpack(DLManagedTensorVersioned *dl_tensor) const override;
 
     const std::vector<uintptr_t>& shape() const & override;
 
