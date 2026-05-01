@@ -46,6 +46,19 @@ def run_subprocess(args, check=True, env=None, cwd=None):
     return output
 
 
+def git_paths():
+    gitdir = Path(run_subprocess(["git", "rev-parse", "--git-dir"]).stdout.strip())
+    if not gitdir.is_absolute():
+        gitdir = Path.cwd() / gitdir
+    gitdir = gitdir.resolve()
+
+    worktree = Path(
+        run_subprocess(["git", "rev-parse", "--show-toplevel"]).stdout.strip()
+    ).resolve()
+
+    return gitdir, worktree
+
+
 def n_commits_since_last_tag(tag_prefix):
     # get the full list of tags
     result = run_subprocess(["git", "tag", "--sort=-creatordate"])
@@ -89,11 +102,7 @@ def acquire_git_index_lock(lock: Path, timeout=2.0, poll=1e-3) -> bool:
 
 
 def update_git_index():
-    gitdir = Path(
-        subprocess.run(
-            ["git", "rev-parse", "--git-dir"], capture_output=True, encoding="utf8"
-        ).stdout.strip()
-    )
+    gitdir, worktree = git_paths()
     lock = gitdir / "index.lock"
 
     # create a temp file inside the git dir and close its fd immediately
@@ -109,7 +118,7 @@ def update_git_index():
         run_subprocess(
             ["git", "update-index", "-q", "--really-refresh"],
             env=env,
-            cwd=gitdir.parent.absolute(),
+            cwd=worktree,
         )
 
         # Now acquire the real index lock and swap the updated temp index in place.
@@ -132,14 +141,17 @@ def update_git_index():
         except Exception:
             pass
 
+    return gitdir, worktree
+
 
 def git_hash_all_code():
     # make sure the index is up to date before doing `git diff-index`
-    update_git_index()
+    gitdir, worktree = update_git_index()
 
     output = subprocess.run(
         ["git", "diff-index", "--quiet", "HEAD", "--"],
         capture_output=True,
+        cwd=worktree,
     )
 
     if output.returncode not in [0, 1]:
@@ -156,18 +168,18 @@ def git_hash_all_code():
         # pretending to stage all the file using a temporary index. This way the actual
         # git index is left untouched.
         with tempfile.NamedTemporaryFile("wb") as tmp:
-            with open(os.path.join(ROOT, ".git", "index"), "rb") as git_index:
+            with open(gitdir / "index", "rb") as git_index:
                 shutil.copyfileobj(git_index, tmp)
             tmp.close()
 
             git_env = os.environ.copy()
             git_env["GIT_INDEX_FILE"] = tmp.name
-            run_subprocess(["git", "add", "--all"], env=git_env)
+            run_subprocess(["git", "add", "--all"], env=git_env, cwd=worktree)
 
-            output = run_subprocess(["git", "write-tree"], env=git_env)
+            output = run_subprocess(["git", "write-tree"], env=git_env, cwd=worktree)
             short_hash = output.stdout[:7]
     else:
-        output = run_subprocess(["git", "rev-parse", "HEAD"])
+        output = run_subprocess(["git", "rev-parse", "HEAD"], cwd=worktree)
         short_hash = output.stdout[:7]
 
     return ("dirty." if is_dirty else "git.") + short_hash
@@ -193,7 +205,7 @@ if __name__ == "__main__":
 
     if result.returncode != 0 or not os.path.samefile(result.stdout.strip(), ROOT):
         warn_and_exit(
-            "the git root is not metatensor repository, if you are trying to build "
+            "the git root is not the metatensor repository, if you are trying to build "
             "metatensor from source please use a git checkout"
         )
 
