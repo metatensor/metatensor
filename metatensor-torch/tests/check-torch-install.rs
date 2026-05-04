@@ -9,66 +9,67 @@ lazy_static::lazy_static! {
     static ref LOCK: Mutex<()> = Mutex::new(());
 }
 
+/// Check that metatensor-torch can be built and installed with cmake, and that
+/// the installed version can be used from another cmake project with
+/// `find_package`
 #[test]
 fn check_torch_install() {
-    let _guard = LOCK.lock().expect("mutex was poisoned");
+    let _guard = match LOCK.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            panic!("another test failed, stopping")
+        }
+    };
 
     const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
+    let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
 
     // ====================================================================== //
     // build and install metatensor-torch with cmake
-    let mut torch_tests = PathBuf::from(CARGO_TARGET_TMPDIR);
-    torch_tests.push("torch-install");
+    let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
+    build_dir.push("torch-install");
+    build_dir.push("cmake-find-package");
+    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
 
-    let deps_dir = torch_tests.join("deps");
+
+    let deps_dir = build_dir.join("deps");
 
     let metatensor_dep = deps_dir.join("metatensor-core");
-    std::fs::create_dir_all(&metatensor_dep).expect("failed to create metatensor dep dir");
-    let metatensor_cmake_prefix = utils::setup_metatensor(metatensor_dep);
+    let metatensor_source_dir = cargo_manifest_dir.join("..").join("metatensor-core");
+    let metatensor_cmake_prefix = utils::setup_metatensor_cmake(&metatensor_source_dir, &metatensor_dep);
 
     let torch_dep = deps_dir.join("torch");
     std::fs::create_dir_all(&torch_dep).expect("failed to create torch dep dir");
     let python = utils::create_python_venv(torch_dep);
-    let pytorch_cmake_prefix = utils::setup_pytorch(&python);
-
-    let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let pytorch_cmake_prefix = utils::setup_torch_pip(&python);
 
     // configure cmake for metatensor-torch
     let metatensor_torch_dep = deps_dir.join("metatensor-torch");
-    let install_prefix = metatensor_torch_dep.join("usr");
-    std::fs::create_dir_all(&metatensor_torch_dep).expect("failed to create metatensor-torch dep dir");
-    let mut cmake_config = utils::cmake_config(&cargo_manifest_dir, &metatensor_torch_dep);
-    cmake_config.arg(format!(
-        "-DCMAKE_PREFIX_PATH={};{}",
-        metatensor_cmake_prefix.display(),
-        pytorch_cmake_prefix.display()
-    ));
 
-    cmake_config.arg(format!("-DCMAKE_INSTALL_PREFIX={}", install_prefix.display()));
+    let cmake_options = vec![
+        format!(
+            "-DCMAKE_PREFIX_PATH={};{}",
+            metatensor_cmake_prefix.display(),
+            pytorch_cmake_prefix.display()
+        ),
+        // The two properties below handle the RPATH for metatensor_torch,
+        // setting it in such a way that we can always load libmetatensor.so and
+        // libtorch.so from the location they are found at when compiling
+        // metatensor-torch. See
+        // https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
+        // for more information on CMake RPATH handling
+        "-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON".into(),
+        "-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON".into(),
+    ];
 
-    // The two properties below handle the RPATH for metatensor_torch, setting it
-    // in such a way that we can always load libmetatensor.so and libtorch.so from
-    // the location they are found at when compiling metatensor-torch. See
-    // https://gitlab.kitware.com/cmake/community/-/wikis/doc/cmake/RPATH-handling
-    // for more information on CMake RPATH handling
-    cmake_config.arg("-DCMAKE_BUILD_WITH_INSTALL_RPATH=ON");
-    cmake_config.arg("-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON");
-
-    let status = cmake_config.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run metatensor_torch cmake configuration");
-
-    // build and install metatensor-torch
-    let mut cmake_build = utils::cmake_build(&metatensor_torch_dep);
-    cmake_build.arg("--target");
-    cmake_build.arg("install");
-
-    let status = cmake_build.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run metatensor_torch cmake build");
+    let install_prefix = utils::setup_metatensor_torch_cmake(
+        &cargo_manifest_dir,
+        &metatensor_torch_dep,
+        cmake_options,
+    );
 
     // ====================================================================== //
     // // try to use the installed metatensor-torch from cmake
-    let build_dir = torch_tests;
-
     let mut source_dir = PathBuf::from(&cargo_manifest_dir);
     source_dir.extend(["tests", "cmake-project"]);
 
@@ -81,63 +82,128 @@ fn check_torch_install() {
         install_prefix.display(),
     ));
 
-    let status = cmake_config.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run test project cmake configuration");
+    let output = cmake_config.output().expect("failed to execute cmake");
+    utils::check_output(&output, "configuring test project with cmake");
 
     // build the code, linking to metatensor-torch
     let mut cmake_build = utils::cmake_build(&build_dir);
-    let status = cmake_build.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run test project cmake build");
+    let output = cmake_build.output().expect("failed to execute cmake");
+    utils::check_output(&output, "building test project with cmake");
 
     // run the executables
     let mut ctest = utils::ctest(&build_dir);
-    let status = ctest.status().expect("could not run ctest");
-    assert!(status.success(), "failed to run test project tests");
+    let output = ctest.output().expect("could not run ctest");
+    utils::check_output(&output, "running tests with ctest");
 }
 
+/// Same as above, but using pre-built metatensor-torch from the Python wheel,
+/// instead of building it from source with cmake.
+#[test]
+fn check_python_install() {
+    let _guard = match LOCK.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            panic!("another test failed, stopping")
+        }
+    };
 
+    const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
+
+    // ====================================================================== //
+    // build and install metatensor and metatensor-torch with pip
+    let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
+    build_dir.push("torch-install");
+    build_dir.push("python-wheels");
+    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
+
+    let mut venv_dir = build_dir.clone();
+    venv_dir.push("virtualenv");
+
+    let python_exe = utils::create_python_venv(venv_dir);
+
+    let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
+    let python_source_dir = cargo_manifest_dir.parent().unwrap().join("python").join("metatensor_core");
+    let metatensor_cmake_prefix = utils::setup_metatensor_pip(&python_exe, &python_source_dir);
+
+    let pytorch_cmake_prefix = utils::setup_torch_pip(&python_exe);
+
+    let python_source_dir = cargo_manifest_dir.parent().unwrap().join("python").join("metatensor_torch");
+    let metatensor_torch_cmake_prefix = utils::setup_metatensor_torch_pip(&python_exe, &python_source_dir);
+
+    // ====================================================================== //
+    // try to use the installed metatensor-torch from cmake
+    let mut source_dir = PathBuf::from(&cargo_manifest_dir);
+    source_dir.extend(["tests", "cmake-project"]);
+
+    // configure cmake for the test cmake project
+    let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
+    cmake_config.arg(format!(
+        "-DCMAKE_PREFIX_PATH={};{};{}",
+        metatensor_cmake_prefix.display(),
+        pytorch_cmake_prefix.display(),
+        metatensor_torch_cmake_prefix.display(),
+    ));
+
+    let output = cmake_config.output().expect("failed to execute cmake");
+    utils::check_output(&output, "configuring test project with cmake");
+
+    // build the code, linking to metatensor-torch
+    let mut cmake_build = utils::cmake_build(&build_dir);
+    let output = cmake_build.output().expect("failed to execute cmake");
+    utils::check_output(&output, "building test project with cmake");
+
+    // run the executables
+    let mut ctest = utils::ctest(&build_dir);
+    let output = ctest.output().expect("failed to execute ctest");
+    utils::check_output(&output, "running tests with ctest");
+}
+
+/// Same test as above, but building metatensor and metatensor-torch in the same
+/// CMake project (i.e. using add_subdirectory instead of find_package)
 #[test]
 fn check_cmake_subdirectory() {
-    let _guard = LOCK.lock().expect("mutex was poisoned");
-
-    // Same test as above, but building metatensor and metatensor-torch in the
-    // same CMake project
+    let _guard = match LOCK.lock() {
+        Ok(guard) => guard,
+        Err(_) => {
+            panic!("another test failed, stopping")
+        }
+    };
 
     const CARGO_TARGET_TMPDIR: &str = env!("CARGO_TARGET_TMPDIR");
 
     // install torch
-    let mut torch_tests = PathBuf::from(CARGO_TARGET_TMPDIR);
-    torch_tests.push("torch-install");
-    let deps_dir = torch_tests.join("deps");
+    let mut build_dir = PathBuf::from(CARGO_TARGET_TMPDIR);
+    build_dir.push("torch-install");
+    build_dir.push("cmake-subdirectory");
+    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
+
+    let deps_dir = build_dir.join("deps");
 
     let torch_dep = deps_dir.join("torch");
     std::fs::create_dir_all(&torch_dep).expect("failed to create torch dep dir");
     let python = utils::create_python_venv(torch_dep);
-    let pytorch_cmake_prefix = utils::setup_pytorch(&python);
+    let pytorch_cmake_prefix = utils::setup_torch_pip(&python);
 
-
+    // ====================================================================== //
     let cargo_manifest_dir = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let mut source_dir = PathBuf::from(&cargo_manifest_dir);
     source_dir.extend(["tests", "cmake-project"]);
-
-    let build_dir = torch_tests.join("cmake-subdirectory");
-    std::fs::create_dir_all(&build_dir).expect("failed to create build dir");
 
     // configure cmake for the test cmake project
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
     cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", pytorch_cmake_prefix.display()));
     cmake_config.arg("-DUSE_CMAKE_SUBDIRECTORY=ON");
 
-    let status = cmake_config.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run test project cmake configuration");
+    let output = cmake_config.output().expect("failed to execute cmake");
+    utils::check_output(&output, "configuring test project with cmake");
 
     // build the code, linking to metatensor-torch
     let mut cmake_build = utils::cmake_build(&build_dir);
-    let status = cmake_build.status().expect("could not run cmake");
-    assert!(status.success(), "failed to run test project cmake build");
+    let output = cmake_build.output().expect("failed to execute cmake");
+    utils::check_output(&output, "building test project with cmake");
 
     // run the executables
     let mut ctest = utils::ctest(&build_dir);
-    let status = ctest.status().expect("could not run ctest");
-    assert!(status.success(), "failed to run test project tests");
+    let output = ctest.output().expect("failed to execute ctest");
+    utils::check_output(&output, "running tests with ctest");
 }
