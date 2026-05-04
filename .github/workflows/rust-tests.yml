@@ -89,7 +89,7 @@ jobs:
         run: |
           apt update
           apt install -y software-properties-common
-          apt install -y cmake make gcc g++ git curl
+          apt install -y cmake make gcc g++ git curl python3-venv
 
       - uses: actions/checkout@v6
         with:

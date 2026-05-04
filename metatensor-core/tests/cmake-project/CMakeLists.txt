@@ -30,43 +30,55 @@ else()
 
     find_package(metatensor ${REQUIRED_METATENSOR_VERSION} REQUIRED)
 
-    get_target_property(mts_build_version metatensor::shared BUILD_VERSION)
-    if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
-        message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::shared, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+    if(TARGET metatensor::shared)
+        get_target_property(mts_build_version metatensor::shared BUILD_VERSION)
+        if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
+            message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::shared, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+        endif()
     endif()
 
-    get_target_property(mts_build_version metatensor::static BUILD_VERSION)
-    if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
-        message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::static, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+    if(TARGET metatensor::static)
+        get_target_property(mts_build_version metatensor::static BUILD_VERSION)
+        if (NOT ${mts_build_version} STREQUAL ${METATENSOR_CORE_FULL_VERSION})
+            message(FATAL_ERROR "Invalid BUILD_VERSION for metatensor::static, expected ${METATENSOR_CORE_FULL_VERSION} but got ${mts_build_version}")
+        endif()
     endif()
 endif()
 
-add_executable(c-main src/main.c)
-target_link_libraries(c-main metatensor::shared)
-
-add_executable(c-main-static src/main.c)
-target_link_libraries(c-main-static metatensor::static)
-
-add_executable(cxx-main src/main.cpp)
-target_link_libraries(cxx-main metatensor::shared)
-
-add_executable(cxx-main-static src/main.cpp)
-target_link_libraries(cxx-main-static metatensor::static)
-
 enable_testing()
-add_test(NAME c-main COMMAND c-main)
-add_test(NAME c-main-static COMMAND c-main-static)
-add_test(NAME cxx-main COMMAND cxx-main)
-add_test(NAME cxx-main-static COMMAND cxx-main-static)
 
-if(WIN32)
-    # We need to set the path to allow access to metatensor.dll
-    STRING(REPLACE ";" "\\;" PATH_STRING "$ENV{PATH}")
-    set_tests_properties(c-main PROPERTIES
-        ENVIRONMENT "PATH=${PATH_STRING}\;$<TARGET_FILE_DIR:metatensor::shared>"
-    )
 
-    set_tests_properties(cxx-main PROPERTIES
-        ENVIRONMENT "PATH=${PATH_STRING}\;$<TARGET_FILE_DIR:metatensor::shared>"
-    )
+if(TARGET metatensor::shared)
+    add_executable(c-main src/main.c)
+    target_link_libraries(c-main metatensor::shared)
+
+    add_executable(cxx-main src/main.cpp)
+    target_link_libraries(cxx-main metatensor::shared)
+
+    add_test(NAME c-main COMMAND c-main)
+    add_test(NAME cxx-main COMMAND cxx-main)
+
+    if(WIN32)
+        # We need to set the path to allow access to metatensor.dll
+        STRING(REPLACE ";" "\\;" PATH_STRING "$ENV{PATH}")
+        set_tests_properties(c-main PROPERTIES
+            ENVIRONMENT "PATH=${PATH_STRING}\;$<TARGET_FILE_DIR:metatensor::shared>"
+        )
+
+        set_tests_properties(cxx-main PROPERTIES
+            ENVIRONMENT "PATH=${PATH_STRING}\;$<TARGET_FILE_DIR:metatensor::shared>"
+        )
+    endif()
+endif()
+
+
+if(TARGET metatensor::static)
+    add_executable(c-main-static src/main.c)
+    target_link_libraries(c-main-static metatensor::static)
+
+    add_executable(cxx-main-static src/main.cpp)
+    target_link_libraries(cxx-main-static metatensor::static)
+
+    add_test(NAME c-main-static COMMAND c-main-static)
+    add_test(NAME cxx-main-static COMMAND cxx-main-static)
 endif()
