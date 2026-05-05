@@ -221,7 +221,7 @@ impl TensorMap {
         if matching.len() != 1 {
             let selection_str = selection.names()
                 .iter()
-                .zip(&selection.to_cpu()[0])
+                .zip(&selection[0])
                 .map(|(name, value)| format!("{} = {}", name, value))
                 .collect::<Vec<_>>()
                 .join(", ");
@@ -373,7 +373,7 @@ impl TensorMap {
     #[inline]
     pub fn iter(&self) -> TensorMapIter<'_> {
         return TensorMapIter {
-            inner: self.keys().to_cpu().into_iter().zip(self.blocks())
+            inner: self.keys().into_iter().zip(self.blocks())
         };
     }
 
@@ -389,7 +389,7 @@ impl TensorMap {
         }
 
         return TensorMapIterMut {
-            inner: self.keys().to_cpu().into_iter().zip(blocks)
+            inner: self.keys().into_iter().zip(blocks)
         };
     }
 
@@ -399,7 +399,7 @@ impl TensorMap {
     pub fn par_iter(&self) -> TensorMapParIter<'_> {
         use rayon::prelude::*;
         TensorMapParIter {
-            inner: self.keys().to_cpu().into_par_iter().zip_eq(self.blocks().into_par_iter())
+            inner: self.keys().par_iter().zip_eq(self.blocks().into_par_iter())
         }
     }
 
@@ -418,7 +418,7 @@ impl TensorMap {
         }
 
         TensorMapParIterMut {
-            inner: self.keys().to_cpu().into_par_iter().zip_eq(blocks)
+            inner: self.keys().par_iter().zip_eq(blocks)
         }
     }
 
