@@ -1,5 +1,5 @@
-use std:: ffi::CStr;
-use std::ffi::CString;
+use std::sync::OnceLock;
+use std::ffi::{CStr, CString};
 use std::collections::BTreeSet;
 use std::iter::FusedIterator;
 
@@ -117,6 +117,9 @@ impl LabelValue {
 /// should be a cheap operation.
 pub struct Labels {
     pub(crate) ptr: *const mts_labels_t,
+    values_cpu_ptr: OnceLock<*const LabelValue>,
+    count: OnceLock<usize>,
+    size: OnceLock<usize>,
 }
 
 // Labels can be sent to other thread safely since mts_labels_t uses an
@@ -144,7 +147,7 @@ pub(crate) fn pretty_print_labels(
     writeln!(f, "{}    {}", offset, names.join(", "))?;
 
     let widths = names.iter().map(|s| s.len()).collect::<Vec<_>>();
-    for values in labels.to_cpu() {
+    for values in labels {
         write!(f, "{}    ", offset)?;
         for (value, width) in values.iter().zip(&widths) {
             write!(f, "{:^width$}  ", value.isize(), width=width)?;
@@ -160,7 +163,12 @@ impl Clone for Labels {
     fn clone(&self) -> Self {
         let ptr = unsafe { crate::c_api::mts_labels_clone(self.ptr) };
         assert!(!ptr.is_null(), "failed to clone Labels");
-        Labels { ptr }
+        Labels {
+            ptr,
+            values_cpu_ptr: self.values_cpu_ptr.clone(),
+            count: self.count.clone(),
+            size: self.size.clone(),
+        }
     }
 }
 
@@ -211,7 +219,12 @@ impl Labels {
     #[inline]
     pub unsafe fn from_raw(ptr: *const mts_labels_t) -> Labels {
         assert!(!ptr.is_null(), "expected mts_labels_t pointer to not be NULL");
-        Labels { ptr }
+        Labels {
+            ptr,
+            values_cpu_ptr: OnceLock::new(),
+            size: OnceLock::new(),
+            count: OnceLock::new(),
+        }
     }
 
     /// Create a set of `Labels` with the given names, containing no entries.
@@ -260,25 +273,25 @@ impl Labels {
     /// Get the number of entries/named values in a single label
     #[inline]
     pub fn size(&self) -> usize {
-        self.names().len()
+        *self.size.get_or_init(|| self.names().len())
     }
 
     /// Get the names of the entries/columns in this set of labels
     #[inline]
     pub fn names(&self) -> Vec<&str> {
         let mut names_ptr = std::ptr::null();
-        let mut count = 0;
+        let mut size = 0;
         unsafe {
-            check_status(crate::c_api::mts_labels_dimensions(self.ptr, &mut names_ptr, &mut count))
+            check_status(crate::c_api::mts_labels_dimensions(self.ptr, &mut names_ptr, &mut size))
                 .expect("failed to get labels dimensions");
         }
 
-        if count == 0 {
+        if size == 0 {
             return Vec::new();
         }
 
         unsafe {
-            let names = std::slice::from_raw_parts(names_ptr, count);
+            let names = std::slice::from_raw_parts(names_ptr, size);
             return names.iter()
                         .map(|&ptr| CStr::from_ptr(ptr).to_str().expect("invalid UTF8"))
                         .collect();
@@ -297,6 +310,36 @@ impl Labels {
         return MtsArray::from_raw(array);
     }
 
+    /// Get the values of these Labels on CPU, potentially copying them from
+    /// another device.
+    pub fn values_cpu(&self) -> &[LabelValue] {
+        let values_cpu_ptr = self.values_cpu_ptr.get_or_init(|| {
+            let mut values_cpu_ptr = std::ptr::null();
+            let mut count = 0;
+            let mut size = 0;
+
+            unsafe {
+                check_status(crate::c_api::mts_labels_values_cpu(
+                    self.ptr,
+                    &mut values_cpu_ptr,
+                    &mut count,
+                    &mut size
+                )).expect("failed to get CPU values for Labels");
+            }
+
+            debug_assert_eq!(count, self.count());
+            debug_assert_eq!(size, self.size());
+
+            values_cpu_ptr.cast()
+        });
+
+        unsafe {
+            let count = self.count();
+            let size = self.size();
+            std::slice::from_raw_parts(*values_cpu_ptr, count * size)
+        }
+    }
+
     /// Get the total number of entries in this set of labels
     #[inline]
     pub fn device(&self) -> dlpk::DLDevice {
@@ -307,8 +350,7 @@ impl Labels {
     /// Get the total number of entries in this set of labels
     #[inline]
     pub fn count(&self) -> usize {
-        let array = self.values();
-        return array.shape().expect("failed to get the array shape")[0];
+        return *self.count.get_or_init(|| self.values().shape().expect("failed to get the array shape")[0]);
     }
 
     /// Check if this set of Labels is empty (contains no entry)
@@ -493,8 +535,40 @@ impl Labels {
         return Ok(selected.into_iter().map(|s| s as usize).collect());
     }
 
-    pub fn to_cpu(&self) -> CpuLabels<'_> {
-        CpuLabels::new(self)
+    /// Iterate over the entries in this set of labels
+    #[inline]
+    pub fn iter(&self) -> LabelsIter<'_> {
+        return LabelsIter {
+            ptr: self.values_cpu().as_ptr(),
+            cur: 0,
+            len: self.count(),
+            chunk_len: self.size(),
+            phantom: std::marker::PhantomData,
+        };
+    }
+
+    /// Iterate over the entries in this set of labels in parallel
+    #[cfg(feature = "rayon")]
+    #[inline]
+    pub fn par_iter(&self) -> LabelsParIter<'_> {
+        use rayon::prelude::*;
+        return LabelsParIter {
+            chunks: self.values_cpu().par_chunks_exact(self.size())
+        };
+    }
+
+    /// Iterate over the entries in this set of labels as fixed-size arrays
+    #[inline]
+    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<'_, N> {
+        assert!(N == self.size(),
+            "wrong label size in `iter_fixed_size`: the entries contains {} element \
+            but this function was called with size of {}",
+            self.size(), N
+        );
+
+        return LabelsFixedSizeIter {
+            values: self.values_cpu()
+        };
     }
 }
 
@@ -519,124 +593,19 @@ impl std::cmp::PartialEq<Labels> for Labels {
             // have the same dimensions and number of entries
             return true;
         } else {
-            return self.to_cpu().values() == other.to_cpu().values();
+            return self.values_cpu() == other.values_cpu();
         }
     }
 }
 
-/// A wrapper around `Labels` that provides easier access to the values on CPU.
-///
-/// This provides `Index` and `IntoIterator` implementations to access the
-/// entries in the labels. It is a separate struct from `Labels` to make it
-/// clear when we are accessing values on CPU.
-pub struct CpuLabels<'a> {
-    labels: &'a Labels,
-    values: &'a [LabelValue],
-}
-
-impl std::ops::Deref for CpuLabels<'_> {
-    type Target = Labels;
-
-    fn deref(&self) -> &Labels {
-        self.labels
-    }
-}
-
-impl<'a> CpuLabels<'a> {
-    /// Create a new `CpuLabels` wrapper around the given `Labels`.
-    #[allow(clippy::cast_possible_wrap)]
-    pub fn new(labels: &'a Labels) -> Self {
-        let mut values_ptr = std::ptr::null();
-        let mut count = 0;
-        let mut size = 0;
-
-        unsafe {
-            check_status(crate::c_api::mts_labels_values_cpu(
-                labels.as_mts_labels_t(),
-                &mut values_ptr,
-                &mut count,
-                &mut size
-            )).expect("failed to get labels values on CPU");
-        }
-
-        let values = unsafe { std::slice::from_raw_parts(values_ptr.cast(), count * size) };
-        return CpuLabels { labels, values };
-    }
-
-
-    /// Get the values of these labels on CPU as a slice of `LabelValue`
-    #[inline]
-    pub fn values(&self) -> &[LabelValue] {
-        return self.values
-    }
-
-    /// Iterate over the entries in this set of labels
-    #[inline]
-    pub fn iter(&self) -> LabelsIter<'_> {
-        return LabelsIter {
-            ptr: self.values().as_ptr(),
-            cur: 0,
-            len: self.count(),
-            chunk_len: self.size(),
-            phantom: std::marker::PhantomData,
-        };
-    }
-
-    /// Iterate over the entries in this set of labels
-    #[inline]
-    pub fn into_iter(self) -> LabelsIter<'a> {
-        return LabelsIter {
-            ptr: self.values.as_ptr(),
-            cur: 0,
-            len: self.count(),
-            chunk_len: self.size(),
-            phantom: std::marker::PhantomData,
-        };
-    }
-
-    /// Iterate over the entries in this set of labels in parallel
-    #[cfg(feature = "rayon")]
-    #[inline]
-    pub fn par_iter(&self) -> LabelsParIter<'_> {
-        use rayon::prelude::*;
-        return LabelsParIter {
-            chunks: self.values.par_chunks_exact(self.size())
-        };
-    }
-
-    /// Iterate over the entries in this set of labels in parallel
-    #[cfg(feature = "rayon")]
-    #[inline]
-    pub fn into_par_iter(self) -> LabelsParIter<'a> {
-        use rayon::prelude::*;
-        return LabelsParIter {
-            chunks: self.values.par_chunks_exact(self.size())
-        };
-    }
-
-    /// Iterate over the entries in this set of labels as fixed-size arrays
-    #[inline]
-    pub fn iter_fixed_size<const N: usize>(&self) -> LabelsFixedSizeIter<'_, N> {
-        assert!(N == self.size(),
-            "wrong label size in `iter_fixed_size`: the entries contains {} element \
-            but this function was called with size of {}",
-            self.size(), N
-        );
-
-        return LabelsFixedSizeIter {
-            values: self.values()
-        };
-    }
-}
-
-impl std::ops::Index<usize> for CpuLabels<'_> {
+impl std::ops::Index<usize> for Labels {
     type Output = [LabelValue];
 
     #[inline]
     fn index(&self, i: usize) -> &[LabelValue] {
         let start = i * self.size();
         let stop = (i + 1) * self.size();
-        &self.values[start..stop]
+        &self.values_cpu()[start..stop]
     }
 }
 
@@ -687,23 +656,13 @@ impl ExactSizeIterator for LabelsIter<'_> {
 
 impl FusedIterator for LabelsIter<'_> {}
 
-impl<'a, 'b> IntoIterator for &'a CpuLabels<'b> where 'b: 'a {
+impl<'a> IntoIterator for &'a Labels {
     type IntoIter = LabelsIter<'a>;
     type Item = &'a [LabelValue];
 
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl<'a> IntoIterator for CpuLabels<'a> {
-    type IntoIter = LabelsIter<'a>;
-    type Item = &'a [LabelValue];
-
-    #[inline]
-    fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
     }
 }
 
@@ -912,8 +871,6 @@ mod tests {
         assert_eq!(labels.count(), 3);
         assert!(!labels.is_empty());
 
-        let labels = labels.to_cpu();
-
         assert_eq!(labels[0], [2, 3]);
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
@@ -947,8 +904,6 @@ mod tests {
         assert_eq!(labels.size(), 2);
         assert_eq!(labels.count(), 3);
 
-        let labels = labels.to_cpu();
-
         assert_eq!(labels[0], [2, 3]);
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
@@ -962,7 +917,6 @@ mod tests {
         builder.add(&[4, 3]);
 
         let labels = builder.finish();
-        let labels = labels.to_cpu();
         let mut iter = labels.iter();
         assert_eq!(iter.len(), 3);
 
@@ -983,7 +937,6 @@ mod tests {
         builder.add(&[4, 3]);
 
         let labels = builder.finish();
-        let labels = labels.to_cpu();
         let iter = labels.par_iter();
         assert_eq!(iter.len(), 3);
 
@@ -1001,7 +954,7 @@ mod tests {
 
         let labels = builder.finish();
 
-        for (i, [a, b]) in labels.to_cpu().iter_fixed_size().enumerate() {
+        for (i, [a, b]) in labels.iter_fixed_size().enumerate() {
             assert_eq!(a.usize(), 1 + i);
             assert_eq!(b.usize(), 2 + i);
         }
@@ -1012,7 +965,7 @@ mod tests {
     fn iter_fixed_size_wrong_size() {
         let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
 
-        for [_, _, _] in labels.to_cpu().iter_fixed_size() {}
+        for [_, _, _] in labels.iter_fixed_size() {}
     }
 
     #[test]
@@ -1081,8 +1034,6 @@ mod tests {
             ]
         );
 
-        let labels = labels.to_cpu();
-
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
     }
@@ -1115,7 +1066,7 @@ mod tests {
         let union = first.union(&second, Some(&mut first_mapping), Some(&mut second_mapping)).unwrap();
 
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.to_cpu().values(), [0, 1, 1, 2, 2, 3, 4, 5]);
+        assert_eq!(union.values_cpu(), [0, 1, 1, 2, 2, 3, 4, 5]);
 
         assert_eq!(first_mapping, [0, 1]);
         assert_eq!(second_mapping, [2, 1, 3]);
@@ -1131,7 +1082,7 @@ mod tests {
         let union = first.intersection(&second, Some(&mut first_mapping), Some(&mut second_mapping)).unwrap();
 
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.to_cpu().values(), [1, 2]);
+        assert_eq!(union.values_cpu(), [1, 2]);
 
         assert_eq!(first_mapping, [-1, 0]);
         assert_eq!(second_mapping, [-1, 0, -1]);
@@ -1146,7 +1097,7 @@ mod tests {
         let union = first.difference(&second, Some(&mut mapping)).unwrap();
 
         assert_eq!(union.names(), ["aa", "bb"]);
-        assert_eq!(union.to_cpu().values(), [0, 1]);
+        assert_eq!(union.values_cpu(), [0, 1]);
 
         assert_eq!(mapping, [0, -1]);
     }
