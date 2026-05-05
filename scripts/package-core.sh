@@ -48,7 +48,7 @@ echo "[workspace]" >> "$ARCHIVE_NAME/Cargo.toml"
 
 cargo generate-lockfile --manifest-path "$ARCHIVE_NAME/Cargo.toml"
 
-tar cf "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
+tar --dereference --create --file "$ARCHIVE_NAME.tar" "$ARCHIVE_NAME"
 gzip -9 "$ARCHIVE_NAME.tar"
 
 cp "$TMP_DIR/$ARCHIVE_NAME.tar.gz" "$OUTPUT_DIR/"

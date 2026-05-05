@@ -18,6 +18,11 @@ TMP_DIR=$(mktemp -d)
 mkdir "$TMP_DIR/$ARCHIVE_NAME"
 
 cp -r "$ROOT_DIR"/metatensor-torch/* "$TMP_DIR/$ARCHIVE_NAME/"
+
+# allow resolving symlinks inside metatensor-core
+ln -s "$ROOT_DIR"/metatensor-core "$TMP_DIR/metatensor-core"
+
+# copy the license and authors files, we want them in the archive
 cp "$ROOT_DIR/LICENSE" "$TMP_DIR/$ARCHIVE_NAME"
 cp "$ROOT_DIR/AUTHORS" "$TMP_DIR/$ARCHIVE_NAME"
 
@@ -27,7 +32,7 @@ cd "$ROOT_DIR"
 ./scripts/git-version-info.py "metatensor-torch-v" > "$TMP_DIR/$ARCHIVE_NAME/cmake/git_version_info"
 
 cd "$TMP_DIR"
-tar cf "$ARCHIVE_NAME".tar "$ARCHIVE_NAME"
+tar --dereference --create --file "$ARCHIVE_NAME".tar "$ARCHIVE_NAME"
 
 gzip -9 "$ARCHIVE_NAME".tar
 
