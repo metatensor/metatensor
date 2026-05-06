@@ -1449,18 +1449,13 @@ public:
             throw Error("`stream` must be null for CPU data");
         }
 
-        DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        // SEMVER, so major must match, and the MTA minor must be below the minor(caller)
-        bool major_mismatch = max_version.major != mta_version.major;
-        bool minor_too_high = max_version.minor < mta_version.minor;
-        if (major_mismatch || minor_too_high) {
+        if (max_version.major != DLPACK_MAJOR_VERSION) {
             throw Error(
-                "SimpleDataArray supports DLPack version " +
-                std::to_string(mta_version.major) + "." +
-                std::to_string(mta_version.minor) +
-                ". Caller requested incompatible version " +
-                std::to_string(max_version.major) + "." +
-                std::to_string(max_version.minor)
+                "invalid `max_version` in SimpleDataArray::as_dlpack: "
+                "we got v" + std::to_string(max_version.major) + "." +
+                std::to_string(max_version.minor) + ", but we support v" +
+                std::to_string(DLPACK_MAJOR_VERSION) + "." +
+                std::to_string(DLPACK_MINOR_VERSION)
             );
         }
 
@@ -1482,7 +1477,7 @@ public:
         // point to existing data and setup manager
         ctx->data = this->data_;
         auto managed = std::make_unique<DLManagedTensorVersioned>();
-        managed->version = mta_version;
+        managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
         managed->flags = 0;
         managed->deleter = DLPackDeleter;
 

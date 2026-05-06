@@ -217,8 +217,12 @@ unsafe extern "C" fn labels_array_as_dlpack(
         // minimum minor version requirement.
         if max_version.major != current.major {
             return Err(Error::InvalidParameter(
-                format!("`max_version` too high in as_dlpack: got {}, we support {}", max_version.major, current.major)
-            ))
+                format!(
+                    "invalid `max_version` in LabelsArray::as_dlpack: \
+                    we got v{}.{}, but we support v{}.{})",
+                    max_version.major, max_version.minor, current.major, current.minor
+                )
+            ));
         }
 
         let array = array.cast::<LabelsValuesArray>();

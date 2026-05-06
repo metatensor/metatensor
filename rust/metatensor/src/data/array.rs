@@ -366,7 +366,6 @@ unsafe extern "C" fn rust_array_as_dlpack(
         let tensor = (*array).impl_.as_dlpack(device, stream_opt, max_version)?;
 
         *dl_tensor = tensor.into_raw().as_ptr();
-
         Ok(())
     })
 }
