@@ -327,14 +327,13 @@ DLDataType TorchDataArray::dtype() const {
 }
 
 DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64_t* stream, DLPackVersion max_version) {
-    DLPackVersion mta_version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    bool major_mismatch = max_version.major != mta_version.major;
-    bool minor_too_high = max_version.minor < mta_version.minor;
-    if (major_mismatch || minor_too_high) {
+    if (max_version.major != DLPACK_MAJOR_VERSION) {
         throw metatensor::Error(
-            "TorchDataArray supports DLPack version " + std::to_string(mta_version.major) + "." +
-            std::to_string(mta_version.minor) + ". Caller requested incompatible version " +
-            std::to_string(max_version.major) + "." + std::to_string(max_version.minor)
+            "invalid `max_version` in TorchDataArray::as_dlpack: "
+            "we got v" + std::to_string(max_version.major) + "." +
+            std::to_string(max_version.minor) + ", but we support v" +
+            std::to_string(DLPACK_MAJOR_VERSION) + "." +
+            std::to_string(DLPACK_MINOR_VERSION)
         );
     }
     torch::Device target_device = dlpack_device_to_torch(device);
@@ -403,7 +402,7 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
     DLManagedTensor* legacy_tensor = at::toDLPack(tensor_to_pack);
 
     auto* versioned_tensor = new DLManagedTensorVersioned();
-    versioned_tensor->version = mta_version;
+    versioned_tensor->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
     // Setup context, keeping the legacy variant for the deleter
     versioned_tensor->manager_ctx = legacy_tensor;
     versioned_tensor->deleter = dlpack_versioned_deleter;

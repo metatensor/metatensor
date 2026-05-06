@@ -347,7 +347,8 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     DLPackVersion old_version = {0, 1};
     CHECK_THROWS_WITH(
         data->as_dlpack(cpu_device, nullptr, old_version),
-        Catch::Matchers::Contains("SimpleDataArray supports DLPack version")
+        "invalid `max_version` in SimpleDataArray::as_dlpack: "
+        "we got v0.1, but we support v1.3"
     );
 
     // Case 2: Request a newer version (1.5)
@@ -361,7 +362,8 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     DLPackVersion too_new_version = {2, 0};
     CHECK_THROWS_WITH(
         data->as_dlpack(cpu_device, nullptr, too_new_version),
-        Catch::Matchers::Contains("Caller requested incompatible version")
+        "invalid `max_version` in SimpleDataArray::as_dlpack: "
+        "we got v2.0, but we support v1.3"
     );
 
     // Verify we got back the implementation version, not the requested one

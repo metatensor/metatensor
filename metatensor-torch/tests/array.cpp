@@ -260,22 +260,12 @@ TEST_CASE("DLPack conversion") {
 
         // Major version mismatch
         // If the caller requests a different major version, it should fail.
-        DLPackVersion bad_major = {DLPACK_MAJOR_VERSION + 1, DLPACK_MINOR_VERSION};
+        DLPackVersion bad_major = {2, 2};
         CHECK_THROWS_WITH(
             array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/nullptr, /*max_version=*/ bad_major),
-            Catch::Matchers::Contains("Caller requested incompatible version")
+            "invalid `max_version` in TorchDataArray::as_dlpack: "
+            "we got v2.2, but we support v1.3"
         );
-
-        // Minor version too old
-        // If the caller supports a lower max minor version than the tensor provides,
-        // we must ensure it throws (as per logic: max_version.minor < mta_version.minor).
-        if (DLPACK_MINOR_VERSION > 0) {
-            DLPackVersion old_minor = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION - 1};
-            CHECK_THROWS_WITH(
-                array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/nullptr, /*max_version=*/ old_minor),
-                Catch::Matchers::Contains("Caller requested incompatible version")
-            );
-        }
     }
 
     SECTION("stream synchronization") {
