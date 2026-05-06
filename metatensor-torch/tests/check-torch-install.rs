@@ -82,18 +82,15 @@ fn check_torch_install() {
         install_prefix.display(),
     ));
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
     // build the code, linking to metatensor-torch
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("could not run ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
 
 /// Same as above, but using pre-built metatensor-torch from the Python wheel,
@@ -144,18 +141,15 @@ fn check_python_install() {
         metatensor_torch_cmake_prefix.display(),
     ));
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
     // build the code, linking to metatensor-torch
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
 
 /// Same test as above, but building metatensor and metatensor-torch in the same
@@ -194,16 +188,13 @@ fn check_cmake_subdirectory() {
     cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", pytorch_cmake_prefix.display()));
     cmake_config.arg("-DUSE_CMAKE_SUBDIRECTORY=ON");
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
     // build the code, linking to metatensor-torch
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }

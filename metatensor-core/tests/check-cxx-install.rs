@@ -44,18 +44,15 @@ fn check_cxx_install() {
     // configure cmake for the test cmake project
     let mut cmake_config = utils::cmake_config(&tests_source_dir, &build_dir);
     cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", metatensor_cmake_prefix.display()));
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
     // build the code, linking to metatensor
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
 
 
@@ -97,18 +94,15 @@ fn check_python_install() {
     // configure cmake for the test cmake project
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
     cmake_config.arg(format!("-DCMAKE_PREFIX_PATH={}", metatensor_cmake_prefix.display()));
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
     // build the code, linking to metatensor
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
 
 /// Same test as above, but building metatensor in the same CMake project as the
@@ -138,16 +132,13 @@ fn check_cmake_subdirectory() {
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
     cmake_config.arg("-DUSE_CMAKE_SUBDIRECTORY=ON");
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring test project with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
-    // build the code, linking to metatensor-torch
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building test project with cmake");
+    // build the code, linking to metatensor
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the executables
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
