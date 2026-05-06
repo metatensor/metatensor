@@ -1,8 +1,9 @@
 #![allow(dead_code)]
 #![allow(clippy::needless_return)]
 
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 fn build_type() -> &'static str {
     // assume that debug assertion means that we are building the code in
@@ -137,33 +138,30 @@ fn python_in_venv(venv_dir: &Path) -> PathBuf {
 /// `python -m venv`, and return the path to the python executable in the venv
 pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
     if let Some(uv_bin) = find_uv() {
-        let output = Command::new(&uv_bin)
-            .arg("venv")
-            .arg("--clear")
-            .arg(&build_dir)
-            .output()
-            .expect("failed to run uv venv");
-        check_output(&output, "creating virtualenv with uv");
+        let mut cmd = Command::new(&uv_bin);
+        cmd.arg("venv");
+        cmd.arg("--clear");
+        cmd.arg(&build_dir);
+
+        run_command(cmd, "uv venv creation");
     } else {
-        let output = Command::new(find_python())
-            .arg("-m")
-            .arg("venv")
-            .arg(&build_dir)
-            .output()
-            .expect("failed to run python -m venv");
-        check_output(&output, "creating virtualenv with `venv`");
+        let mut cmd = Command::new(find_python());
+        cmd.arg("-m");
+        cmd.arg("venv");
+        cmd.arg(&build_dir);
+
+        run_command(cmd, "python to create virtualenv with `venv`");
 
         // update pip in case the system uses a very old one
         let python = python_in_venv(&build_dir);
-        let output = Command::new(&python)
-            .arg("-m")
-            .arg("pip")
-            .arg("install")
-            .arg("--upgrade")
-            .arg("pip")
-            .output()
-            .expect("failed to upgrade pip");
-        check_output(&output, "upgrading pip in venv");
+        let mut cmd = Command::new(&python);
+        cmd.arg("-m");
+        cmd.arg("pip");
+        cmd.arg("install");
+        cmd.arg("--upgrade");
+        cmd.arg("pip");
+
+        run_command(cmd, "pip upgrade in virtualenv");
     }
 
     python_in_venv(&build_dir)
@@ -205,8 +203,7 @@ fn pip_install(
             cmd.arg(package);
         }
 
-        let output = cmd.output().expect("failed to execute `uv pip install`");
-        check_output(&output, "running `uv pip install`");
+        run_command(cmd, "uv pip install");
     } else {
         let mut cmd = Command::new(python);
         cmd.arg("-m").arg("pip").arg("install");
@@ -226,8 +223,7 @@ fn pip_install(
             cmd.arg(package);
         }
 
-        let output = cmd.output().expect("failed to execute `pip install`");
-        check_output(&output, "running `pip install`");
+        run_command(cmd, "pip install");
     }
 }
 
@@ -241,15 +237,13 @@ pub fn setup_torch_pip(python: &Path) -> PathBuf {
         PipInstallOptions { upgrade: true, no_deps: false, no_build_isolation: false }
     );
 
-    let output = Command::new(python)
-        .arg("-c")
-        .arg("import torch; print(torch.utils.cmake_prefix_path)")
-        .output()
-        .expect("failed to execute Python");
-    check_output(&output, "getting torch cmake prefix from Python");
+    let mut cmd = Command::new(python);
+    cmd.arg("-c");
+    cmd.arg("import torch; print(torch.utils.cmake_prefix_path)");
+
+    let output = run_command(cmd, "python to get torch cmake prefix");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-
     let prefix = PathBuf::from(stdout.trim());
     if !prefix.exists() {
         panic!("'torch.utils.cmake_prefix' at '{}' does not exist", prefix.display());
@@ -273,15 +267,13 @@ pub fn setup_metatensor_pip(python: &Path, source_dir: &Path) -> PathBuf {
         }
     );
 
-    let output = Command::new(python)
-        .arg("-c")
-        .arg("import metatensor; print(metatensor.utils.cmake_prefix_path)")
-        .output()
-        .expect("failed to execute Python");
-    check_output(&output, "getting metatensor cmake prefix from Python");
+    let mut cmd = Command::new(python);
+    cmd.arg("-c");
+    cmd.arg("import metatensor; print(metatensor.utils.cmake_prefix_path)");
+
+    let output = run_command(cmd, "python to get metatensor cmake prefix");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-
     let prefix = PathBuf::from(stdout.trim());
     if !prefix.exists() {
         panic!("'metatensor.utils.cmake_prefix' at '{}' does not exist", prefix.display());
@@ -303,15 +295,13 @@ pub fn setup_metatensor_torch_pip(python: &Path, source_dir: &Path) -> PathBuf {
         }
     );
 
-    let output = Command::new(python)
-        .arg("-c")
-        .arg("import metatensor.torch; print(metatensor.torch.utils.cmake_prefix_path)")
-        .output()
-        .expect("failed to execute Python");
-    check_output(&output, "getting metatensor_torch cmake prefix from Python");
+    let mut cmd = Command::new(python);
+    cmd.arg("-c");
+    cmd.arg("import metatensor.torch; print(metatensor.torch.utils.cmake_prefix_path)");
+
+    let output = run_command(cmd, "python to get metatensor_torch cmake prefix");
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-
     let prefix = PathBuf::from(stdout.trim());
     if !prefix.exists() {
         panic!("'metatensor.torch.utils.cmake_prefix' at '{}' does not exist", prefix.display());
@@ -331,16 +321,14 @@ pub fn setup_metatensor_cmake(source_dir: &Path, build_dir: &Path) -> PathBuf {
     let install_prefix = build_dir.join("usr");
     cmake_config.arg(format!("-DCMAKE_INSTALL_PREFIX={}", install_prefix.display()));
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    check_output(&output, "running metatensor cmake configuration");
+    run_command(cmake_config, "cmake configuration for metatensor");
 
     // build and install metatensor
     let mut cmake_build = cmake_build(build_dir);
     cmake_build.arg("--target");
     cmake_build.arg("install");
 
-    let output = cmake_build.output().expect("failed to execute cmake");
-    check_output(&output, "running metatensor cmake build");
+    run_command(cmake_build, "cmake build for metatensor");
 
     install_prefix
 }
@@ -362,29 +350,72 @@ pub fn setup_metatensor_torch_cmake(source_dir: &Path, build_dir: &Path, cmake_a
         cmake_config.arg(arg);
     }
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    check_output(&output, "running metatensor_torch cmake configuration");
+    run_command(cmake_config, "cmake configuration for metatensor_torch");
 
     // build and install metatensor
     let mut cmake_build = cmake_build(build_dir);
     cmake_build.arg("--target");
     cmake_build.arg("install");
 
-    let output = cmake_build.output().expect("failed to execute cmake");
-    check_output(&output, "running metatensor_torch cmake build");
+    run_command(cmake_build, "cmake build for metatensor_torch");
 
     install_prefix
 }
 
 
-pub fn check_output(output: &std::process::Output, context: &str) {
-    if !output.status.success() {
+pub fn run_command(mut command: Command, context: &str) -> std::process::Output {
+    write!(std::io::stdout().lock(), "\n\n[Running] {:?}\n\n", command).unwrap();
+
+    let mut child = command
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn().unwrap_or_else(|_| panic!("failed to spawn {}", context));
+
+    let mut child_stdout = child.stdout.take().expect("missing stdout");
+    let mut child_stderr = child.stderr.take().expect("missing stderr");
+
+    let out_handle = std::thread::spawn(move || -> std::io::Result<Vec<u8>> {
+        let mut buf = [0u8; 8192];
+        let mut captured = Vec::new();
+        let mut sink = std::io::stdout().lock();
+        loop {
+            let n = child_stdout.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            sink.write_all(&buf[..n])?;
+            sink.flush()?;
+            captured.extend_from_slice(&buf[..n]);
+        }
+        Ok(captured)
+    });
+
+    let err_handle = std::thread::spawn(move || -> std::io::Result<Vec<u8>> {
+        let mut buf = [0u8; 8192];
+        let mut captured = Vec::new();
+        let mut sink = std::io::stderr().lock();
+        loop {
+            let n = child_stderr.read(&mut buf)?;
+            if n == 0 {
+                break;
+            }
+            sink.write_all(&buf[..n])?;
+            sink.flush()?;
+            captured.extend_from_slice(&buf[..n]);
+        }
+        Ok(captured)
+    });
+
+    let status = child.wait().unwrap_or_else(|_| panic!("failed to run {}", context));
+    let stdout = String::from_utf8_lossy(&out_handle.join().unwrap().unwrap()).into_owned();
+    let stderr = String::from_utf8_lossy(&err_handle.join().unwrap().unwrap()).into_owned();
+
+    if !status.success() {
         panic!(
             "{} failed, status: {}\nstderr:\n\n{}\nstdout:\n\n{}\n",
-            context,
-            output.status,
-            String::from_utf8_lossy(&output.stderr),
-            String::from_utf8_lossy(&output.stdout)
+            context, status, stderr, stdout
         );
     }
+
+    return std::process::Output { status, stdout: stdout.into_bytes(), stderr: stderr.into_bytes() };
 }

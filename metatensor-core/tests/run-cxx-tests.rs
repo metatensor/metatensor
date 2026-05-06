@@ -15,16 +15,13 @@ fn run_cxx_tests() {
     // configure cmake for the tests
     let mut cmake_config = utils::cmake_config(&source_dir, &build_dir);
     cmake_config.arg("-DCMAKE_EXPORT_COMPILE_COMMANDS=ON");
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring tests with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
-    // build the tests with cmake
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building tests with cmake");
+    // build the tests
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the tests
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }

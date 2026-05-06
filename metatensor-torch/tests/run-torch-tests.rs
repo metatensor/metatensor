@@ -36,16 +36,13 @@ fn run_torch_tests() {
         pytorch_cmake_prefix.display()
     ));
 
-    let output = cmake_config.output().expect("failed to execute cmake");
-    utils::check_output(&output, "configuring torch tests with cmake");
+    utils::run_command(cmake_config, "cmake configuration");
 
-    // build the tests with cmake
-    let mut cmake_build = utils::cmake_build(&build_dir);
-    let output = cmake_build.output().expect("failed to execute cmake");
-    utils::check_output(&output, "building torch tests with cmake");
+    // build the tests
+    let cmake_build = utils::cmake_build(&build_dir);
+    utils::run_command(cmake_build, "cmake build");
 
     // run the tests
-    let mut ctest = utils::ctest(&build_dir);
-    let output = ctest.output().expect("failed to execute ctest");
-    utils::check_output(&output, "running torch tests with ctest");
+    let ctest = utils::ctest(&build_dir);
+    utils::run_command(ctest, "ctest");
 }
