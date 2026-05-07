@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock, TryLockError};
 
 use dlpk::sys::{DLDevice, DLPackVersion, DLDataType};
-use dlpk::{DLDataTypeCode, DLPackPointerCast, DLPackTensor, GetDLPackDataType};
+use dlpk::{DLDataTypeCode, DLPackPointerCast, DLPackTensor, GetDLPackDataType, ReadOnly};
 
 use crate::errors::Error;
 use crate::c_api::mts_data_movement_t;
@@ -244,7 +244,7 @@ where
             });
         }
 
-        let tensor: DLPackTensor = Arc::clone(self).try_into().map_err(|e| Error {
+        let tensor: DLPackTensor = ReadOnly(Arc::clone(self)).try_into().map_err(|e| Error {
             code: Some(crate::c_api::MTS_INVALID_PARAMETER_ERROR),
             message: format!("failed to convert ndarray to DLPack: {:?}", e),
         })?;
