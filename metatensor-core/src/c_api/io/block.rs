@@ -176,7 +176,7 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 
 /// Save a tensor block to the file at the given path.
 ///
-/// If the file already exists, it is overwritten. The recomended file extension
+/// If the file already exists, it is overwritten. The recommended file extension
 /// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
@@ -221,7 +221,7 @@ pub unsafe extern "C" fn mts_block_save(
 /// @param realloc_user_data custom data for the `realloc` callback. This will
 ///        be passed as the first argument to `realloc` as-is.
 /// @param realloc function that allows to grow the buffer allocation
-/// @param block tensor block that will saved to the buffer
+/// @param block tensor block that will be saved to the buffer
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error

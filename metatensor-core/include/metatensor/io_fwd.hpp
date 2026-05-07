@@ -18,11 +18,11 @@ namespace metatensor {
     namespace io {
         /// Save a `TensorMap` to the file at `path`.
         ///
-        /// If the file exists, it will be overwritten. The recomended file
+        /// If the file exists, it will be overwritten. The recommended file
         /// extension when saving data is `.mts`, to prevent confusion with generic
         /// `.npz` files.
         ///
-        /// `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
+        /// `TensorMap`s are serialized using numpy's NPZ format, i.e. a ZIP file
         /// without compression (storage method is `STORED`), where each file is
         /// stored as a `.npy` array. See the C API documentation for more
         /// information on the format.
@@ -31,7 +31,7 @@ namespace metatensor {
         /// Save a `TensorMap` to an in-memory buffer.
         ///
         /// The `Buffer` template parameter can be set to any type that can be
-        /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+        /// constructed from a pair of iterators over `std::vector<uint8_t>`.
         template <typename Buffer = std::vector<uint8_t>>
         Buffer save_buffer(const TensorMap& tensor);
 
@@ -42,7 +42,7 @@ namespace metatensor {
 
         /// Save a `TensorBlock` to the file at `path`.
         ///
-        /// If the file exists, it will be overwritten. The recomended file
+        /// If the file exists, it will be overwritten. The recommended file
         /// extension when saving data is `.mts`, to prevent confusion with generic
         /// `.npz` files.
         void save(const std::string& path, const TensorBlock& block);
@@ -50,7 +50,7 @@ namespace metatensor {
         /// Save a `TensorBlock` to an in-memory buffer.
         ///
         /// The `Buffer` template parameter can be set to any type that can be
-        /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+        /// constructed from a pair of iterators over `std::vector<uint8_t>`.
         template <typename Buffer = std::vector<uint8_t>>
         Buffer save_buffer(const TensorBlock& block);
 
@@ -61,7 +61,7 @@ namespace metatensor {
 
         /// Save `Labels` to the file at `path`.
         ///
-        /// If the file exists, it will be overwritten. The recomended file
+        /// If the file exists, it will be overwritten. The recommended file
         /// extension when saving data is `.mts`, to prevent confusion with generic
         /// `.npz` files.
         void save(const std::string& path, const Labels& labels);
@@ -69,7 +69,7 @@ namespace metatensor {
         /// Save `Labels` to an in-memory buffer.
         ///
         /// The `Buffer` template parameter can be set to any type that can be
-        /// constructed from a pair of iterator over `std::vector<uint8_t>`.
+        /// constructed from a pair of iterators over `std::vector<uint8_t>`.
         template <typename Buffer = std::vector<uint8_t>>
         Buffer save_buffer(const Labels& labels);
 
@@ -91,7 +91,7 @@ namespace metatensor {
         *
         * \endverbatim
         *
-        * `TensorMap` are serialized using numpy's NPZ format, i.e. a ZIP file
+        * `TensorMap`s are serialized using numpy's NPZ format, i.e. a ZIP file
         * without compression (storage method is `STORED`), where each file is
         * stored as a `.npy` array. See the C API documentation for more
         * information on the format.

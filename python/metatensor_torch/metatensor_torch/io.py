@@ -139,7 +139,7 @@ def save(file: str, data: Union[TensorMap, TensorBlock, Labels]):
     Save the given data (either :py:class:`TensorMap`, :py:class:`TensorBlock`, or
     :py:class:`Labels`) to the given ``file``.
 
-    If the file already exists, it is overwritten. The recomended file extension when
+    If the file already exists, it is overwritten. The recommended file extension when
     saving data is ``.mts``, to prevent confusion with generic ``.npz`` files.
 
     :param file: path of the file where to save the data, or already opened file.

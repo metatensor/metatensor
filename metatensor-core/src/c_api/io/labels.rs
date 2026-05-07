@@ -133,7 +133,7 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
 
 /// Save labels to the file at the given path.
 ///
-/// If the file already exists, it is overwritten. The recomended file extension
+/// If the file already exists, it is overwritten. The recommended file extension
 /// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
@@ -181,7 +181,7 @@ pub unsafe extern "C" fn mts_labels_save(
 /// @param realloc_user_data custom data for the `realloc` callback. This will
 ///        be passed as the first argument to `realloc` as-is.
 /// @param realloc function that allows to grow the buffer allocation
-/// @param labels pointer to labels that will saved to the buffer
+/// @param labels pointer to labels that will be saved to the buffer
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error

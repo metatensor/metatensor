@@ -20,7 +20,7 @@ impl TensorMap {
     /// sample labels will contain entries corresponding to the merged blocks'
     /// keys.
     ///
-    /// The new sample labels will contains all of the merged blocks sample
+    /// The new sample labels will contain all of the merged blocks sample
     /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which

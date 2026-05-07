@@ -255,7 +255,7 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
 /// the property labels, and blocks with the same remaining keys dimensions
 /// will be merged together along the property axis.
 ///
-/// If `keys_to_move` does not contains any entries (`keys_to_move.count
+/// If `keys_to_move` does not contain any entries (`keys_to_move.count
 /// == 0`), then the new property labels will contain entries corresponding
 /// to the merged blocks only. For example, merging a block with key `a=0`
 /// and properties `p=1, 2` with a block with key `a=2` and properties `p=1,
@@ -264,12 +264,12 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
 ///
 /// If `keys_to_move` contains entries, then the property labels must be the
 /// same for all the merged blocks. In that case, the merged property labels
-/// will contains each of the entries of `keys_to_move` and then the current
+/// will contain each of the entries of `keys_to_move` and then the current
 /// property labels. For example, using `a=2, 3` in `keys_to_move`, and
 /// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
 /// (3, 1), (3, 2)`.
 ///
-/// The new sample labels will contains all of the merged blocks sample
+/// The new sample labels will contain all of the merged blocks sample
 /// labels. The order of the samples is controlled by `sort_samples`. If
 /// `sort_samples` is true, samples are re-ordered to keep them
 /// lexicographically sorted. Otherwise they are kept in the order in which
@@ -382,14 +382,11 @@ pub unsafe extern "C" fn mts_tensormap_components_to_properties(
 /// sample labels will contain entries corresponding to the merged blocks'
 /// keys.
 ///
-/// The new sample labels will contains all of the merged blocks sample
+/// The new sample labels will contain all of the merged blocks sample
 /// labels. The order of the samples is controlled by `sort_samples`. If
 /// `sort_samples` is true, samples are re-ordered to keep them
 /// lexicographically sorted. Otherwise they are kept in the order in which
 /// they appear in the blocks.
-///
-/// This function is only implemented if all merged block have the same
-/// property labels.
 ///
 /// @param tensor pointer to an existing tensor map
 /// @param keys_to_move description of the keys to move

@@ -60,7 +60,7 @@ class LabelsEntry:
     @property
     def values(self) -> Array:
         """
-        values associated with each dimensions of this Labels entry, stored as
+        values associated with each dimension of this Labels entry, stored as
         32-bit integers.
         """
         return self._values

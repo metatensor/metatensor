@@ -10,7 +10,7 @@ use super::utils::copy_str_to_c;
 /// Register a new data origin with the given `name`. Calling this function
 /// multiple times with the same name will give the same `mts_data_origin_t`.
 ///
-/// @param name name of the data origin as an UTF-8 encoded NULL-terminated string
+/// @param name name of the data origin as a UTF-8 encoded NULL-terminated string
 /// @param origin pointer to an `mts_data_origin_t` where the origin will be stored
 ///
 /// @returns The status code of this operation. If the status is not
@@ -36,7 +36,7 @@ pub unsafe extern "C" fn mts_register_data_origin(
 ///
 /// @param origin pre-registered data origin
 /// @param buffer buffer to be filled with the data origin name. The origin name
-///               will be written  as an UTF-8 encoded, NULL-terminated string
+///               will be written as a UTF-8 encoded, NULL-terminated string
 /// @param buffer_size size of the buffer
 ///
 /// @returns The status code of this operation. If the status is not

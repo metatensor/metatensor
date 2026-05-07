@@ -19,7 +19,7 @@ namespace metatensor_torch {
 namespace metatensor {
 /// Basic building block for a tensor map.
 ///
-/// A single block contains a n-dimensional `mts_array_t` (or `DataArrayBase`),
+/// A single block contains an n-dimensional `mts_array_t` (or `DataArrayBase`),
 /// and n sets of `Labels` (one for each dimension). The first dimension is the
 /// *samples* dimension, the last dimension is the *properties* dimension. Any
 /// intermediate dimension is called a *component* dimension.
@@ -31,7 +31,7 @@ namespace metatensor {
 ///
 /// A block can also contain gradients of the values with respect to a variety
 /// of parameters. In this case, each gradient has a separate set of samples,
-/// and possibly components but share the same property labels as the values.
+/// and possibly components but shares the same property labels as the values.
 class TensorBlock final {
 public:
     /// Create a new TensorBlock containing the given `values` array.
@@ -79,7 +79,7 @@ public:
         *this = std::move(other);
     }
 
-    /// TensorBlock can be moved assigned
+    /// TensorBlock can be move-assigned
     TensorBlock& operator=(TensorBlock&& other) noexcept {
         if (!is_view_) {
             mts_block_free(block_);
@@ -341,7 +341,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved ``TensorBlock`` from a in-memory buffer.
+     * Load a previously saved ``TensorBlock`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_block_buffer`, and
      * provided as a convenience API.
@@ -359,7 +359,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved ``TensorBlock`` from a in-memory buffer.
+     * Load a previously saved ``TensorBlock`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_block_buffer`, and
      * provided as a convenience API.

@@ -59,7 +59,7 @@ pub enum mts_status_t {
     /// Status code used when a memory buffer is too small to fit the requested
     /// data
     MTS_BUFFER_SIZE_ERROR = 4,
-    /// Status code indicating errors that comes from callbacks provided by the
+    /// Status code indicating errors that come from callbacks provided by the
     /// user of metatensor. The error message and arbitrary custom data can be
     /// stored using `mts_set_last_error` inside the callback, and retrieved
     /// later with `mts_last_error`.
@@ -224,7 +224,7 @@ pub unsafe extern "C" fn mts_last_error(
 /// @param message the error message to set, as a NULL-terminated string
 /// @param origin the origin of the error, as a NULL-terminated string. This
 ///        can be used to check if the `data` field was defined by the same
-///        code that is calling `mts_last_error` to when retrieving custom data.
+///        code that is calling `mts_last_error` when retrieving custom data.
 /// @param data an arbitrary pointer that can be retrieved later with `mts_last_error`.
 /// @param data_deleter deleter for the custom data, this function will be
 ///        called with `data` as argument when the last error is replaced by
