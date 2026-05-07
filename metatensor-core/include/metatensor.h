@@ -1060,7 +1060,7 @@ struct mts_tensormap_t *mts_tensormap_keys_to_properties(const struct mts_tensor
  *          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
  *          error message.
  */
-struct mts_tensormap_t *mts_tensormap_components_to_properties(struct mts_tensormap_t *tensor,
+struct mts_tensormap_t *mts_tensormap_components_to_properties(const struct mts_tensormap_t *tensor,
                                                                const char *const *dimensions,
                                                                uintptr_t dimensions_count);
 

@@ -429,7 +429,7 @@ extern "C" {
         sort_samples: bool,
     ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_components_to_properties(
-        tensor: *mut mts_tensormap_t,
+        tensor: *const mts_tensormap_t,
         dimensions: *const *const ::std::os::raw::c_char,
         dimensions_count: usize,
     ) -> *mut mts_tensormap_t;
