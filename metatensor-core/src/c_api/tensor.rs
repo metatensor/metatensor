@@ -336,7 +336,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 ///          error message.
 #[no_mangle]
 pub unsafe extern "C" fn mts_tensormap_components_to_properties(
-    tensor: *mut mts_tensormap_t,
+    tensor: *const mts_tensormap_t,
     dimensions: *const *const c_char,
     dimensions_count: usize,
 ) -> *mut mts_tensormap_t {
