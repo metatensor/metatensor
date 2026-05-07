@@ -193,9 +193,12 @@ pub struct mts_array_t {
     ) -> mts_status_t>,
 
     /// Get the shape of the array managed by this `mts_array_t` in the `*shape`
-    /// pointer, and the number of dimension (size of the `*shape` array) in
+    /// pointer, and the number of dimensions (size of the `*shape` array) in
     /// `*shape_count`. If the array is a single scalar, `shape_count` should be
     /// set to 0, and the shape pointer to `NULL`.
+    ///
+    /// The returned pointer in `*shape` should remain valid as long as the
+    /// `mts_array_t` is valid, and should not be freed by the caller.
     ///
     /// This function should return `MTS_SUCCESS` on success, or
     /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation

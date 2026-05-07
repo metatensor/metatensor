@@ -60,7 +60,7 @@ impl std::ops::Deref for mts_labels_t {
 /// `mts_labels_free` when you don't need it anymore.
 ///
 /// @param dimensions array of NULL-terminated UTF-8 strings containing the
-///        name of each dimensions of the new labels
+///        name of each dimension of the new labels
 /// @param dimensions_count number of entries in the `dimensions` array
 /// @param array the values array (2D, i32, row-major). The labels take
 ///        ownership of this array.
@@ -577,7 +577,8 @@ pub unsafe extern "C" fn mts_labels_difference(
 
 /// Select entries in the `labels` that match the `selection`.
 ///
-/// The selection's names must be a subset of the name of the `labels` names.
+/// The selection's dimensions must be a subset of the dimensions of the
+/// `labels`.
 ///
 /// All entries in the `labels` that match one of the entry in the `selection`
 /// for all the selection's dimension will be picked. Any entry in the

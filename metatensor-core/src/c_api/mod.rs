@@ -17,7 +17,8 @@ mod io;
 
 mod utils;
 
-/// Disable printing of the message to stderr when some Rust code reach a panic.
+/// Disable printing of the message to stderr when some Rust code reaches a
+/// panic.
 ///
 /// All panics from Rust code are caught anyway and translated to an error
 /// status code, and the message is stored and accessible through

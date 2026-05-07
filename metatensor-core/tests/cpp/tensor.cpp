@@ -312,7 +312,7 @@ TEST_CASE("TensorMap") {
         CHECK(clone.keys() == tensor.keys());
 
         auto block = clone.block_by_id(0);
-        CHECK_THROWS_WITH(block.values(), "can not call `as_dlpack` for an EmtpyDataArray");
+        CHECK_THROWS_WITH(block.values(), "can not call `as_dlpack` for an EmptyDataArray");
 
         // reset the last error, this should free the exception and avoid memory leak
         auto status = mts_set_last_error(nullptr, nullptr, nullptr, nullptr);

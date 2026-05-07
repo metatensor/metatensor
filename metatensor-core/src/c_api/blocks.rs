@@ -66,8 +66,8 @@ impl mts_block_t {
 /// @param components array of `mts_labels_t` pointers for the components; the
 ///                   block will increase the reference count of these labels.
 /// @param components_count number of entries in the `components` array
-/// @param properties pointer to the `mts_labels_t` for properties;the block will
-///                   increase the reference count of these labels.
+/// @param properties pointer to the `mts_labels_t` for properties; the block
+///                   will increase the reference count of these labels.
 ///
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`

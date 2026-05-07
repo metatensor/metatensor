@@ -28,7 +28,7 @@ pub fn load_labels_buffer(buffer: &[u8]) -> Result<Labels, Error> {
 
 /// Save the given `Labels` to a file.
 ///
-/// If the file already exists, it is overwritten. The recomended file extension
+/// If the file already exists, it is overwritten. The recommended file extension
 /// when saving data is `.mts`, to prevent confusion with generic `.npz`.
 pub fn save_labels(path: impl AsRef<std::path::Path>, labels: &Labels) -> Result<(), Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");

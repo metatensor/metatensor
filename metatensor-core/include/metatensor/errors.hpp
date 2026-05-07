@@ -60,7 +60,7 @@ namespace metatensor {
                 } catch (const std::exception& e) {
                     message = e.what();
                 } catch (...) {
-                    message = "C++ code threw an exception that was not an std::exception";
+                    message = "C++ code threw an exception that was not a std::exception";
                 }
 
                 auto status = mts_set_last_error(

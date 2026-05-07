@@ -18,7 +18,7 @@ mod tensor;
 /// return non-zero `mts_status_t`.
 ///
 /// The newly created array should live on CPU, since metatensor will use
-/// `mts_array_t.data` to get the data pointer and write to it.
+/// `mts_array_t.as_dlpack` to get the data pointer and write to it.
 ///
 /// This function should return `MTS_SUCCESS` on success, or
 /// `MTS_CALLBACK_ERROR` on failure. In case of failure, the implementation

@@ -52,7 +52,7 @@ class LabelsEntry:
     @property
     def values(self) -> torch.Tensor:
         """
-        Values associated with each dimensions of this :py:class:`LabelsEntry`, stored
+        Values associated with each dimension of this :py:class:`LabelsEntry`, stored
         as 32-bit integers.
 
         .. warning::
@@ -191,7 +191,7 @@ class Labels:
     @property
     def values(self) -> torch.Tensor:
         """
-        Values associated with each dimensions of the :py:class:`Labels`, stored
+        Values associated with each dimension of the :py:class:`Labels`, stored
         as 2-dimensional tensor of 32-bit integers.
 
         .. warning::
@@ -1233,7 +1233,7 @@ class TensorMap:
         as if they where passed directly.
 
         Finally, if ``keys_to_move`` is a non empty set of :py:class:`Labels`,
-        the new properties labels will contains **all** of the entries of
+        the new properties labels will contain **all** of the entries of
         ``keys_to_move`` (regardless of the values taken by
         ``keys_to_move.names`` in the merged blocks' keys) followed by the
         existing properties labels. For example, using ``a=2, 3`` in

@@ -32,8 +32,7 @@ use super::mts_create_array_callback_t;
 ///
 /// We add other restriction on top of these formats when saving/loading data.
 /// First, `Labels` instances are saved as structured array, see the `labels`
-/// module for more information. Only 32-bit integers are supported for Labels,
-/// and only 64-bit floats are supported for data (values and gradients).
+/// module for more information.
 ///
 /// Second, the path of the files in the archive also carry meaning. The keys of
 /// the `TensorMap` are stored in `/keys.npy`, and then different blocks are
@@ -207,7 +206,7 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 
 /// Save a tensor map to the file at the given path.
 ///
-/// If the file already exists, it is overwritten. The recomended file extension
+/// If the file already exists, it is overwritten. The recommended file extension
 /// when saving data is `.mts`, to prevent confusion with generic `.npz` files.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
@@ -252,7 +251,7 @@ pub unsafe extern "C" fn mts_tensormap_save(
 /// @param realloc_user_data custom data for the `realloc` callback. This will
 ///        be passed as the first argument to `realloc` as-is.
 /// @param realloc function that allows to grow the buffer allocation
-/// @param tensor tensor map that will saved to the buffer
+/// @param tensor tensor map that will be saved to the buffer
 ///
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error

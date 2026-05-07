@@ -60,7 +60,7 @@ def save(
     without compression (storage method is ``STORED``), where each file is stored as a
     ``.npy`` array. See the C API documentation for more information on the format.
 
-    The recomended file extension when saving data is ``.mts``, to prevent confusion
+    The recommended file extension when saving data is ``.mts``, to prevent confusion
     with generic ``.npz`` files.
 
     :param file: where to save the data. This can be a string, :py:class:`pathlib.Path`

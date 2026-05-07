@@ -436,14 +436,14 @@ private:
     std::vector<size_t> shape_;
 };
 
-/// Compare this `DLPackArray` with another `DLPackArray`. The array are equal if
+/// Compare this `DLPackArray` with another `DLPackArray`. The arrays are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator==(const DLPackArray<T>& lhs, const DLPackArray<T>& rhs) {
     return details::arrays_equal(lhs, rhs);
 }
 
-/// Compare this `DLPackArray` with another `DLPackArray`. The array are equal
+/// Compare this `DLPackArray` with another `DLPackArray`. The arrays are equal
 /// if and only if both the shape and data are equal.
 template<typename T>
 bool operator!=(const DLPackArray<T>& lhs, const DLPackArray<T>& rhs) {
@@ -564,7 +564,7 @@ public:
     template<typename ...Args>
     T& operator()(Args... args) & {
         if (is_const_) {
-            throw Error("This NDArray is const, can not get non const access to it");
+            throw Error("This NDArray is const, can not get non-const access to it");
         }
 
         auto index = std::array<size_t, sizeof... (Args)>{static_cast<size_t>(args)...};
@@ -590,7 +590,7 @@ public:
     /// element.
     T* data() & {
         if (is_const_) {
-            throw Error("This NDArray is const, can not get non const access to it");
+            throw Error("This NDArray is const, can not get non-const access to it");
         }
         return data_;
     }
@@ -702,42 +702,42 @@ private:
 };
 
 
-/// Compare this `NDArray` with another `NDarray`. The array are equal if
+/// Compare this `NDArray` with another `NDArray`. The arrays are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator==(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     return details::arrays_equal(lhs, rhs);
 }
 
-/// Compare this `NDArray` with another `NDarray`. The array are equal if
+/// Compare this `NDArray` with another `NDArray`. The arrays are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator!=(const NDArray<T>& lhs, const NDArray<T>& rhs) {
     return !details::arrays_equal(lhs, rhs);
 }
 
-/// Compare this `DLPackArray` with another `NDArray`. The array are equal if
+/// Compare this `DLPackArray` with another `NDArray`. The arrays are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator==(const DLPackArray<T>& lhs, const NDArray<T>& rhs) {
     return details::arrays_equal(lhs, rhs);
 }
 
-/// Compare this `DLPackArray` with another `NDArray`. The array are equal
+/// Compare this `DLPackArray` with another `NDArray`. The arrays are equal
 /// if and only if both the shape and data are equal.
 template<typename T>
 bool operator!=(const DLPackArray<T>& lhs, const NDArray<T>& rhs) {
     return !details::arrays_equal(lhs, rhs);
 }
 
-/// Compare an `NDArray` with a `DLPackArray`. The array are equal if
+/// Compare an `NDArray` with a `DLPackArray`. The arrays are equal if
 /// and only if both the shape and data are equal.
 template<typename T>
 bool operator==(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
     return details::arrays_equal(lhs, rhs);
 }
 
-/// Compare this `NDArray` with another `DLPackArray`. The array are equal
+/// Compare this `NDArray` with another `DLPackArray`. The arrays are equal
 /// if and only if both the shape and data are equal.
 template<typename T>
 bool operator!=(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
@@ -960,7 +960,7 @@ public:
     /// The `moves` indicate where the data should be moved from `input` to the
     /// current DataArrayBase.
     ///
-    /// This function copy data from `input[move.sample_in, ...,
+    /// This function copies data from `input[move.sample_in, ...,
     /// move.properties_start_in + i]` to `array[move.sample_out, ...,
     /// move.properties_start_out + i]` for each `move` in `moves` and `i` up to
     /// `move.properties_length`. All indexes are 0-based.
@@ -981,7 +981,7 @@ private:
 };
 
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
-/// tensor map. The array itself if opaque to this library and can come from
+/// tensor map. The array itself is opaque to this library and can come from
 /// multiple sources: Rust program, a C/C++ program, a Fortran program, Python
 /// with numpy or torch. The data does not have to live on CPU, or even on the
 /// same machine where this code is executed.
@@ -1236,7 +1236,7 @@ public:
 /// Very basic implementation of DataArrayBase in C++.
 ///
 /// This is included as an example implementation of DataArrayBase, and to make
-/// metatensor usable without additional dependencies. For other uses cases, it
+/// metatensor usable without additional dependencies. For other use cases, it
 /// might be better to implement DataArrayBase on your data, using
 /// functionalities from `Eigen`, `Boost.Array`, etc.
 template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
@@ -1627,14 +1627,14 @@ private:
     friend bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs);
 };
 
-/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The array are
+/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The arrays are
 /// equal if and only if both the shape and data are equal.
 template<typename T>
 inline bool operator==(const SimpleDataArray<T>& lhs, const SimpleDataArray<T>& rhs) {
     return lhs.shape_ == rhs.shape_ && *lhs.data_ == *rhs.data_;
 }
 
-/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The array are
+/// Compare this `SimpleDataArray` with another `SimpleDataArray`. The arrays are
 /// equal if and only if both the shape and data are equal.
 template<typename T>
 inline bool operator!=(const SimpleDataArray<T>& lhs, const SimpleDataArray<T>& rhs) {
@@ -1692,11 +1692,11 @@ bool operator!=(const NDArray<T>& lhs, const SimpleDataArray<T>& rhs) {
 
 /// An implementation of `DataArrayBase` containing no data.
 ///
-/// This class only tracks it's shape, and can be used when only the metadata
+/// This class only tracks its shape, and can be used when only the metadata
 /// of a `TensorBlock` is important, leaving the data unspecified.
 class EmptyDataArray: public metatensor::DataArrayBase {
 public:
-    /// Create ae `EmptyDataArray` with the given `shape`
+    /// Create an `EmptyDataArray` with the given `shape`
     EmptyDataArray(std::vector<uintptr_t> shape):
         shape_(std::move(shape)) {}
 
@@ -1728,12 +1728,12 @@ public:
 
     [[noreturn]]
     DLManagedTensorVersioned *as_dlpack(DLDevice, const int64_t*, DLPackVersion) override {
-        throw metatensor::Error("can not call `as_dlpack` for an EmtpyDataArray");
+        throw metatensor::Error("can not call `as_dlpack` for an EmptyDataArray");
     }
 
     [[noreturn]]
     std::unique_ptr<DataArrayBase> from_dlpack(DLManagedTensorVersioned*) const override {
-        throw metatensor::Error("can not call `from_dlpack` for an EmtpyDataArray");
+        throw metatensor::Error("can not call `from_dlpack` for an EmptyDataArray");
     }
 
     const std::vector<uintptr_t>& shape() const & override {

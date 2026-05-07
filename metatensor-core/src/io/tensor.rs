@@ -92,7 +92,7 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
 /// Save the given tensor to a file (or any other writer).
 ///
 /// The format consists of a zip archive containing NPY files and one JSON file
-/// for the global metadata. The recomended file extension when saving data is
+/// for the global metadata. The recommended file extension when saving data is
 /// `.mts`, to prevent confusion with generic `.npz` files.
 pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);

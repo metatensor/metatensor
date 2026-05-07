@@ -73,7 +73,7 @@ pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
 
 /// Save the given tensor to a file.
 ///
-/// If the file already exists, it is overwritten. The recomended file extension
+/// If the file already exists, it is overwritten. The recommended file extension
 /// when saving data is `.mts`, to prevent confusion with generic `.npz`.
 ///
 /// The format used is documented in the [`load`] function, and consists of a

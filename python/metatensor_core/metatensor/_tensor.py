@@ -563,7 +563,7 @@ class TensorMap:
         they where passed directly.
 
         Finally, if ``keys_to_move`` is a non empty set of :py:class:`Labels`, the new
-        properties labels will contains **all** of the entries of ``keys_to_move``
+        properties labels will contain **all** of the entries of ``keys_to_move``
         (regardless of the values taken by ``keys_to_move.names`` in the merged blocks'
         keys) followed by the existing properties labels. For example, using ``a=2, 3``
         in ``keys_to_move``, blocks with properties ``p=1, 2`` will result in ``a, p =

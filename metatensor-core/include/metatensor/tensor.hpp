@@ -144,7 +144,7 @@ public:
 
     /// TensorMap can NOT be copy constructed, use TensorMap::clone instead
     TensorMap(const TensorMap&) = delete;
-    /// TensorMap can not be copy assigned, use TensorMap::clone instead
+    /// TensorMap can not be copy-assigned, use TensorMap::clone instead
     TensorMap& operator=(const TensorMap&) = delete;
 
     /// TensorMap can be move constructed
@@ -216,7 +216,7 @@ public:
         return Labels(ptr);
     }
 
-    /// Get a block inside this TensorMap by it's index/the index of the
+    /// Get a block inside this TensorMap by its index/the index of the
     /// corresponding key.
     ///
     /// The returned `TensorBlock` is a view inside memory owned by this
@@ -238,7 +238,7 @@ public:
     /// the property labels, and blocks with the same remaining keys dimensions
     /// will be merged together along the property axis.
     ///
-    /// If `keys_to_move` does not contains any entries (i.e.
+    /// If `keys_to_move` does not contain any entries (i.e.
     /// `keys_to_move.count() == 0`), then the new property labels will contain
     /// entries corresponding to the merged blocks only. For example, merging a
     /// block with key `a=0` and properties `p=1, 2` with a block with key `a=2`
@@ -247,12 +247,12 @@ public:
     ///
     /// If `keys_to_move` contains entries, then the property labels must be the
     /// same for all the merged blocks. In that case, the merged property labels
-    /// will contains each of the entries of `keys_to_move` and then the current
+    /// will contain each of the entries of `keys_to_move` and then the current
     /// property labels. For example, using `a=2, 3` in `keys_to_move`, and
     /// blocks with properties `p=1, 2` will result in `a, p = (2, 1), (2, 2),
     /// (3, 1), (3, 2)`.
     ///
-    /// The new sample labels will contains all of the merged blocks sample
+    /// The new sample labels will contain all of the merged blocks sample
     /// labels. The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
@@ -260,9 +260,9 @@ public:
     ///
     /// @param keys_to_move description of the keys to move
     /// @param fill_value an `MtsArray` containing a single scalar of the same
-    //                    dtype as this `TensorMap`, used to fill missing entries
+    ///     dtype as this `TensorMap`, used to fill missing entries
     /// @param sort_samples whether to sort the merged samples or keep them in
-    ///                     the order in which they appear in the original blocks
+    ///     the order in which they appear in the original blocks
     TensorMap keys_to_properties(
         const Labels& keys_to_move,
         MtsArray fill_value,
@@ -314,7 +314,7 @@ public:
         auto fill_value_array = DataArrayBase::to_mts_array(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
-        // Ownership of fill_value_array is transfered to the C API
+        // Ownership of fill_value_array is transferred to the C API
         return keys_to_properties(keys_to_move, std::move(fill_value_array), sort_samples);
     }
 
@@ -343,25 +343,22 @@ public:
     ///
     /// The dimensions (names) of `keys_to_move` will be moved from the keys to
     /// the sample labels, and blocks with the same remaining keys dimensions
-    /// will be merged together along the sample axis.
+    /// will be merged together along the sample axis. `keys_to_move` must be an
+    /// empty set of `Labels` (`keys_to_move.count() == 0`).
     ///
-    /// If `keys_to_move` must be an empty set of `Labels`
-    /// (`keys_to_move.count() == 0`). The new sample labels will contain
-    /// entries corresponding to the merged blocks' keys.
+    /// The new sample labels will contain entries corresponding to the merged
+    /// blocks' keys.
     ///
     /// The order of the samples is controlled by `sort_samples`. If
     /// `sort_samples` is true, samples are re-ordered to keep them
     /// lexicographically sorted. Otherwise they are kept in the order in which
     /// they appear in the blocks.
     ///
-    /// This function is only implemented if all merged block have the same
-    /// property labels.
-    ///
     /// @param keys_to_move description of the keys to move
     /// @param fill_value an `MtsArray` containing a single scalar of the same
-    //                    dtype as this `TensorMap`, used to fill missing entries
+    ///     dtype as this `TensorMap`, used to fill missing entries
     /// @param sort_samples whether to sort the merged samples or keep them in
-    ///                     the order in which they appear in the original blocks
+    ///     the order in which they appear in the original blocks
     TensorMap keys_to_samples(
         const Labels& keys_to_move,
         MtsArray fill_value,
@@ -413,7 +410,7 @@ public:
         auto fill_value_array = DataArrayBase::to_mts_array(
             std::make_unique<SimpleDataArray<T>>(std::vector<uintptr_t>{}, fill_value)
         );
-        // Ownership of fill_value_array is transfered to the C API
+        // Ownership of fill_value_array is transferred to the C API
         return keys_to_samples(keys_to_move, std::move(fill_value_array), sort_samples);
     }
 
@@ -489,7 +486,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved ``TensorMap`` from a in-memory buffer.
+     * Load a previously saved ``TensorMap`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
      * provided as a convenience API.
@@ -507,7 +504,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load a previously saved ``TensorMap`` from a in-memory buffer.
+     * Load a previously saved ``TensorMap`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_buffer`, and
      * provided as a convenience API.

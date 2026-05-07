@@ -556,19 +556,20 @@ public:
 
     /// Select entries in these `Labels` that match the `selection`.
     ///
-    /// The selection's names must be a subset of the names of these labels.
+    /// The selection's dimensions must be a subset of the dimensions of these
+    /// labels.
     ///
-    /// All entries in these `Labels` that match one of the entry in the
-    /// `selection` for all the selection's dimension will be picked. Any entry
+    /// All entries in these `Labels` that match one of the entries in the
+    /// `selection` for all the selection's dimensions will be picked. Any entry
     /// in the `selection` but not in these `Labels` will be ignored.
     ///
     /// @param selection definition of the selection criteria. Multiple entries
-    ///        are interpreted as a logical `or` operation.
+    ///     are interpreted as a logical `or` operation.
     /// @param selected on input, a pointer to an array with space for
-    ///        `*selected_count` entries. On output, the first `*selected_count`
-    ///        values will contain the index in `labels` of selected entries.
+    ///     `*selected_count` entries. On output, the first `*selected_count`
+    ///     values will contain the index in `labels` of selected entries.
     /// @param selected_count on input, size of the `selected` array. On output,
-    ///        this will contain the number of selected entries.
+    ///     this will contain the number of selected entries.
     void select(const Labels& selection, uint64_t* selected, size_t *selected_count) const {
         details::check_status(mts_labels_select(
             labels_,
@@ -581,7 +582,7 @@ public:
     /// Select entries in these `Labels` that match the `selection`.
     ///
     /// This function does the same thing as the one above, but allocates and
-    /// return the list of selected indexes in a `std::vector`
+    /// returns the list of selected indexes in a `std::vector`
     std::vector<uint64_t> select(const Labels& selection) const {
         auto selected_count = this->count();
         auto selected = std::vector<uint64_t>(selected_count, static_cast<uint64_t>(-1));
@@ -609,7 +610,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load previously saved ``Labels`` from a in-memory buffer.
+     * Load previously saved ``Labels`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_labels_buffer`, and
      * provided as a convenience API.
@@ -623,7 +624,7 @@ public:
     /*!
      * \verbatim embed:rst:leading-asterisk
      *
-     * Load previously saved ``Labels`` from a in-memory buffer.
+     * Load previously saved ``Labels`` from an in-memory buffer.
      *
      * This is identical to :cpp:func:`metatensor::io::load_labels_buffer`, and
      * provided as a convenience API.
