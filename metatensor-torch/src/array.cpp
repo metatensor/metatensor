@@ -519,11 +519,6 @@ void TorchDataArray::move_data(
     }
 
     if (constant_properties) {
-        auto sample_in_indices = std::vector<int64_t>();
-        auto sample_out_indices = std::vector<int64_t>();
-        sample_in_indices.reserve(moves.size());
-        sample_out_indices.reserve(moves.size());
-
         bool contiguous_in = true;
         bool contiguous_out = true;
 
@@ -538,13 +533,18 @@ void TorchDataArray::move_data(
             }
         }
 
-        for (const auto& move : moves) {
-            sample_in_indices.push_back(static_cast<int64_t>(move.sample_in));
-            sample_out_indices.push_back(static_cast<int64_t>(move.sample_out));
-        }
+        auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
+        auto samples_in = torch::zeros({static_cast<int64_t>(moves.size())}, options);
+        auto samples_in_accessor = samples_in.accessor<int64_t, 1>();
 
-        torch::Tensor samples_in;
-        torch::Tensor samples_out;
+        auto samples_out = torch::zeros({static_cast<int64_t>(moves.size())}, options);
+        auto samples_out_accessor = samples_out.accessor<int64_t, 1>();
+
+        for (size_t i = 0; i < moves.size(); ++i) {
+            const auto& move = moves[i];
+            samples_in_accessor[i] = static_cast<int64_t>(move.sample_in);
+            samples_out_accessor[i] = static_cast<int64_t>(move.sample_out);
+        }
 
         auto property_start_in = static_cast<int64_t>(first_prop_start_in);
         auto property_start_out = static_cast<int64_t>(first_prop_start_out);
@@ -560,11 +560,7 @@ void TorchDataArray::move_data(
                 Slice(property_start_in, property_start_in + property_len)
             });
         } else {
-            samples_in = torch::from_blob(
-                sample_in_indices.data(),
-                {static_cast<int64_t>(sample_in_indices.size())},
-                torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
-            ).to(input_tensor.device(), /*non_blocking=*/true, /*copy=*/true);
+            samples_in = samples_in.to(input_tensor.device(), /*non_blocking=*/false, /*copy=*/false);
 
             input_slice = input_tensor.index({
                 samples_in,
@@ -585,11 +581,7 @@ void TorchDataArray::move_data(
                 input_slice
             );
         } else {
-            samples_out = torch::from_blob(
-                sample_out_indices.data(),
-                {static_cast<int64_t>(sample_out_indices.size())},
-                torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
-            ).to(input_tensor.device(), /*non_blocking=*/true, /*copy=*/true);
+            samples_out = samples_out.to(input_tensor.device(), /*non_blocking=*/false, /*copy=*/false);
 
             output_tensor.index_put_(
                 {

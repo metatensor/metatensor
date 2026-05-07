@@ -9,6 +9,16 @@ from metatensor.torch import Labels, LabelsEntry, TensorBlock, TensorMap
 from . import _tests_utils
 
 
+AVAILABLE_DTYPE_DEVICES = [(torch.float64, "cpu"), (torch.float32, "cpu")]
+
+if _tests_utils.can_use_mps_backend():
+    AVAILABLE_DTYPE_DEVICES.append((torch.float32, torch.device("mps:0")))
+
+if torch.cuda.is_available():
+    AVAILABLE_DTYPE_DEVICES.append((torch.float64, torch.device("cuda:0")))
+    AVAILABLE_DTYPE_DEVICES.append((torch.float32, torch.device("cuda:0")))
+
+
 @pytest.fixture
 def tensor():
     return _tests_utils.tensor()
@@ -205,9 +215,20 @@ def test_iter(tensor):
         assert torch.all(block.values == expected_values)
 
 
-def test_keys_to_properties(tensor):
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_keys_to_properties(tensor, dtype, device):
+    tensor = tensor.to(dtype, device)
+
     tensor = tensor.keys_to_properties("key_1")
 
+    for block in tensor.blocks():
+        assert tensor.keys.values.device == block.values.device
+        assert block.samples.values.device == block.values.device
+        for component in block.components:
+            assert component.values.device == block.values.device
+        assert block.properties.values.device == block.values.device
+
+    tensor = tensor.to(device="cpu")
     assert tensor.keys.names == ["key_2"]
     assert torch.all(tensor.keys.values == torch.tensor([(0,), (2,), (3,)]))
 
@@ -270,8 +291,20 @@ def test_keys_to_properties(tensor):
     assert torch.all(block.values == torch.full((4, 3, 1), 4.0))
 
 
-def test_keys_to_samples(tensor):
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_keys_to_samples(tensor, dtype, device):
+    tensor = tensor.to(dtype, device)
+
     tensor = tensor.keys_to_samples("key_2", sort_samples=True)
+
+    for block in tensor.blocks():
+        assert tensor.keys.values.device == block.values.device
+        assert block.samples.values.device == block.values.device
+        for component in block.components:
+            assert component.values.device == block.values.device
+        assert block.properties.values.device == block.values.device
+
+    tensor = tensor.to(device="cpu")
 
     assert tensor.keys.names == ["key_1"]
     assert tuple(tensor.keys.values[0]) == (0,)
@@ -353,33 +386,38 @@ def test_keys_to_samples_unsorted(tensor):
     assert tuple(block.samples.values[7]) == (5, 3)
 
 
-def test_components_to_properties(tensor):
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_components_to_properties(tensor, dtype, device):
+    tensor = tensor.to(dtype, device)
+
     tensor = tensor.components_to_properties("c")
+
+    for block in tensor.blocks():
+        assert tensor.keys.values.device == block.values.device
+        assert block.samples.values.device == block.values.device
+        for component in block.components:
+            assert component.values.device == block.values.device
+        assert block.properties.values.device == block.values.device
+
+    tensor = tensor.to(device="cpu")
 
     block = tensor.block_by_id(0)
     assert block.samples.names == ["s"]
-    assert tuple(block.samples.values[0]) == (0,)
-    assert tuple(block.samples.values[1]) == (2,)
-    assert tuple(block.samples.values[2]) == (4,)
+    assert torch.all(block.samples.values == torch.tensor([[0], [2], [4]]))
 
     assert block.components == []
 
     assert block.properties.names == ["c", "p"]
-    assert tuple(block.properties.values[0]) == (0, 0)
+    assert torch.all(block.properties.values == torch.tensor([[0, 0]]))
 
     block = tensor.block_by_id(3)
     assert block.samples.names, ["s"]
-    assert tuple(block.samples.values[0]) == (0,)
-    assert tuple(block.samples.values[1]) == (1,)
-    assert tuple(block.samples.values[2]) == (2,)
-    assert tuple(block.samples.values[3]) == (5,)
+    assert torch.all(block.samples.values == torch.tensor([[0], [1], [2], [5]]))
 
     assert block.components == []
 
     assert block.properties.names == ["c", "p"]
-    assert tuple(block.properties.values[0]) == (0, 0)
-    assert tuple(block.properties.values[1]) == (1, 0)
-    assert tuple(block.properties.values[2]) == (2, 0)
+    assert torch.all(block.properties.values == torch.tensor([[0, 0], [1, 0], [2, 0]]))
 
 
 def test_empty_tensor():
@@ -405,73 +443,20 @@ def test_empty_tensor():
         empty_tensor.keys_to_properties("key")
 
 
-@pytest.fixture
-def device_tensor():
-    if _tests_utils.can_use_mps_backend():
-        device = torch.device("mps:0")
-    elif torch.cuda.is_available():
-        device = torch.device("cuda:0")
-    else:
-        pytest.skip("this test requires a real device to run")
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_different_device_error(tensor, dtype, device):
+    if device == "cpu":
+        return
 
-    return TensorMap(
-        keys=Labels.range("keys", 2).to(device),
-        blocks=[
-            TensorBlock(
-                values=torch.tensor([[[1.0, 2.0]]], device=device),
-                samples=Labels.range("samples", 1).to(device),
-                components=[Labels.range("component", 1).to(device)],
-                properties=Labels.range("properties", 2).to(device),
-            ),
-            TensorBlock(
-                values=torch.tensor([[[3.0, 4.0]]], device=device),
-                samples=Labels.range("samples", 1).to(device),
-                components=[Labels.range("component", 1).to(device)],
-                properties=Labels.range("properties", 2).to(device),
-            ),
-        ],
-    )
-
-
-def test_keys_to_samples_same_device(device_tensor):
-    new_tensor = device_tensor.keys_to_samples("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
-
-
-def test_keys_to_properties_same_device(device_tensor):
-    new_tensor = device_tensor.keys_to_properties("keys")
-    block = new_tensor.block()
-    assert new_tensor.keys.values.device == block.values.device
-    assert block.samples.values.device == block.values.device
-    assert block.components[0].values.device == block.values.device
-    assert block.properties.values.device == block.values.device
-
-
-def test_components_to_properties_same_device(device_tensor):
-    new_tensor = device_tensor.components_to_properties("component")
-    for block in new_tensor.blocks():
-        assert new_tensor.keys.values.device == block.values.device
-        assert block.samples.values.device == block.values.device
-        assert block.properties.values.device == block.values.device
-
-
-def test_different_device(device_tensor):
     message = "tried to build a TensorMap from blocks on different devices"
     with pytest.raises(RuntimeError, match=message):
         TensorMap(
-            keys=device_tensor.keys,
+            keys=tensor.keys,
             blocks=[
-                device_tensor[0].copy(),
-                TensorBlock(
-                    values=torch.tensor([[[3.0, 4.0]]]),
-                    samples=Labels.range("samples", 1),
-                    components=[Labels.range("component", 1)],
-                    properties=Labels.range("properties", 2),
-                ),
+                tensor[0].copy().to(dtype=dtype),
+                tensor[1].copy().to(dtype=dtype),
+                tensor[2].copy().to(dtype=dtype),
+                tensor[3].copy().to(dtype=dtype, device=device),
             ],
         )
 
