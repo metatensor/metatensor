@@ -1,6 +1,6 @@
 [package]
 name = "metatensor"
-version = "0.3.0-rc1"
+version = "0.3.0-rc2"
 edition = "2021"
 rust-version = "1.74"
 
@@ -14,7 +14,7 @@ license = "BSD-3-Clause"
 bench = false
 
 [dependencies]
-metatensor-sys = {version = "0.2.0-rc3", path="../metatensor-sys"}
+metatensor-sys = {version = "0.2.0-rc4", path="../metatensor-sys"}
 dlpk = { version = "0.3.0", features = ["ndarray", "half", "sync"]}
 half = "<2.5"
 
