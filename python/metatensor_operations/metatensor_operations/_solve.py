@@ -8,7 +8,7 @@ from ._backend import (
     torch_jit_annotate,
     torch_jit_script,
 )
-from ._utils import _check_same_gradients_raise, _check_same_keys_raise
+from ._utils import check_same_gradients_raise, check_same_keys_raise
 
 
 @torch_jit_script
@@ -39,7 +39,7 @@ def _solve_block(X: TensorBlock, Y: TensorBlock) -> TensorBlock:
     Y_n_properties = Y.values.shape[-1]
     Y_values = Y.values.reshape(-1, Y_n_properties)
 
-    _check_same_gradients_raise(X, Y, fname="solve")
+    check_same_gradients_raise(X, Y, fname="solve")
 
     for parameter, X_gradient in X.gradients():
         X_gradient_values = X_gradient.values.reshape(-1, X_n_properties)
@@ -123,7 +123,7 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]
     """
-    _check_same_keys_raise(X, Y, "solve")
+    check_same_keys_raise(X, Y, "solve")
 
     for X_block in X.blocks():
         shape = X_block.values.shape

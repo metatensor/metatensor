@@ -10,9 +10,9 @@ from ._backend import (
     torch_jit_script,
 )
 from ._utils import (
-    _check_blocks_raise,
-    _check_same_gradients_raise,
-    _check_same_keys_raise,
+    check_blocks_raise,
+    check_same_gradients_raise,
+    check_same_keys_raise,
 )
 
 
@@ -183,8 +183,8 @@ def _join_block_samples(
     n_joined_samples = 0
     for block in blocks:
         n_joined_samples += block.values.shape[0]
-        _check_blocks_raise(first_block, block, fname, ["components", "properties"])
-        _check_same_gradients_raise(first_block, block, fname, ["components"])
+        check_blocks_raise(first_block, block, fname, ["components", "properties"])
+        check_same_gradients_raise(first_block, block, fname, ["components"])
 
     shape = list(first_block.values.shape)
     shape[0] = n_joined_samples
@@ -307,8 +307,8 @@ def _join_block_properties(
     n_joined_properties = 0
     for block in blocks:
         n_joined_properties += block.values.shape[-1]
-        _check_blocks_raise(first_block, block, fname, ["samples", "components"])
-        _check_same_gradients_raise(first_block, block, fname, ["components"])
+        check_blocks_raise(first_block, block, fname, ["samples", "components"])
+        check_same_gradients_raise(first_block, block, fname, ["components"])
 
         if block.properties.names != property_names:
             has_different_property_names = True
@@ -593,7 +593,7 @@ def join(
 
     if different_keys == "error":
         for ts_to_join in tensors[1:]:
-            _check_same_keys_raise(tensors[0], ts_to_join, "join")
+            check_same_keys_raise(tensors[0], ts_to_join, "join")
     elif different_keys == "intersection":
         tensors = _tensors_intersection(tensors)
     elif different_keys == "union":

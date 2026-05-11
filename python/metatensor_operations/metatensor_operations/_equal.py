@@ -2,15 +2,15 @@ from . import _dispatch
 from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import (
     NotEqualError,
-    _check_blocks_impl,
-    _check_same_gradients_impl,
-    _check_same_keys_impl,
+    check_blocks_impl,
+    check_same_gradients_impl,
+    check_same_keys_impl,
 )
 
 
 def _equal_impl(tensor_1: TensorMap, tensor_2: TensorMap) -> str:
     """Abstract function to perform an equal operation between two TensorMaps."""
-    message = _check_same_keys_impl(tensor_1, tensor_2, "equal")
+    message = check_same_keys_impl(tensor_1, tensor_2, "equal")
     if message != "":
         return f"the tensor maps have different keys: {message}"
 
@@ -29,11 +29,11 @@ def _equal_block_impl(block_1: TensorBlock, block_2: TensorBlock) -> str:
     if not _dispatch.all(block_1.values == block_2.values):
         return "values are not equal"
 
-    check_blocks_message = _check_blocks_impl(block_1, block_2, fname="equal")
+    check_blocks_message = check_blocks_impl(block_1, block_2, fname="equal")
     if check_blocks_message != "":
         return check_blocks_message
 
-    check_same_gradient_message = _check_same_gradients_impl(
+    check_same_gradient_message = check_same_gradients_impl(
         block_1, block_2, fname="equal"
     )
     if check_same_gradient_message != "":

@@ -8,9 +8,9 @@ from ._backend import (
     torch_jit_script,
 )
 from ._utils import (
-    _check_blocks_raise,
-    _check_same_gradients_raise,
-    _check_same_keys_raise,
+    check_blocks_raise,
+    check_same_gradients_raise,
+    check_same_keys_raise,
 )
 
 
@@ -140,15 +140,15 @@ def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
         for block_A in A.blocks():
             blocks.append(_divide_block_constant(block=block_A, constant=B))
     elif is_tensor_map:
-        _check_same_keys_raise(A, B, "divide")
+        check_same_keys_raise(A, B, "divide")
         for key, block_A in A.items():
             block_B = B.block(key)
-            _check_blocks_raise(
+            check_blocks_raise(
                 block_A,
                 block_B,
                 fname="divide",
             )
-            _check_same_gradients_raise(
+            check_same_gradients_raise(
                 block_A,
                 block_B,
                 fname="divide",

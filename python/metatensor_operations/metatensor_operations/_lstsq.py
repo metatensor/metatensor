@@ -10,17 +10,17 @@ from ._backend import (
     torch_jit_script,
 )
 from ._utils import (
-    _check_blocks_raise,
-    _check_same_gradients_raise,
-    _check_same_keys_raise,
+    check_blocks_raise,
+    check_same_gradients_raise,
+    check_same_keys_raise,
 )
 
 
 def _lstsq_block(
     X: TensorBlock, Y: TensorBlock, rcond: Optional[float], driver: Optional[str] = None
 ) -> TensorBlock:
-    _check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
-    _check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
+    check_blocks_raise(X, Y, check=["samples", "components"], fname="lstsq")
+    check_same_gradients_raise(X, Y, check=["samples", "components"], fname="lstsq")
 
     # reshape components together with the samples
     X_n_properties = X.values.shape[-1]
@@ -145,7 +145,7 @@ def lstsq(
             stacklevel=1,
         )
 
-    _check_same_keys_raise(X, Y, "lstsq")
+    check_same_keys_raise(X, Y, "lstsq")
 
     blocks: List[TensorBlock] = []
     for key, X_block in X.items():
