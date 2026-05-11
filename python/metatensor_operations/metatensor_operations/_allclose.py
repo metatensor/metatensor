@@ -2,9 +2,9 @@ from . import _dispatch
 from ._backend import TensorBlock, TensorMap, torch_jit_script
 from ._utils import (
     NotEqualError,
-    _check_blocks_impl,
-    _check_same_gradients_impl,
-    _check_same_keys_impl,
+    check_blocks_impl,
+    check_same_gradients_impl,
+    check_same_keys_impl,
 )
 
 
@@ -12,7 +12,7 @@ def _allclose_impl(
     tensor_1: TensorMap, tensor_2: TensorMap, rtol: float, atol: float, equal_nan: bool
 ) -> str:
     """Abstract function to perform an allclose operation between two TensorMaps."""
-    message = _check_same_keys_impl(tensor_1, tensor_2, "allclose")
+    message = check_same_keys_impl(tensor_1, tensor_2, "allclose")
     if message != "":
         return f"the tensor maps have different keys: {message}"
 
@@ -45,7 +45,7 @@ def _allclose_block_impl(
     ):
         return "values are not allclose"
 
-    check_blocks_message = _check_blocks_impl(
+    check_blocks_message = check_blocks_impl(
         block_1,
         block_2,
         fname="allclose",
@@ -53,7 +53,7 @@ def _allclose_block_impl(
     if check_blocks_message != "":
         return check_blocks_message
 
-    check_same_gradient_message = _check_same_gradients_impl(
+    check_same_gradient_message = check_same_gradients_impl(
         block_1,
         block_2,
         check=["samples", "properties", "components"],

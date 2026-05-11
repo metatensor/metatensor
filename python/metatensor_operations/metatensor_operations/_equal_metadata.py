@@ -9,9 +9,9 @@ from ._backend import (
 )
 from ._utils import (
     NotEqualError,
-    _check_blocks_impl,
-    _check_same_gradients_impl,
-    _check_same_keys_impl,
+    check_blocks_impl,
+    check_same_gradients_impl,
+    check_same_keys_impl,
 )
 
 
@@ -27,7 +27,7 @@ def _equal_metadata_impl(
         if not isinstance_metatensor(tensor_2, "TensorMap"):
             return f"`tensor_2` must be a metatensor TensorMap, not {type(tensor_2)}"
 
-    message = _check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
+    message = check_same_keys_impl(tensor_1, tensor_2, "equal_metadata_raise")
     if message != "":
         return message
 
@@ -57,7 +57,7 @@ def _equal_metadata_block_impl(
         if not isinstance_metatensor(block_2, "TensorBlock"):
             return f"`block_2` must be a metatensor TensorBlock, not {type(block_2)}"
 
-    check_blocks_message = _check_blocks_impl(
+    check_blocks_message = check_blocks_impl(
         block_1,
         block_2,
         "equal_metadata_block_raise",
@@ -68,7 +68,7 @@ def _equal_metadata_block_impl(
         return check_blocks_message
 
     if check_gradients:
-        check_same_gradient_message = _check_same_gradients_impl(
+        check_same_gradient_message = check_same_gradients_impl(
             block_1,
             block_2,
             "equal_metadata_block_raise",

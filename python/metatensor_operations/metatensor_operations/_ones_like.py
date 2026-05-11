@@ -2,7 +2,7 @@ from typing import List, Optional, Union
 
 from . import _dispatch
 from ._backend import TensorBlock, TensorMap, torch_jit_script
-from ._utils import _check_gradient_presence_raise
+from ._utils import check_gradient_presence_raise
 
 
 @torch_jit_script
@@ -42,7 +42,7 @@ def ones_like_block(
     if gradients is None:
         gradients = block.gradients_list()
     else:
-        _check_gradient_presence_raise(
+        check_gradient_presence_raise(
             block=block, parameters=gradients, fname="ones_like"
         )
 

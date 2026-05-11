@@ -2,7 +2,7 @@ from typing import List
 
 from . import _dispatch
 from ._backend import TensorBlock, TensorMap, torch_jit_script
-from ._utils import _check_same_keys_raise
+from ._utils import check_same_keys_raise
 
 
 def _dot_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
@@ -102,7 +102,7 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
             ``B``; and the ``components`` equal to the ``components`` of ``A``
 
     """
-    _check_same_keys_raise(tensor_1, tensor_2, "dot")
+    check_same_keys_raise(tensor_1, tensor_2, "dot")
 
     blocks: List[TensorBlock] = []
     for key, block_1 in tensor_1.items():

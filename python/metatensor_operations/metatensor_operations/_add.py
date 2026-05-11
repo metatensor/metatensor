@@ -8,9 +8,9 @@ from ._backend import (
     torch_jit_script,
 )
 from ._utils import (
-    _check_blocks_raise,
-    _check_same_gradients_raise,
-    _check_same_keys_raise,
+    check_blocks_raise,
+    check_same_gradients_raise,
+    check_same_keys_raise,
 )
 
 
@@ -119,15 +119,15 @@ def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
             blocks.append(_add_block_constant(block=block_A, constant=B))
 
     elif is_tensor_map:
-        _check_same_keys_raise(A, B, "add")
+        check_same_keys_raise(A, B, "add")
         for key, block_A in A.items():
             block_B = B[key]
-            _check_blocks_raise(
+            check_blocks_raise(
                 block_A,
                 block_B,
                 fname="add",
             )
-            _check_same_gradients_raise(
+            check_same_gradients_raise(
                 block_A,
                 block_B,
                 fname="add",

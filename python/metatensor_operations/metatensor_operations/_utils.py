@@ -9,25 +9,25 @@ class NotEqualError(Exception):
     pass
 
 
-def _check_same_keys(a: TensorMap, b: TensorMap, fname: str) -> bool:
+def check_same_keys(a: TensorMap, b: TensorMap, fname: str) -> bool:
     """
     Returns true if the keys of 2 TensorMaps are the same, without specification of the
     order, and false otherwise.
     """
-    return not bool(_check_same_keys_impl(a, b, fname))
+    return not bool(check_same_keys_impl(a, b, fname))
 
 
-def _check_same_keys_raise(a: TensorMap, b: TensorMap, fname: str) -> None:
+def check_same_keys_raise(a: TensorMap, b: TensorMap, fname: str) -> None:
     """
     If the keys of 2 TensorMaps are not the same, raises a NotEqualError, otherwise
     returns None.
     """
-    message = _check_same_keys_impl(a, b, fname)
+    message = check_same_keys_impl(a, b, fname)
     if message != "":
         raise NotEqualError(message)
 
 
-def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
+def check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
     """
     Checks if the keys of 2 TensorMaps are the same, without specification of the order.
     Returns an empty str if they are the same, otherwise returns a str message of a
@@ -63,7 +63,7 @@ def _check_same_keys_impl(a: TensorMap, b: TensorMap, fname: str) -> str:
     return ""
 
 
-def _check_blocks(
+def check_blocks(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -73,10 +73,10 @@ def _check_blocks(
     Checks if the metadata of 2 TensorBlocks are the same. If not, returns false.
     Otherwise returns true.
     """
-    return not bool(_check_blocks_impl(a, b, fname, check))
+    return not bool(check_blocks_impl(a, b, fname, check))
 
 
-def _check_blocks_raise(
+def check_blocks_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -88,7 +88,7 @@ def _check_blocks_raise(
     Otherwise returns it None.
 
     The message associated with the exception will contain more information on where the
-    two :py:class:`TensorBlock` differ. See :py:func:`_check_blocks_impl` for more
+    two :py:class:`TensorBlock` differ. See :py:func:`check_blocks_impl` for more
     information on when two :py:class:`TensorBlock` are considered as equal.
 
     :param a: first :py:class:`TensorBlock` for check
@@ -104,12 +104,12 @@ def _check_blocks_raise(
     :raises: :py:class:`ValueError` if an invalid prop name in :param check: is
         given. See :param check: description for valid prop names
     """
-    message = _check_blocks_impl(a, b, fname, check)
+    message = check_blocks_impl(a, b, fname, check)
     if message != "":
         raise NotEqualError(message)
 
 
-def _check_blocks_impl(
+def check_blocks_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -173,7 +173,7 @@ def _check_blocks_impl(
     return ""
 
 
-def _check_same_gradients(
+def check_same_gradients(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -197,10 +197,10 @@ def _check_same_gradients(
         ``'all'`` to check everything. Defaults to ``'all'``. If you only want to check
         if the two blocks have the same gradients, pass an empty list ``check=[]``.
     """
-    return not bool(_check_same_gradients_impl(a, b, fname, check))
+    return not bool(check_same_gradients_impl(a, b, fname, check))
 
 
-def _check_same_gradients_raise(
+def check_same_gradients_raise(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -211,7 +211,7 @@ def _check_same_gradients_raise(
 
     The message associated with the exception will contain more information on where the
     gradients of the two :py:class:`TensorBlock` differ. See
-    :py:func:`_check_same_gradients_impl` for more information on when gradients of
+    :py:func:`check_same_gradients_impl` for more information on when gradients of
     :py:class:`TensorBlock` are considered as equal.
 
     :param a: first :py:class:`TensorBlock` for check
@@ -228,12 +228,12 @@ def _check_same_gradients_raise(
     :raises: :py:class:`ValueError` if an invalid prop name in :param check: is
         given. See :param check: description for valid prop names
     """
-    message = _check_same_gradients_impl(a, b, fname, check)
+    message = check_same_gradients_impl(a, b, fname, check)
     if message != "":
         raise NotEqualError(message)
 
 
-def _check_same_gradients_impl(
+def check_same_gradients_impl(
     a: TensorBlock,
     b: TensorBlock,
     fname: str,
@@ -311,7 +311,7 @@ def _check_same_gradients_impl(
     return ""
 
 
-def _check_gradient_presence_raise(
+def check_gradient_presence_raise(
     block: TensorBlock,
     parameters: List[str],
     fname: str,
