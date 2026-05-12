@@ -421,3 +421,12 @@ def test_constructor_assume_unique():
     labels = Labels(names=["a", "b"], values=values, assume_unique=True)
     assert labels == safe_labels
     np.testing.assert_equal(labels.values, values)
+
+
+def test_equal_non_contiguous():
+    values_non_contiguous = np.array([[1, 2, 3], [4, 3, 1]]).T
+    values_contiguous = np.ascontiguousarray(values_non_contiguous)
+
+    labels_non_contiguous = Labels(names=["a", "b"], values=values_non_contiguous)
+    labels_contiguous = Labels(names=["a", "b"], values=values_contiguous)
+    assert labels_contiguous == labels_non_contiguous
