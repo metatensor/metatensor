@@ -27,8 +27,12 @@ public:
     /// Create a new `TensorMapHolder` for TorchScript.
     TensorMapHolder(Labels keys, std::vector<TensorBlock> blocks);
 
-    /// Make a copy of this `TensorMap`, including all the data contained inside
-    TensorMap copy() const;
+    /// Make a copy of this `TensorMap`.
+    ///
+    /// If `deep` is `true`, the blocks and their data will be copied as well;
+    /// otherwise, the new `TensorMap` will increase the reference count of the
+    /// blocks' data and return a shallow copy.
+    TensorMap copy(bool deep = true);
 
     /// Get the keys for this `TensorMap`
     Labels keys() const;

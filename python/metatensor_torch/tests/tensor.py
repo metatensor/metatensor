@@ -534,6 +534,42 @@ def test_to(tensor):
         moved = tensor.to(torch.tensor([0]))
 
 
+def test_deep_copy():
+    values = torch.full((3, 2), 11)
+    block = TensorBlock(
+        values=values,
+        samples=Labels(names=["s"], values=torch.tensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
+    )
+    tensor = TensorMap(keys=Labels.range("keys", 1), blocks=[block])
+
+    assert values.data_ptr() == tensor.block().values.data_ptr()
+
+    clone = tensor.copy()
+    del tensor
+
+    assert values.data_ptr() != clone.block().values.data_ptr()
+
+
+def test_shallow_copy():
+    values = torch.full((3, 2), 11)
+    block = TensorBlock(
+        values=values,
+        samples=Labels(names=["s"], values=torch.tensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
+    )
+    tensor = TensorMap(keys=Labels.range("keys", 1), blocks=[block])
+
+    assert values.data_ptr() == tensor.block().values.data_ptr()
+
+    clone = tensor.copy(deep=False)
+    del tensor
+
+    assert values.data_ptr() == clone.block().values.data_ptr()
+
+
 # This function only works in script mode, because `block.dtype` is always an `int`, and
 # `torch.dtype` is only an int in script mode.
 if os.environ.get("PYTORCH_JIT") == "0":

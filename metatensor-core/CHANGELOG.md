@@ -99,6 +99,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `ExternalCpuArray`. It wraps non-Python CUDA data as a `torch.Tensor` via
   DLPack, for use with external array backends that store data on CUDA devices.
 
+#### Changed
+
+- `TensorBlock.copy` and `TensorMap.copy` now accept a `deep` parameter to
+  control whether to perform a deep or shallow copy.
+
 #### Removed
 
 - `LabelsView` has been removed, and with it the following functions:

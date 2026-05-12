@@ -204,7 +204,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__repr__", &TensorBlockHolder::repr)
         .def("__str__", &TensorBlockHolder::repr)
         .def("__len__", &TensorBlockHolder::len )
-        .def("copy", &TensorBlockHolder::copy)
+        .def("copy", &TensorBlockHolder::copy, DOCSTRING, {torch::arg("deep") = true})
         .def_property("values", &TensorBlockHolder::values, block_values_setter)
         .def_property("samples", &TensorBlockHolder::samples)
         .def_property("components", &TensorBlockHolder::components)
@@ -253,7 +253,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("__getitem__", &TensorMapHolder::block_torch, DOCSTRING,
             {torch::arg("selection")}
         )
-        .def("copy", &TensorMapHolder::copy)
+        .def("copy", &TensorMapHolder::copy, DOCSTRING, {torch::arg("deep") = true})
         .def("save", &TensorMapHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorMapHolder::save_buffer)
         .def_static("load", &TensorMapHolder::load)

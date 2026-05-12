@@ -71,8 +71,28 @@ TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, std::string 
     parent_(std::move(parent))
 {}
 
-TensorBlock TensorBlockHolder::copy() const {
-    return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
+TensorBlock TensorBlockHolder::copy(bool deep) const {
+    if (deep) {
+        return torch::make_intrusive<TensorBlockHolder>(this->block_.clone(), torch::IValue());
+    } else {
+        auto new_block = torch::make_intrusive<TensorBlockHolder>(TensorBlockHolder(
+            this->values(),
+            this->samples(),
+            this->components(),
+            this->properties()
+        ));
+
+        for (const auto& parameter: this->gradients_list()) {
+            auto gradient = TensorBlockHolder(
+                this->block_.gradient(parameter),
+                torch::IValue()
+            );
+
+            new_block->add_gradient(parameter, gradient.copy(/*deep=*/false));
+        }
+
+        return new_block;
+    }
 }
 
 TensorBlock TensorBlockHolder::to(

@@ -175,13 +175,10 @@ class TensorBlock:
                 self._lib.mts_block_free(self._actual_ptr)
 
     def __copy__(self):
-        raise ValueError(
-            "shallow copies of TensorBlock are not possible, use a deepcopy instead"
-        )
+        return self.copy(deep=False)
 
     def __deepcopy__(self, _memodict):
-        new_ptr = self._lib.mts_block_copy(self._ptr)
-        return TensorBlock._from_ptr(new_ptr, parent=None)
+        return self.copy(deep=True)
 
     def __reduce__(self):
         raise NotImplementedError(
@@ -203,11 +200,30 @@ class TensorBlock:
         """
         return self.values.shape
 
-    def copy(self) -> "TensorBlock":
+    def copy(self, deep: bool = True) -> "TensorBlock":
         """
-        get a deep copy of this block, including all the data and metadata
+        Get a copy of this block, with the same values and labels. If ``deep`` is
+        ``True``, also make a full copy of the values; otherwise, the values in the new
+        block will share the same memory as those in this block.
+
+        :param deep: if ``True``, create a deep copy of the block
         """
-        return copy.deepcopy(self)
+        if deep:
+            new_ptr = self._lib.mts_block_copy(self._ptr)
+            return TensorBlock._from_ptr(new_ptr, parent=None)
+        else:
+            new_block = TensorBlock(
+                values=self.values,
+                samples=self.samples,
+                components=self.components,
+                properties=self.properties,
+            )
+
+            for parameter in self.gradients_list():
+                gradient = self.gradient(parameter)
+                new_block.add_gradient(parameter, gradient.copy(deep=False))
+
+            return new_block
 
     def __repr__(self) -> str:
         if self._actual_ptr is None:
