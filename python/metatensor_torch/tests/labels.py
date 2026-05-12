@@ -672,3 +672,13 @@ def test_script():
 
     module = TestModuleEntry()
     module = torch.jit.script(module)
+
+
+def test_equal_non_contiguous():
+    values_non_contiguous = torch.tensor([[1, 2, 3], [4, 3, 1]]).T
+    values_contiguous = values_non_contiguous.contiguous()
+
+    labels_non_contiguous = Labels(names=["a", "b"], values=values_non_contiguous)
+    labels_contiguous = Labels(names=["a", "b"], values=values_contiguous)
+
+    assert labels_contiguous == labels_non_contiguous

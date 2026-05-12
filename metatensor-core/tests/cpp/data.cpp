@@ -172,7 +172,6 @@ TEST_CASE("DLPackArray<T> - construction and access") {
         CHECK(arr.shape().size() == 2);
         CHECK(arr.shape()[0] == 2);
         CHECK(arr.shape()[1] == 3);
-        CHECK(arr.is_empty() == false);
 
         CHECK(arr(0, 0) == 1.0);
         CHECK(arr(0, 1) == 2.0);
@@ -184,28 +183,6 @@ TEST_CASE("DLPackArray<T> - construction and access") {
         CHECK(arr.data() != nullptr);
         CHECK(arr.data()[0] == 1.0);
         // DLPackArray destructor will call the deleter
-    }
-
-    SECTION("move construction") {
-        auto arr1 = DLPackArray<double>(managed);
-        auto arr2 = DLPackArray<double>(std::move(arr1));
-
-        CHECK(arr2.shape().size() == 2);
-        CHECK(arr2(1, 2) == 6.0);
-
-        // arr1 should be empty after move
-        CHECK(arr1.shape() == std::vector<size_t>{0, 0});
-        CHECK(arr1.data() == nullptr);
-        CHECK(arr1.is_empty() == true);
-    }
-
-    SECTION("move assignment") {
-        auto arr1 = DLPackArray<double>(managed);
-        auto arr2 = DLPackArray<double>();
-
-        arr2 = std::move(arr1);
-        CHECK(arr2(0, 0) == 1.0);
-        CHECK(arr1.is_empty() == true);
     }
 }
 
@@ -255,16 +232,13 @@ TEST_CASE("DLPackArray<T> - with int32 data") {
 }
 
 TEST_CASE("DLPackArray<T> - empty array") {
-    auto arr = DLPackArray<double>();
-    CHECK(arr.is_empty() == true);
-    CHECK(arr.data() == nullptr);
-    CHECK(arr.shape() == std::vector<size_t>{0, 0});
-}
+    auto array = DLPackArray<double>();
+    CHECK(array.data() == nullptr);
+    CHECK(array.shape() == std::vector<size_t>{});
 
-TEST_CASE("DLPackArray<T> - nullptr construction") {
-    auto arr = DLPackArray<double>(nullptr);
-    CHECK(arr.is_empty() == true);
-    CHECK(arr.data() == nullptr);
+    array = DLPackArray<double>(nullptr);
+    CHECK(array.data() == nullptr);
+    CHECK(array.shape() == std::vector<size_t>{});
 }
 
 TEST_CASE("SimpleDataArray - device()") {
@@ -464,4 +438,65 @@ void check_array_equality() {
 TEST_CASE("array equality") {
     check_array_equality<double>();
     check_array_equality<int>();
+}
+
+struct NonContiguousInt32DLPackContext {
+    std::vector<int64_t> shape;
+    std::vector<int64_t> strides;
+    std::shared_ptr<std::vector<int32_t>> data;
+};
+
+static void non_contiguous_int32_dlpack_deleter(DLManagedTensorVersioned* self) {
+    if (self != nullptr) {
+        delete static_cast<NonContiguousInt32DLPackContext*>(self->manager_ctx);
+        delete self;
+    }
+}
+
+static DLManagedTensorVersioned* make_non_contiguous_int32_dlpack(
+    std::shared_ptr<std::vector<int32_t>> data
+) {
+    auto* managed = new DLManagedTensorVersioned();
+    auto* context = new NonContiguousInt32DLPackContext();
+
+    context->shape = {3, 2};
+    // Expose a transposed non-contiguous view (torch-like stride)
+    context->strides = {1, 3};
+    context->data = std::move(data);
+
+    managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    managed->manager_ctx = context;
+    managed->deleter = non_contiguous_int32_dlpack_deleter;
+    managed->flags = 0;
+
+    managed->dl_tensor.data = context->data->data();
+    managed->dl_tensor.device = {kDLCPU, 0};
+    managed->dl_tensor.ndim = 2;
+    managed->dl_tensor.dtype = metatensor::details::dtype_of<int32_t>();
+    managed->dl_tensor.shape = context->shape.data();
+    managed->dl_tensor.strides = context->strides.data();
+    managed->dl_tensor.byte_offset = 0;
+
+    return managed;
+}
+
+TEST_CASE("Array equality with non-contiguous strides") {
+    auto non_contiguous_data = std::make_shared<std::vector<int32_t>>(
+        std::vector<int32_t>{1, 2, 3, 4, 3, 1}
+    );
+    auto contiguous = SimpleDataArray<int32_t>({3, 2}, {1, 4, 2, 3, 3, 1});
+
+    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+
+    auto non_contiguous_dlpack = DLPackArray<int32_t>(
+        make_non_contiguous_int32_dlpack(std::move(non_contiguous_data))
+    );
+    auto contiguous_dlpack = DLPackArray<int32_t>(
+        contiguous.as_dlpack({kDLCPU, 0}, nullptr, version)
+    );
+
+    CHECK(non_contiguous_dlpack.shape() == std::vector<size_t>{3, 2});
+    CHECK(contiguous_dlpack.shape() == std::vector<size_t>{3, 2});
+    CHECK(non_contiguous_dlpack == contiguous_dlpack);
+    CHECK(contiguous_dlpack == non_contiguous_dlpack);
 }

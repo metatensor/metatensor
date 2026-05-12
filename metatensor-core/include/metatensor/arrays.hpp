@@ -19,12 +19,45 @@
 namespace metatensor {
 namespace details {
     /// Compute the product of all values in the `shape` vector
-    inline size_t product(const std::vector<size_t>& shape) {
+    template<typename Shape>
+    inline size_t product(const Shape& shape) {
         size_t result = 1;
         for (auto size: shape) {
-            result *= size;
+            result *= static_cast<size_t>(size);
         }
         return result;
+    }
+
+    template<typename Shape>
+    inline std::vector<int64_t> contiguous_strides(const Shape& shape) {
+        auto strides = std::vector<int64_t>(shape.size(), 1);
+        if (shape.empty()) {
+            return strides;
+        }
+
+        for (size_t i = shape.size(); i > 1; --i) {
+            auto dim = i - 1;
+            strides[dim - 1] = strides[dim] * static_cast<int64_t>(shape[dim]);
+        }
+        return strides;
+    }
+
+    template<typename Shape>
+    inline bool is_row_major_contiguous(const Shape& shape, const std::vector<int64_t>& strides) {
+        if (shape.size() != strides.size()) {
+            return false;
+        }
+
+        int64_t expected_stride = 1;
+        for (size_t i = shape.size(); i > 0; --i) {
+            auto dim = i - 1;
+            if (static_cast<int64_t>(shape[dim]) != 1 && strides[dim] != expected_stride) {
+                return false;
+            }
+            expected_stride *= static_cast<int64_t>(shape[dim]);
+        }
+
+        return true;
     }
 
     /// Get the N-dimensional index corresponding to the given linear `index`
@@ -158,21 +191,66 @@ namespace details {
 
         static_assert(std::is_same_v<lhs_data_t, rhs_data_t>, "data types of lhs and rhs must be the same");
 
-        if (std::is_integral_v<lhs_data_t>) {
-            // compare integers with memcmp
-            return std::memcmp(lhs.data(), rhs.data(), sizeof(lhs_data_t) * details::product(lhs.shape())) == 0;
-        } else {
-            // make sure to handle NaN and ±0.0 correctly when comparing floating
-            // point data and everything else
+        auto shape = lhs.shape();
+        auto n_elements = details::product(shape);
+
+        if (n_elements == 0) {
+            return true;
+        }
+
+        if (lhs.is_contiguous() && rhs.is_contiguous()) {
+            if (std::is_integral_v<lhs_data_t>) {
+                // compare integers with memcmp
+                return std::memcmp(lhs.data(), rhs.data(), sizeof(lhs_data_t) * n_elements) == 0;
+            }
+
+            // make sure to handle NaN and ±0.0 correctly when comparing
+            // floating point data by comparing element-wise instead of using
+            // memcmp
             const auto* lhs_ptr = lhs.data();
             const auto* rhs_ptr = rhs.data();
-            for (size_t i=0; i<details::product(lhs.shape()); i++) {
+            for (size_t i=0; i<n_elements; i++) {
                 if (lhs_ptr[i] != rhs_ptr[i]) {
                     return false;
                 }
             }
             return true;
         }
+
+        auto lhs_strides = lhs.strides();
+        auto rhs_strides = rhs.strides();
+
+        assert(lhs_strides.size() == shape.size());
+        assert(rhs_strides.size() == shape.size());
+
+        auto ndim = shape.size();
+        auto indices = std::vector<int64_t>(ndim, 0);
+        const auto* lhs_ptr = lhs.data();
+        const auto* rhs_ptr = rhs.data();
+
+        for (size_t i = 0; i < n_elements; i++) {
+            int64_t lhs_offset = 0;
+            int64_t rhs_offset = 0;
+            for (size_t dim = 0; dim < ndim; dim++) {
+                lhs_offset += indices[dim] * lhs_strides[dim];
+                rhs_offset += indices[dim] * rhs_strides[dim];
+            }
+
+            if (lhs_ptr[lhs_offset] != rhs_ptr[rhs_offset]) {
+                return false;
+            }
+
+            for (size_t dim = ndim; dim > 0; dim--) {
+                auto d = dim - 1;
+                indices[d]++;
+                if (indices[d] < static_cast<int64_t>(shape[d])) {
+                    break;
+                }
+                indices[d] = 0;
+            }
+        }
+
+        return true;
     }
 
     template <typename T>
@@ -215,15 +293,9 @@ namespace details {
                 strides[i] = strides[i + 1] * shape[i + 1];
             }
         } else {
-            // Check if the tensor is contiguous in row-major order
-            int64_t expected_stride = 1;
-            for (int i = dl_tensor.ndim - 1; i >= 0; --i) {
-                if (strides[i] != expected_stride) {
-                    is_contiguous = false;
-                    break;
-                }
-                expected_stride *= shape[i];
-            }
+            auto shape_vec = std::vector<int64_t>(shape, shape + dl_tensor.ndim);
+            auto strides_vec = std::vector<int64_t>(strides, strides + dl_tensor.ndim);
+            is_contiguous = details::is_row_major_contiguous(shape_vec, strides_vec);
         }
 
         size_t num_elements = 1;
@@ -279,8 +351,8 @@ namespace details {
 template<typename T>
 class DLPackArray {
 public:
-    /// Create an empty `DLPackArray`, with shape `[0, 0]`.
-    DLPackArray(): managed_(nullptr), data_(nullptr), shape_({0, 0}) {}
+    /// Create an empty `DLPackArray`
+    DLPackArray(): managed_(nullptr), data_(nullptr) {}
 
     /// Create a `DLPackArray` that takes ownership of `managed`.
     ///
@@ -292,7 +364,8 @@ public:
         data_(nullptr)
     {
         if (managed_ == nullptr) {
-            shape_ = {0, 0};
+            shape_ = {};
+            strides_ = {};
             return;
         }
 
@@ -321,6 +394,14 @@ public:
         for (int32_t i = 0; i < tensor.ndim; ++i) {
             shape_.push_back(static_cast<size_t>(tensor.shape[i]));
         }
+
+        if (tensor.ndim == 0) {
+            strides_ = {};
+        } else if (tensor.strides == nullptr) {
+            strides_ = details::contiguous_strides(shape_);
+        } else {
+            strides_.assign(tensor.strides, tensor.strides + tensor.ndim);
+        }
     }
 
     ~DLPackArray() {
@@ -346,12 +427,13 @@ public:
         }
 
         managed_ = other.managed_;
-        data_ = other.data_;
-        shape_ = std::move(other.shape_);
-
         other.managed_ = nullptr;
+
+        data_ = other.data_;
         other.data_ = nullptr;
-        other.shape_ = {0, 0};
+
+        shape_ = std::move(other.shape_);
+        strides_ = std::move(other.strides_);
 
         return *this;
     }
@@ -395,7 +477,12 @@ public:
                 " indexes in DLPackArray::operator(), got " + std::to_string(index.size())
             );
         }
-        return data_[details::linear_index(shape_, index)];
+
+        int64_t offset = 0;
+        for (size_t i = 0; i < index.size(); i++) {
+            offset += static_cast<int64_t>(index[i]) * strides_[i];
+        }
+        return data_[offset];
     }
 
     template<typename ...Args>
@@ -416,15 +503,16 @@ public:
 
     const std::vector<size_t>& shape() && = delete;
 
-    /// Check if this array is empty, i.e. if at least one of the shape element
-    /// is 0.
-    bool is_empty() const {
-        for (auto s: shape_) {
-            if (s == 0) {
-                return true;
-            }
-        }
-        return false;
+    /// Get the strides of this array in number of elements.
+    const std::vector<int64_t>& strides() const & {
+        return strides_;
+    }
+
+    const std::vector<int64_t>& strides() && = delete;
+
+    /// Check if this array is contiguous in row-major order.
+    bool is_contiguous() const {
+        return details::is_row_major_contiguous(shape_, strides_);
     }
 
 private:
@@ -434,6 +522,8 @@ private:
     T* data_;
     /// Shape extracted from the DLTensor
     std::vector<size_t> shape_;
+    /// Strides extracted from the DLTensor (in element counts)
+    std::vector<int64_t> strides_;
 };
 
 /// Compare this `DLPackArray` with another `DLPackArray`. The arrays are equal if
@@ -463,8 +553,8 @@ bool operator!=(const DLPackArray<T>& lhs, const DLPackArray<T>& rhs) {
 template<typename T>
 class NDArray {
 public:
-    /// Create a new empty `NDArray`, with shape `[0, 0]`.
-    NDArray(): NDArray(nullptr, {0, 0}, true) {}
+    /// Create a new empty `NDArray`.
+    NDArray(): NDArray(nullptr, {}, true) {}
 
     /// Create a new `NDArray` using a non-owning view in `const` memory with
     /// the given `shape`.
@@ -519,6 +609,7 @@ public:
 
         this->data_ = std::move(other.data_);
         this->shape_ = std::move(other.shape_);
+        this->strides_ = std::move(other.strides_);
         this->is_const_ = other.is_const_;
         this->owned_data_ = other.owned_data_;
         this->deleter_ = std::move(other.deleter_);
@@ -604,15 +695,14 @@ public:
 
     const std::vector<size_t>& shape() && = delete;
 
-    /// Check if this array is empty, i.e. if at least one of the shape element
-    /// is 0.
-    bool is_empty() const {
-        for (auto s: shape_) {
-            if (s == 0) {
-                return true;
-            }
-        }
-        return false;
+    /// Get the strides of this array in number of elements.
+    const std::vector<int64_t>& strides() const {
+        return strides_;
+    }
+
+    /// Check if this array is contiguous in row-major order.
+    bool is_contiguous() const {
+        return true;
     }
 
 private:
@@ -623,6 +713,7 @@ private:
     NDArray(const T* data, std::vector<size_t> shape, bool is_const):
         data_(const_cast<T*>(data)),
         shape_(std::move(shape)),
+        strides_(details::contiguous_strides(shape_)),
         is_const_(is_const),
         deleter_([](void*){})
     {
@@ -637,6 +728,7 @@ private:
     NDArray(const std::vector<std::initializer_list<T>>& data, size_t size):
         data_(nullptr),
         shape_({data.size(), size}),
+        strides_(details::contiguous_strides(shape_)),
         is_const_(false),
         deleter_([](void*){})
     {
@@ -690,7 +782,9 @@ private:
     /// Pointer to the data used by this array
     T* data_ = nullptr;
     /// Full shape of this array
-    std::vector<size_t> shape_ = {0, 0};
+    std::vector<size_t> shape_;
+    /// Row-major contiguous strides for this array
+    std::vector<int64_t> strides_;
     /// Is this array const? This will dynamically prevent calling non-const
     /// function on it.
     bool is_const_ = true;
@@ -1244,14 +1338,17 @@ class SimpleDataArray : public metatensor::DataArrayBase {
 public:
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
-        SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
-        shape_(std::move(shape)), data_(std::make_shared<std::vector<T>>(details::product(shape_), value)) {}
+    SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
+        shape_(std::move(shape)),
+        strides_(details::contiguous_strides(shape_)),
+        data_(std::make_shared<std::vector<T>>(details::product(shape_), value)) {}
 
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
     /// The data is interpreted as a row-major n-dimensional array.
     SimpleDataArray(std::vector<uintptr_t> shape, std::vector<T> data):
         shape_(std::move(shape)),
+        strides_(details::contiguous_strides(shape_)),
         data_(std::make_shared<std::vector<T>>(std::move(data)))
     {
         if (data_->size() != details::product(shape_)) {
@@ -1619,8 +1716,19 @@ public:
         return data_->data();
     }
 
+    /// Get the strides of this array in number of elements.
+    const std::vector<int64_t>& strides() const {
+        return strides_;
+    }
+
+    /// Check if this array is contiguous in row-major order.
+    bool is_contiguous() const {
+        return true;
+    }
+
 private:
     std::vector<uintptr_t> shape_;
+    std::vector<int64_t> strides_;
     std::shared_ptr<std::vector<T>> data_;
 
     template <typename U>
