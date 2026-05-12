@@ -10,9 +10,9 @@ The code is organized in multiple projects, each in a separate directory:
   lives, implemented as a header-only library in ``metatensor.hpp``.
 - ``metatensor-torch/`` contains a `TorchScript`_ extension, written in C++,
   using the C++ API of metatensor; with corresponding tests and examples.
-- ``metatensor/`` contains the Rust interface to metatensor, using the C API
-  defined in ``metatensor-core``, as well as the corresponding tests and
-  examples.
+- ``rust/`` contains the Rust interface to metatensor, re-exposing the C API
+  defined in ``metatensor-core`` in the ``rust/metatensor-sys`` crate, and then
+  providing a more idiomatic Rust interface in the ``rust/metatensor`` crate;
 - ``python/metatensor_core/`` contains the Python interface to the core
   metatensor types, and the corresponding tests;
 - ``python/metatensor_operations/`` contains a set of pure Python functions to
@@ -21,9 +21,6 @@ The code is organized in multiple projects, each in a separate directory:
   learning models, with API inspired by scikit-learn and PyTorch;
 - ``python/metatensor_torch/`` contains the Python interface for the TorchScript
   version of metatensor, and the corresponding tests;
-- ``python/metatensor/`` contains a small Python package re-exporting everything
-  from ``metatensor-core`` and ``metatensor-operations``. This is the main
-  package users should interact with.
 - ``julia/`` contains the Julia bindings to metatensor, which are currently in
   a very early alpha stage of development;
 
@@ -57,14 +54,15 @@ automatically be translated to the corresponding C function declaration.
 The C++ API in ``metatensor.hpp`` is a hand-crafted header-only library,
 wrapping the functions from ``metatensor.h`` with a cleaner C++11 interface.
 
+
 ``metatensor-torch``
 ^^^^^^^^^^^^^^^^^^^^
 
-This sub-project is a C++ project, built by `cmake`_. It contains the
-`TorchScript`_ version of all metatensor core types, using the C++ API.
-This sub-project depends on both the C++ API of metatensor-core; and
-``libtorch`` (the C++ part of PyTorch). All the code in this sub-project is
-written by hand.
+This is a C++ project, built by `cmake`_. It contains the `TorchScript`_ version
+of all metatensor core types, using the C++ API. This sub-project depends on
+both the C++ API of metatensor-core; and ``libtorch`` (the C++ part of PyTorch).
+All the code in this sub-project is written by hand.
+
 
 ``metatensor`` rust crate
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -81,6 +79,7 @@ package). This file should be generated before publishing using
 (``./metatensor/src/c_api.rs``) are also automatically generated using using
 `bindgen`_, and should be updated with ``./scripts/update-declarations.sh``.
 
+
 Python packages
 ^^^^^^^^^^^^^^^
 
@@ -88,17 +87,19 @@ The Python API for metatensor is split into different `distributions`_, which
 when installed will correspond to different sub-module of ``metatensor``:
 
 - the ``metatensor`` distribution does not install any modules, but has
-  dependencies on ``metatensor-core`` and ``metatensor-operations``. It is
-  mainly here for user convenience, allowing to have a single install command;
+  dependencies on all the other packages. It is mainly here for user
+  convenience, allowing to have a single install command;
 - the ``metatensor-core`` distribution contains the ``metatensor`` module;
 - the ``metatensor-operations`` distribution contains the
-  ``metatensor.operations`` module; which depends on ``metatensor-core``;
-- the ``metatensor-learn`` distribution contains the ``metatensor.learn``
-  module; which depends on ``metatensor-operations``;
-- the ``metatensor-torch`` distribution contains the ``metatensor.torch``
-  module. This module re-exports ``metatensor-operations`` and
-  ``metatensor-learn`` as ``metatensor.torch.operations`` and
-  ``metatensor.torch.learn`` respectively;
+  ``metatensor_operations`` module, re-exported as ``metatensor.operations``;
+- the ``metatensor-learn`` distribution contains the ``metatensor_learn``
+  module, re-exported as ``metatensor.learn``;
+- the ``metatensor-torch`` distribution contains the ``metatensor_torch``
+  module, re-exported as ``metatensor.torch``. This module also re-exports
+  ``metatensor-operations`` and ``metatensor-learn`` as
+  ``metatensor.torch.operations`` and ``metatensor.torch.learn`` respectively,
+  using the types from the TorchScript version of metatensor. See
+  :ref:`operations-and-torch` for more details on how this works.
 
 All the Python sub-projects are built by setuptools, and fully compatible with
 ``pip`` and other standard Python tools.
@@ -108,16 +109,17 @@ All the Python sub-projects are built by setuptools, and fully compatible with
 
 This Python module re-exports a native Python interface built on top of the C
 API. The C API is accessed using the standard Python `ctypes`_ module. The
-functions declaration in ``python/metatensor_core/metatensor/core/_c_api.py``
-are generated from the ``metatensor.h`` header when running
-``./scripts/update-declarations.sh``.
+functions declaration in ``python/metatensor_core/metatensor/_c_api.py`` are
+generated from the ``metatensor.h`` header when running
+``./scripts/update-declarations.py``.
 
 ``metatensor-operations``
 -------------------------
 
 This Python package contains the code for the :ref:`operations
-<metatensor-operations>` acting on :py:class:`TensorMap`, and provides building
-blocks for machine learning models on top of the metatensor data structures.
+<metatensor-operations>` acting on :py:class:`TensorMap` and
+:py:class:`TensorBlock`, and provides building blocks for machine learning
+models on top of the metatensor data structures.
 
 By default, the operations uses the types from ``metatensor-core``, and can act
 on either numpy or torch data. The code in ``_dispatch.py`` is here to use the
@@ -127,7 +129,7 @@ At the same time, this code is also used from ``metatensor-torch``, using the
 metatensor types exposed in this module and operating only on torch data. This
 is achieved by re-importing the code from ``metatensor-operations`` in a new
 module ``metatensor.torch.operations``. See the comments in
-``python/metatensor_torch/metatensor/torch/operations.py`` for more information.
+``python/metatensor_torch/metatensor_torch/operations.py`` for more information.
 
 ``metatensor-learn``
 --------------------
