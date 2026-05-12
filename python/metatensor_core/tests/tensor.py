@@ -94,8 +94,8 @@ def test_constructor_errors():
         TensorMap(keys, ["block"])
 
 
-def test_copy():
-    # Do not use a fixture here because we want exactly on reference in the copy test.
+def test_deep_copy():
+    # Do not use a fixture here because we want exactly one reference in the copy test.
     tensor = _tests_utils.tensor()
     # Using TensorMap.copy
     clone = tensor.copy()
@@ -124,10 +124,34 @@ def test_copy():
     assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
 
 
-def test_shallow_copy_error(tensor):
-    msg = "shallow copies of TensorMap are not possible, use a deepcopy instead"
-    with pytest.raises(ValueError, match=msg):
-        copy.copy(tensor)
+def test_shallow_copy():
+    # Do not use a fixture here because we want exactly on reference in the copy test.
+    tensor = _tests_utils.tensor()
+    # Using TensorMap.copy
+    clone = tensor.copy(deep=False)
+    block_1_values_id = id(tensor.block(0).values)
+
+    # We should have exactly 2 references to the object: one in this function,
+    # and one passed to `sys.getrefcount`
+    if sys.version_info >= (3, 14):
+        # Python 3.14 has an optimization to avoid temporary references
+        assert sys.getrefcount(tensor) == 1
+    else:
+        assert sys.getrefcount(tensor) == 2
+
+    del tensor
+
+    # The values should have the same id
+    assert id(clone.block(0).values) == block_1_values_id
+    assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
+
+    # Using copy.copy
+    other_clone = copy.copy(clone)
+
+    del clone
+
+    assert id(other_clone.block(0).values) == block_1_values_id
+    assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
 
 
 def test_keys(tensor):

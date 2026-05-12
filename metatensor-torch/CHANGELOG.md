@@ -28,6 +28,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `TensorBlock::release`, which moves the data out of the `TensorBlockHolder`.
 - `TensorMap` now takes full ownership of the blocks passed to it, they are no
   longer usable afterward.
+- `TensorBlock::copy` and `TensorMap::copy` now accept a `deep` parameter to
+  control whether to perform a deep or shallow copy.
 
 ### Removed
 

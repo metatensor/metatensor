@@ -772,8 +772,14 @@ class TensorBlock:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def copy(self) -> "TensorBlock":
-        """get a deep copy of this block, including all the data and metadata"""
+    def copy(self, deep: bool = True) -> "TensorBlock":
+        """
+        Get a copy of this block, with the same values and labels. If ``deep`` is
+        ``True``, also make a full copy of the values; otherwise, the values in the new
+        block will share the same memory as those in this block.
+
+        :param deep: if ``True``, create a deep copy of the block
+        """
         raise THIS_CODE_SHOULD_NOT_RUN
 
     def add_gradient(self, parameter: str, gradient: "TensorBlock"):
@@ -1092,10 +1098,14 @@ class TensorMap:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def copy(self) -> "TensorMap":
+    def copy(self, deep: bool = True) -> "TensorMap":
         """
-        get a deep copy of this :py:class:`TensorMap`, including all the data
-        and metadata
+        Get a copy of this :py:class:`TensorMap`, with the same keys and blocks. If
+        ``deep`` is ``True``, also make a full copy of the blocks values; otherwise, the
+        blocks values in the new :py:class:`TensorMap` will share the same memory as
+        those in this :py:class:`TensorMap`.
+
+        :param deep: if ``True``, create a deep copy of the blocks in the map
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 

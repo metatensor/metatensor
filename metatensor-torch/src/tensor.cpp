@@ -46,8 +46,18 @@ TensorMapHolder::TensorMapHolder(Labels keys, std::vector<TensorBlock> blocks):
     tensor_(keys->as_metatensor(), blocks_from_torch(keys, std::move(blocks)))
 {}
 
-TensorMap TensorMapHolder::copy() const {
-    return torch::make_intrusive<TensorMapHolder>(TensorMapHolder(this->tensor_.clone()));
+TensorMap TensorMapHolder::copy(bool deep) {
+    if (deep) {
+        return torch::make_intrusive<TensorMapHolder>(TensorMapHolder(this->tensor_.clone()));
+    } else {
+        auto blocks = std::vector<TensorBlock>();
+        for (size_t i=0; i<this->keys()->count(); i++) {
+            auto block = this->tensor_.block_by_id(i);
+            auto torch_block = TensorBlockHolder(std::move(block), /*parent=*/torch::IValue());
+            blocks.push_back(torch_block.copy(/*deep=*/false));
+        }
+        return torch::make_intrusive<TensorMapHolder>(this->keys(), std::move(blocks));
+    }
 }
 
 Labels TensorMapHolder::keys() const {

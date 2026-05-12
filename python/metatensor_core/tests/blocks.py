@@ -269,7 +269,7 @@ def test_gradients(block_components):
     assert_equal(gradient.values, np.full((2, 3, 2, 2), 11.0))
 
 
-def test_copy():
+def test_deep_copy():
     block = TensorBlock(
         values=np.full((3, 3, 2), 2.0),
         samples=Labels(["s"], np.array([[0], [2], [4]])),
@@ -282,10 +282,58 @@ def test_copy():
     # using TensorBlock.copy
     clone = block.copy()
     block_values_id = id(block.values)
+    samples_values_id = id(block.samples.values)
+    component_values_id = id(block.components[0].values)
+    properties_values_id = id(block.properties.values)
 
     del block
 
     assert id(clone.values) != block_values_id
+    assert_equal(clone.values, np.full((3, 3, 2), 2.0))
+
+    # The samples are always shared
+    assert id(clone.samples.values) == samples_values_id
+    assert id(clone.components[0].values) == component_values_id
+    assert id(clone.properties.values) == properties_values_id
+
+    # using copy.deepcopy
+    other_clone = copy.deepcopy(clone)
+    block_values_id = id(clone.values)
+
+    del clone
+
+    assert id(other_clone.values) != block_values_id
+    assert_equal(other_clone.values, np.full((3, 3, 2), 2.0))
+
+    assert id(other_clone.samples.values) == samples_values_id
+    assert id(other_clone.components[0].values) == component_values_id
+    assert id(other_clone.properties.values) == properties_values_id
+
+
+def test_shallow_copy():
+    block = TensorBlock(
+        values=np.full((3, 3, 2), 2.0),
+        samples=Labels(["s"], np.array([[0], [2], [4]])),
+        components=[
+            Labels(["c_1"], np.array([[-1], [0], [1]])),
+        ],
+        properties=Labels(["p"], np.array([[5], [3]])),
+    )
+
+    # using TensorBlock.copy
+    clone = block.copy(deep=False)
+    block_values_id = id(block.values)
+    samples_values_id = id(block.samples.values)
+    component_values_id = id(block.components[0].values)
+    properties_values_id = id(block.properties.values)
+
+    del block
+
+    assert id(clone.values) == block_values_id
+    # The samples are always shared
+    assert id(clone.samples.values) == samples_values_id
+    assert id(clone.components[0].values) == component_values_id
+    assert id(clone.properties.values) == properties_values_id
 
     assert_equal(clone.values, np.full((3, 3, 2), 2.0))
     assert clone.samples.names == ["s"]
@@ -294,20 +342,17 @@ def test_copy():
     assert tuple(clone.samples[1]) == (2,)
     assert tuple(clone.samples[2]) == (4,)
 
-    # using copy.deepcopy
-    other_clone = clone.copy()
-    block_values_id = id(clone.values)
+    # using copy.copy
+    other_clone = copy.copy(clone)
 
     del clone
 
-    assert id(other_clone.values) != block_values_id
+    assert id(other_clone.values) == block_values_id
     assert_equal(other_clone.values, np.full((3, 3, 2), 2.0))
 
-
-def test_shallow_copy_error(block):
-    msg = "shallow copies of TensorBlock are not possible, use a deepcopy instead"
-    with pytest.raises(ValueError, match=msg):
-        copy.copy(block)
+    assert id(other_clone.samples.values) == samples_values_id
+    assert id(other_clone.components[0].values) == component_values_id
+    assert id(other_clone.properties.values) == properties_values_id
 
 
 def test_nested_gradients():

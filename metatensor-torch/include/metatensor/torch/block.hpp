@@ -39,9 +39,12 @@ public:
     /// object, making sure a reference to it is kept around.
     TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent);
 
-    /// Make a copy of this `TensorBlockHolder`, including all the data
-    /// contained inside
-    TensorBlock copy() const;
+    /// Make a copy of this `TensorBlockHolder`.
+    ///
+    /// If `deep` is `true`, the values and labels will be copied as well;
+    /// otherwise, the new `TensorBlockHolder` will increase the reference count
+    /// of the values and labels and return a shallow copy.
+    TensorBlock copy(bool deep = true) const;
 
     /// Get a view in the values in this block
     torch::Tensor values() const;

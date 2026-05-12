@@ -1,4 +1,3 @@
-import copy
 import ctypes
 import pathlib
 import warnings
@@ -131,19 +130,26 @@ class TensorMap:
             self._lib.mts_tensormap_free(self._ptr)
 
     def __copy__(self):
-        raise ValueError(
-            "shallow copies of TensorMap are not possible, use a deepcopy instead"
-        )
+        return self.copy(deep=False)
 
     def __deepcopy__(self, _memodict):
-        new_ptr = self._lib.mts_tensormap_copy(self._ptr)
-        return TensorMap._from_ptr(new_ptr)
+        return self.copy(deep=True)
 
-    def copy(self) -> "TensorMap":
+    def copy(self, deep: bool = True) -> "TensorMap":
         """
-        Get a deep copy of this TensorMap, including all the data and metadata
+        Get a copy of this :py:class:`TensorMap`, with the same keys and blocks. If
+        ``deep`` is ``True``, also make a full copy of the blocks values; otherwise, the
+        blocks values in the new :py:class:`TensorMap` will share the same memory as
+        those in this :py:class:`TensorMap`.
+
+        :param deep: if ``True``, create a deep copy of the blocks in the map
         """
-        return copy.deepcopy(self)
+        if deep:
+            new_ptr = self._lib.mts_tensormap_copy(self._ptr)
+            return TensorMap._from_ptr(new_ptr)
+        else:
+            new_blocks = [block.copy(deep=False) for block in self.blocks()]
+            return TensorMap(keys=self.keys, blocks=new_blocks)
 
     def __len__(self):
         return len(self.keys)

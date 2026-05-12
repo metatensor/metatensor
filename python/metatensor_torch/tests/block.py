@@ -112,7 +112,7 @@ def test_repr():
     assert repr(block.gradient("g")) == expected
 
 
-def test_copy():
+def test_deep_copy():
     values = torch.full((3, 2), 11)
     block = TensorBlock(
         values=values,
@@ -127,6 +127,23 @@ def test_copy():
     del block
 
     assert values.data_ptr() != clone.values.data_ptr()
+
+
+def test_shallow_copy():
+    values = torch.full((3, 2), 11)
+    block = TensorBlock(
+        values=values,
+        samples=Labels(names=["s"], values=torch.tensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
+    )
+
+    assert values.data_ptr() == block.values.data_ptr()
+
+    clone = block.copy(deep=False)
+    del block
+
+    assert values.data_ptr() == clone.values.data_ptr()
 
 
 def test_gradients():
