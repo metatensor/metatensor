@@ -53,14 +53,27 @@ if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa: F401
     from .operations import *  # noqa: F401, F403
 
-else:
-    # __getattr__ is called when a module attribute can not be found, we use it to give
-    # the user a better error message if they don't have metatensor-operations
-    def __getattr__(name):
-        raise AttributeError(
-            f"metatensor.{name} is not defined, are you sure you have the "
-            "metatensor-operations package installed?"
-        )
+
+# __getattr__ is called when a module attribute can not be found. We use it to provide
+# access to symbols from metatensor-operations even if this module was imported while
+# metatensor-operations was still initializing, and to provide a clearer error message
+# when metatensor-operations is not installed.
+def __getattr__(name):
+    if HAS_METATENSOR_OPERATIONS:
+        from . import operations
+
+        try:
+            # Mimic the behavior of "from .operations import *"
+            value = getattr(operations, name)
+            globals()[name] = value
+            return value
+        except AttributeError:
+            pass
+
+    raise AttributeError(
+        f"metatensor.{name} is not defined, are you sure you have the "
+        "metatensor-operations package installed?"
+    )
 
 
 try:
