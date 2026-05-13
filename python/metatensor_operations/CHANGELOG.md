@@ -17,8 +17,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
+
 ### Changed
 
+- The code is now compatible with metatensor-core v0.2.0
 - This package now installs itself to `site-packages/metatensor_operations`
   instead of `site-packages/metatensor/operations`. The operations should still
   be imported using `import metatensor as mts; mts.join(...)`

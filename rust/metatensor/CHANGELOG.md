@@ -16,6 +16,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.3.0) - 2026-05-13
+
 ### Added
 
 - Added `MtsArray` as a safe wrapper around an owned `mts_array_t`
