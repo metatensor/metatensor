@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.0) - 2026-05-13
+
 ### metatensor-core C
 
 #### Changed
