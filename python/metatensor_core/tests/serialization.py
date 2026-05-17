@@ -128,7 +128,9 @@ def test_load_mmap_tensor(standalone_fn):
         assert len(mmap_tensor.keys) == len(tensor.keys)
         for ref, got in zip(tensor.blocks(), mmap_tensor.blocks()):
             assert got.values.shape == ref.values.shape
-            np.testing.assert_array_equal(np.asarray(got.values), np.asarray(ref.values))
+            np.testing.assert_array_equal(
+                np.asarray(got.values), np.asarray(ref.values)
+            )
         return
 
     assert isinstance(tensor, TensorMap)
@@ -164,7 +166,6 @@ def test_load_mmap_pathlib():
     path = Path(_data_mts_path())
     tensor = mts.io.load_mmap(path)
     assert isinstance(tensor, TensorMap)
-
 
 
 def test_load_mmap_values_are_views():
