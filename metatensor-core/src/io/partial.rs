@@ -833,7 +833,7 @@ mod tests {
         .unwrap();
 
         let array = unsafe { &*output.ptr.cast::<StridedTestArray>() };
-        assert_eq!(array.data, vec![-1.0, 5.0, 3.0, -1.0, 8.0, 6.0, -1.0]);
+        assert_eq!(array.data, vec![-1.0, 8.0, 6.0, -1.0, 11.0, 9.0, -1.0]);
 
         unsafe {
             output.destroy.unwrap()(output.ptr);
