@@ -87,6 +87,106 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
+def _data_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+
+def _block_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load_mmap_tensor(standalone_fn):
+    path = _data_mts_path()
+
+    if standalone_fn:
+        tensor = mts.load_mmap(path)
+    else:
+        tensor = TensorMap.load(path)  # canonical reference
+
+        # The mmap loader must produce a TensorMap with identical structure
+        # and equal values to the canonical streaming loader.
+        mmap_tensor = mts.io.load_mmap(path)
+        assert isinstance(mmap_tensor, TensorMap)
+        assert mmap_tensor.keys.names == tensor.keys.names
+        assert len(mmap_tensor.keys) == len(tensor.keys)
+        for ref, got in zip(tensor.blocks(), mmap_tensor.blocks()):
+            assert got.values.shape == ref.values.shape
+            np.testing.assert_array_equal(np.asarray(got.values), np.asarray(ref.values))
+        return
+
+    assert isinstance(tensor, TensorMap)
+    assert tensor.keys.names == [
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
+    ]
+    assert len(tensor.keys) == 27
+
+    block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert block.samples.names == ["system", "atom"]
+    assert block.values.shape == (9, 5, 3)
+    assert not block.values.flags.writeable, "mmap arrays should be read-only"
+
+    gradient = block.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+def test_load_mmap_block():
+    path = _block_mts_path()
+
+    block = mts.io.load_block_mmap(path)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape[0] > 0
+    assert not block.values.flags.writeable
+
+
+def test_load_mmap_pathlib():
+    # pathlib.Path inputs must work alongside str inputs.
+    path = Path(_data_mts_path())
+    tensor = mts.io.load_mmap(path)
+    assert isinstance(tensor, TensorMap)
+
+
+
+def test_load_mmap_values_are_views():
+    # mmap-loaded arrays must be views into a memory-mapped buffer,
+    # not freshly-allocated copies. We assert: (a) values are read-only
+    # and (b) the .base chain leads to *some* non-None buffer (numpy
+    # arrays whose data is a fresh malloc would have base=None).
+    path = _data_mts_path()
+    tensor = mts.io.load_mmap(path)
+    for block in tensor.blocks():
+        arr = np.asarray(block.values)
+        assert not arr.flags.writeable, "mmap arrays should be read-only"
+        # walk to the lowest non-None base
+        base = arr.base
+        while base is not None and getattr(base, "base", None) is not None:
+            base = base.base
+        assert base is not None, (
+            "expected the array to be a view into an mmap, not an "
+            "independently-allocated buffer (base is None)"
+        )
+
+
 @pytest.mark.parametrize("use_numpy", (True, False))
 def test_load_deflate(use_numpy):
     # This file was saved using DEFLATE to compress the different ZIP archive members

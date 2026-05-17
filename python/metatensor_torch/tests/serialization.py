@@ -112,6 +112,35 @@ def test_load(tensor_path):
     check_tensor(loaded)
 
 
+def test_load_mmap(tensor_path):
+    # standalone function
+    loaded = mts.load_mmap(tensor_path)
+    check_tensor(loaded)
+
+    # static method
+    loaded = TensorMap.load_mmap(tensor_path)
+    check_tensor(loaded)
+
+    # Path
+    loaded = mts.load_mmap(Path(tensor_path))
+    check_tensor(loaded)
+
+    # mmap-loaded values must be equal to the canonical streaming loader
+    ref = mts.load(tensor_path)
+    mmap_tensor = mts.load_mmap(tensor_path)
+    for ref_block, got_block in zip(ref.blocks(), mmap_tensor.blocks()):
+        assert ref_block.values.shape == got_block.values.shape
+        torch.testing.assert_close(ref_block.values, got_block.values)
+
+
+def test_load_block_mmap(block_path):
+    block = mts.load_block_mmap(block_path)
+    check_block(block)
+
+    block = TensorBlock.load_mmap(block_path)
+    check_block(block)
+
+
 def test_save(tmpdir, tensor_path):
     """Check that we can save and load a tensor to a file"""
     tmpfile = "serialize-test.mts"

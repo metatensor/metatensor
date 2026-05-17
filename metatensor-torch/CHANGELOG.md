@@ -6,6 +6,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Added
+
+- `TensorMap.load_mmap` and `TensorBlock.load_mmap` (also exported as
+  `metatensor.torch.load_mmap` / `load_block_mmap` and as the
+  TorchScript ops `torch.ops.metatensor.load_mmap` /
+  `load_block_mmap`) for memory-mapped loading of `.mts` files. Values
+  are returned as `torch::from_blob` views into a cross-platform
+  shared mmap (POSIX `mmap`, Windows `MapViewOfFile`); a `shared_ptr`
+  capture in each tensor's deleter keeps the mapping alive until the
+  last referencing tensor is freed. The input file must use the
+  STORED ZIP format and native byte order.
+
 <!-- Possible sections for each package:
 
 ### Added

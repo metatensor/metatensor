@@ -6,6 +6,38 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### metatensor-core C
+
+#### Added
+
+- `mts_tensormap_load_mmap` and `mts_block_load_mmap` for memory-mapped
+  loading of `.mts` files. Both take a `mts_create_file_array_callback_t`
+  callback and an opaque `void *user_data`; metatensor parses the NPY
+  header for each array via mmap and dispatches `(shape, dtype,
+  file_offset)` to the callback so the binding decides how to
+  materialise the array (mmap view, plain copy, GPU upload, ...).
+  Byte length is always derivable from `shape * dtype`, so it is not
+  passed explicitly. The input file must use the STORED
+  (uncompressed) ZIP format and native byte order.
+
+### metatensor-core C++
+
+#### Added
+
+- `metatensor::io::load_mmap` and `metatensor::io::load_block_mmap`
+  inlines wrapping the new C API.
+
+### metatensor-core Python
+
+#### Added
+
+- `metatensor.load_mmap` / `metatensor.io.load_mmap` and the
+  corresponding `load_block_mmap`, returning a `TensorMap` /
+  `TensorBlock` whose numeric arrays are read-only numpy views into
+  the memory-mapped file. The underlying `mmap.mmap` is kept alive
+  via numpy's `.base` chain for the lifetime of every returned
+  array.
+
 <!-- Possible sections for each package:
 
 #### Added
