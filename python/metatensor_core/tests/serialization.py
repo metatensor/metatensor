@@ -126,7 +126,7 @@ def test_load_mmap_tensor(standalone_fn):
         assert isinstance(mmap_tensor, TensorMap)
         assert mmap_tensor.keys.names == tensor.keys.names
         assert len(mmap_tensor.keys) == len(tensor.keys)
-        for ref, got in zip(tensor.blocks(), mmap_tensor.blocks()):
+        for ref, got in zip(tensor.blocks(), mmap_tensor.blocks(), strict=True):
             assert got.values.shape == ref.values.shape
             np.testing.assert_array_equal(
                 np.asarray(got.values), np.asarray(ref.values)

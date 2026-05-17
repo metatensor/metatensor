@@ -131,7 +131,7 @@ def test_load_mmap(tensor_path):
     # mmap-loaded values must be equal to the canonical streaming loader
     ref = mts.load(tensor_path)
     mmap_tensor = mts.load_mmap(tensor_path)
-    for ref_block, got_block in zip(ref.blocks(), mmap_tensor.blocks()):
+    for ref_block, got_block in zip(ref.blocks(), mmap_tensor.blocks(), strict=True):
         assert ref_block.values.shape == got_block.values.shape
         torch.testing.assert_close(ref_block.values, got_block.values)
 
@@ -154,7 +154,9 @@ def test_load_mmap_values_are_mutable_private_views(tensor_path, tmp_path):
         )
 
         reloaded = mts.load(path)
-        reloaded_block = reloaded.block(dict(o3_lambda=2, center_type=6, neighbor_type=1))
+        reloaded_block = reloaded.block(
+            dict(o3_lambda=2, center_type=6, neighbor_type=1)
+        )
         torch.testing.assert_close(reloaded_block.values, original)
         """
     )
