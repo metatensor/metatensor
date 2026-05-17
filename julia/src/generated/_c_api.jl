@@ -16,8 +16,9 @@ end
 Cbool = Cuchar
 mts_data_origin_t = UInt64
 
-mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
-mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
+mts_create_array_callback_t = Ptr{Cvoid}        # TODO: actual type
+mts_create_file_array_callback_t = Ptr{Cvoid}   # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}               # TODO: actual type
 
 # ====== End of manual definitions ====== #
 
@@ -516,10 +517,18 @@ function mts_labels_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntp
 end
 
 function mts_block_load(path::Ptr{Cchar}, create_array::mts_create_array_callback_t)
-    ccall((:mts_block_load, libmetatensor), 
+    ccall((:mts_block_load, libmetatensor),
         Ptr{mts_block_t},
         (Ptr{Cchar}, mts_create_array_callback_t,),
         path, create_array
+    )
+end
+
+function mts_block_load_mmap(path::Ptr{Cchar}, create_array::mts_create_file_array_callback_t, user_data::Ptr{Cvoid})
+    ccall((:mts_block_load_mmap, libmetatensor),
+        Ptr{mts_block_t},
+        (Ptr{Cchar}, mts_create_file_array_callback_t, Ptr{Cvoid},),
+        path, create_array, user_data
     )
 end
 
@@ -548,10 +557,18 @@ function mts_block_save_buffer(buffer::Ptr{Ptr{UInt8}}, buffer_count::Ptr{UIntpt
 end
 
 function mts_tensormap_load(path::Ptr{Cchar}, create_array::mts_create_array_callback_t)
-    ccall((:mts_tensormap_load, libmetatensor), 
+    ccall((:mts_tensormap_load, libmetatensor),
         Ptr{mts_tensormap_t},
         (Ptr{Cchar}, mts_create_array_callback_t,),
         path, create_array
+    )
+end
+
+function mts_tensormap_load_mmap(path::Ptr{Cchar}, create_array::mts_create_file_array_callback_t, user_data::Ptr{Cvoid})
+    ccall((:mts_tensormap_load_mmap, libmetatensor),
+        Ptr{mts_tensormap_t},
+        (Ptr{Cchar}, mts_create_file_array_callback_t, Ptr{Cvoid},),
+        path, create_array, user_data
     )
 end
 

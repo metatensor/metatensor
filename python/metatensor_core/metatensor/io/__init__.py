@@ -21,6 +21,7 @@ from ._labels import (
     load_labels,
     load_labels_buffer,
 )
+from ._mmap import load_block_mmap, load_mmap
 from ._tensor import (
     _save_tensor,
     _save_tensor_buffer_raw,
@@ -38,11 +39,13 @@ __all__ = [
     "load_block_buffer",
     "load_block_custom_array",
     "load_block",
+    "load_block_mmap",
     "load_buffer_custom_array",
     "load_buffer",
     "load_custom_array",
     "load_labels_buffer",
     "load_labels",
+    "load_mmap",
     "load",
 ]
 

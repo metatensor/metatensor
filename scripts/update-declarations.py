@@ -426,8 +426,9 @@ end
 Cbool = Cuchar
 mts_data_origin_t = UInt64
 
-mts_create_array_callback_t = Ptr{Cvoid}  # TODO: actual type
-mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
+mts_create_array_callback_t = Ptr{Cvoid}        # TODO: actual type
+mts_create_file_array_callback_t = Ptr{Cvoid}   # TODO: actual type
+mts_realloc_buffer_t = Ptr{Cvoid}               # TODO: actual type
 
 # ====== End of manual definitions ====== #
 """

@@ -28,7 +28,14 @@ from ._labels import Labels, LabelsEntry
 from ._status import MetatensorError
 from ._tensor import TensorMap
 from ._version import __version__  # noqa: F401
-from .io import load, load_block, load_labels, save  # noqa: F401
+from .io import (  # noqa: F401
+    load,
+    load_block,
+    load_block_mmap,
+    load_labels,
+    load_mmap,
+    save,
+)
 
 
 # pretend the classes are defined in the top-level module for better error messages

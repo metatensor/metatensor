@@ -159,6 +159,7 @@ DLPackManagedTensorToPyObjectNoSync = CFUNCTYPE(ctypes.c_int, POINTER(DLManagedT
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
+mts_create_file_array_callback_t = CFUNCTYPE(mts_status_t, ctypes.c_void_p, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, c_uintptr_t, POINTER(mts_array_t))
 
 
 DLPackVersion._fields_ = [
@@ -538,6 +539,13 @@ def setup_functions(lib):
     ]
     lib.mts_block_load.restype = POINTER(mts_block_t)
 
+    lib.mts_block_load_mmap.argtypes = [
+        ctypes.c_char_p,
+        mts_create_file_array_callback_t,
+        ctypes.c_void_p,
+    ]
+    lib.mts_block_load_mmap.restype = POINTER(mts_block_t)
+
     lib.mts_block_load_buffer.argtypes = [
         ctypes.c_char_p,
         c_uintptr_t,
@@ -565,6 +573,13 @@ def setup_functions(lib):
         mts_create_array_callback_t,
     ]
     lib.mts_tensormap_load.restype = POINTER(mts_tensormap_t)
+
+    lib.mts_tensormap_load_mmap.argtypes = [
+        ctypes.c_char_p,
+        mts_create_file_array_callback_t,
+        ctypes.c_void_p,
+    ]
+    lib.mts_tensormap_load_mmap.restype = POINTER(mts_tensormap_t)
 
     lib.mts_tensormap_load_buffer.argtypes = [
         ctypes.c_char_p,
