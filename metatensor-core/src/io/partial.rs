@@ -440,7 +440,7 @@ where
         .ok_or_else(|| {
             Error::Serialization(format!("output shape {:?} is too large", output_shape))
         })?;
-    let output = create_array(output_shape, dtype)?;
+    let output = create_array(output_shape.clone(), dtype)?;
 
     if new_n_samples == 0 || new_n_props == 0 || elem_size == 0 {
         return Ok(output);
