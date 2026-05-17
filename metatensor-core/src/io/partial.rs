@@ -44,7 +44,9 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use dlpk::sys::{DLDataType, DLDevice, DLPackVersion};
-use memmap2::{Advice, Mmap};
+#[cfg(unix)]
+use memmap2::Advice;
+use memmap2::Mmap;
 use zip::ZipArchive;
 
 #[cfg(unix)]
@@ -59,9 +61,9 @@ use std::os::windows::fs::FileExt;
 /// are random-access workloads. Advisory failures are safe to ignore at the
 /// call sites: the correctness fallback is ordinary positional I/O.
 ///
-/// `posix_fadvise` is a Linux/glibc extension; macOS, the BSDs, and Windows
-/// do not expose it through `libc`. On those platforms we rely on the
-/// mmap-side hint alone.
+/// `posix_fadvise` is a Linux/glibc extension; macOS and the BSDs rely on the
+/// mmap-side hint alone. Windows uses ordinary positional I/O without an
+/// equivalent advisory hint.
 fn advise_random_access(file: &File, mmap: &Mmap) -> std::io::Result<()> {
     #[cfg(target_os = "linux")]
     {
@@ -76,7 +78,15 @@ fn advise_random_access(file: &File, mmap: &Mmap) -> std::io::Result<()> {
     #[cfg(not(target_os = "linux"))]
     let _ = file;
 
-    mmap.advise(Advice::Random)
+    #[cfg(unix)]
+    {
+        mmap.advise(Advice::Random)?;
+    }
+
+    #[cfg(not(unix))]
+    let _ = mmap;
+
+    Ok(())
 }
 
 /// Read exactly `buf.len()` bytes from `file` starting at `offset`, using
