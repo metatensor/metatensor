@@ -168,6 +168,60 @@ def test_load_mmap_pathlib():
     assert isinstance(tensor, TensorMap)
 
 
+def test_load_partial_select_all():
+    # No filters: must equal canonical load.
+    path = _data_mts_path()
+    ref = mts.load(path)
+    got = mts.load_partial(path)
+    assert isinstance(got, TensorMap)
+    assert got.keys.names == ref.keys.names
+    assert len(got.keys) == len(ref.keys)
+    for ref_block, got_block in zip(ref.blocks(), got.blocks(), strict=True):
+        assert got_block.values.shape == ref_block.values.shape
+        np.testing.assert_array_equal(
+            np.asarray(got_block.values), np.asarray(ref_block.values)
+        )
+
+
+def test_load_partial_filter_keys():
+    path = _data_mts_path()
+    keys_filter = Labels(
+        names=["o3_lambda", "center_type"],
+        values=np.array([[2, 6]], dtype=np.int32),
+    )
+    got = mts.load_partial(path, keys=keys_filter)
+    assert isinstance(got, TensorMap)
+    # the matching keys filter selects 4 (o3_lambda=2, center_type=6,
+    # neighbor_type in {1,6,8}, o3_sigma=1)
+    assert len(got.keys) >= 1
+    for entry in got.keys:
+        assert entry["o3_lambda"] == 2
+        assert entry["center_type"] == 6
+
+
+def test_load_partial_filter_samples():
+    path = _data_mts_path()
+    # pick a sample selector that's present in the data
+    ref = mts.load(path)
+    ref_block = ref.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    first_sample = np.array(ref_block.samples.values[:1], dtype=np.int32)
+    samples_filter = Labels(names=ref_block.samples.names, values=first_sample)
+
+    got = mts.load_partial(path, samples=samples_filter)
+    got_block = got.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert got_block.samples.values.shape[0] == 1
+    np.testing.assert_array_equal(
+        np.asarray(got_block.samples.values), first_sample
+    )
+
+
+def test_load_block_partial_round_trip():
+    path = _block_mts_path()
+    block = mts.io.load_block_partial(path)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape[0] > 0
+
+
 def test_load_mmap_values_are_views():
     # mmap-loaded arrays must be views into a memory-mapped buffer,
     # not freshly-allocated copies. We assert: (a) values are read-only

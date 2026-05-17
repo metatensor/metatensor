@@ -546,6 +546,14 @@ def setup_functions(lib):
     ]
     lib.mts_block_load_buffer.restype = POINTER(mts_block_t)
 
+    lib.mts_block_load_partial.argtypes = [
+        ctypes.c_char_p,
+        POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        mts_create_array_callback_t,
+    ]
+    lib.mts_block_load_partial.restype = POINTER(mts_block_t)
+
     lib.mts_block_load_mmap.argtypes = [
         ctypes.c_char_p,
         mts_create_file_array_callback_t,
@@ -587,6 +595,15 @@ def setup_functions(lib):
         ctypes.c_void_p,
     ]
     lib.mts_tensormap_load_mmap.restype = POINTER(mts_tensormap_t)
+
+    lib.mts_tensormap_load_partial.argtypes = [
+        ctypes.c_char_p,
+        POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        POINTER(mts_labels_t),
+        mts_create_array_callback_t,
+    ]
+    lib.mts_tensormap_load_partial.restype = POINTER(mts_tensormap_t)
 
     lib.mts_tensormap_save.argtypes = [
         ctypes.c_char_p,

@@ -32,8 +32,10 @@ from .io import (  # noqa: F401
     load,
     load_block,
     load_block_mmap,
+    load_block_partial,
     load_labels,
     load_mmap,
+    load_partial,
     save,
 )
 

@@ -9,7 +9,6 @@ use crate::Error;
 use crate::data::mts_array_t;
 
 use super::{ExternalBuffer, mts_realloc_buffer_t};
-
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::tensor::mts_tensormap_t;
 use super::{mts_create_array_callback_t, mts_create_file_array_callback_t};
@@ -268,6 +267,69 @@ pub unsafe extern "C" fn mts_tensormap_load_mmap(
     return result;
 }
 
+/// Load a tensor map from `path`, selecting only a subset of the data based
+/// on `keys`, `samples`, and `properties`.
+///
+/// Any of `keys` / `samples` / `properties` may be `NULL` to mean "select all
+/// rows on this dimension". When non-NULL, the pointer must remain valid for
+/// the duration of this call; the labels are interpreted with `Labels::select`
+/// semantics (the selection's dimensions must be a subset of the target's).
+///
+/// `create_array` follows the same contract as `mts_tensormap_load`: it gets
+/// `(shape, dtype)` and must return an `mts_array_t` of that shape and dtype.
+/// The returned tensor map owns its data (no live mmap reference).
+///
+/// The input file must use the STORED (uncompressed) ZIP format and native
+/// byte order for numeric arrays.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param keys NULL, or label-based filter for which blocks to load
+/// @param samples NULL, or label-based filter for which samples to keep
+/// @param properties NULL, or label-based filter for which properties to keep
+/// @param create_array callback used to allocate each block's value/gradient array
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer
+///          in case of error.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_load_partial(
+    path: *const c_char,
+    keys: *const super::super::labels::mts_labels_t,
+    samples: *const super::super::labels::mts_labels_t,
+    properties: *const super::super::labels::mts_labels_t,
+    create_array: mts_create_array_callback_t,
+) -> *mut mts_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let create_array_fn = wrap_create_array(&create_array);
+
+        let keys_ref = if keys.is_null() { None } else { Some(&**keys) };
+        let samples_ref = if samples.is_null() { None } else { Some(&**samples) };
+        let properties_ref = if properties.is_null() { None } else { Some(&**properties) };
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let tensor = crate::io::load_partial(
+            path, keys_ref, samples_ref, properties_ref, create_array_fn,
+        ).map_err(|err| match err {
+            Error::Serialization(message) => Error::Serialization(format!(
+                "unable to partial-load TensorMap from '{}': {}", path, message
+            )),
+            err => err,
+        })?;
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
 
 pub(super) fn wrap_create_file_array(
     callback: unsafe extern "C" fn(

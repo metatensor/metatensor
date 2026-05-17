@@ -1335,6 +1335,31 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
                                           mts_create_array_callback_t create_array);
 
 /**
+ * Load a tensor block from `path`, selecting only a subset of samples and
+ * properties.
+ *
+ * `samples` and `properties` are optional (`NULL` means select all on that
+ * dimension). When non-NULL, the labels are interpreted with `Labels::select`
+ * semantics. `create_array` follows the standard
+ * `mts_create_array_callback_t` contract.
+ *
+ * The returned block owns its data (no live mmap reference). The input file
+ * must use the STORED ZIP format and native byte order for numeric arrays.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param samples NULL, or label-based filter for which samples to keep
+ * @param properties NULL, or label-based filter for which properties to keep
+ * @param create_array callback used to allocate the block's value/gradient array
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error.
+ */
+struct mts_block_t *mts_block_load_partial(const char *path,
+                                           const struct mts_labels_t *samples,
+                                           const struct mts_labels_t *properties,
+                                           mts_create_array_callback_t create_array);
+
+/**
  * Load a `TensorBlock` from the file at the given path using memory mapping.
  *
  * See `mts_tensormap_load_mmap` for callback semantics and file format
@@ -1510,6 +1535,37 @@ struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
 struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
                                                 mts_create_file_array_callback_t create_array,
                                                 void *user_data);
+
+/**
+ * Load a tensor map from `path`, selecting only a subset of the data based
+ * on `keys`, `samples`, and `properties`.
+ *
+ * Any of `keys` / `samples` / `properties` may be `NULL` to mean "select all
+ * rows on this dimension". When non-NULL, the pointer must remain valid for
+ * the duration of this call; the labels are interpreted with `Labels::select`
+ * semantics (the selection's dimensions must be a subset of the target's).
+ *
+ * `create_array` follows the same contract as `mts_tensormap_load`: it gets
+ * `(shape, dtype)` and must return an `mts_array_t` of that shape and dtype.
+ * The returned tensor map owns its data (no live mmap reference).
+ *
+ * The input file must use the STORED (uncompressed) ZIP format and native
+ * byte order for numeric arrays.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param keys NULL, or label-based filter for which blocks to load
+ * @param samples NULL, or label-based filter for which samples to keep
+ * @param properties NULL, or label-based filter for which properties to keep
+ * @param create_array callback used to allocate each block's value/gradient array
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer
+ *          in case of error.
+ */
+struct mts_tensormap_t *mts_tensormap_load_partial(const char *path,
+                                                   const struct mts_labels_t *keys,
+                                                   const struct mts_labels_t *samples,
+                                                   const struct mts_labels_t *properties,
+                                                   mts_create_array_callback_t create_array);
 
 /**
  * Save a tensor map to the file at the given path.

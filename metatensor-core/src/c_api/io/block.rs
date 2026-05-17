@@ -175,6 +175,63 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 }
 
 
+/// Load a tensor block from `path`, selecting only a subset of samples and
+/// properties.
+///
+/// `samples` and `properties` are optional (`NULL` means select all on that
+/// dimension). When non-NULL, the labels are interpreted with `Labels::select`
+/// semantics. `create_array` follows the standard
+/// `mts_create_array_callback_t` contract.
+///
+/// The returned block owns its data (no live mmap reference). The input file
+/// must use the STORED ZIP format and native byte order for numeric arrays.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param samples NULL, or label-based filter for which samples to keep
+/// @param properties NULL, or label-based filter for which properties to keep
+/// @param create_array callback used to allocate the block's value/gradient array
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_load_partial(
+    path: *const c_char,
+    samples: *const super::super::labels::mts_labels_t,
+    properties: *const super::super::labels::mts_labels_t,
+    create_array: mts_create_array_callback_t,
+) -> *mut mts_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let create_array_fn = wrap_create_array(&create_array);
+
+        let samples_ref = if samples.is_null() { None } else { Some(&**samples) };
+        let properties_ref = if properties.is_null() { None } else { Some(&**properties) };
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let block = crate::io::load_block_partial(
+            path, samples_ref, properties_ref, create_array_fn,
+        ).map_err(|err| match err {
+            Error::Serialization(message) => Error::Serialization(format!(
+                "unable to partial-load TensorBlock from '{}': {}", path, message
+            )),
+            err => err,
+        })?;
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_block_t::into_boxed_raw(block);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
 
 /// Load a `TensorBlock` from the file at the given path using memory mapping.
 ///

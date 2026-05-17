@@ -19,6 +19,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   Byte length is always derivable from `shape * dtype`, so it is not
   passed explicitly. The input file must use the STORED
   (uncompressed) ZIP format and native byte order.
+- `mts_tensormap_load_partial` and `mts_block_load_partial` for
+  selective loading with optional `keys` / `samples` / `properties`
+  filters (NULL = select-all). Returns owned arrays via the standard
+  `mts_create_array_callback_t`.
 
 ### metatensor-core C++
 
@@ -37,6 +41,9 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   the memory-mapped file. The underlying `mmap.mmap` is kept alive
   via numpy's `.base` chain for the lifetime of every returned
   array.
+- `metatensor.load_partial` / `metatensor.io.load_partial` (and the
+  block-level variant) for selective loading with optional `keys`,
+  `samples`, `properties` filters.
 
 <!-- Possible sections for each package:
 

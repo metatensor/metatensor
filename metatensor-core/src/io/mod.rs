@@ -18,6 +18,9 @@ pub use self::tensor::looks_like_tensormap_data;
 mod mmap;
 pub use self::mmap::{load_mmap, load_block_mmap};
 
+mod partial;
+pub use self::partial::{load_partial, load_block_partial};
+
 
 use crate::Error;
 
@@ -252,4 +255,22 @@ mod tests {
             "unexpected error: {err}"
         );
     }
+}
+
+
+/// (elem_size, n_components, n_props, row_bytes) layout helper shared by
+/// `partial.rs`.
+pub(crate) fn npy_layout(
+    shape: &[usize],
+    dtype: dlpk::sys::DLDataType,
+) -> (usize, usize, usize, usize) {
+    let elem_size = (dtype.bits as usize / 8) * dtype.lanes as usize;
+    let src_n_props = *shape.last().expect("block values must have rank >= 2");
+    let n_components: usize = if shape.len() > 2 {
+        shape[1..shape.len() - 1].iter().product()
+    } else {
+        1
+    };
+    let row_bytes = n_components * src_n_props * elem_size;
+    (elem_size, n_components, src_n_props, row_bytes)
 }
