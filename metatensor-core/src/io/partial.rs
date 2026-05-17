@@ -6,10 +6,6 @@
 //! columns into freshly-allocated arrays returned by the standard
 //! `create_array` callback. The result of `load_partial(path, None,
 //! None, None, cb)` equals `load(path, cb)`.
-//!
-//! mmap-backed partial loading (where the result arrays themselves are
-//! mmap views) is a separate concern -- see the multi-region callback
-//! variant in a follow-up PR.
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -154,22 +150,13 @@ fn labels_subset(labels: &Labels, indices: &[usize]) -> Result<Labels, Error> {
 }
 
 
-// parse_stored_npy_entry was extracted to super::parse_stored_npy_entry
-// (audit #14): both mmap.rs and partial.rs use the same shared helper.
-
-
 /// Compute the index list for a sample / property selector, materialising
 /// `0..count()` when the selector is `None` and otherwise running
-/// `Labels::select`. Used by all four partial walkers (audit #13).
-fn compute_indices(
-    all: &Labels,
-    selector: Option<&Labels>,
-) -> Result<Vec<usize>, Error> {
+/// `Labels::select`.
+fn compute_indices(all: &Labels, selector: Option<&Labels>) -> Result<Vec<usize>, Error> {
     if let Some(sel) = selector {
         let mut selected = vec![0u64; all.count()];
         let n = all.select(sel, &mut selected)?;
-        // Audit #22: defensive cast -- usize::try_from catches truncation
-        // on a hypothetical 32-bit target where label indices exceed 4 GiB.
         selected[..n]
             .iter()
             .map(|&i| {
@@ -184,13 +171,9 @@ fn compute_indices(
 }
 
 
-// Gradient-parameter discovery moved to super::discover_gradient_parameters
-// (audit #1/#12) so mmap.rs can share the same helper.
-
-
 /// Filter gradient samples whose column-0 (parent-sample index) is in
 /// the kept parent set, and rewrite column-0 with the new sequential
-/// index. Used by both gradient walkers (audit #13).
+/// index.
 fn reindex_gradient_samples(
     grad_samples: &Labels,
     parent_sample_indices: &[usize],
@@ -226,7 +209,7 @@ fn reindex_gradient_samples(
 
 
 /// Load the `components/{i}.npy` labels for a block (one per non-edge
-/// shape dimension). Used by all four partial walkers (audit #13).
+/// shape dimension).
 fn load_components(
     archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
     prefix: &str,
@@ -245,8 +228,7 @@ fn load_components(
 /// Group a sorted-or-unsorted index list into maximal contiguous runs.
 /// Returns a list of `(new_col_start, old_col_start, run_len)` triples
 /// such that for `r in 0..run_len`, `prop_idx[new_col_start + r] ==
-/// old_col_start + r`. Used by `gather_selected_data` (audit #9) to
-/// collapse per-element memcpys into per-run memcpys.
+/// old_col_start + r`.
 fn contiguous_runs(prop_idx: &[usize]) -> Vec<(usize, usize, usize)> {
     let mut runs = Vec::new();
     if prop_idx.is_empty() {
@@ -269,6 +251,152 @@ fn contiguous_runs(prop_idx: &[usize]) -> Vec<(usize, usize, usize)> {
     runs
 }
 
+fn row_major_strides(shape: &[usize]) -> Result<Vec<i64>, Error> {
+    let mut strides = vec![1; shape.len()];
+    let mut next = 1i64;
+    for dim in (0..shape.len()).rev() {
+        strides[dim] = next;
+        let size = i64::try_from(shape[dim]).map_err(|_| {
+            Error::Serialization(format!("array dimension {} does not fit in i64", shape[dim]))
+        })?;
+        next = next.checked_mul(size).ok_or_else(|| {
+            Error::Serialization(format!(
+                "array shape {:?} has overflowing contiguous strides",
+                shape
+            ))
+        })?;
+    }
+    Ok(strides)
+}
+
+fn dlpack_strides(shape: &[usize], strides: Option<&[i64]>) -> Result<Vec<i64>, Error> {
+    let strides = match strides {
+        Some(strides) => {
+            if strides.len() != shape.len() {
+                return Err(Error::Serialization(format!(
+                    "create_array returned strides {:?} for shape {:?}",
+                    strides, shape
+                )));
+            }
+            strides.to_vec()
+        }
+        None => row_major_strides(shape)?,
+    };
+
+    for (&dim, &stride) in shape.iter().zip(&strides) {
+        if stride < 0 {
+            return Err(Error::Serialization(format!(
+                "create_array returned negative stride {} for shape {:?}",
+                stride, shape
+            )));
+        }
+        if dim > 1 && stride == 0 {
+            return Err(Error::Serialization(format!(
+                "create_array returned zero stride for non-singleton shape {:?}",
+                shape
+            )));
+        }
+    }
+
+    Ok(strides)
+}
+
+fn is_row_major_contiguous(shape: &[usize], strides: &[i64]) -> Result<bool, Error> {
+    if shape.len() != strides.len() {
+        return Ok(false);
+    }
+
+    let expected = row_major_strides(shape)?;
+    Ok(shape
+        .iter()
+        .zip(strides)
+        .zip(expected)
+        .all(|((&dim, &stride), expected)| dim == 1 || stride == expected))
+}
+
+fn component_offsets(shape: &[usize], strides: &[i64]) -> Result<Vec<i64>, Error> {
+    let n_components = shape.iter().product();
+    let mut offsets = Vec::with_capacity(n_components);
+
+    for mut flat in 0..n_components {
+        let mut offset = 0i64;
+        for (&size, &stride) in shape.iter().zip(strides).rev() {
+            let index = flat % size;
+            flat /= size;
+            let index = i64::try_from(index).map_err(|_| {
+                Error::Serialization(format!("component index {} does not fit in i64", index))
+            })?;
+            offset = offset
+                .checked_add(index.checked_mul(stride).ok_or_else(|| {
+                    Error::Serialization("component stride offset overflowed".into())
+                })?)
+                .ok_or_else(|| {
+                    Error::Serialization("component stride offset overflowed".into())
+                })?;
+        }
+        offsets.push(offset);
+    }
+
+    Ok(offsets)
+}
+
+fn checked_dst_offset(
+    row: usize,
+    component_offset: i64,
+    property: usize,
+    strides: &[i64],
+    elem_size: usize,
+) -> Result<usize, Error> {
+    let row = i64::try_from(row)
+        .map_err(|_| Error::Serialization(format!("row index {} does not fit in i64", row)))?;
+    let property = i64::try_from(property).map_err(|_| {
+        Error::Serialization(format!("property index {} does not fit in i64", property))
+    })?;
+
+    let offset = row
+        .checked_mul(strides[0])
+        .and_then(|offset| offset.checked_add(component_offset))
+        .and_then(|offset| offset.checked_add(property.checked_mul(*strides.last()?)?))
+        .ok_or_else(|| Error::Serialization("destination stride offset overflowed".into()))?;
+
+    let offset = usize::try_from(offset).map_err(|_| {
+        Error::Serialization(format!("destination stride offset {} is negative", offset))
+    })?;
+
+    offset
+        .checked_mul(elem_size)
+        .ok_or_else(|| Error::Serialization("destination byte offset overflowed".into()))
+}
+
+fn validate_selected_indices(
+    src_shape: &[usize],
+    sample_indices: &[usize],
+    prop_indices: Option<&[usize]>,
+) -> Result<(), Error> {
+    for &sample in sample_indices {
+        if sample >= src_shape[0] {
+            return Err(Error::Serialization(format!(
+                "sample index {} is out of bounds for source shape {:?}",
+                sample, src_shape
+            )));
+        }
+    }
+
+    if let Some(prop_indices) = prop_indices {
+        let n_props = *src_shape.last().expect("block values must have rank >= 2");
+        for &property in prop_indices {
+            if property >= n_props {
+                return Err(Error::Serialization(format!(
+                    "property index {} is out of bounds for source shape {:?}",
+                    property, src_shape
+                )));
+            }
+        }
+    }
+
+    Ok(())
+}
+
 
 /// Copy the selected rows / columns from `mmap` (at `raw_data_offset`)
 /// into a freshly-allocated array. The destination dtype must match the
@@ -286,6 +414,14 @@ fn gather_selected_data<F>(
 where
     F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>,
 {
+    if src_shape.len() < 2 {
+        return Err(Error::Serialization(format!(
+            "block values must have rank >= 2, got shape {:?}",
+            src_shape
+        )));
+    }
+    validate_selected_indices(src_shape, sample_indices, prop_indices)?;
+
     let (elem_size, n_components, src_n_props, src_row_bytes) = npy_layout(src_shape, dtype);
 
     let new_n_samples = sample_indices.len();
@@ -298,7 +434,12 @@ where
     }
     output_shape.push(new_n_props);
 
-    let total_elems: usize = output_shape.iter().product();
+    let total_elems: usize = output_shape
+        .iter()
+        .try_fold(1usize, |count, &dim| count.checked_mul(dim))
+        .ok_or_else(|| {
+            Error::Serialization(format!("output shape {:?} is too large", output_shape))
+        })?;
     let output = create_array(output_shape, dtype)?;
 
     if new_n_samples == 0 || new_n_props == 0 || elem_size == 0 {
@@ -320,26 +461,95 @@ where
             dst_dtype.bits, dst_dtype.lanes, dtype.bits, dtype.lanes
         )));
     }
-    // SAFETY: dst_elem_bytes == elem_size and the destination is a CPU
-    // tensor that we just allocated through the callback; treating its
-    // contiguous data buffer as &mut [u8] is sound (the slice borrows
-    // through `dl_tensor`, which is dropped at the end of this function).
-    let total_bytes = total_elems * elem_size;
-    let dst_ptr = tensor_ref.as_dltensor().data as *mut u8;
-    if dst_ptr.is_null() && total_bytes > 0 {
+
+    if tensor_ref.device().device_type != DLDevice::cpu().device_type {
+        return Err(Error::Serialization(
+            "create_array returned a non-CPU DLPack tensor".into(),
+        ));
+    }
+
+    let dst_shape = tensor_ref
+        .shape()
+        .iter()
+        .map(|&dim| {
+            usize::try_from(dim).map_err(|_| {
+                Error::Serialization(format!(
+                    "create_array returned a negative or overflowing shape dimension {}",
+                    dim
+                ))
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    if dst_shape != output_shape {
+        return Err(Error::Serialization(format!(
+            "create_array returned shape {:?}, expected {:?}",
+            dst_shape, output_shape
+        )));
+    }
+
+    let dst_strides = dlpack_strides(&output_shape, tensor_ref.strides())?;
+
+    let total_bytes = total_elems
+        .checked_mul(elem_size)
+        .ok_or_else(|| Error::Serialization("destination byte length overflowed".into()))?;
+    let dst_base = tensor_ref.as_dltensor().data as *mut u8;
+    if dst_base.is_null() && total_bytes > 0 {
         return Err(Error::Serialization(
             "create_array returned an array with a NULL data pointer".into(),
         ));
     }
-    let dst_bytes: &mut [u8] =
-        unsafe { std::slice::from_raw_parts_mut(dst_ptr, total_bytes) };
+    let dst_ptr = dst_base.wrapping_add(tensor_ref.byte_offset());
+
+    if !is_row_major_contiguous(&output_shape, &dst_strides)? {
+        let component_shape = &src_shape[1..src_shape.len() - 1];
+        let component_strides = &dst_strides[1..dst_strides.len() - 1];
+        let component_offsets = component_offsets(component_shape, component_strides)?;
+        let all_properties;
+        let selected_properties = match prop_indices {
+            Some(indices) => indices,
+            None => {
+                all_properties = (0..src_n_props).collect::<Vec<_>>();
+                &all_properties
+            }
+        };
+
+        for (new_row, &old_row) in sample_indices.iter().enumerate() {
+            let src_offset = raw_data_offset + old_row * src_row_bytes;
+            for (new_col, &old_col) in selected_properties.iter().enumerate() {
+                for (comp, &comp_dst_offset) in component_offsets.iter().enumerate() {
+                    let src_off = src_offset
+                        + (comp * src_n_props + old_col)
+                            .checked_mul(elem_size)
+                            .ok_or_else(|| {
+                                Error::Serialization("source byte offset overflowed".into())
+                            })?;
+                    let dst_off = checked_dst_offset(
+                        new_row,
+                        comp_dst_offset,
+                        new_col,
+                        &dst_strides,
+                        elem_size,
+                    )?;
+                    unsafe {
+                        std::ptr::copy_nonoverlapping(
+                            mmap.as_ptr().add(src_off),
+                            dst_ptr.add(dst_off),
+                            elem_size,
+                        );
+                    }
+                }
+            }
+        }
+
+        return Ok(output);
+    }
+
+    // SAFETY: dst_elem_bytes == elem_size and the destination DLPack tensor is
+    // contiguous after applying byte_offset. The slice borrows through
+    // `dl_tensor`, which is dropped at the end of this function.
+    let dst_bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(dst_ptr, total_bytes) };
 
     if let Some(prop_idx) = prop_indices {
-        // Audit #9: detect contiguous runs in the property selector and
-        // collapse them into a single copy_from_slice per run, instead of
-        // a per-element memcpy. For selections that pick K contiguous
-        // properties this drops the inner loop from O(K) memcpys of
-        // elem_size to one memcpy of K*elem_size.
         let runs = contiguous_runs(prop_idx);
         let dst_row_bytes = n_components * new_n_props * elem_size;
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
@@ -477,5 +687,156 @@ where
         &kept_grad_indices, prop_indices, create_array,
     )?;
 
-    TensorBlock::new(data, new_grad_samples, components, new_properties.clone())
+    let mut gradient = TensorBlock::new(data, new_grad_samples, components, new_properties.clone())?;
+
+    for parameter in &super::discover_gradient_parameters(archive, prefix) {
+        let grad_prefix = format!("{}gradients/{}/", prefix, parameter);
+        let nested_gradient = read_partial_gradient(
+            archive,
+            mmap,
+            &grad_prefix,
+            &kept_grad_indices,
+            new_properties,
+            prop_indices,
+            create_array,
+        )?;
+        gradient.add_gradient(parameter, nested_gradient)?;
+    }
+
+    Ok(gradient)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::os::raw::c_void;
+
+    use dlpk::sys::{
+        DLDataType, DLDataTypeCode, DLManagedTensorVersioned, DLTensor, DLPackVersion,
+    };
+
+    use super::*;
+    use crate::c_api::mts_status_t;
+
+    struct StridedTestArray {
+        shape_usize: Vec<usize>,
+        shape_i64: Vec<i64>,
+        strides: Vec<i64>,
+        data: Vec<f64>,
+        byte_offset: usize,
+    }
+
+    impl StridedTestArray {
+        fn new(shape: Vec<usize>, strides: Vec<i64>, byte_offset: usize, len: usize) -> mts_array_t {
+            let shape_i64 = shape.iter().map(|&dim| dim as i64).collect();
+            let array = Box::new(StridedTestArray {
+                shape_usize: shape,
+                shape_i64,
+                strides,
+                data: vec![-1.0; len],
+                byte_offset,
+            });
+
+            mts_array_t {
+                ptr: Box::into_raw(array).cast(),
+                origin: None,
+                device: None,
+                dtype: None,
+                as_dlpack: Some(Self::as_dlpack),
+                from_dlpack: None,
+                shape: Some(Self::shape),
+                reshape: None,
+                swap_axes: None,
+                create: None,
+                copy: None,
+                destroy: Some(Self::destroy),
+                move_data: None,
+            }
+        }
+
+        unsafe extern "C" fn as_dlpack(
+            ptr: *mut c_void,
+            dl_managed_tensor: *mut *mut DLManagedTensorVersioned,
+            _device: DLDevice,
+            _stream: *const i64,
+            max_version: DLPackVersion,
+        ) -> mts_status_t {
+            let array = &mut *ptr.cast::<StridedTestArray>();
+            let managed = Box::new(DLManagedTensorVersioned {
+                version: max_version,
+                manager_ctx: std::ptr::null_mut(),
+                deleter: Some(Self::delete_dlpack),
+                flags: 0,
+                dl_tensor: DLTensor {
+                    data: array.data.as_mut_ptr().cast(),
+                    device: DLDevice::cpu(),
+                    ndim: array.shape_i64.len() as i32,
+                    dtype: DLDataType {
+                        code: DLDataTypeCode::kDLFloat,
+                        bits: 64,
+                        lanes: 1,
+                    },
+                    shape: array.shape_i64.as_mut_ptr(),
+                    strides: array.strides.as_mut_ptr(),
+                    byte_offset: (array.byte_offset * std::mem::size_of::<f64>()) as u64,
+                },
+            });
+            *dl_managed_tensor = Box::into_raw(managed);
+            mts_status_t::MTS_SUCCESS
+        }
+
+        unsafe extern "C" fn shape(
+            ptr: *const c_void,
+            shape: *mut *const usize,
+            shape_count: *mut usize,
+        ) -> mts_status_t {
+            let array = &*ptr.cast::<StridedTestArray>();
+            *shape = array.shape_usize.as_ptr();
+            *shape_count = array.shape_usize.len();
+            mts_status_t::MTS_SUCCESS
+        }
+
+        unsafe extern "C" fn delete_dlpack(dlpack: *mut DLManagedTensorVersioned) {
+            drop(Box::from_raw(dlpack));
+        }
+
+        unsafe extern "C" fn destroy(ptr: *mut c_void) {
+            drop(Box::from_raw(ptr.cast::<StridedTestArray>()));
+        }
+    }
+
+    #[test]
+    fn gather_selected_data_respects_output_byte_offset_and_strides() {
+        let raw_data_offset = 13;
+        let mut mmap = vec![0; raw_data_offset];
+        for value in 0..12 {
+            mmap.extend_from_slice(&(value as f64).to_ne_bytes());
+        }
+
+        let dtype = DLDataType {
+            code: DLDataTypeCode::kDLFloat,
+            bits: 64,
+            lanes: 1,
+        };
+        let output = gather_selected_data(
+            &mmap,
+            raw_data_offset,
+            dtype,
+            &[2, 2, 3],
+            &[1],
+            Some(&[2, 0]),
+            &|shape, array_dtype| {
+                assert_eq!(shape, vec![1, 2, 2]);
+                assert_eq!(array_dtype, dtype);
+                Ok(StridedTestArray::new(shape, vec![8, 3, 1], 1, 7))
+            },
+        )
+        .unwrap();
+
+        let array = unsafe { &*output.ptr.cast::<StridedTestArray>() };
+        assert_eq!(array.data, vec![-1.0, 5.0, 3.0, -1.0, 8.0, 6.0, -1.0]);
+
+        unsafe {
+            output.destroy.unwrap()(output.ptr);
+        }
+    }
 }

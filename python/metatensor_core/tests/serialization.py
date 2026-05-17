@@ -215,6 +215,62 @@ def test_load_partial_filter_samples():
     )
 
 
+def test_load_partial_nested_gradients(tmpdir):
+    block = TensorBlock(
+        values=np.arange(9, dtype=np.float64).reshape(3, 3),
+        samples=Labels.range("s", 3),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    gradient = TensorBlock(
+        values=np.arange(9, 18, dtype=np.float64).reshape(3, 3),
+        samples=Labels.range("sample", 3),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    grad_grad = TensorBlock(
+        values=np.arange(45, dtype=np.float64).reshape(3, 5, 3),
+        samples=Labels.range("sample", 3),
+        components=[Labels.range("c", 5)],
+        properties=Labels.range("p", 3),
+    )
+
+    gradient.add_gradient("grad-of-grad", grad_grad)
+    block.add_gradient("grad", gradient)
+    tensor = TensorMap(Labels.single(), [block])
+
+    samples_filter = Labels(
+        names=["s"],
+        values=np.array([[0], [2]], dtype=np.int32),
+    )
+
+    tmpfile = "partial-grad-grad-test.mts"
+    with tmpdir.as_cwd():
+        mts.save(tmpfile, tensor)
+        loaded = mts.load_partial(tmpfile, samples=samples_filter)
+
+    loaded_block = loaded.block(0)
+    loaded_gradient = loaded_block.gradient("grad")
+    loaded_grad_grad = loaded_gradient.gradient("grad-of-grad")
+
+    np.testing.assert_array_equal(loaded_block.values, block.values[[0, 2], :])
+    np.testing.assert_array_equal(loaded_gradient.values, gradient.values[[0, 2], :])
+    np.testing.assert_array_equal(
+        loaded_gradient.samples.values,
+        np.array([[0], [1]], dtype=np.int32),
+    )
+    np.testing.assert_array_equal(
+        loaded_grad_grad.values,
+        grad_grad.values[[0, 2], :, :],
+    )
+    np.testing.assert_array_equal(
+        loaded_grad_grad.samples.values,
+        np.array([[0], [1]], dtype=np.int32),
+    )
+
+
 def test_load_block_partial_round_trip():
     path = _block_mts_path()
     block = mts.io.load_block_partial(path)

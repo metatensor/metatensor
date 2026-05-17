@@ -13,8 +13,7 @@ from ._block import create_numpy_array
 def _labels_arg(labels: Optional[Labels]) -> Any:
     """Map ``labels`` to an ``mts_labels_t *`` for the C API. ``None``
     becomes a NULL pointer, which the C core interprets as 'select all'
-    on this dimension. Audit #17: annotation is ``Any`` because
-    ``ctypes.POINTER(...)`` is a callable, not a real type."""
+    on this dimension."""
     if labels is None:
         return ctypes.POINTER(mts_labels_t)()
     return labels._as_mts_labels_t()
