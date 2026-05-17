@@ -1,11 +1,36 @@
 //! Selective loading of `TensorMap` from `.mts` files.
 //!
-//! `load_partial` accepts three optional `Labels`-shaped filters
-//! (`keys`, `samples`, `properties`); the loader memory-maps the file to
-//! find block boundaries, then byte-copies only the selected rows /
-//! columns into freshly-allocated arrays returned by the standard
+//! [`load_partial`] accepts three optional `Labels`-shaped filters
+//! (`keys`, `samples`, `properties`) and copies only the selected rows
+//! and columns into freshly-allocated arrays returned by the standard
 //! `create_array` callback. The result of `load_partial(path, None,
 //! None, None, cb)` equals `load(path, cb)`.
+//!
+//! # I/O strategy
+//!
+//! The loader uses a hybrid mmap-plus-pread design:
+//!
+//! - The file is memory-mapped once with `Mmap::advise(Advice::Random)`.
+//!   The mmap is used *only* to parse the ZIP central directory and the
+//!   per-entry NPY headers, where small-window random access through the
+//!   page cache is cheaper than a separate syscall per lookup.
+//! - The raw element data of every selected block is read via explicit
+//!   platform `pread` (`FileExt::read_at` on Unix, `FileExt::seek_read`
+//!   on Windows). Each `pread` requests exactly the bytes the caller
+//!   asked for and writes them into the caller-owned destination buffer.
+//!
+//! This avoids two pathologies of a pure mmap-byte-copy implementation:
+//!
+//! 1. *Readahead over-fetch.* Sparse partial loads (for example one row
+//!    out of every thousand) trigger the kernel's default readahead and
+//!    pull adjacent unselected pages into the page cache. `MADV_RANDOM`
+//!    plus `pread` of exact ranges suppresses both.
+//! 2. *Synchronous page-fault hops.* A naive
+//!    `dst.copy_from_slice(&mmap[off..off + n])` page-faults once per
+//!    touched page on the read path; `pread` lets the kernel issue
+//!    larger contiguous reads when the requested range spans multiple
+//!    pages, and lets backends that expose `O_DIRECT`-style fast paths
+//!    skip the page-cache promotion entirely.
 
 use std::collections::HashMap;
 use std::ffi::CString;
@@ -54,22 +79,28 @@ use crate::utils::ConstCString;
 use crate::{mts_array_t, Error, Labels, TensorBlock, TensorMap};
 
 
-/// Load a `TensorMap` from the file at the given path, selecting only a
-/// subset of the data based on `keys`, `samples`, and `properties`.
+/// Load a `TensorMap` from the file at the given path, selecting only
+/// a subset of the data based on `keys`, `samples`, and `properties`.
 ///
-/// The file is memory-mapped for fast random access; only the selected
-/// rows and columns are copied into arrays allocated by `create_array`.
-/// The returned tensor owns its data (no live mmap reference); the
-/// underlying file is unmapped before this function returns.
+/// The returned tensor owns its data; the underlying file is unmapped
+/// and the file descriptor is closed before this function returns. The
+/// mmap is held only for the duration of the call and is used only to
+/// parse the ZIP central directory and NPY headers, the element data
+/// is fetched with explicit `pread`; see the module-level documentation
+/// for the rationale.
 ///
 /// Each selection uses `Labels::select` semantics: the selection's
 /// dimensions must be a subset of the target's dimensions, and all
 /// matching rows are kept. `None` for any of `keys` / `samples` /
 /// `properties` means "select all" on that dimension.
 ///
-/// `create_array` follows the same contract as `mts_create_array_callback_t`:
-/// it gets `(shape, dtype)` and must return an `mts_array_t` of that
-/// shape and dtype.
+/// `create_array` follows the same contract as
+/// `mts_create_array_callback_t`: it receives `(shape, dtype)` and
+/// must return an `mts_array_t` of that shape and dtype. The loader
+/// writes the selected data into the array's DLPack buffer using the
+/// byte offset and strides reported by the array, so non-contiguous
+/// allocations (for example a slice of a larger preallocated tensor)
+/// are supported without an intermediate copy.
 ///
 /// # File format constraints
 /// - The file must use the `STORED` (uncompressed) ZIP format that
@@ -135,9 +166,17 @@ where
 
 
 
-/// Load a single `TensorBlock` from the file at the given path, selecting
-/// only a subset of samples and properties. See [`load_partial`] for the
-/// filter semantics and file-format constraints.
+/// Load a single `TensorBlock` from the file at the given path,
+/// selecting only a subset of samples and properties.
+///
+/// Uses the same mmap-plus-`pread` I/O strategy as [`load_partial`]
+/// (see the module documentation): the file is memory-mapped only for
+/// ZIP / NPY-header parsing, raw element data is fetched with explicit
+/// `pread` of exact ranges with `MADV_RANDOM` hinted on the data
+/// region to suppress kernel readahead.
+///
+/// See [`load_partial`] for the filter semantics, the `create_array`
+/// contract, and the file-format constraints.
 pub fn load_block_partial<F>(
     path: &str,
     samples: Option<&Labels>,

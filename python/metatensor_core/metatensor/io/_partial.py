@@ -26,21 +26,26 @@ def load_partial(
     properties: Optional[Labels] = None,
 ) -> TensorMap:
     """
-    Load a previously saved :py:class:`TensorMap` from ``path``, selecting
-    only a subset of blocks (``keys``), rows (``samples``), and columns
-    (``properties``).
+    Load a previously saved :py:class:`TensorMap` from ``path``,
+    selecting only a subset of blocks (``keys``), rows (``samples``),
+    and columns (``properties``).
 
-    Each of ``keys`` / ``samples`` / ``properties`` is optional: passing
-    ``None`` (the default) selects everything on that dimension. When
-    provided, selection uses :py:meth:`Labels.select` semantics.
+    Each of ``keys`` / ``samples`` / ``properties`` is optional;
+    passing ``None`` (the default) selects everything on that
+    dimension. When provided, selection uses
+    :py:meth:`Labels.select` semantics.
 
-    The returned tensor owns its arrays (the underlying mmap is dropped
-    before this function returns); rows / columns are byte-copied out of
-    the memory-mapped file by the C core.
+    The returned tensor owns its arrays. The C core memory-maps the
+    file only for ZIP and NPY-header parsing and uses explicit
+    positional ``pread`` calls for the selected element data, with
+    ``MADV_RANDOM`` hinted on the mapping. This keeps the kernel from
+    pre-fetching unselected pages around each scattered row, which
+    matters when ``samples`` or ``properties`` keeps a small fraction
+    of a large block.
 
-    The input file must use the ``STORED`` (uncompressed) ZIP format that
-    :py:func:`save` produces, and numeric arrays must use native byte
-    order.
+    The input file must use the ``STORED`` (uncompressed) ZIP format
+    that :py:func:`save` produces, and numeric arrays must use native
+    byte order.
 
     :param path: path of the file to load
     :param keys: optional key selector

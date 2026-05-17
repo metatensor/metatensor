@@ -1343,8 +1343,15 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
  * semantics. `create_array` follows the standard
  * `mts_create_array_callback_t` contract.
  *
- * The returned block owns its data (no live mmap reference). The input file
- * must use the STORED ZIP format and native byte order for numeric arrays.
+ * Internally the loader uses the same mmap-plus-`pread` I/O strategy as
+ * `mts_tensormap_load_partial`: the file is memory-mapped only for ZIP and
+ * NPY-header parsing, the selected element data is fetched with explicit
+ * positional `pread`, and `MADV_RANDOM` is hinted on the mapping to suppress
+ * kernel readahead on sparse selections.
+ *
+ * The returned block owns its data; the underlying file is unmapped and
+ * closed before this function returns. The input file must use the STORED
+ * ZIP format and native byte order for numeric arrays.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
  * @param samples NULL, or label-based filter for which samples to keep
@@ -1547,7 +1554,16 @@ struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
  *
  * `create_array` follows the same contract as `mts_tensormap_load`: it gets
  * `(shape, dtype)` and must return an `mts_array_t` of that shape and dtype.
- * The returned tensor map owns its data (no live mmap reference).
+ * The returned tensor map owns its data; the underlying file is unmapped and
+ * closed before this function returns.
+ *
+ * Internally the loader memory-maps the file only to walk the ZIP central
+ * directory and the per-entry NPY headers, then issues positional `pread`
+ * calls (the platform-native equivalent) directly into each block's array
+ * for the selected rows / columns. `MADV_RANDOM` is hinted on the mapping
+ * so the kernel does not pre-fetch unselected pages around each scattered
+ * row, which matters when the selection keeps a small fraction of a large
+ * block.
  *
  * The input file must use the STORED (uncompressed) ZIP format and native
  * byte order for numeric arrays.

@@ -277,7 +277,16 @@ pub unsafe extern "C" fn mts_tensormap_load_mmap(
 ///
 /// `create_array` follows the same contract as `mts_tensormap_load`: it gets
 /// `(shape, dtype)` and must return an `mts_array_t` of that shape and dtype.
-/// The returned tensor map owns its data (no live mmap reference).
+/// The returned tensor map owns its data; the underlying file is unmapped and
+/// closed before this function returns.
+///
+/// Internally the loader memory-maps the file only to walk the ZIP central
+/// directory and the per-entry NPY headers, then issues positional `pread`
+/// calls (the platform-native equivalent) directly into each block's array
+/// for the selected rows / columns. `MADV_RANDOM` is hinted on the mapping
+/// so the kernel does not pre-fetch unselected pages around each scattered
+/// row, which matters when the selection keeps a small fraction of a large
+/// block.
 ///
 /// The input file must use the STORED (uncompressed) ZIP format and native
 /// byte order for numeric arrays.

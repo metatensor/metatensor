@@ -183,8 +183,15 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
 /// semantics. `create_array` follows the standard
 /// `mts_create_array_callback_t` contract.
 ///
-/// The returned block owns its data (no live mmap reference). The input file
-/// must use the STORED ZIP format and native byte order for numeric arrays.
+/// Internally the loader uses the same mmap-plus-`pread` I/O strategy as
+/// `mts_tensormap_load_partial`: the file is memory-mapped only for ZIP and
+/// NPY-header parsing, the selected element data is fetched with explicit
+/// positional `pread`, and `MADV_RANDOM` is hinted on the mapping to suppress
+/// kernel readahead on sparse selections.
+///
+/// The returned block owns its data; the underlying file is unmapped and
+/// closed before this function returns. The input file must use the STORED
+/// ZIP format and native byte order for numeric arrays.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
 /// @param samples NULL, or label-based filter for which samples to keep
