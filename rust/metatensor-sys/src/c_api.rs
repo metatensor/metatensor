@@ -496,15 +496,15 @@ extern "C" {
         path: *const ::std::os::raw::c_char,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_block_t;
-    pub fn mts_block_load_mmap(
-        path: *const ::std::os::raw::c_char,
-        create_array: mts_create_file_array_callback_t,
-        user_data: *mut ::std::os::raw::c_void,
-    ) -> *mut mts_block_t;
     pub fn mts_block_load_buffer(
         buffer: *const u8,
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
+    ) -> *mut mts_block_t;
+    pub fn mts_block_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_file_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
     ) -> *mut mts_block_t;
     #[must_use]
     pub fn mts_block_save(
@@ -523,15 +523,15 @@ extern "C" {
         path: *const ::std::os::raw::c_char,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_tensormap_t;
-    pub fn mts_tensormap_load_mmap(
-        path: *const ::std::os::raw::c_char,
-        create_array: mts_create_file_array_callback_t,
-        user_data: *mut ::std::os::raw::c_void,
-    ) -> *mut mts_tensormap_t;
     pub fn mts_tensormap_load_buffer(
         buffer: *const u8,
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
+    ) -> *mut mts_tensormap_t;
+    pub fn mts_tensormap_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_file_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
     ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_save(
