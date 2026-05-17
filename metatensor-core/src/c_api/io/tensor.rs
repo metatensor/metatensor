@@ -12,7 +12,7 @@ use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::tensor::mts_tensormap_t;
-use super::mts_create_array_callback_t;
+use super::{mts_create_array_callback_t, mts_create_file_array_callback_t};
 
 /// Load a tensor map from the file at the given path.
 ///
@@ -199,6 +199,107 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
         } else {
             crate::c_api::add_error_context("failed to create a new array in mts_tensormap_load");
             return Err(Error::CallbackError);
+        }
+    }
+}
+
+
+/// Load a `TensorMap` from the file at the given path using memory mapping.
+///
+/// metatensor parses the NPY header for each array (values + gradients) and
+/// calls `create_array(user_data, shape, shape_count, dtype, file_offset,
+/// array)`. The callback decides how to materialise the `mts_array_t`: as a
+/// mmap-backed view, a plain copy, a GPU upload, etc. Byte length is always
+/// `product(shape) * dtype.bits / 8 * dtype.lanes`.
+///
+/// `user_data` is forwarded to every call to `create_array`. Labels are
+/// always decompressed into owned `Labels` regardless of the callback.
+///
+/// The input file must use the `STORED` (uncompressed) ZIP format that
+/// `mts_tensormap_save` produces, and all numeric arrays must use native
+/// byte order.
+///
+/// The memory allocated by this function should be released using
+/// `mts_tensormap_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback used to create each array (must be non-NULL)
+/// @param user_data opaque pointer forwarded to `create_array`
+///
+/// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer
+///          in case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_tensormap_load_mmap(
+    path: *const c_char,
+    create_array: mts_create_file_array_callback_t,
+    user_data: *mut c_void,
+) -> *mut mts_tensormap_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let Some(callback) = create_array else {
+            return Err(Error::InvalidParameter(
+                "create_array must not be NULL in mts_tensormap_load_mmap".into()
+            ));
+        };
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let wrapped = wrap_create_file_array(callback, user_data);
+        let tensor = crate::io::load_mmap(path, wrapped)
+            .map_err(|err| match err {
+                Error::Serialization(message) => Error::Serialization(format!(
+                    "unable to load a TensorMap from '{}' via mmap: {}", path, message
+                )),
+                err => err,
+            })?;
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(tensor);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
+}
+
+
+pub(super) fn wrap_create_file_array(
+    callback: unsafe extern "C" fn(
+        *mut c_void, *const usize, usize,
+        DLDataType, usize,
+        *mut mts_array_t,
+    ) -> mts_status_t,
+    user_data: *mut c_void,
+) -> impl Fn(Vec<usize>, DLDataType, usize) -> Result<mts_array_t, Error> {
+    // user_data is opaque; the contract requires the caller to keep it valid
+    // for the duration of the load call. We cast to usize so the closure is
+    // Send-able through closure environments that capture it.
+    let user_data = user_data as usize;
+    move |shape: Vec<usize>, dtype, file_offset| {
+        let mut array = mts_array_t::null();
+        let status = unsafe {
+            callback(
+                user_data as *mut c_void,
+                shape.as_ptr(),
+                shape.len(),
+                dtype,
+                file_offset,
+                &mut array,
+            )
+        };
+        if status.is_success() {
+            Ok(array)
+        } else {
+            crate::c_api::add_error_context(
+                "failed to create a new array in mts_tensormap_load_mmap",
+            );
+            Err(Error::CallbackError)
         }
     }
 }

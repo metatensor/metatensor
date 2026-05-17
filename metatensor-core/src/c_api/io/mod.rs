@@ -32,6 +32,37 @@ type mts_create_array_callback_t = unsafe extern "C" fn(
     array: *mut mts_array_t,
 ) -> mts_status_t;
 
+/// Function pointer used by `mts_tensormap_load_mmap` /
+/// `mts_block_load_mmap` to materialise each value/gradient array.
+///
+/// metatensor parses the NPY header for every array, then calls this
+/// callback with the array's `shape`, DLPack `dtype`, and byte offset of
+/// the raw data within the file. The implementation decides how to build
+/// the resulting `mts_array_t`: it can wrap the corresponding mmap
+/// region as a zero-copy view, copy the bytes into an owned buffer, or
+/// upload them straight to a GPU via GPU Direct Storage.
+///
+/// `user_data` is the opaque pointer forwarded from
+/// `mts_tensormap_load_mmap` / `mts_block_load_mmap`. It can carry a
+/// cached file descriptor, an `mmap` handle, a GDS context, or anything
+/// else the binding needs.
+///
+/// Byte length of the data region is always derivable from
+/// `shape` and `dtype` (`product(shape) * dtype.bits / 8 * dtype.lanes`),
+/// so it is not passed explicitly.
+///
+/// Returns `MTS_SUCCESS` on success or `MTS_CALLBACK_ERROR` on failure.
+/// On failure, the implementation should call `mts_set_last_error` first.
+#[allow(non_camel_case_types)]
+pub(crate) type mts_create_file_array_callback_t = Option<unsafe extern "C" fn(
+    user_data: *mut c_void,
+    shape: *const usize,
+    shape_count: usize,
+    dtype: DLDataType,
+    file_offset: usize,
+    array: *mut mts_array_t,
+) -> mts_status_t>;
+
 /// Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
 /// and `mts_labels_save_buffer`.
 ///

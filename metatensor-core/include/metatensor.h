@@ -383,6 +383,36 @@ typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     DLDataType dtype,
                                                     struct mts_array_t *array);
 
+/**
+ * Function pointer used by `mts_tensormap_load_mmap` /
+ * `mts_block_load_mmap` to materialise each value/gradient array.
+ *
+ * metatensor parses the NPY header for every array, then calls this
+ * callback with the array's `shape`, DLPack `dtype`, and byte offset of
+ * the raw data within the file. The implementation decides how to build
+ * the resulting `mts_array_t`: it can wrap the corresponding mmap
+ * region as a zero-copy view, copy the bytes into an owned buffer, or
+ * upload them straight to a GPU via GPU Direct Storage.
+ *
+ * `user_data` is the opaque pointer forwarded from
+ * `mts_tensormap_load_mmap` / `mts_block_load_mmap`. It can carry a
+ * cached file descriptor, an `mmap` handle, a GDS context, or anything
+ * else the binding needs.
+ *
+ * Byte length of the data region is always derivable from
+ * `shape` and `dtype` (`product(shape) * dtype.bits / 8 * dtype.lanes`),
+ * so it is not passed explicitly.
+ *
+ * Returns `MTS_SUCCESS` on success or `MTS_CALLBACK_ERROR` on failure.
+ * On failure, the implementation should call `mts_set_last_error` first.
+ */
+typedef mts_status_t (*mts_create_file_array_callback_t)(void *user_data,
+                                                         const uintptr_t *shape,
+                                                         uintptr_t shape_count,
+                                                         DLDataType dtype,
+                                                         uintptr_t file_offset,
+                                                         struct mts_array_t *array);
+
 #ifdef __cplusplus
 extern "C" {
 #endif // __cplusplus
@@ -1305,6 +1335,27 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
                                           mts_create_array_callback_t create_array);
 
 /**
+ * Load a `TensorBlock` from the file at the given path using memory mapping.
+ *
+ * See `mts_tensormap_load_mmap` for callback semantics and file format
+ * constraints.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_block_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback used to create the array (must be non-NULL)
+ * @param user_data opaque pointer forwarded to `create_array`
+ *
+ * @returns A pointer to the newly allocated block, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_block_t *mts_block_load_mmap(const char *path,
+                                        mts_create_file_array_callback_t create_array,
+                                        void *user_data);
+
+/**
  * Save a tensor block to the file at the given path.
  *
  * If the file already exists, it is overwritten. The recommended file extension
@@ -1428,6 +1479,37 @@ struct mts_tensormap_t *mts_tensormap_load(const char *path,
 struct mts_tensormap_t *mts_tensormap_load_buffer(const uint8_t *buffer,
                                                   uintptr_t buffer_count,
                                                   mts_create_array_callback_t create_array);
+
+/**
+ * Load a `TensorMap` from the file at the given path using memory mapping.
+ *
+ * metatensor parses the NPY header for each array (values + gradients) and
+ * calls `create_array(user_data, shape, shape_count, dtype, file_offset,
+ * array)`. The callback decides how to materialise the `mts_array_t`: as a
+ * mmap-backed view, a plain copy, a GPU upload, etc. Byte length is always
+ * `product(shape) * dtype.bits / 8 * dtype.lanes`.
+ *
+ * `user_data` is forwarded to every call to `create_array`. Labels are
+ * always decompressed into owned `Labels` regardless of the callback.
+ *
+ * The input file must use the `STORED` (uncompressed) ZIP format that
+ * `mts_tensormap_save` produces, and all numeric arrays must use native
+ * byte order.
+ *
+ * The memory allocated by this function should be released using
+ * `mts_tensormap_free`.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback used to create each array (must be non-NULL)
+ * @param user_data opaque pointer forwarded to `create_array`
+ *
+ * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer
+ *          in case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
+                                                mts_create_file_array_callback_t create_array,
+                                                void *user_data);
 
 /**
  * Save a tensor map to the file at the given path.
