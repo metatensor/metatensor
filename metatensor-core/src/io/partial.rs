@@ -49,7 +49,7 @@ use zip::ZipArchive;
 
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;
-#[cfg(unix)]
+#[cfg(target_os = "linux")]
 use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::fs::FileExt;
@@ -58,8 +58,12 @@ use std::os::windows::fs::FileExt;
 /// Hint that both the mmap metadata path and the file-descriptor data path
 /// are random-access workloads. Advisory failures are safe to ignore at the
 /// call sites: the correctness fallback is ordinary positional I/O.
+///
+/// `posix_fadvise` is a Linux/glibc extension; macOS, the BSDs, and Windows
+/// do not expose it through `libc`. On those platforms we rely on the
+/// mmap-side hint alone.
 fn advise_random_access(file: &File, mmap: &Mmap) -> std::io::Result<()> {
-    #[cfg(unix)]
+    #[cfg(target_os = "linux")]
     {
         let status = unsafe {
             libc::posix_fadvise(file.as_raw_fd(), 0, 0, libc::POSIX_FADV_RANDOM)
@@ -69,7 +73,7 @@ fn advise_random_access(file: &File, mmap: &Mmap) -> std::io::Result<()> {
         }
     }
 
-    #[cfg(not(unix))]
+    #[cfg(not(target_os = "linux"))]
     let _ = file;
 
     mmap.advise(Advice::Random)
