@@ -23,19 +23,20 @@
 //!   on Windows). Each `pread` requests exactly the bytes the caller
 //!   asked for and writes them into the caller-owned destination buffer.
 //!
-//! This avoids two pathologies of a pure mmap-byte-copy implementation:
+//! This design is intended to avoid two pathologies of a pure
+//! mmap-byte-copy implementation (no microbenchmark currently lives in
+//! this crate to quantify the gain):
 //!
 //! 1. *Readahead over-fetch.* Sparse partial loads (for example one row
-//!    out of every thousand) can pull adjacent unselected pages into the
-//!    page cache. The Unix descriptor hint marks the value-data stream as
-//!    random-access, while exact positional reads avoid copying from
-//!    unrelated mmap pages in user space.
+//!    out of every thousand) can pull adjacent unselected pages into
+//!    the page cache. The Unix descriptor hint marks the value-data
+//!    stream as random-access, while exact positional reads describe
+//!    only the bytes the caller asked for.
 //! 2. *Synchronous page-fault hops.* A naive
 //!    `dst.copy_from_slice(&mmap[off..off + n])` page-faults once per
-//!    touched page on the read path; `pread` lets the kernel issue
-//!    larger contiguous reads when the requested range spans multiple
-//!    pages, and lets backends that expose `O_DIRECT`-style fast paths
-//!    skip the page-cache promotion entirely.
+//!    touched page on the read path; `pread` lets the kernel coalesce
+//!    a multi-page request into one I/O, and lets backends that expose
+//!    `O_DIRECT`-style fast paths skip the page-cache promotion.
 
 use std::collections::HashMap;
 use std::ffi::CString;
