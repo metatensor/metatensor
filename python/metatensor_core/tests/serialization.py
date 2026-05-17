@@ -237,6 +237,10 @@ def test_load_partial_nested_gradients(tmpdir):
         properties=Labels.range("p", 3),
     )
 
+    block_values = block.values.copy()
+    gradient_values = gradient.values.copy()
+    grad_grad_values = grad_grad.values.copy()
+
     gradient.add_gradient("grad-of-grad", grad_grad)
     block.add_gradient("grad", gradient)
     tensor = TensorMap(Labels.single(), [block])
@@ -255,15 +259,15 @@ def test_load_partial_nested_gradients(tmpdir):
     loaded_gradient = loaded_block.gradient("grad")
     loaded_grad_grad = loaded_gradient.gradient("grad-of-grad")
 
-    np.testing.assert_array_equal(loaded_block.values, block.values[[0, 2], :])
-    np.testing.assert_array_equal(loaded_gradient.values, gradient.values[[0, 2], :])
+    np.testing.assert_array_equal(loaded_block.values, block_values[[0, 2], :])
+    np.testing.assert_array_equal(loaded_gradient.values, gradient_values[[0, 2], :])
     np.testing.assert_array_equal(
         loaded_gradient.samples.values,
         np.array([[0], [1]], dtype=np.int32),
     )
     np.testing.assert_array_equal(
         loaded_grad_grad.values,
-        grad_grad.values[[0, 2], :, :],
+        grad_grad_values[[0, 2], :, :],
     )
     np.testing.assert_array_equal(
         loaded_grad_grad.samples.values,
