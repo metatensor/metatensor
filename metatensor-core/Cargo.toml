@@ -50,3 +50,4 @@ tempfile = "=3.24.0"
 [dev-dependencies]
 lazy_static = "1"
 which = "8"
+tempfile = "=3.24.0"

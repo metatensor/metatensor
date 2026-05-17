@@ -9,12 +9,42 @@
 
 use std::collections::HashMap;
 use std::ffi::CString;
+use std::fs::File;
 use std::io::Cursor;
 use std::sync::Arc;
 
 use dlpk::sys::{DLDataType, DLDevice, DLPackVersion};
-use memmap2::Mmap;
+use memmap2::{Advice, Mmap};
 use zip::ZipArchive;
+
+#[cfg(unix)]
+use std::os::unix::fs::FileExt;
+#[cfg(windows)]
+use std::os::windows::fs::FileExt;
+
+
+/// Read exactly `buf.len()` bytes from `file` starting at `offset`, using
+/// platform pread (no internal seek state). Loops on short reads. Used by
+/// `gather_selected_data` instead of byte-copying out of an mmap, which
+/// gives the kernel exact knowledge of the requested ranges and avoids
+/// readahead over-fetching on sparse partial loads.
+fn read_exact_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> std::io::Result<()> {
+    while !buf.is_empty() {
+        #[cfg(unix)]
+        let n = file.read_at(buf, offset)?;
+        #[cfg(windows)]
+        let n = file.seek_read(buf, offset)?;
+        if n == 0 {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::UnexpectedEof,
+                "pread returned 0 before fully reading the region",
+            ));
+        }
+        buf = &mut buf[n..];
+        offset += n as u64;
+    }
+    Ok(())
+}
 
 use super::labels::load_labels;
 use super::{npy_layout, parse_stored_npy_entry};
@@ -58,6 +88,10 @@ where
     let file = std::fs::File::open(path)?;
     // SAFETY: read-only view; file owned for the duration of this call.
     let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
+    // Disable kernel readahead on the data region: partial loads have
+    // sparse access patterns and pre-fetched pages we don't touch
+    // pollute the page cache.
+    let _ = mmap.advise(Advice::Random);
 
     let cursor = Cursor::new(mmap.as_ref());
     let mut archive = ZipArchive::new(cursor).map_err(|e| ("<root>".into(), e))?;
@@ -75,6 +109,7 @@ where
         let block = read_partial_block(
             &mut archive,
             mmap.as_ref(),
+            &file,
             &prefix,
             samples,
             properties,
@@ -114,6 +149,7 @@ where
 {
     let file = std::fs::File::open(path)?;
     let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
+    let _ = mmap.advise(Advice::Random);
 
     let cursor = Cursor::new(mmap.as_ref());
     let mut archive = ZipArchive::new(cursor).map_err(|e| ("<root>".into(), e))?;
@@ -121,6 +157,7 @@ where
     read_partial_block(
         &mut archive,
         mmap.as_ref(),
+        &file,
         "",
         samples,
         properties,
@@ -398,12 +435,16 @@ fn validate_selected_indices(
 }
 
 
-/// Copy the selected rows / columns from `mmap` (at `raw_data_offset`)
-/// into a freshly-allocated array. The destination dtype must match the
-/// source dtype's element width (the callback is given `dtype` so it
-/// can allocate the right type).
+/// Copy the selected rows / columns from `file` (data starts at
+/// `raw_data_offset`) into a freshly-allocated array. The destination
+/// dtype must match the source dtype's element width.
+///
+/// Uses platform pread per byte run rather than reading from a
+/// memory-mapped view. With `MADV_RANDOM` hinted on the mmap used for
+/// header parsing, this avoids both kernel readahead over-fetch and
+/// the page-fault latency that a sparse mmap-copy would pay.
 fn gather_selected_data<F>(
-    mmap: &[u8],
+    file: &File,
     raw_data_offset: usize,
     dtype: DLDataType,
     src_shape: &[usize],
@@ -513,6 +554,12 @@ where
             }
         };
 
+        // Strided destination: pread one element-sized run at a time per
+        // (sample, prop, component). The kernel coalesces sequential
+        // preads within a page; for sparse selectors we pay one syscall
+        // per element which is the same as the previous mmap-copy plus
+        // one page-fault per first touch.
+        let mut buf = vec![0u8; elem_size];
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
             let src_offset = raw_data_offset + old_row * src_row_bytes;
             for (new_col, &old_col) in selected_properties.iter().enumerate() {
@@ -530,9 +577,10 @@ where
                         &dst_strides,
                         elem_size,
                     )?;
+                    read_exact_at(file, &mut buf, src_off as u64)?;
                     unsafe {
                         std::ptr::copy_nonoverlapping(
-                            mmap.as_ptr().add(src_off),
+                            buf.as_ptr(),
                             dst_ptr.add(dst_off),
                             elem_size,
                         );
@@ -550,11 +598,16 @@ where
     let dst_bytes: &mut [u8] = unsafe { std::slice::from_raw_parts_mut(dst_ptr, total_bytes) };
 
     if let Some(prop_idx) = prop_indices {
+        // Property filter: pull a full row into a scratch buffer with one
+        // pread, then scatter into the destination via contiguous-run
+        // copies. One syscall per kept row, regardless of property
+        // selector shape.
         let runs = contiguous_runs(prop_idx);
         let dst_row_bytes = n_components * new_n_props * elem_size;
+        let mut row_buf = vec![0u8; src_row_bytes];
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
-            let src_offset = raw_data_offset + old_row * src_row_bytes;
-            let row_buf = &mmap[src_offset..src_offset + src_row_bytes];
+            let src_offset = (raw_data_offset + old_row * src_row_bytes) as u64;
+            read_exact_at(file, &mut row_buf, src_offset)?;
             let dst_row_off = new_row * dst_row_bytes;
             for comp in 0..n_components {
                 let src_comp_off = comp * src_n_props * elem_size;
@@ -569,12 +622,15 @@ where
             }
         }
     } else {
-        // Whole-row copy (no property filter).
+        // Whole-row copy: pread each row straight into its destination slot.
         for (new_row, &old_row) in sample_indices.iter().enumerate() {
-            let src_offset = raw_data_offset + old_row * src_row_bytes;
+            let src_offset = (raw_data_offset + old_row * src_row_bytes) as u64;
             let dst_offset = new_row * src_row_bytes;
-            dst_bytes[dst_offset..dst_offset + src_row_bytes]
-                .copy_from_slice(&mmap[src_offset..src_offset + src_row_bytes]);
+            read_exact_at(
+                file,
+                &mut dst_bytes[dst_offset..dst_offset + src_row_bytes],
+                src_offset,
+            )?;
         }
     }
 
@@ -589,6 +645,7 @@ where
 fn read_partial_block<F>(
     archive: &mut ZipArchive<Cursor<&[u8]>>,
     mmap: &[u8],
+    file: &File,
     prefix: &str,
     samples_sel: Option<&Labels>,
     properties_sel: Option<&Labels>,
@@ -627,7 +684,7 @@ where
     let components = load_components(archive, prefix, src_shape.len())?;
 
     let data = gather_selected_data(
-        mmap, raw_data_offset, dtype, &src_shape,
+        file, raw_data_offset, dtype, &src_shape,
         &sample_indices, prop_indices.as_deref(), create_array,
     )?;
 
@@ -639,6 +696,7 @@ where
         let gradient = read_partial_gradient(
             archive,
             mmap,
+            file,
             &grad_prefix,
             &sample_indices,
             &new_properties,
@@ -661,6 +719,7 @@ where
 fn read_partial_gradient<F>(
     archive: &mut ZipArchive<Cursor<&[u8]>>,
     mmap: &[u8],
+    file: &File,
     prefix: &str,
     parent_sample_indices: &[usize],
     new_properties: &Arc<Labels>,
@@ -683,7 +742,7 @@ where
         reindex_gradient_samples(&grad_samples, parent_sample_indices)?;
 
     let data = gather_selected_data(
-        mmap, raw_data_offset, dtype, &src_shape,
+        file, raw_data_offset, dtype, &src_shape,
         &kept_grad_indices, prop_indices, create_array,
     )?;
 
@@ -694,6 +753,7 @@ where
         let nested_gradient = read_partial_gradient(
             archive,
             mmap,
+            file,
             &grad_prefix,
             &kept_grad_indices,
             new_properties,
@@ -806,11 +866,18 @@ mod tests {
 
     #[test]
     fn gather_selected_data_respects_output_byte_offset_and_strides() {
+        use std::io::Write;
+
         let raw_data_offset = 13;
-        let mut mmap = vec![0; raw_data_offset];
+        let mut payload = vec![0u8; raw_data_offset];
         for value in 0..12 {
-            mmap.extend_from_slice(&(value as f64).to_ne_bytes());
+            payload.extend_from_slice(&(value as f64).to_ne_bytes());
         }
+
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(&payload).unwrap();
+        tmp.flush().unwrap();
+        let file = std::fs::File::open(tmp.path()).unwrap();
 
         let dtype = DLDataType {
             code: DLDataTypeCode::kDLFloat,
@@ -818,7 +885,7 @@ mod tests {
             lanes: 1,
         };
         let output = gather_selected_data(
-            &mmap,
+            &file,
             raw_data_offset,
             dtype,
             &[2, 2, 3],
