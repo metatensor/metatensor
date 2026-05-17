@@ -28,10 +28,10 @@ namespace details {
 METATENSOR_TORCH_EXPORT TensorMap load(const std::string& path);
 
 /// Load a previously saved `TensorMap` from the given path using memory
-/// mapping. Numeric arrays are returned as read-only views into the
-/// memory-mapped file (no copy); labels are loaded normally. The
-/// underlying mmap is kept alive for the lifetime of every returned
-/// tensor.
+/// mapping. Numeric arrays are returned as private memory-mapped tensor
+/// views; in-place writes affect the tensor and never modify the file.
+/// Labels are loaded normally. The underlying mmap is kept alive for the
+/// lifetime of every returned tensor.
 METATENSOR_TORCH_EXPORT TensorMap load_mmap(const std::string& path);
 
 /// Load a previously saved `TensorMap` from the given in-memory buffer

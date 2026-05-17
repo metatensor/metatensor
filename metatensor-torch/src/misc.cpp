@@ -98,11 +98,12 @@ mts_status_t metatensor_torch::details::create_torch_array(
 
 namespace {
 
-// Cross-platform read-only memory map. Owned by a shared_ptr that is captured
+// Cross-platform private memory map. Owned by a shared_ptr that is captured
 // by every torch::Tensor returned from the mmap loader, so the mapping stays
-// alive for as long as any tensor refers into it.
+// alive for as long as any tensor refers into it. The mapping is writable but
+// private: in-place tensor writes fault private pages and never modify the file.
 struct MmapFile {
-    const uint8_t* data = nullptr;
+    uint8_t* data = nullptr;
     size_t length = 0;
 
 #if defined(_WIN32)
@@ -147,13 +148,13 @@ static std::shared_ptr<MmapFile> mmap_open(const std::string& path) {
     }
     handle->length = static_cast<size_t>(fsize.QuadPart);
     handle->mapping_handle = CreateFileMappingA(
-        handle->file_handle, nullptr, PAGE_READONLY, 0, 0, nullptr
+        handle->file_handle, nullptr, PAGE_WRITECOPY, 0, 0, nullptr
     );
     if (handle->mapping_handle == nullptr) {
         throw metatensor::Error("CreateFileMapping failed for '" + path + "'");
     }
-    handle->data = reinterpret_cast<const uint8_t*>(
-        MapViewOfFile(handle->mapping_handle, FILE_MAP_READ, 0, 0, 0)
+    handle->data = reinterpret_cast<uint8_t*>(
+        MapViewOfFile(handle->mapping_handle, FILE_MAP_COPY, 0, 0, 0)
     );
     if (handle->data == nullptr) {
         throw metatensor::Error("MapViewOfFile failed for '" + path + "'");
@@ -175,17 +176,13 @@ static std::shared_ptr<MmapFile> mmap_open(const std::string& path) {
     if (handle->length == 0) {
         throw metatensor::Error("file '" + path + "' is empty");
     }
-    void* mapped = mmap(nullptr, handle->length, PROT_READ, MAP_PRIVATE, handle->fd, 0);
+    void* mapped = mmap(nullptr, handle->length, PROT_READ | PROT_WRITE, MAP_PRIVATE, handle->fd, 0);
     if (mapped == MAP_FAILED) {
         throw metatensor::Error(
             "mmap of '" + path + "' failed: " + std::strerror(errno)
         );
     }
-    // Audit #8: load_mmap is a single-pass read of the whole file, so
-    // MADV_SEQUENTIAL lets the kernel read ahead aggressively and drop
-    // pages early. Improves first-load throughput on cold cache.
-    (void) madvise(mapped, handle->length, MADV_SEQUENTIAL);
-    handle->data = reinterpret_cast<const uint8_t*>(mapped);
+    handle->data = reinterpret_cast<uint8_t*>(mapped);
 #endif
 
     return handle;
@@ -237,9 +234,9 @@ static mts_status_t torch_mmap_create_array(
         // Capture a fresh shared_ptr to the mmap so this tensor keeps it
         // alive even if the load function and other tensors are dropped.
         auto file_for_capture = ctx->file;
-        const void* raw = ctx->file->data + file_offset;
+        void* raw = ctx->file->data + file_offset;
         auto tensor = torch::from_blob(
-            const_cast<void*>(raw),
+            raw,
             sizes,
             // deleter: keeps the mmap alive until this tensor's storage is freed
             [file_for_capture](void*) mutable { file_for_capture.reset(); },

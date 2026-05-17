@@ -18,26 +18,16 @@ def _make_numpy_mmap_callback(mm: mmap.mmap):
     Build a `mts_create_file_array_callback_t` that materialises each array
     as a numpy view into the given mmap.
 
-    The mmap object is captured by the callback closure AND by every returned
-    numpy array (via `np.frombuffer`'s `.base` chain), so it stays alive as
-    long as any of the arrays do.
-
-
-    same file to parse NPY headers. We therefore have *two* VA mappings of
-    the same inode active during the load. The OS shares physical pages
-    (both mappings are read-only of the same file) so the actual memory
-    cost is one set of pages, not two. Removing the duplicate would require
-    threading the C-side mmap base pointer through ``user_data`` to the
-    callback -- the C API parameter is already ``void *`` for this kind of
-    thing; deferred to a follow-up that touches the C surface.
+    The mmap object is captured by the callback closure and by every returned
+    numpy array through `np.frombuffer`'s `.base` chain, so it stays alive as
+    long as any of the arrays do. The Rust loader maps the same file to parse
+    NPY headers; both mappings point to the same inode and share physical pages.
     """
 
     @catch_exceptions
     def callback(_user_data, shape_ptr, shape_count, dtype, file_offset, array_out):
         shape = [shape_ptr[i] for i in range(shape_count)]
         np_dtype = _dlpack_dtype_to_numpy(dtype)
-        # Audit #7: np.prod returns 1 for an empty list, so the explicit
-        # ``if shape else 1`` guard is redundant.
         nelems = int(np.prod(shape, dtype=np.int64))
         if nelems == 0:
             data = np.empty(shape, dtype=np_dtype)
@@ -66,8 +56,6 @@ def load_mmap(path: Union[str, pathlib.Path]) -> TensorMap:
     """
     if isinstance(path, pathlib.Path):
         path = str(path)
-    # Audit #6: mmap.mmap keeps its own reference to the fd, so the with
-    # block can close the original fd as soon as the mapping is set up.
     with open(path, "rb") as fd:
         mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
 
@@ -92,8 +80,6 @@ def load_block_mmap(path: Union[str, pathlib.Path]) -> TensorBlock:
     """
     if isinstance(path, pathlib.Path):
         path = str(path)
-    # Audit #6: mmap.mmap keeps its own reference to the fd, so the with
-    # block can close the original fd as soon as the mapping is set up.
     with open(path, "rb") as fd:
         mm = mmap.mmap(fd.fileno(), 0, access=mmap.ACCESS_READ)
 

@@ -69,9 +69,10 @@ def load_mmap(file: str) -> TensorMap:
     Load a previously saved :py:class:`TensorMap` from ``file`` using
     memory-mapped I/O.
 
-    Numeric arrays are returned as read-only views into the memory-mapped
-    file (no copy); labels are loaded normally. The underlying mmap is kept
-    alive for the lifetime of every returned tensor.
+    Numeric arrays are returned as private memory-mapped tensor views;
+    in-place writes affect the tensor and never modify the file. Labels are
+    loaded normally. The underlying mmap is kept alive for the lifetime of
+    every returned tensor.
 
     The input file must use the ``STORED`` (uncompressed) ZIP format that
     :py:func:`save` produces, and numeric arrays must use native byte order.

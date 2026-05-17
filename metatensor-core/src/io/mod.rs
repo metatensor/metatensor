@@ -55,10 +55,10 @@ fn check_for_extra_bytes<R: std::io::Read>(reader: &mut R) -> Result<(), Error> 
 
 /// Parse a STORED (uncompressed) NPY entry inside a memory-mapped ZIP
 /// archive without copying the data. Returns the array shape, DLPack
-/// dtype, and byte offset of the raw element data within the
-/// mmap-ed file. Both mmap and partial-load code paths use this --
-/// the on-disk format checks (STORED compression, native byte order,
-/// non-fortran order, non-structured dtype) are identical for both.
+/// dtype, and byte offset of the raw element data within the mmap-ed file.
+/// The on-disk format checks (STORED compression, native byte order,
+/// non-fortran order, non-structured dtype, exact payload length) are
+/// identical for all direct file-offset loaders.
 pub(crate) fn parse_stored_npy_entry(
     archive: &mut zip::ZipArchive<std::io::Cursor<&[u8]>>,
     mmap: &[u8],
@@ -130,6 +130,36 @@ pub(crate) fn parse_stored_npy_entry(
 
     let dl_dtype = dlpk::sys::DLDataType { code, bits, lanes: 1 };
     let header_len = cursor.position() as usize;
+    if header_len > entry_size {
+        return Err(Error::Serialization(format!(
+            "entry '{}' has an NPY header longer than the ZIP entry",
+            path
+        )));
+    }
+
+    let elem_size = (bits as usize / 8)
+        .checked_mul(dl_dtype.lanes as usize)
+        .ok_or_else(|| {
+            Error::Serialization(format!("entry '{}' has overflowing dtype size", path))
+        })?;
+
+    let expected_payload_len = header.shape.iter().try_fold(elem_size, |acc, &dim| {
+        acc.checked_mul(dim)
+    }).ok_or_else(|| {
+        Error::Serialization(format!(
+            "entry '{}' has overflowing shape/dtype payload length",
+            path
+        ))
+    })?;
+
+    let payload_len = entry_size - header_len;
+    if payload_len != expected_payload_len {
+        return Err(Error::Serialization(format!(
+            "entry '{}' payload length is {}, but shape {:?} and dtype bits={} lanes={} require {} bytes",
+            path, payload_len, header.shape, dl_dtype.bits, dl_dtype.lanes, expected_payload_len
+        )));
+    }
+
     let raw_data_offset = data_start + header_len;
 
     Ok((header.shape, dl_dtype, raw_data_offset))
@@ -157,8 +187,7 @@ pub(crate) fn discover_gradient_parameters<R: std::io::Read + std::io::Seek>(
 
 
 /// Load `info.json` from a ZIP archive (if present) and call
-/// `add_info(key, value)` for each entry. Used by `tensor.rs::load`,
-/// `mmap.rs::load_mmap`, and `partial.rs::load_partial`.
+/// `add_info(key, value)` for each entry.
 pub(crate) fn load_info_json<R: std::io::Read + std::io::Seek>(
     archive: &mut zip::ZipArchive<R>,
     mut add_info: impl FnMut(&str, &str),
@@ -224,4 +253,3 @@ mod tests {
         );
     }
 }
-

@@ -139,24 +139,6 @@ namespace io {
         return TensorMap(ptr);
     }
 
-    /// Load a `TensorMap` from `path`, selecting only a subset of blocks
-    /// (`keys`), rows (`samples`), and columns (`properties`). Pass an
-    /// empty `Labels` (no entries) or NULL to skip filtering on that
-    /// dimension.
-    inline TensorMap load_partial(
-        const std::string& path,
-        const mts_labels_t* keys,
-        const mts_labels_t* samples,
-        const mts_labels_t* properties,
-        mts_create_array_callback_t create_array
-    ) {
-        auto* ptr = mts_tensormap_load_partial(
-            path.c_str(), keys, samples, properties, create_array
-        );
-        details::check_pointer(ptr);
-        return TensorMap(ptr);
-    }
-
     /// Load a `TensorMap` from `path` using memory-mapped I/O.
     ///
     /// metatensor parses each NPY header from the mmap-backed file and
@@ -208,22 +190,6 @@ namespace io {
         mts_create_array_callback_t create_array
     ) {
         auto* ptr = mts_block_load(path.c_str(), create_array);
-        details::check_pointer(ptr);
-        return TensorBlock(ptr);
-    }
-
-    /// Load a `TensorBlock` from `path`, selecting only a subset of samples
-    /// and properties. NULL on either pointer means "select all" on that
-    /// dimension.
-    inline TensorBlock load_block_partial(
-        const std::string& path,
-        const mts_labels_t* samples,
-        const mts_labels_t* properties,
-        mts_create_array_callback_t create_array
-    ) {
-        auto* ptr = mts_block_load_partial(
-            path.c_str(), samples, properties, create_array
-        );
         details::check_pointer(ptr);
         return TensorBlock(ptr);
     }
