@@ -1,6 +1,6 @@
 import ctypes
 import pathlib
-from typing import Any, Optional, Union
+from typing import Optional, Union
 
 from .._block import TensorBlock
 from .._c_api import mts_create_array_callback_t, mts_labels_t
@@ -10,7 +10,7 @@ from .._tensor import TensorMap
 from ._block import create_numpy_array
 
 
-def _labels_arg(labels: Optional[Labels]) -> Any:
+def _labels_arg(labels: Optional[Labels]) -> "ctypes._Pointer[mts_labels_t]":
     """Map ``labels`` to an ``mts_labels_t *`` for the C API. ``None``
     becomes a NULL pointer, which the C core interprets as 'select all'
     on this dimension."""
