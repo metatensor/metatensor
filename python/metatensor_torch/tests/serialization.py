@@ -1,4 +1,7 @@
 import os
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 from typing import Union
 
@@ -131,6 +134,39 @@ def test_load_mmap(tensor_path):
     for ref_block, got_block in zip(ref.blocks(), mmap_tensor.blocks()):
         assert ref_block.values.shape == got_block.values.shape
         torch.testing.assert_close(ref_block.values, got_block.values)
+
+
+def test_load_mmap_values_are_mutable_private_views(tensor_path):
+    script = textwrap.dedent(
+        f"""
+        import torch
+        import metatensor.torch as mts
+
+        path = {tensor_path!r}
+        tensor = mts.load_mmap(path)
+        block = tensor.block(dict(o3_lambda=2, center_type=6, neighbor_type=1))
+        original = block.values.clone()
+
+        block.values[0, 0, 0] = original[0, 0, 0] + 1.0
+        torch.testing.assert_close(
+            block.values[0, 0, 0],
+            original[0, 0, 0] + 1.0,
+        )
+
+        reloaded = mts.load(path)
+        reloaded_block = reloaded.block(dict(o3_lambda=2, center_type=6, neighbor_type=1))
+        torch.testing.assert_close(reloaded_block.values, original)
+        """
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
 
 
 def test_load_block_mmap(block_path):

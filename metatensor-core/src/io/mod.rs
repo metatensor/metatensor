@@ -186,3 +186,42 @@ pub(crate) fn load_info_json<R: std::io::Read + std::io::Seek>(
 }
 
 
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Write};
+
+    use zip::{ZipArchive, ZipWriter};
+
+    use super::npy_header::{DataType, Header};
+
+    #[test]
+    fn stored_npy_entry_rejects_truncated_payload() {
+        let mut buffer = Cursor::new(Vec::new());
+        {
+            let mut archive = ZipWriter::new(&mut buffer);
+            let options = zip::write::FileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            archive.start_file("values.npy", options).unwrap();
+
+            let header = Header {
+                type_descriptor: DataType::Scalar(super::native_endian_prefix().to_string() + "f8"),
+                fortran_order: false,
+                shape: vec![2, 3],
+            };
+            header.write(&mut archive).unwrap();
+            archive.write_all(&[0; 5 * std::mem::size_of::<f64>()]).unwrap();
+            archive.finish().unwrap();
+        }
+
+        let archive_bytes = buffer.into_inner();
+        let mut archive = ZipArchive::new(Cursor::new(archive_bytes.as_slice())).unwrap();
+        let err = super::parse_stored_npy_entry(&mut archive, &archive_bytes, "values.npy")
+            .expect_err("truncated NPY payload should be rejected");
+
+        assert!(
+            err.to_string().contains("payload length"),
+            "unexpected error: {err}"
+        );
+    }
+}
+
