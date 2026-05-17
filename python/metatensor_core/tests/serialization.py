@@ -213,6 +213,41 @@ def test_load_partial_filter_samples():
     np.testing.assert_array_equal(np.asarray(got_block.samples.values), first_sample)
 
 
+def test_load_partial_filter_properties():
+    """
+    Property selection drives the per-row scratch-buffer branch of
+    gather_selected_data (one pread per kept row into row_buf, then
+    column-subset scatter into dst). Verify the kept columns match the
+    canonical load byte-for-byte, in the requested order.
+    """
+    path = _data_mts_path()
+    ref = mts.load(path)
+    ref_block = ref.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert ref_block.properties.values.shape[0] >= 2, (
+        "test assumes the reference block has at least two properties"
+    )
+
+    # Keep the last property first, then the first; tests both subset
+    # selection and column reordering through the scratch buffer.
+    kept = ref_block.properties.values[[-1, 0], :].astype(np.int32, copy=True)
+    properties_filter = Labels(names=ref_block.properties.names, values=kept)
+
+    got = mts.load_partial(path, properties=properties_filter)
+    got_block = got.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert got_block.properties.values.shape[0] == 2
+    np.testing.assert_array_equal(np.asarray(got_block.properties.values), kept)
+
+    # Every selected column must match the canonical block at the
+    # same property index, in the requested order.
+    ref_values = np.asarray(ref_block.values)
+    got_values = np.asarray(got_block.values)
+    ref_cols = [
+        int(np.where((ref_block.properties.values == row).all(axis=1))[0][0])
+        for row in kept
+    ]
+    np.testing.assert_array_equal(got_values, ref_values[..., ref_cols])
+
+
 def test_load_partial_nested_gradients(tmpdir):
     block = TensorBlock(
         values=np.arange(9, dtype=np.float64).reshape(3, 3),
@@ -278,6 +313,93 @@ def test_load_block_partial_round_trip():
     block = mts.io.load_block_partial(path)
     assert isinstance(block, TensorBlock)
     assert block.values.shape[0] > 0
+
+
+def test_load_mmap_gds_values_equal():
+    """
+    Load a TensorMap via NVIDIA GPU Direct Storage (cuFile) and verify
+    every value array equals the canonical CPU load, byte-for-byte.
+
+    Skipped on systems without cupy + kvikio. When kvikio is in compat
+    mode (no nvidia-fs kernel module or non-GDS-capable filesystem),
+    cuFile still reads via POSIX but with a host bounce buffer; the
+    end result is the same GPU array, so we test both modes via the
+    same assertion.
+    """
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import is_using_real_gds, load_mmap_gds
+
+    path = _data_mts_path()
+    ref = mts.load(path)
+    gpu = load_mmap_gds(path)
+
+    print(f"GDS mode: {'direct DMA' if is_using_real_gds() else 'compat (POSIX)'}")
+    assert isinstance(gpu, TensorMap)
+    assert gpu.keys.names == ref.keys.names
+    assert len(gpu.keys) == len(ref.keys)
+
+    for ref_block, gpu_block in zip(ref.blocks(), gpu.blocks(), strict=True):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        assert gpu_np.shape == ref_np.shape
+        assert gpu_np.dtype == ref_np.dtype
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+
+def test_load_partial_mmap_gds_round_trip():
+    """
+    Multi-region GDS partial load: select half the blocks and one
+    sample row per surviving block; verify the GPU result equals the
+    canonical mts.load_partial result, byte-for-byte.
+    """
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import load_partial_mmap_gds
+
+    path = _data_mts_path()
+
+    # No filter at all: must equal full mts.load.
+    ref_full = mts.load(path)
+    gpu_full = load_partial_mmap_gds(path)
+    assert len(gpu_full.keys) == len(ref_full.keys)
+    for ref_block, gpu_block in zip(ref_full.blocks(), gpu_full.blocks(), strict=True):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+    # Key + sample filter.
+    keys_filter = Labels(
+        names=["o3_lambda", "center_type"],
+        values=np.array([[2, 6]], dtype=np.int32),
+    )
+    samples_filter = Labels(
+        names=["system"],
+        values=np.array([[0]], dtype=np.int32),
+    )
+    ref_filtered = mts.load_partial(path, keys=keys_filter, samples=samples_filter)
+    gpu_filtered = load_partial_mmap_gds(path, keys=keys_filter, samples=samples_filter)
+    assert len(gpu_filtered.keys) == len(ref_filtered.keys)
+    for ref_block, gpu_block in zip(
+        ref_filtered.blocks(), gpu_filtered.blocks(), strict=True
+    ):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+
+def test_load_block_mmap_gds_values_equal():
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import load_block_mmap_gds
+
+    path = _block_mts_path()
+    ref = mts.io.load_block(path)
+    gpu = load_block_mmap_gds(path)
+    assert isinstance(gpu, TensorBlock)
+    ref_np = np.asarray(ref.values)
+    gpu_np = cupy.asnumpy(gpu.values)
+    np.testing.assert_array_equal(gpu_np, ref_np)
 
 
 def test_load_mmap_values_are_views():
