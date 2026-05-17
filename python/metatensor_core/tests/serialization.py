@@ -210,9 +210,7 @@ def test_load_partial_filter_samples():
     got = mts.load_partial(path, samples=samples_filter)
     got_block = got.block(o3_lambda=2, center_type=6, neighbor_type=1)
     assert got_block.samples.values.shape[0] == 1
-    np.testing.assert_array_equal(
-        np.asarray(got_block.samples.values), first_sample
-    )
+    np.testing.assert_array_equal(np.asarray(got_block.samples.values), first_sample)
 
 
 def test_load_partial_nested_gradients(tmpdir):
