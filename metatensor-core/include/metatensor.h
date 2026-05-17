@@ -1346,8 +1346,8 @@ struct mts_block_t *mts_block_load_buffer(const uint8_t *buffer,
  * Internally the loader uses the same mmap-plus-`pread` I/O strategy as
  * `mts_tensormap_load_partial`: the file is memory-mapped only for ZIP and
  * NPY-header parsing, the selected element data is fetched with explicit
- * positional `pread`, and `MADV_RANDOM` is hinted on the mapping to suppress
- * kernel readahead on sparse selections.
+ * positional `pread`, and Unix builds mark the file descriptor as a
+ * random-access stream for sparse selections.
  *
  * The returned block owns its data; the underlying file is unmapped and
  * closed before this function returns. The input file must use the STORED
@@ -1560,10 +1560,9 @@ struct mts_tensormap_t *mts_tensormap_load_mmap(const char *path,
  * Internally the loader memory-maps the file only to walk the ZIP central
  * directory and the per-entry NPY headers, then issues positional `pread`
  * calls (the platform-native equivalent) directly into each block's array
- * for the selected rows / columns. `MADV_RANDOM` is hinted on the mapping
- * so the kernel does not pre-fetch unselected pages around each scattered
- * row, which matters when the selection keeps a small fraction of a large
- * block.
+ * for the selected rows / columns. Unix builds also mark the file descriptor
+ * as a random-access stream, which matters when the selection keeps a small
+ * fraction of a large block.
  *
  * The input file must use the STORED (uncompressed) ZIP format and native
  * byte order for numeric arrays.

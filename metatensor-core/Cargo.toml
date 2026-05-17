@@ -35,6 +35,7 @@ jzon = "0.12"
 dlpk = { version = "0.3.0", features = ["ndarray", "half"]}
 ndarray = {version = "0.17"}
 half = { version = "<2.5"}
+libc = "0.2"
 
 [build-dependencies]
 cbindgen = { version = "0.29", default-features = false }

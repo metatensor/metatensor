@@ -14,6 +14,10 @@
 //!   The mmap is used *only* to parse the ZIP central directory and the
 //!   per-entry NPY headers, where small-window random access through the
 //!   page cache is cheaper than a separate syscall per lookup.
+//! - On Unix, the file descriptor is also marked with
+//!   `posix_fadvise(POSIX_FADV_RANDOM)` for the duration of the load. On
+//!   other platforms the loader still uses positional reads, but does not
+//!   rely on descriptor-level readahead control.
 //! - The raw element data of every selected block is read via explicit
 //!   platform `pread` (`FileExt::read_at` on Unix, `FileExt::seek_read`
 //!   on Windows). Each `pread` requests exactly the bytes the caller
@@ -22,9 +26,10 @@
 //! This avoids two pathologies of a pure mmap-byte-copy implementation:
 //!
 //! 1. *Readahead over-fetch.* Sparse partial loads (for example one row
-//!    out of every thousand) trigger the kernel's default readahead and
-//!    pull adjacent unselected pages into the page cache. `MADV_RANDOM`
-//!    plus `pread` of exact ranges suppresses both.
+//!    out of every thousand) can pull adjacent unselected pages into the
+//!    page cache. The Unix descriptor hint marks the value-data stream as
+//!    random-access, while exact positional reads avoid copying from
+//!    unrelated mmap pages in user space.
 //! 2. *Synchronous page-fault hops.* A naive
 //!    `dst.copy_from_slice(&mmap[off..off + n])` page-faults once per
 //!    touched page on the read path; `pread` lets the kernel issue
@@ -44,15 +49,36 @@ use zip::ZipArchive;
 
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
 #[cfg(windows)]
 use std::os::windows::fs::FileExt;
 
 
+/// Hint that both the mmap metadata path and the file-descriptor data path
+/// are random-access workloads. Advisory failures are safe to ignore at the
+/// call sites: the correctness fallback is ordinary positional I/O.
+fn advise_random_access(file: &File, mmap: &Mmap) -> std::io::Result<()> {
+    #[cfg(unix)]
+    {
+        let status = unsafe {
+            libc::posix_fadvise(file.as_raw_fd(), 0, 0, libc::POSIX_FADV_RANDOM)
+        };
+        if status != 0 {
+            return Err(std::io::Error::from_raw_os_error(status));
+        }
+    }
+
+    #[cfg(not(unix))]
+    let _ = file;
+
+    mmap.advise(Advice::Random)
+}
+
 /// Read exactly `buf.len()` bytes from `file` starting at `offset`, using
 /// platform pread (no internal seek state). Loops on short reads. Used by
-/// `gather_selected_data` instead of byte-copying out of an mmap, which
-/// gives the kernel exact knowledge of the requested ranges and avoids
-/// readahead over-fetching on sparse partial loads.
+/// `gather_selected_data` instead of byte-copying out of an mmap, so sparse
+/// partial loads request only the selected byte ranges.
 fn read_exact_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> std::io::Result<()> {
     while !buf.is_empty() {
         #[cfg(unix)]
@@ -119,10 +145,7 @@ where
     let file = std::fs::File::open(path)?;
     // SAFETY: read-only view; file owned for the duration of this call.
     let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
-    // Disable kernel readahead on the data region: partial loads have
-    // sparse access patterns and pre-fetched pages we don't touch
-    // pollute the page cache.
-    let _ = mmap.advise(Advice::Random);
+    let _ = advise_random_access(&file, &mmap);
 
     let cursor = Cursor::new(mmap.as_ref());
     let mut archive = ZipArchive::new(cursor).map_err(|e| ("<root>".into(), e))?;
@@ -172,8 +195,8 @@ where
 /// Uses the same mmap-plus-`pread` I/O strategy as [`load_partial`]
 /// (see the module documentation): the file is memory-mapped only for
 /// ZIP / NPY-header parsing, raw element data is fetched with explicit
-/// `pread` of exact ranges with `MADV_RANDOM` hinted on the data
-/// region to suppress kernel readahead.
+/// `pread` of exact ranges, and Unix builds mark the file descriptor as
+/// a random-access stream.
 ///
 /// See [`load_partial`] for the filter semantics, the `create_array`
 /// contract, and the file-format constraints.
@@ -188,7 +211,7 @@ where
 {
     let file = std::fs::File::open(path)?;
     let mmap = unsafe { Mmap::map(&file) }.map_err(Error::Io)?;
-    let _ = mmap.advise(Advice::Random);
+    let _ = advise_random_access(&file, &mmap);
 
     let cursor = Cursor::new(mmap.as_ref());
     let mut archive = ZipArchive::new(cursor).map_err(|e| ("<root>".into(), e))?;
@@ -325,6 +348,27 @@ fn contiguous_runs(prop_idx: &[usize]) -> Vec<(usize, usize, usize)> {
     }
     runs.push((new_col_start, old_col_start, run_len));
     runs
+}
+
+fn coalesced_row_regions(
+    raw_data_offset: usize,
+    row_bytes: usize,
+    row_indices: &[usize],
+) -> Vec<(usize, usize)> {
+    let mut regions = Vec::new();
+
+    for &row in row_indices {
+        let offset = raw_data_offset + row * row_bytes;
+        if let Some((previous_offset, previous_len)) = regions.last_mut() {
+            if *previous_offset + *previous_len == offset {
+                *previous_len += row_bytes;
+                continue;
+            }
+        }
+        regions.push((offset, row_bytes));
+    }
+
+    regions
 }
 
 fn row_major_strides(shape: &[usize]) -> Result<Vec<i64>, Error> {
@@ -479,9 +523,9 @@ fn validate_selected_indices(
 /// dtype must match the source dtype's element width.
 ///
 /// Uses platform pread per byte run rather than reading from a
-/// memory-mapped view. With `MADV_RANDOM` hinted on the mmap used for
-/// header parsing, this avoids both kernel readahead over-fetch and
-/// the page-fault latency that a sparse mmap-copy would pay.
+/// memory-mapped view. On Unix the file descriptor is also marked as a
+/// random-access stream, so sparse loads do not depend on mmap fault
+/// behavior for the value-data path.
 fn gather_selected_data<F>(
     file: &File,
     raw_data_offset: usize,
@@ -661,15 +705,20 @@ where
             }
         }
     } else {
-        // Whole-row copy: pread each row straight into its destination slot.
-        for (new_row, &old_row) in sample_indices.iter().enumerate() {
-            let src_offset = (raw_data_offset + old_row * src_row_bytes) as u64;
-            let dst_offset = new_row * src_row_bytes;
+        // Whole-row copy: merge adjacent source rows into larger positional
+        // reads while preserving the selected row order in the destination.
+        let mut dst_offset = 0usize;
+        for (src_offset, len) in coalesced_row_regions(
+            raw_data_offset,
+            src_row_bytes,
+            sample_indices,
+        ) {
             read_exact_at(
                 file,
-                &mut dst_bytes[dst_offset..dst_offset + src_row_bytes],
-                src_offset,
+                &mut dst_bytes[dst_offset..dst_offset + len],
+                src_offset as u64,
             )?;
+            dst_offset += len;
         }
     }
 

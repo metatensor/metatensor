@@ -283,10 +283,9 @@ pub unsafe extern "C" fn mts_tensormap_load_mmap(
 /// Internally the loader memory-maps the file only to walk the ZIP central
 /// directory and the per-entry NPY headers, then issues positional `pread`
 /// calls (the platform-native equivalent) directly into each block's array
-/// for the selected rows / columns. `MADV_RANDOM` is hinted on the mapping
-/// so the kernel does not pre-fetch unselected pages around each scattered
-/// row, which matters when the selection keeps a small fraction of a large
-/// block.
+/// for the selected rows / columns. Unix builds also mark the file descriptor
+/// as a random-access stream, which matters when the selection keeps a small
+/// fraction of a large block.
 ///
 /// The input file must use the STORED (uncompressed) ZIP format and native
 /// byte order for numeric arrays.

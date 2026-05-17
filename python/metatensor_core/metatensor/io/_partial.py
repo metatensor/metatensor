@@ -37,11 +37,10 @@ def load_partial(
 
     The returned tensor owns its arrays. The C core memory-maps the
     file only for ZIP and NPY-header parsing and uses explicit
-    positional ``pread`` calls for the selected element data, with
-    ``MADV_RANDOM`` hinted on the mapping. This keeps the kernel from
-    pre-fetching unselected pages around each scattered row, which
-    matters when ``samples`` or ``properties`` keeps a small fraction
-    of a large block.
+    positional ``pread`` calls for the selected element data. Unix
+    builds also mark the file descriptor as a random-access stream,
+    which matters when ``samples`` or ``properties`` keeps a small
+    fraction of a large block.
 
     The input file must use the ``STORED`` (uncompressed) ZIP format
     that :py:func:`save` produces, and numeric arrays must use native
