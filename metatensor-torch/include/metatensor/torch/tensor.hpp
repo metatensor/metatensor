@@ -166,6 +166,13 @@ public:
     /// Load a serialized TensorMap from the given path
     static TensorMap load(const std::string& path);
 
+    /// Load a serialized TensorMap from the given path using memory-mapped
+    /// I/O. Numeric arrays are returned as read-only views into the
+    /// memory-mapped file (no copy); labels are loaded normally. The
+    /// underlying mmap is kept alive for the lifetime of the returned
+    /// tensors via `torch::from_blob` with a custom deleter.
+    static TensorMap load_mmap(const std::string& path);
+
     /// Load a serialized TensorMap from an in-memory buffer (represented as a
     /// `torch::Tensor` of bytes)
     static TensorMap load_buffer(torch::Tensor buffer);

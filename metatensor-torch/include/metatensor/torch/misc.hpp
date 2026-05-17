@@ -27,6 +27,13 @@ namespace details {
 /// Load a previously saved `TensorMap` from the given path.
 METATENSOR_TORCH_EXPORT TensorMap load(const std::string& path);
 
+/// Load a previously saved `TensorMap` from the given path using memory
+/// mapping. Numeric arrays are returned as read-only views into the
+/// memory-mapped file (no copy); labels are loaded normally. The
+/// underlying mmap is kept alive for the lifetime of every returned
+/// tensor.
+METATENSOR_TORCH_EXPORT TensorMap load_mmap(const std::string& path);
+
 /// Load a previously saved `TensorMap` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)
 METATENSOR_TORCH_EXPORT TensorMap load_buffer(torch::Tensor buffer);
@@ -42,6 +49,10 @@ METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TensorMap tensor);
 
 /// Load a previously saved `TensorBlock` from the given path.
 METATENSOR_TORCH_EXPORT TensorBlock load_block(const std::string& path);
+
+/// Load a previously saved `TensorBlock` from the given path using memory
+/// mapping. See `load_mmap` for semantics.
+METATENSOR_TORCH_EXPORT TensorBlock load_block_mmap(const std::string& path);
 
 /// Load a previously saved `TensorBlock` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)

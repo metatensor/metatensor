@@ -64,6 +64,44 @@ def load(file: str) -> TensorMap:
 load.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
+def load_mmap(file: str) -> TensorMap:
+    """
+    Load a previously saved :py:class:`TensorMap` from ``file`` using
+    memory-mapped I/O.
+
+    Numeric arrays are returned as read-only views into the memory-mapped
+    file (no copy); labels are loaded normally. The underlying mmap is kept
+    alive for the lifetime of every returned tensor.
+
+    The input file must use the ``STORED`` (uncompressed) ZIP format that
+    :py:func:`save` produces, and numeric arrays must use native byte order.
+
+    :param file: path of the file to load.
+
+        .. warning::
+
+            When using this function in TorchScript mode, only ``str``
+            arguments are supported. ``mmap`` requires a real filesystem
+            path, so file-like objects are not accepted in either mode.
+    """
+    if torch.jit.is_scripting():
+        assert isinstance(file, str)
+        return torch.ops.metatensor.load_mmap(file=file)
+    else:
+        if isinstance(file, str):
+            return torch.ops.metatensor.load_mmap(file=file)
+        elif isinstance(file, pathlib.Path):
+            return torch.ops.metatensor.load_mmap(file=str(file.resolve()))
+        else:
+            raise TypeError(
+                "load_mmap requires a filesystem path; file-like objects are "
+                "not supported because mmap is a file-system operation"
+            )
+
+
+load_mmap.__annotations__["file"] = Union[str, pathlib.Path]
+
+
 def load_block(file: str) -> TensorBlock:
     """
     Load previously saved :py:class:`TensorBlock` from the given ``file``.
@@ -97,6 +135,37 @@ def load_block(file: str) -> TensorBlock:
 
 
 load_block.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
+
+
+def load_block_mmap(file: str) -> TensorBlock:
+    """
+    Load a previously saved :py:class:`TensorBlock` from ``file`` using
+    memory-mapped I/O. See :py:func:`load_mmap` for semantics.
+
+    :param file: path of the file to load.
+
+        .. warning::
+
+            When using this function in TorchScript mode, only ``str``
+            arguments are supported.
+    """
+    if torch.jit.is_scripting():
+        assert isinstance(file, str)
+        return torch.ops.metatensor.load_block_mmap(file=file)
+    else:
+        if isinstance(file, str):
+            return torch.ops.metatensor.load_block_mmap(file=file)
+        elif isinstance(file, pathlib.Path):
+            return torch.ops.metatensor.load_block_mmap(file=str(file.resolve()))
+        else:
+            raise TypeError(
+                "load_block_mmap requires a filesystem path; file-like "
+                "objects are not supported because mmap is a file-system "
+                "operation"
+            )
+
+
+load_block_mmap.__annotations__["file"] = Union[str, pathlib.Path]
 
 
 def load_labels(file: str) -> Labels:
