@@ -136,7 +136,7 @@ def test_load_mmap(tensor_path):
         torch.testing.assert_close(ref_block.values, got_block.values)
 
 
-def test_load_mmap_values_are_mutable_private_views(tensor_path):
+def test_load_mmap_values_are_mutable_private_views(tensor_path, tmp_path):
     script = textwrap.dedent(
         f"""
         import torch
@@ -164,6 +164,7 @@ def test_load_mmap_values_are_mutable_private_views(tensor_path):
         text=True,
         capture_output=True,
         check=False,
+        cwd=tmp_path,
     )
 
     assert result.returncode == 0, result.stderr
