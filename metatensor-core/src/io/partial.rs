@@ -941,4 +941,30 @@ mod tests {
         let array = unsafe { &*output.ptr.cast::<StridedTestArray>() };
         assert_eq!(array.data, vec![-1.0, 8.0, 6.0, -1.0, 11.0, 9.0, -1.0]);
     }
+
+    #[test]
+    fn coalesced_row_regions_merges_contiguous_rows() {
+        assert_eq!(
+            coalesced_row_regions(100, 16, &[0, 1, 2, 5, 6, 9]),
+            vec![(100, 48), (180, 32), (244, 16)]
+        );
+        assert_eq!(
+            coalesced_row_regions(100, 16, &[2, 1, 0]),
+            vec![(132, 16), (116, 16), (100, 16)]
+        );
+    }
+
+    #[test]
+    fn random_access_advice_accepts_regular_file() {
+        use std::io::Write;
+
+        let mut tmp = tempfile::NamedTempFile::new().unwrap();
+        tmp.write_all(&[0; 128]).unwrap();
+        tmp.flush().unwrap();
+
+        let file = std::fs::File::open(tmp.path()).unwrap();
+        let mmap = unsafe { Mmap::map(&file) }.unwrap();
+
+        advise_random_access(&file, &mmap).unwrap();
+    }
 }
