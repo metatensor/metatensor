@@ -473,6 +473,32 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
             size = os.path.getsize(file)
 
         assert size == 8718
+
+        # tmp(mtsio-debug): dump magic + first 32 bytes when the test fails on CI
+        # so we can tell whether the Rust save buffer was emitted at all or
+        # corrupted (the failure mode reports "pickled object data", which
+        # implies the buffer is neither PK-zip nor NUMPY-npy).
+        if memory_buffer:
+            _diag_bytes = bytes(buffer)[:32]
+        else:
+            with open("serialize-test.mts", "rb") as _diag_fd:
+                _diag_bytes = _diag_fd.read(32)
+        print(
+            "DEBUG test_save",
+            (standalone_fn, memory_buffer, use_numpy),
+            "size=",
+            size,
+            "magic=",
+            _diag_bytes[:8].hex(),
+            "PK=",
+            _diag_bytes[:2] == b"PK",
+            "NPY=",
+            _diag_bytes[:6] == b"\x93NUMPY",
+            "head=",
+            _diag_bytes.hex(),
+            flush=True,
+        )
+
         data = np.load(file)
 
     assert len(data.keys()) == 29
