@@ -187,6 +187,42 @@ class TensorMap:
     def __str__(self) -> str:
         return self.print(7)
 
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks."""
+        from metatensor._html import TensorBlockData, tensor_map_html
+
+        def _block_data(block):
+            gradients = {}
+            for parameter in block.gradients_list():
+                grad = block.gradient(parameter)
+                gradients[parameter] = _block_data(grad)
+
+            return TensorBlockData(
+                values_shape=tuple(block.values.shape),
+                samples=(block.samples.names, block.samples.values),
+                components=[(c.names, c.values) for c in block.components],
+                properties=(block.properties.names, block.properties.values),
+                gradients=gradients,
+            )
+
+        blocks = [_block_data(self.block_by_id(i)) for i in range(len(self))]
+
+        body = tensor_map_html(
+            self.keys.names,
+            self.keys.values,
+            blocks,
+            module="metatensor",
+        )
+
+        block_word = "block" if len(self) == 1 else "blocks"
+        header = (
+            f"<div><strong>metatensor.TensorMap</strong>"
+            f" with {len(self)} {block_word}</div>"
+        )
+        hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+
+        return header + hr + body
+
     def __getitem__(self, selection) -> TensorBlock:
         """This is equivalent to self.block(selection)"""
         return self.block(selection)
