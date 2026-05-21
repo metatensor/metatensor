@@ -101,15 +101,14 @@ class EquivariantTransformation(Module):
 
         >>> transformation(tensor)
         TensorMap with 2 blocks
-        keys: o3_lambda
-                  0
-                  1
+             o3_lambda
+                 0     => TensorBlock with shape (2, 1, 3)
+                 1     => TensorBlock with shape (2, 3, 3)
         >>> transformation(tensor)[0]
-        TensorBlock
-            samples (2): ['system', 'atom']
-            components (1): ['o3_mu']
-            properties (3): ['properties']
-            gradients: None
+        TensorBlock with shape (2, 1, 3)
+            samples: [system, atom]
+            components: [o3_mu]
+            properties: [properties]
 
     """
 

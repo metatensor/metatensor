@@ -399,11 +399,10 @@ def sum_over_properties_block(
     ... )
     >>> block_sum = sum_over_properties_block(block, property_names="j")
     >>> print(block_sum.properties)
-    Labels(
+    Labels
         i
         0
         1
-    )
     >>> print(block_sum.values)
     [[ 4 17]
      [ 7 19]
@@ -480,17 +479,14 @@ def sum_over_properties(
     >>> tensor_sum = sum_over_properties(tensor, property_names="j")
     >>> # only 'i' is left as a property
     >>> print(tensor_sum.block(0))
-    TensorBlock
-        samples (3): ['system', 'atom']
-        components (): []
-        properties (2): ['i']
-        gradients: None
+    TensorBlock with shape (3, 2)
+        samples: [system, atom]
+        properties: [i]
     >>> print(tensor_sum.block(0).properties)
-    Labels(
+    Labels
         i
         0
         1
-    )
     >>> print(tensor_sum.block(0).values)
     [[ 4 17]
      [ 7 19]

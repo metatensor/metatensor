@@ -114,11 +114,9 @@ def solve(X: TensorMap, Y: TensorMap) -> TensorMap:
     ... )
     >>> c = mts.solve(X, y)
     >>> print(c.block())
-    TensorBlock
-        samples (1): ['property_to_regress']
-        components (): []
-        properties (2): ['properties_for_regression']
-        gradients: None
+    TensorBlock with shape (1, 2)
+        samples: [property_to_regress]
+        properties: [properties_for_regression]
     >>> # c should now be close to true_c
     >>> print(c.block().values)
     [[ 9.67680334 42.12534656]]

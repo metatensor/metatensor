@@ -130,11 +130,13 @@ def random_uniform_like(
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
     >>> print(tensor.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
 
     Then we use ``random_uniform_like`` to create a :py:class:`TensorMap` with
     the same metadata as ``tensor``, but with all values randomly sampled from a
@@ -142,11 +144,13 @@ def random_uniform_like(
 
     >>> tensor_random = mts.random_uniform_like(tensor)
     >>> print(tensor_random.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
     >>> print(tensor_random.block(0).values)
     [[0.53316528 0.69187711 0.31551563]
      [0.68650093 0.83462567 0.01828828]

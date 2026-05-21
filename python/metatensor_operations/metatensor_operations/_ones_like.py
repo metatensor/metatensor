@@ -123,22 +123,26 @@ def ones_like(
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
     >>> print(tensor.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
 
     Then we use ``ones_like`` to create a :py:class:`TensorMap` with the same
     metadata as ``tensor``, but with all values set to 1.
 
     >>> tensor_ones = mts.ones_like(tensor)
     >>> print(tensor_ones.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
     >>> print(tensor_ones.block(0).values)
     [[1. 1. 1.]
      [1. 1. 1.]

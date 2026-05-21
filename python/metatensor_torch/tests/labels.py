@@ -99,7 +99,7 @@ def test_constructor_errors():
 def test_repr():
     labels = Labels(names=("aaa", "bbb"), values=torch.tensor([[1, 2], [3, 4]]))
 
-    expected = "Labels(\n    aaa  bbb\n     1    2\n     3    4\n)"
+    expected = "Labels\n    aaa  bbb\n     1    2\n     3    4"
     assert str(labels) == expected
     assert repr(labels) == expected
 
@@ -151,11 +151,10 @@ def test_repr():
         names=("aaa", "bbb"), values=torch.tensor([[111111111, 2], [3, 444444444]])
     )
 
-    expected = """Labels(
+    expected = """Labels
        aaa        bbb
     111111111      2
-        3      444444444
-)"""
+        3      444444444"""
     assert str(labels) == expected
 
 
@@ -303,7 +302,7 @@ def test_position():
 
     message = (
         "parameter to Labels::positions must be a LabelsEntry, tensor, "
-        "or list/tuple of integers"
+        "or list/tuple of integers, got 'int' instead"
     )
     with pytest.raises(TypeError, match=message):
         _ = labels.position(3)

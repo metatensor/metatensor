@@ -63,11 +63,10 @@ def block_from_array(
     >>> # Transform it into a TensorBlock:
     >>> tensor_block = mts.block_from_array(array)
     >>> print(tensor_block)
-    TensorBlock
-        samples (7): ['sample']
-        components (3, 1): ['component_1', 'component_2']
-        properties (2): ['property']
-        gradients: None
+    TensorBlock with shape (7, 3, 1, 2)
+        samples: [sample]
+        components: [component_1, component_2]
+        properties: [property]
     >>> # The data inside the TensorBlock will correspond to the provided array:
     >>> print(np.all(array == tensor_block.values))
     True
@@ -78,11 +77,10 @@ def block_from_array(
     ...     array, sample_names=["a", "b"], property_names=["y"]
     ... )
     >>> print(tensor_block)
-    TensorBlock
-        samples (6): ['a', 'b']
-        components (5, 1): ['component_1', 'component_2']
-        properties (2): ['y']
-        gradients: None
+    TensorBlock with shape (6, 5, 1, 2)
+        samples: [a, b]
+        components: [component_1, component_2]
+        properties: [y]
     """
 
     if torch_jit_is_scripting():

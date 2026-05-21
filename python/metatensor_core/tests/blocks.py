@@ -122,11 +122,9 @@ def test_gradient_errors(block):
 
 
 def test_repr(block):
-    expected = """TensorBlock
-    samples (3): ['s']
-    components (): []
-    properties (2): ['p']
-    gradients: None"""
+    expected = """TensorBlock with shape (3, 2)
+    samples: [s]
+    properties: [p]"""
     assert block.__repr__() == expected
 
 
@@ -137,11 +135,9 @@ def test_repr_zero_samples():
         components=[],
         properties=Labels(["p"], np.array([[5], [3]])),
     )
-    expected = """TensorBlock
-    samples (0): []
-    components (): []
-    properties (2): ['p']
-    gradients: None"""
+    expected = """TensorBlock with shape (0, 2)
+    samples: []
+    properties: [p]"""
     assert block.__repr__() == expected
 
 
@@ -156,19 +152,18 @@ def test_repr_zero_samples_gradient(block):
         ),
     )
 
-    expected_block = """TensorBlock
-    samples (3): ['s']
-    components (): []
-    properties (2): ['p']
-    gradients: ['g']"""
+    expected_block = """TensorBlock with shape (3, 2)
+    samples: [s]
+    properties: [p]
+
+    gradients:
+        g => TensorBlock with shape (0, 2)"""
 
     assert block.__repr__() == expected_block
 
-    expected_grad = """Gradient TensorBlock ('g')
-    samples (0): ['sample']
-    components (): []
-    properties (2): ['p']
-    gradients: None"""
+    expected_grad = """TensorBlock gradient for 'g', with shape (0, 2)
+    samples: [sample]
+    properties: [p]"""
 
     gradient = block.gradient("g")
     assert gradient.__repr__() == expected_grad
@@ -192,11 +187,10 @@ def test_block_no_components(block):
 
 
 def test_block_with_components(block_components):
-    expected = """TensorBlock
-    samples (3): ['s']
-    components (3, 2): ['c_1', 'c_2']
-    properties (2): ['p']
-    gradients: None"""
+    expected = """TensorBlock with shape (3, 3, 2, 2)
+    samples: [s]
+    components: [c_1, c_2]
+    properties: [p]"""
     assert block_components.__repr__() == expected
 
     assert_equal(block_components.values, np.full((3, 3, 2, 2), -1.0))
@@ -238,11 +232,13 @@ def test_gradients(block_components):
         ),
     )
 
-    expected = """TensorBlock
-    samples (3): ['s']
-    components (3, 2): ['c_1', 'c_2']
-    properties (2): ['p']
-    gradients: ['g']"""
+    expected = """TensorBlock with shape (3, 3, 2, 2)
+    samples: [s]
+    components: [c_1, c_2]
+    properties: [p]
+
+    gradients:
+        g => TensorBlock with shape (2, 3, 2, 2)"""
     assert block_components.__repr__() == expected
 
     assert block_components.has_gradient("g")
@@ -253,11 +249,10 @@ def test_gradients(block_components):
 
     gradient = block_components.gradient("g")
 
-    expected_grad = """Gradient TensorBlock ('g')
-    samples (2): ['sample', 'g']
-    components (3, 2): ['c_1', 'c_2']
-    properties (2): ['p']
-    gradients: None"""
+    expected_grad = """TensorBlock gradient for 'g', with shape (2, 3, 2, 2)
+    samples: [sample, g]
+    components: [c_1, c_2]
+    properties: [p]"""
     assert gradient.__repr__() == expected_grad
 
     assert gradient.samples.names == ["sample", "g"]
