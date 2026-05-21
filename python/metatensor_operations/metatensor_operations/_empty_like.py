@@ -123,22 +123,26 @@ def empty_like(
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
     >>> print(tensor.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
 
     Then we use ``empty_like`` to create a :py:class:`TensorMap` with the same
     metadata as ``tensor``, but with all values uninitialized.
 
     >>> tensor_empty = mts.empty_like(tensor)
     >>> print(tensor_empty.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
 
     Note that if we copy just the gradient ``alpha``, ``beta`` is no longer
     available.

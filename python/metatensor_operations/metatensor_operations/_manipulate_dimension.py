@@ -56,9 +56,9 @@ def insert_dimension(
     >>> keys = Labels(["foo"], np.array([[0]]))
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
-    TensorMap with 1 blocks
-    keys: foo
-           0
+    TensorMap with 1 block
+         foo
+          0  => TensorBlock with shape (2, 2)
     >>> mts.insert_dimension(
     ...     tensor,
     ...     axis="keys",
@@ -66,9 +66,9 @@ def insert_dimension(
     ...     name="bar",
     ...     values=np.array([1]),
     ... )
-    TensorMap with 1 blocks
-    keys: bar  foo
-           1    0
+    TensorMap with 1 block
+         bar  foo
+          1    0  => TensorBlock with shape (2, 2)
     """
     _check_axis(axis)
 
@@ -162,18 +162,18 @@ def append_dimension(
     >>> keys = Labels(["foo"], np.array([[0]]))
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
-    TensorMap with 1 blocks
-    keys: foo
-           0
+    TensorMap with 1 block
+         foo
+          0  => TensorBlock with shape (2, 2)
     >>> mts.append_dimension(
     ...     tensor,
     ...     axis="keys",
     ...     name="bar",
     ...     values=np.array([1]),
     ... )
-    TensorMap with 1 blocks
-    keys: foo  bar
-           0    1
+    TensorMap with 1 block
+         foo  bar
+          0    1  => TensorBlock with shape (2, 2)
     """
     if axis == "keys":
         index = len(tensor.keys.names)
@@ -222,16 +222,16 @@ def permute_dimensions(
     >>> keys = Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
-    TensorMap with 1 blocks
-    keys: foo  bar  baz
-          42   10    3
+    TensorMap with 1 block
+         foo  bar  baz
+         42   10    3  => TensorBlock with shape (2, 2)
 
     Move the last (second) dimension to the first position.
 
     >>> mts.permute_dimensions(tensor, axis="keys", dimensions_indexes=[2, 0, 1])
-    TensorMap with 1 blocks
-    keys: baz  foo  bar
-           3   42   10
+    TensorMap with 1 block
+         baz  foo  bar
+          3   42   10  => TensorBlock with shape (2, 2)
     """
     _check_axis(axis)
 
@@ -302,13 +302,13 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     >>> keys = Labels(["key", "extra"], np.array([[0, 0]]))
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
-    TensorMap with 1 blocks
-    keys: key  extra
-           0     0
+    TensorMap with 1 block
+         key  extra
+          0     0   => TensorBlock with shape (2, 2)
     >>> mts.remove_dimension(tensor, axis="keys", name="extra")
-    TensorMap with 1 blocks
-    keys: key
-           0
+    TensorMap with 1 block
+         key
+          0  => TensorBlock with shape (2, 2)
 
     Removing a dimension can only be performed if the resulting :py:class:`Labels` will
     contain unique entries.
@@ -319,9 +319,9 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     >>> tensor = TensorMap(keys=keys, blocks=[block.copy(), block.copy()])
     >>> tensor
     TensorMap with 2 blocks
-    keys: key  extra
-           0     0
-           0     1
+         key  extra
+          0     0   => TensorBlock with shape (2, 2)
+          0     1   => TensorBlock with shape (2, 2)
     >>> try:
     ...     mts.remove_dimension(tensor, axis="keys", name="extra")
     ... except MetatensorError as e:
@@ -391,13 +391,13 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
     >>> keys = Labels(["foo"], np.array([[0]]))
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
-    TensorMap with 1 blocks
-    keys: foo
-           0
+    TensorMap with 1 block
+         foo
+          0  => TensorBlock with shape (2, 2)
     >>> mts.rename_dimension(tensor, axis="keys", old="foo", new="bar")
-    TensorMap with 1 blocks
-    keys: bar
-           0
+    TensorMap with 1 block
+         bar
+          0  => TensorBlock with shape (2, 2)
 
     """
     _check_axis(axis)

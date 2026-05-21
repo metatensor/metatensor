@@ -208,11 +208,9 @@ def sort_block(
     ...     properties=Labels(["n", "l"], np.array([[2, 0], [3, 0], [1, 0]])),
     ... )
     >>> print(block)
-    TensorBlock
-        samples (3): ['system', 'atom']
-        components (): []
-        properties (3): ['n', 'l']
-        gradients: None
+    TensorBlock with shape (3, 3)
+        samples: [system, atom]
+        properties: [n, l]
     >>> # sorting axes one by one
     >>> block_sorted_stepwise = mts.sort_block(block, axes=["properties"])
     >>> # properties (last dimension of the array) are sorted
@@ -336,9 +334,9 @@ def sort(
     ... )
     >>> mts.sort(tensor, axes="keys")
     TensorMap with 2 blocks
-    keys: types
-            0
-            1
+         types
+           0   => TensorBlock with shape (3, 3)
+           1   => TensorBlock with shape (1, 3)
     """
     if isinstance(axes, str):
         axes_list: List[str] = []

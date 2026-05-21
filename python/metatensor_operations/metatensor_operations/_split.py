@@ -103,27 +103,24 @@ def split(
     >>> len(splitted)
     3
     >>> splitted[0].block(0).samples
-    Labels(
+    Labels
         system
           0
           6
           7
-    )
     >>> splitted[1].block(0).samples
-    Labels(
+    Labels
         system
           2
           3
           4
-    )
     >>> splitted[2].block(0).samples
-    Labels(
+    Labels
         system
           1
           5
           8
           10
-    )
 
     :param tensor: a :py:class:`TensorMap` to be split
     :param axis: a str, either "samples" or "properties", that indicates the
@@ -212,27 +209,24 @@ def split_block(
     >>> len(splitted)
     3
     >>> splitted[0].samples
-    Labels(
+    Labels
         system
           0
           6
           7
-    )
     >>> splitted[1].samples
-    Labels(
+    Labels
         system
           2
           3
           4
-    )
     >>> splitted[2].samples
-    Labels(
+    Labels
         system
           1
           5
           8
           10
-    )
 
     :param block: a :py:class:`TensorBlock` to be split
     :param axis: a str, either "samples" or "properties", that indicates the

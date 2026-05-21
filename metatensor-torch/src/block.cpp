@@ -208,70 +208,76 @@ std::vector<std::tuple<std::string, TensorBlock>> TensorBlockHolder::gradients(T
 }
 
 static void print_labels(std::ostringstream& output, const metatensor::Labels& labels, const char* labels_kind) {
-    output << "    " << labels_kind << " (" << labels.count() << "): ";
-    output << "[";
+    output << "    " << labels_kind << ": [";
     auto first = true;
     for (const auto& name: labels.names()) {
         if (!first) {
             output << ", ";
         }
-        output << '\'' << name << '\'';
+        output << name;
         first = false;
     }
-    output << "]\n";
+    output << "]";
 }
 
 std::string TensorBlockHolder::repr() const {
     auto output = std::ostringstream();
+    auto shape = this->values().sizes();
 
-    if (parameter_.empty()) {
-        output << "TensorBlock\n";
-    } else {
-        output << "Gradient TensorBlock ('" << parameter_ << "')\n";
+    output << "TensorBlock";
+    if (!parameter_.empty()) {
+        output << " gradient for '" << parameter_ << "',";
     }
+    output << " with shape (";
+
+    for (size_t i = 0; i < shape.size(); i++) {
+        if (i != 0) {
+            output << ", ";
+        }
+        output << shape[i];
+    }
+    output << ")\n";
 
     print_labels(output, block_.samples(), "samples");
+    output << "\n";
 
     auto components = block_.components();
-    output << "    components (";
-    auto first = true;
-    for (const auto& component: components) {
-        if (!first) {
-            output << ", ";
+    if (!components.empty()) {
+        output << "    components: [";
+        auto first = true;
+        for (const auto& component: components) {
+            if (!first) {
+                output << ", ";
+            }
+            assert(component.size() == 1);
+            output << component.names()[0];
+            first = false;
         }
-        output << component.count();
-        first = false;
+        output << "]\n";
     }
-
-    output << "): [";
-    first = true;
-    for (const auto& component: components) {
-        if (!first) {
-            output << ", ";
-        }
-        assert(component.size() == 1);
-        output << '\'' << component.names()[0] << '\'';
-        first = false;
-    }
-    output << "]\n";
 
     print_labels(output, block_.properties(), "properties");
 
     auto gradients = block_.gradients_list();
-    output << "    gradients: ";
-    if (gradients.empty()) {
-        output << "None\n";
-    } else {
-        first = true;
-        output << "[";
+    if (!gradients.empty()) {
+        output << "\n\n    gradients:";
+        size_t max_len = 0;
         for (const auto& parameter: gradients) {
-            if (!first) {
-                output << ", ";
-            }
-            output << '\'' << parameter << '\'';
-            first = false;
+            max_len = std::max(max_len, parameter.size());
         }
-        output << "]\n";
+        for (const auto& parameter: gradients) {
+            auto grad_shape = block_.gradient(parameter).values_shape();
+            output << "\n        " << parameter;
+            output << std::string(max_len - parameter.size(), ' ');
+            output << " => TensorBlock with shape (";
+            for (size_t i = 0; i < grad_shape.size(); i++) {
+                if (i != 0) {
+                    output << ", ";
+                }
+                output << grad_shape[i];
+            }
+            output << ")";
+        }
     }
 
     return output.str();

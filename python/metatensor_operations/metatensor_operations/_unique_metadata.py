@@ -124,12 +124,11 @@ def unique_metadata(
     >>> tensor = TensorMap(keys, [block.copy()])
     >>> unique_systems = mts.unique_metadata(tensor, axis="samples", names=["system"])
     >>> unique_systems
-    Labels(
+    Labels
         system
           0
           1
           2
-    )
 
     Or, to find the unique ``(system, atom)`` pairs of indices in the ``"samples"``
     metadata present in the ``"positions"`` gradient blocks of a given
@@ -152,12 +151,11 @@ def unique_metadata(
     ...     names=["system", "atom"],
     ...     gradient="positions",
     ... )
-    Labels(
+    Labels
         system  atom
           0      0
           1      4
           2      5
-    )
 
     :param tensor: the :py:class:`TensorMap` to find unique indices for.
     :param axis: a ``str``, either ``"samples"`` or ``"properties"``, corresponding to

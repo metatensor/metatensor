@@ -382,11 +382,10 @@ def sum_over_samples_block(
     ... )
     >>> block_sum = sum_over_samples_block(block, sample_names="atom")
     >>> print(block_sum.samples)
-    Labels(
+    Labels
         system
           0
           1
-    )
     >>> print(block_sum.values)
     [[ 4  7 10]
      [17 19 21]]
@@ -439,17 +438,14 @@ def sum_over_samples(
     >>> tensor_sum = sum_over_samples(tensor, sample_names="atom")
     >>> # only 'system' is left as a sample
     >>> print(tensor_sum.block(0))
-    TensorBlock
-        samples (2): ['system']
-        components (): []
-        properties (3): ['properties']
-        gradients: None
+    TensorBlock with shape (2, 3)
+        samples: [system]
+        properties: [properties]
     >>> print(tensor_sum.block(0).samples)
-    Labels(
+    Labels
         system
           0
           1
-    )
     >>> print(tensor_sum.block(0).values)
     [[ 4  7 10]
      [17 19 21]]

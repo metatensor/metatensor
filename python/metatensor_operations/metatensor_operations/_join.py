@@ -494,7 +494,7 @@ def join(
 
     >>> joined_tensor = mts.join([tensor_1, tensor_2], axis="properties")
     >>> joined_tensor[0].properties
-    Labels(
+    Labels
         n
         0
         2
@@ -502,7 +502,6 @@ def join(
         1
         4
         5
-    )
 
     Second, if the labels names are the same but the values are not unique, you can ask
     to add an extra dimension to the labels when joining with ``add_dimension``, thus
@@ -527,7 +526,7 @@ def join(
     ...     [tensor_1, tensor_3], axis="properties", add_dimension="tensor"
     ... )
     >>> joined_tensor[0].properties
-    Labels(
+    Labels
         n  tensor
         0    0
         2    0
@@ -535,7 +534,6 @@ def join(
         0    1
         2    1
         3    1
-    )
 
     Finally, when joining along properties, if different ``TensorMap`` have different
     property names, we'll re-create new properties labels containing the original tensor
@@ -558,7 +556,7 @@ def join(
 
     >>> joined_tensor = mts.join([tensor_1, tensor_4], axis="properties")
     >>> joined_tensor[0].properties
-    Labels(
+    Labels
         joined_index  property
              0           0
              0           1
@@ -566,7 +564,6 @@ def join(
              1           0
              1           1
              1           2
-    )
     """
     if not torch_jit_is_scripting():
         if not isinstance(tensors, (list, tuple)):

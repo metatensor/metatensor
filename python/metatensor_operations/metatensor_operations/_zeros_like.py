@@ -123,22 +123,26 @@ def zeros_like(
     >>> keys = Labels(names=["key"], values=np.array([[0]]))
     >>> tensor = TensorMap(keys, [block])
     >>> print(tensor.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
 
     Then we use ``zeros_like`` to create a :py:class:`TensorMap` with
     the same metadata as ``tensor``, but with all values set to 0.
 
     >>> tensor_zeros = mts.zeros_like(tensor)
     >>> print(tensor_zeros.block(0))
-    TensorBlock
-        samples (4): ['sample']
-        components (): []
-        properties (3): ['property']
-        gradients: ['alpha', 'beta']
+    TensorBlock with shape (4, 3)
+        samples: [sample]
+        properties: [property]
+    <BLANKLINE>
+        gradients:
+            alpha => TensorBlock with shape (2, 3, 3)
+            beta  => TensorBlock with shape (1, 3)
     >>> print(tensor_zeros.block(0).values)
     [[0. 0. 0.]
      [0. 0. 0.]

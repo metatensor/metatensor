@@ -784,13 +784,13 @@ std::string LabelsHolder::print(int64_t max_entries, int64_t indent) const {
 
 std::string LabelsHolder::str() const {
     auto output = std::ostringstream();
-    output << "Labels(\n   " << this->print(4, 3) << "\n)";
+    output << "Labels\n   " << this->print(4, 3);
     return output.str();
 }
 
 std::string LabelsHolder::repr() const {
     auto output = std::ostringstream();
-    output << "Labels(\n   " << this->print(-1, 3) << "\n)";
+    output << "Labels\n   " << this->print(-1, 3);
     return output.str();
 }
 

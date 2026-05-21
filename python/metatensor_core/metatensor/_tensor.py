@@ -1,4 +1,5 @@
 import ctypes
+import io
 import pathlib
 from pickle import PickleBuffer
 from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
@@ -181,10 +182,10 @@ class TensorMap:
         return len(self.keys)
 
     def __repr__(self) -> str:
-        return self.print(4)
+        return self.print(-1)
 
     def __str__(self) -> str:
-        return self.print(-1)
+        return self.print(7)
 
     def __getitem__(self, selection) -> TensorBlock:
         """This is equivalent to self.block(selection)"""
@@ -673,8 +674,60 @@ class TensorMap:
             all keys.
         """
 
-        result = f"TensorMap with {len(self)} blocks\nkeys:"
-        result += self.keys.print(max_entries=max_keys, indent=5)
+        if max_keys < 0:
+            n_blocks_to_print = len(self)
+        else:
+            n_blocks_to_print = min(max_keys, len(self))
+
+        block_word = "block" if len(self) == 1 else "blocks"
+
+        result = f"TensorMap with {len(self)} {block_word}\n"
+
+        # use the same column formatting as Labels printing
+        from metatensor._labels import _print_string_center
+
+        names = self.keys.names
+        values = self.keys.values
+
+        # +2 to use at least one space on each side of the name
+        widths = [len(n) + 2 for n in names]
+
+        key_strings = []
+        for i in range(n_blocks_to_print):
+            entry_strings = [str(int(v)) for v in values[i]]
+            for j, s in enumerate(entry_strings):
+                widths[j] = max(widths[j], len(s) + 2)
+            key_strings.append(entry_strings)
+
+        n_dimensions = len(names)
+        indent = "    "
+
+        # header
+        output = io.StringIO()
+        output.write(indent)
+        for i in range(n_dimensions):
+            last = i == n_dimensions - 1
+            _print_string_center(output, names[i], widths[i], last)
+        output.write("\n")
+
+        # each key row
+        for i, strings in enumerate(key_strings):
+            output.write(indent)
+            for j in range(n_dimensions):
+                # use last=False so all columns get full padding, keeping
+                # the => arrows aligned across rows with different value widths
+                _print_string_center(output, strings[j], widths[j], False)
+            shape = tuple(int(v) for v in self.block_by_id(i).values.shape)
+            output.write(f"=> TensorBlock with shape {shape}")
+            output.write("\n")
+
+        if n_blocks_to_print < len(self):
+            output.write(indent[:-1])
+            for j in range(n_dimensions):
+                _print_string_center(output, "", widths[j], False)
+            output.write("...\n")
+
+        result += output.getvalue().rstrip("\n")
         return result
 
     @property

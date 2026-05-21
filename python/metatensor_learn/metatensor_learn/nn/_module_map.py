@@ -113,9 +113,9 @@ class ModuleMap(Module):
         >>> out = module_map(tensor)
         >>> out
         TensorMap with 2 blocks
-        keys: key
-               0
-               1
+             key
+              0  => TensorBlock with shape (2, 1)
+              1  => TensorBlock with shape (2, 1)
         >>> out[0].values
         tensor([[ 7.],
                 [14.]], grad_fn=<MmBackward0>)
@@ -126,17 +126,13 @@ class ModuleMap(Module):
         Let's look at the metadata
 
         >>> tensor[0]
-        TensorBlock
-            samples (2): ['system', 'atom']
-            components (): []
-            properties (3): ['properties']
-            gradients: None
+        TensorBlock with shape (2, 3)
+            samples: [system, atom]
+            properties: [properties]
         >>> out[0]
-        TensorBlock
-            samples (2): ['system', 'atom']
-            components (): []
-            properties (1): ['_']
-            gradients: None
+        TensorBlock with shape (2, 1)
+            samples: [system, atom]
+            properties: [_]
 
         It got completely lost because we cannot know in general what the output is.
         You can add in the initialization of the ModuleMap a TensorMap that contains

@@ -48,17 +48,14 @@ class TensorBlock:
     ...     properties=Labels("properties", np.array([[0], [1], [2]])),
     ... )
     >>> block
-    TensorBlock
-        samples (2): ['samples']
-        components (): []
-        properties (3): ['properties']
-        gradients: None
+    TensorBlock with shape (2, 3)
+        samples: [samples]
+        properties: [properties]
     >>> block.samples
-    Labels(
+    Labels
         samples
            4
            2
-    )
     >>> block.values[block.samples.position([2])]
     array([3, 5, 6])
     """
@@ -254,28 +251,39 @@ class TensorBlock:
             # The block has been released
             return "TensorBlock(<empty>)"
 
+        def _format_names(names):
+            return "[" + ", ".join(names) + "]"
+
         if len(self._gradient_parameters) != 0:
-            s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
+            s = (
+                f"TensorBlock gradient for "
+                f"'{'/'.join(self._gradient_parameters)}', "
+                f"with shape {tuple(self.values.shape)}\n"
+            )
         else:
-            s = "TensorBlock\n"
-        s += f"    samples ({len(self.samples)}): {str(list(self.samples.names))}"
-        s += "\n"
-        s += "    components ("
-        s += ", ".join([str(len(c)) for c in self.components])
-        s += "): ["
-        for ic in self.components:
-            for name in ic.names[:]:
-                s += "'" + name + "', "
-        if len(self.components) > 0:
-            s = s[:-2]
-        s += "]\n"
-        s += f"    properties ({len(self.properties)}): "
-        s += f"{str(list(self.properties.names))}\n"
-        s += "    gradients: "
-        if len(self.gradients_list()) > 0:
-            s += f"{str(list(self.gradients_list()))}"
-        else:
-            s += "None"
+            s = f"TensorBlock with shape {tuple(self.values.shape)}\n"
+
+        s += f"    samples: {_format_names(self.samples.names)}\n"
+
+        component_names = []
+        for component in self.components:
+            component_names.extend(component.names)
+        if len(component_names) != 0:
+            s += f"    components: {_format_names(component_names)}\n"
+
+        s += f"    properties: {_format_names(self.properties.names)}"
+
+        gradients = self.gradients_list()
+        if len(gradients) != 0:
+            s += "\n\n    gradients:"
+            max_len = max(len(p) for p in gradients)
+            for parameter in gradients:
+                gradient = self.gradient(parameter)
+                grad_shape = tuple(int(v) for v in gradient.values.shape)
+                s += (
+                    f"\n        {parameter.ljust(max_len)} "
+                    f"=> TensorBlock with shape {grad_shape}"
+                )
 
         return s
 
@@ -398,19 +406,16 @@ class TensorBlock:
 
         >>> positions_gradient = block.gradient("positions")
         >>> print(positions_gradient)
-        Gradient TensorBlock ('positions')
-            samples (2): ['sample', 'atom']
-            components (3, 1): ['direction', 'component']
-            properties (5): ['property']
-            gradients: None
-
+        TensorBlock gradient for 'positions', with shape (2, 3, 1, 5)
+            samples: [sample, atom]
+            components: [direction, component]
+            properties: [property]
         >>> cell_gradient = block.gradient("cell")
         >>> print(cell_gradient)
-        Gradient TensorBlock ('cell')
-            samples (2): ['sample']
-            components (3, 3, 1): ['direction_1', 'direction_2', 'component']
-            properties (5): ['property']
-            gradients: None
+        TensorBlock gradient for 'cell', with shape (2, 3, 3, 1, 5)
+            samples: [sample]
+            components: [direction_1, direction_2, component]
+            properties: [property]
         """
         gradient_block = ctypes.POINTER(mts_block_t)()
 
@@ -463,11 +468,13 @@ class TensorBlock:
         ... )
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
-        TensorBlock
-            samples (3): ['system']
-            components (1): ['component']
-            properties (1): ['property']
-            gradients: ['parameter']
+        TensorBlock with shape (3, 1, 1)
+            samples: [system]
+            components: [component]
+            properties: [property]
+
+            gradients:
+                parameter => TensorBlock with shape (2, 1, 1)
         """
         if self._parent is not None:
             raise ValueError(

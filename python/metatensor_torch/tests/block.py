@@ -49,12 +49,9 @@ def test_repr():
         properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
     )
 
-    expected = """TensorBlock
-    samples (3): ['s']
-    components (): []
-    properties (2): ['p']
-    gradients: None
-"""
+    expected = """TensorBlock with shape (3, 2)
+    samples: [s]
+    properties: [p]"""
 
     assert str(block) == expected
 
@@ -93,21 +90,20 @@ def test_repr():
         ),
     )
 
-    expected = """TensorBlock
-    samples (3): ['s_1', 's_2']
-    components (3, 1, 2): ['c_1', 'c_2', 'c_3']
-    properties (5): ['p_1', 'p_2']
-    gradients: ['g']
-"""
+    expected = """TensorBlock with shape (3, 3, 1, 2, 5)
+    samples: [s_1, s_2]
+    components: [c_1, c_2, c_3]
+    properties: [p_1, p_2]
+
+    gradients:
+        g => TensorBlock with shape (3, 3, 1, 2, 5)"""
     assert str(block) == expected
     assert repr(block) == expected
 
-    expected = """Gradient TensorBlock ('g')
-    samples (3): ['sample', 'g']
-    components (3, 1, 2): ['c_1', 'c_2', 'c_3']
-    properties (5): ['p_1', 'p_2']
-    gradients: None
-"""
+    expected = """TensorBlock gradient for 'g', with shape (3, 3, 1, 2, 5)
+    samples: [sample, g]
+    components: [c_1, c_2, c_3]
+    properties: [p_1, p_2]"""
     assert str(block.gradient("g")) == expected
     assert repr(block.gradient("g")) == expected
 

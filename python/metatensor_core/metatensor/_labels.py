@@ -223,12 +223,11 @@ class Labels:
     ...     values=np.array([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
     ... )
     >>> labels
-    Labels(
+    Labels
         system  atom  center_type
           0      1         8
           0      2         1
           0      5         1
-    )
     >>> labels.names
     ['system', 'atom', 'center_type']
     >>> print(labels.values)
@@ -437,7 +436,7 @@ class Labels:
             return "Labels(<empty>)"
 
         printed = self.print(4, 3)
-        return f"Labels(\n   {printed}\n)"
+        return f"Labels\n   {printed}"
 
     def __repr__(self) -> str:
         if not self._ptr:
@@ -445,7 +444,7 @@ class Labels:
             return "Labels(<empty>)"
 
         printed = self.print(-1, 3)
-        return f"Labels(\n   {printed}\n)"
+        return f"Labels\n   {printed}"
 
     def __len__(self) -> int:
         """number of entries in these labels"""
@@ -625,15 +624,13 @@ class Labels:
         >>> from metatensor import Labels
         >>> label = Labels("foo", np.array([[42]]))
         >>> label
-        Labels(
+        Labels
             foo
             42
-        )
         >>> label.append(name="bar", values=np.array([10]))
-        Labels(
+        Labels
             foo  bar
             42   10
-        )
         """
         return self.insert(index=len(self), name=name, values=values)
 
@@ -648,15 +645,13 @@ class Labels:
         >>> from metatensor import Labels
         >>> label = Labels("foo", np.array([[42]]))
         >>> label
-        Labels(
+        Labels
             foo
             42
-        )
         >>> label.insert(0, name="bar", values=np.array([10]))
-        Labels(
+        Labels
             bar  foo
             10   42
-        )
         """
         new_names = self.names.copy()
         new_names.insert(index, name)
@@ -690,15 +685,13 @@ class Labels:
         >>> from metatensor import Labels
         >>> label = Labels(["foo", "bar", "baz"], np.array([[42, 10, 3]]))
         >>> label
-        Labels(
+        Labels
             foo  bar  baz
             42   10    3
-        )
         >>> label.permute([2, 0, 1])
-        Labels(
+        Labels
             baz  foo  bar
              3   42   10
-        )
         """
         if len(dimensions_indexes) != len(self.names):
             raise ValueError(
@@ -723,26 +716,23 @@ class Labels:
         >>> from metatensor import Labels
         >>> label = Labels(["foo", "bar"], np.array([[42, 10]]))
         >>> label
-        Labels(
+        Labels
             foo  bar
             42   10
-        )
         >>> label.remove(name="bar")
-        Labels(
+        Labels
             foo
             42
-        )
 
         If the new :py:class:`Labels` is not unique an error is raised.
 
         >>> from metatensor import MetatensorError
         >>> label = Labels(["foo", "bar"], np.array([[42, 10], [42, 11]]))
         >>> label
-        Labels(
+        Labels
             foo  bar
             42   10
             42   11
-        )
         >>> try:
         ...     label.remove(name="bar")
         ... except MetatensorError as e:
@@ -771,15 +761,13 @@ class Labels:
         >>> from metatensor import Labels
         >>> label = Labels("foo", np.array([[42]]))
         >>> label
-        Labels(
+        Labels
             foo
             42
-        )
         >>> label.rename("foo", "bar")
-        Labels(
+        Labels
             bar
             42
-        )
         """
 
         if old not in self.names:
@@ -888,11 +876,10 @@ class Labels:
         ...     names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2], [2, 1]])
         ... )
         >>> first.difference(second)
-        Labels(
+        Labels
             a  b
             0  1
             2  2
-        )
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_difference(
@@ -926,11 +913,10 @@ class Labels:
         ... )
         >>> difference, mapping_1 = first.difference_and_mapping(second)
         >>> difference
-        Labels(
+        Labels
             a  b
             0  1
             2  2
-        )
         >>> print(mapping_1)
         [ 0 -1 -1  1]
         """
@@ -960,13 +946,12 @@ class Labels:
         >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
         >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
         >>> first.union(second)
-        Labels(
+        Labels
             a  b
             0  1
             1  2
             0  3
             1  3
-        )
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_union(
@@ -1002,13 +987,12 @@ class Labels:
         >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
         >>> union, mapping_1, mapping_2 = first.union_and_mapping(second)
         >>> union
-        Labels(
+        Labels
             a  b
             0  1
             1  2
             0  3
             1  3
-        )
         >>> print(mapping_1)
         [0 1 2]
         >>> print(mapping_2)
@@ -1043,11 +1027,10 @@ class Labels:
         >>> first = Labels(names=["a", "b"], values=np.array([[0, 1], [1, 2], [0, 3]]))
         >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
         >>> first.intersection(second)
-        Labels(
+        Labels
             a  b
             1  2
             0  3
-        )
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_intersection(
@@ -1084,11 +1067,10 @@ class Labels:
         >>> second = Labels(names=["a", "b"], values=np.array([[0, 3], [1, 3], [1, 2]]))
         >>> intersection, mapping_1, mapping_2 = first.intersection_and_mapping(second)
         >>> intersection
-        Labels(
+        Labels
             a  b
             1  2
             0  3
-        )
         >>> print(mapping_1)
         [-1  0  1]
         >>> print(mapping_2)

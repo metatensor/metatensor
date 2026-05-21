@@ -78,17 +78,14 @@ def dot(tensor_1: TensorMap, tensor_2: TensorMap) -> TensorMap:
     >>> B = TensorMap(keys, [block_2])
     >>> tensor_dot = dot(A, B)
     >>> print(tensor_dot.block(0))
-    TensorBlock
-        samples (2): ['system']
-        components (): []
-        properties (2): ['system']
-        gradients: None
+    TensorBlock with shape (2, 2)
+        samples: [system]
+        properties: [system]
     >>> print(tensor_dot.block(0).samples)
-    Labels(
+    Labels
         system
           0
           1
-    )
     >>> print(tensor_dot.block(0).values)
     [[14 32]
      [32 77]]

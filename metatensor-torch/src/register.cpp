@@ -281,7 +281,7 @@ TORCH_LIBRARY(metatensor, m) {
         )
         .def("__len__", [](const TensorMap& self){ return self->keys()->count(); })
         .def("__repr__", [](const TensorMap& self){ return self->print(-1); })
-        .def("__str__", [](const TensorMap& self){ return self->print(4); })
+        .def("__str__", [](const TensorMap& self){ return self->print(7); })
         .def("__getitem__", &TensorMapHolder::block_torch, DOCSTRING,
             {torch::arg("selection")}
         )

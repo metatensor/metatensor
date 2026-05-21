@@ -118,12 +118,11 @@ class Labels:
     ...     values=torch.tensor([(0, 1, 8), (0, 2, 1), (0, 5, 1)]),
     ... )
     >>> print(labels)
-    Labels(
+    Labels
         system  atom  type
           0      1     8
           0      2     1
           0      5     1
-    )
     >>> labels.names
     ['system', 'atom', 'type']
     >>> labels.values
@@ -394,15 +393,13 @@ class Labels:
         >>> from metatensor.torch import Labels
         >>> label = Labels("foo", torch.tensor([[42]]))
         >>> print(label)
-        Labels(
+        Labels
             foo
             42
-        )
         >>> print(label.append(name="bar", values=torch.tensor([10])))
-        Labels(
+        Labels
             foo  bar
             42   10
-        )
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -417,15 +414,13 @@ class Labels:
         >>> from metatensor.torch import Labels
         >>> label = Labels("foo", torch.tensor([[42]]))
         >>> print(label)
-        Labels(
+        Labels
             foo
             42
-        )
         >>> print(label.insert(0, name="bar", values=torch.tensor([10])))
-        Labels(
+        Labels
             bar  foo
             10   42
-        )
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -442,15 +437,13 @@ class Labels:
         >>> from metatensor.torch import Labels
         >>> label = Labels(["foo", "bar", "baz"], torch.tensor([[42, 10, 3]]))
         >>> print(label)
-        Labels(
+        Labels
             foo  bar  baz
             42   10    3
-        )
         >>> print(label.permute([2, 0, 1]))
-        Labels(
+        Labels
             baz  foo  bar
              3   42   10
-        )
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -467,25 +460,22 @@ class Labels:
         >>> from metatensor.torch import Labels
         >>> label = Labels(["foo", "bar"], torch.tensor([[42, 10]]))
         >>> print(label)
-        Labels(
+        Labels
             foo  bar
             42   10
-        )
         >>> print(label.remove(name="bar"))
-        Labels(
+        Labels
             foo
             42
-        )
 
         If the new :py:class:`Labels` is not unique an error is raised.
 
         >>> label = Labels(["foo", "bar"], torch.tensor([[42, 10], [42, 11]]))
         >>> print(label)
-        Labels(
+        Labels
             foo  bar
             42   10
             42   11
-        )
         >>> try:
         ...     label.remove(name="bar")
         ... except RuntimeError as e:
@@ -505,15 +495,13 @@ class Labels:
         >>> from metatensor.torch import Labels
         >>> label = Labels("foo", torch.tensor([[42]]))
         >>> print(label)
-        Labels(
+        Labels
             foo
             42
-        )
         >>> print(label.rename("foo", "bar"))
-        Labels(
+        Labels
             bar
             42
-        )
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -861,12 +849,13 @@ class TensorBlock:
         ... )
         >>> block.add_gradient("parameter", gradient)
         >>> print(block)
-        TensorBlock
-            samples (3): ['system']
-            components (1): ['component']
-            properties (1): ['property']
-            gradients: ['parameter']
+        TensorBlock with shape (3, 1, 1)
+            samples: [system]
+            components: [component]
+            properties: [property]
         <BLANKLINE>
+            gradients:
+                parameter => TensorBlock with shape (2, 1, 1)
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -911,20 +900,16 @@ class TensorBlock:
 
         >>> positions_gradient = block.gradient("positions")
         >>> print(positions_gradient)
-        Gradient TensorBlock ('positions')
-            samples (2): ['sample', 'atom']
-            components (3, 1): ['direction', 'component']
-            properties (5): ['property']
-            gradients: None
-        <BLANKLINE>
+        TensorBlock gradient for 'positions', with shape (2, 3, 1, 5)
+            samples: [sample, atom]
+            components: [direction, component]
+            properties: [property]
         >>> cell_gradient = block.gradient("cell")
         >>> print(cell_gradient)
-        Gradient TensorBlock ('cell')
-            samples (2): ['sample']
-            components (3, 3, 1): ['direction_1', 'direction_2', 'component']
-            properties (5): ['property']
-            gradients: None
-        <BLANKLINE>
+        TensorBlock gradient for 'cell', with shape (2, 3, 3, 1, 5)
+            samples: [sample]
+            components: [direction_1, direction_2, component]
+            properties: [property]
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 

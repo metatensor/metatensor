@@ -40,53 +40,56 @@ def test_keys(tensor):
 
 def test_print(tensor):
     expected = """TensorMap with 4 blocks
-keys: key_1  key_2
-        0      0
-        1      0
-        2      2
-        2      3"""
+     key_1  key_2
+       0      0   => TensorBlock with shape (3, 1, 1)
+       1      0   => TensorBlock with shape (3, 1, 3)
+       2      2   => TensorBlock with shape (4, 3, 1)
+       2      3   => TensorBlock with shape (4, 3, 1)"""
     assert expected == str(tensor)
-    assert expected == tensor.print(6)
     assert repr(tensor) == expected
 
 
 def test_print_large(large_tensor):
     expected = """TensorMap with 12 blocks
-keys: key_1  key_2
-        0      0
-        1      0
-          ...
-        2      5
-        3      5"""
+     key_1  key_2
+       0      0   => TensorBlock with shape (3, 1, 1)
+       1      0   => TensorBlock with shape (3, 1, 3)
+       2      2   => TensorBlock with shape (4, 3, 1)
+       2      3   => TensorBlock with shape (4, 3, 1)
+       0      4   => TensorBlock with shape (4, 3, 1)
+       1      4   => TensorBlock with shape (4, 3, 1)
+       2      4   => TensorBlock with shape (4, 3, 1)
+                 ..."""
     assert expected == str(large_tensor)
 
     expected = """TensorMap with 12 blocks
-keys: key_1  key_2
-        0      0
-        1      0
-        2      2
-          ...
-        1      5
-        2      5
-        3      5"""
-    assert expected == large_tensor.print(6)
+     key_1  key_2
+       0      0   => TensorBlock with shape (3, 1, 1)
+       1      0   => TensorBlock with shape (3, 1, 3)
+       2      2   => TensorBlock with shape (4, 3, 1)
+       2      3   => TensorBlock with shape (4, 3, 1)
+       0      4   => TensorBlock with shape (4, 3, 1)
+       1      4   => TensorBlock with shape (4, 3, 1)
+       2      4   => TensorBlock with shape (4, 3, 1)
+       3      4   => TensorBlock with shape (4, 3, 1)
+       0      5   => TensorBlock with shape (4, 3, 1)
+       1      5   => TensorBlock with shape (4, 3, 1)
+       2      5   => TensorBlock with shape (4, 3, 1)
+       3      5   => TensorBlock with shape (4, 3, 1)"""
+    assert expected == repr(large_tensor)
 
     expected = """TensorMap with 12 blocks
-keys: key_1  key_2
-        0      0
-        1      0
-        2      2
-        2      3
-        0      4
-        1      4
-        2      4
-        3      4
-        0      5
-        1      5
-        2      5
-        3      5"""
-
-    assert repr(large_tensor) == expected
+     key_1  key_2
+       0      0   => TensorBlock with shape (3, 1, 1)
+       1      0   => TensorBlock with shape (3, 1, 3)
+       2      2   => TensorBlock with shape (4, 3, 1)
+       2      3   => TensorBlock with shape (4, 3, 1)
+       0      4   => TensorBlock with shape (4, 3, 1)
+       1      4   => TensorBlock with shape (4, 3, 1)
+       2      4   => TensorBlock with shape (4, 3, 1)
+       3      4   => TensorBlock with shape (4, 3, 1)
+                 ..."""
+    assert expected == large_tensor.print(8)
 
 
 def test_labels_names(tensor):

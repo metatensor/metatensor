@@ -1,5 +1,6 @@
 #include <metatensor.hpp>
 #include <string>
+#include <vector>
 
 #include "metatensor/torch/tensor.hpp"
 #include "metatensor/torch/array.hpp"
@@ -541,9 +542,97 @@ TensorMap TensorMapHolder::to_positional(
 std::string TensorMapHolder::print(int64_t max_keys) const {
     std::ostringstream output;
     auto keys = this->keys();
-    output << "TensorMap with " << keys->count() << " blocks\n";
-    output << "keys:" << keys->print(max_keys, 5);
-    return output.str();
+
+    int64_t n_blocks_to_print = 0;
+    if (max_keys < 0) {
+        n_blocks_to_print = keys->count();
+    } else {
+        n_blocks_to_print = std::min(max_keys, keys->count());
+    }
+
+    auto key_count = keys->count();
+    output << "TensorMap with " << key_count << " ";
+    if (key_count == 1) {
+        output << "block\n";
+    } else {
+        output << "blocks\n";
+    }
+
+    auto names = keys->names();
+    auto key_values = keys->values().to(torch::kCPU).contiguous();
+    int64_t n_dimensions = key_values.size(1);
+
+    // determine column widths (at least name length + 2)
+    std::vector<size_t> widths(n_dimensions);
+    for (int64_t j = 0; j < n_dimensions; j++) {
+        widths[j] = names[j].size() + 2;
+    }
+
+    // collect key value strings
+    std::vector<std::vector<std::string>> key_strings;
+    for (int64_t i = 0; i < n_blocks_to_print; i++) {
+        std::vector<std::string> row;
+        for (int64_t j = 0; j < n_dimensions; j++) {
+            auto s = std::to_string(key_values[i][j].item<int32_t>());
+            widths[j] = std::max(widths[j], s.size() + 2);
+            row.push_back(s);
+        }
+        key_strings.push_back(row);
+    }
+
+    // helper to center a string in a column
+    auto print_center = [&](std::ostringstream& out, const std::string& s, size_t width, bool last) {
+        size_t delta = width - s.size();
+        size_t n_before = delta / 2;
+        size_t n_after = delta - n_before;
+        if (last) {
+            out << std::string(n_before, ' ') << s;
+        } else {
+            out << std::string(n_before, ' ') << s << std::string(n_after, ' ');
+        }
+    };
+
+    // header
+    output << "    ";
+    for (int64_t j = 0; j < n_dimensions; j++) {
+        print_center(output, names[j], widths[j], j == n_dimensions - 1);
+    }
+    output << "\n";
+
+    // each key row
+    for (int64_t i = 0; i < n_blocks_to_print; i++) {
+        output << "    ";
+        for (int64_t j = 0; j < n_dimensions; j++) {
+            // use last=false so all columns get full padding, keeping
+            // the => arrows aligned across rows with different value widths
+            print_center(output, key_strings[i][j], widths[j], false);
+        }
+        output << "=> TensorBlock with shape (";
+
+        auto block = const_cast<metatensor::TensorMap&>(this->tensor_).block_by_id(i);
+        auto shape = block.values_shape();
+        for (size_t axis = 0; axis < shape.size(); axis++) {
+            if (axis != 0) {
+                output << ", ";
+            }
+            output << shape[axis];
+        }
+        output << ")\n";
+    }
+
+    if (n_blocks_to_print < key_count) {
+        output << "   ";
+        for (int64_t j = 0; j < n_dimensions; j++) {
+            print_center(output, "", widths[j], false);
+        }
+        output << "...\n";
+    }
+
+    auto output_string = output.str();
+    if (!output_string.empty() && output_string.back() == '\n') {
+        output_string.pop_back();
+    }
+    return output_string;
 }
 
 
