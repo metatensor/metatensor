@@ -92,10 +92,14 @@ except ImportError:
     pass
 
 
-from . import _module  # noqa: E402
+from . import (  # noqa: E402
+    _jupyter,
+    _module,
+)
 
 
 _module.patch_torch_jit_module()
+_jupyter.register_ipython_html_formatter()
 
 __all__ = [
     "Labels",

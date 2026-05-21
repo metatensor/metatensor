@@ -15,6 +15,7 @@ from ._c_api import (
 )
 from ._c_lib import _get_library
 from ._data import Array, Device
+from ._html import labels_html
 from ._status import check_pointer, check_status
 
 
@@ -90,6 +91,22 @@ class LabelsEntry:
 
     def __repr__(self) -> str:
         return "LabelsEntry" + self.print()
+
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks."""
+        from metatensor._html import labels_html
+
+        html = labels_html(
+            self._names,
+            self._values[None, :],
+            default_visible_entries=1,
+            max_html_entries=1,
+        )
+        return (
+            "<div><strong>metatensor.LabelsEntry</strong></div>"
+            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+            + html
+        )
 
     def __len__(self) -> int:
         """number of dimensions in this labels entry"""
@@ -445,6 +462,21 @@ class Labels:
 
         printed = self.print(-1, 3)
         return f"Labels\n   {printed}"
+
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks."""
+        html = labels_html(
+            self.names,
+            self.values,
+            default_visible_entries=7,
+            max_html_entries=200,
+        )
+
+        return (
+            "<div><strong>metatensor.Labels</strong></div>"
+            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+            + html
+        )
 
     def __len__(self) -> int:
         """number of entries in these labels"""

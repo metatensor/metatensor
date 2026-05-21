@@ -287,6 +287,46 @@ class TensorBlock:
 
         return s
 
+    def _repr_html_(self) -> str:
+        """HTML representation for Jupyter notebooks."""
+        if not self._ptr:
+            # The block has been released
+            return "TensorBlock(<empty>)"
+
+        from metatensor._html import TensorBlockData, block_html
+
+        def _block_data(block):
+            gradients = {}
+            for parameter in block.gradients_list():
+                grad = block.gradient(parameter)
+                gradients[parameter] = _block_data(grad)
+
+            return TensorBlockData(
+                values_shape=tuple(block.values.shape),
+                samples=(block.samples.names, block.samples.values),
+                components=[(c.names, c.values) for c in block.components],
+                properties=(block.properties.names, block.properties.values),
+                gradients=gradients,
+            )
+
+        data = _block_data(self)
+
+        body = block_html(data, module="metatensor")
+
+        class_name = "metatensor.TensorBlock"
+        if len(self._gradient_parameters) != 0:
+            gradient_for = "/".join(self._gradient_parameters)
+            rest = (
+                f" gradient for '{gradient_for}', with shape {tuple(self.values.shape)}"
+            )
+        else:
+            rest = f" with shape {tuple(self.values.shape)}"
+
+        header = f"<div><strong>{class_name}</strong>{rest}</div>"
+        hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+
+        return header + hr + body
+
     def __eq__(self, other):
         from metatensor.operations import equal_block
 
