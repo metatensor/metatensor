@@ -1,10 +1,13 @@
+use std::fs::File;
 use std::io::BufReader;
 
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 
+use dlpk::sys::{DLDataType, DLDataTypeCode};
+
 use super::npy_header::{Header, DataType};
-use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
-use crate::{Error, Labels};
+use super::{check_for_extra_bytes, native_endian_prefix, CountingReader, Endianness, PathOrBuffer};
+use crate::{Error, Labels, mts_array_t};
 
 
 /// Check if the file/buffer in `data` looks like it could contain serialized
@@ -132,4 +135,149 @@ fn check_type_descriptor(desc: &DataType) -> Result<(Vec<&str>, Endianness), Err
     }
 
     return Ok((names, endianness.expect("failed to find endianness")));
+}
+
+
+fn labels_from_mmap_header<F>(
+    display_path: &str,
+    header: Header,
+    data_offset: usize,
+    create_array: F,
+) -> Result<Labels, Error>
+where
+    F: FnOnce(Vec<usize>, DLDataType, usize) -> Result<mts_array_t, Error>,
+{
+    if header.fortran_order {
+        return Err(Error::Serialization(
+            "Labels can not be loaded from fortran-order arrays".into(),
+        ));
+    }
+    if header.shape.len() != 1 {
+        return Err(Error::Serialization(
+            "Expected a 1-D array when loading Labels".into(),
+        ));
+    }
+
+    let (names, endianness) = check_type_descriptor(&header.type_descriptor)?;
+    let native_ok = match endianness {
+        Endianness::Native => true,
+        Endianness::Little => cfg!(target_endian = "little"),
+        Endianness::Big => cfg!(target_endian = "big"),
+    };
+    if !native_ok {
+        return Err(Error::Serialization(format!(
+            "Labels mmap loading requires native byte order, but '{}' uses the opposite endianness",
+            display_path
+        )));
+    }
+
+    let n_entries = header.shape[0];
+    let n_dimensions = names.len();
+    let shape = vec![n_entries, n_dimensions];
+    let dl_dtype = DLDataType { code: DLDataTypeCode::kDLInt, bits: 32, lanes: 1 };
+
+    let owned_names: Vec<String> = names.iter().map(|s| (*s).to_string()).collect();
+
+    let array = create_array(shape, dl_dtype, data_offset)?;
+
+    let name_refs: Vec<&str> = owned_names.iter().map(String::as_str).collect();
+    Labels::new(&name_refs, array)
+}
+
+pub(crate) fn load_labels_mmap_from_npy_entry<R, F>(
+    archive: &mut zip::ZipArchive<R>,
+    path: &str,
+    create_array: &F,
+) -> Result<Labels, Error>
+where
+    R: std::io::Read + std::io::Seek,
+    F: Fn(Vec<usize>, DLDataType, usize) -> Result<mts_array_t, Error>,
+{
+    let mut entry = archive.by_name(path).map_err(|e| (path.to_string(), e))?;
+
+    if entry.compression() != zip::CompressionMethod::Stored {
+        return Err(Error::Serialization(format!(
+            "entry '{}' uses compression {:?}, but mmap label loading requires STORED entries",
+            path, entry.compression()
+        )));
+    }
+
+    let entry_size = entry.size() as usize;
+    let data_start = entry.data_start() as usize;
+
+    let mut counting = CountingReader { inner: &mut entry, bytes_read: 0 };
+    let header = Header::from_reader(&mut counting).map_err(|e| {
+        Error::Serialization(format!("invalid NPY header in '{}': {}", path, e))
+    })?;
+    let header_len = counting.bytes_read;
+
+    if header_len > entry_size {
+        return Err(Error::Serialization(format!(
+            "entry '{}' has an NPY header longer than the ZIP entry",
+            path
+        )));
+    }
+
+    let n_dimensions = match &header.type_descriptor {
+        DataType::Compound(fields) => fields.len(),
+        DataType::Scalar(_) => {
+            return Err(Error::Serialization(format!(
+                "expected structured Labels dtype in '{}'",
+                path
+            )));
+        }
+    };
+    let expected_payload_len = header.shape.iter().try_fold(4 * n_dimensions, |acc, &dim| {
+        acc.checked_mul(dim)
+    }).ok_or_else(|| {
+        Error::Serialization(format!(
+            "entry '{}' has overflowing Labels payload length",
+            path
+        ))
+    })?;
+
+    let payload_len = entry_size - header_len;
+    if payload_len != expected_payload_len {
+        return Err(Error::Serialization(format!(
+            "entry '{}' payload length is {}, but shape {:?} and {} label dimensions require {} bytes",
+            path, payload_len, header.shape, n_dimensions, expected_payload_len
+        )));
+    }
+
+    let data_offset = data_start + header_len;
+    drop(entry);
+
+    labels_from_mmap_header(path, header, data_offset, |shape, dtype, file_offset| {
+        create_array(shape, dtype, file_offset)
+    })
+}
+
+/// Load `Labels` from `path`, using a callback to create the entry-data array
+/// from its file offset. The callback receives `(shape, dtype, file_offset)`
+/// for the int32 entry data and returns the `mts_array_t` backing the returned
+/// `Labels`.
+///
+/// The shape passed to the callback is always `[n_entries,
+/// n_dimensions]` (the layout `Labels` expects), and the dtype is
+/// always int32. The byte offset points at the first int32 of the
+/// flat row-major entry array within the file.
+///
+/// # File format constraints
+/// - The file must be a single `.mts` artifact written by `mts_labels_save`
+///   (structured `<i4` / `>i4` dtype, 1-D shape).
+/// - Numeric data must use native byte order so callers can mmap it
+///   directly.
+pub fn load_labels_mmap<F>(path: &str, create_array: F) -> Result<Labels, Error>
+where
+    F: FnOnce(Vec<usize>, DLDataType, usize) -> Result<mts_array_t, Error>,
+{
+    let mut file = BufReader::new(File::open(path)?);
+    let mut counting = CountingReader { inner: &mut file, bytes_read: 0 };
+    let header = Header::from_reader(&mut counting).map_err(|e| {
+        Error::Serialization(format!("invalid NPY header for Labels in '{}': {}", path, e))
+    })?;
+    let data_offset = counting.bytes_read;
+    drop(file);
+
+    labels_from_mmap_header(path, header, data_offset, create_array)
 }

@@ -2,6 +2,7 @@ mod npy_header;
 
 mod labels;
 pub use self::labels::load_labels;
+pub use self::labels::load_labels_mmap;
 pub use self::labels::save_labels;
 pub use self::labels::looks_like_labels_data;
 
@@ -15,8 +16,33 @@ pub use self::tensor::load;
 pub use self::tensor::save;
 pub use self::tensor::looks_like_tensormap_data;
 
+mod mmap;
+pub use self::mmap::{load_mmap, load_block_mmap};
+
 
 use crate::Error;
+
+const NPY_DATA_ALIGNMENT: u16 = 16;
+
+pub(crate) fn stored_zip_options() -> zip::write::FileOptions {
+    zip::write::FileOptions::default()
+        .compression_method(zip::CompressionMethod::Stored)
+        .large_file(true)
+        .last_modified_time(
+            zip::DateTime::from_date_and_time(2000, 1, 1, 0, 0, 0)
+                .expect("invalid datetime")
+        )
+}
+
+pub(crate) fn start_npy_zip_file<W: std::io::Write + std::io::Seek>(
+    archive: &mut zip::ZipWriter<W>,
+    path: &str,
+) -> Result<(), Error> {
+    archive
+        .start_file_aligned(path, stored_zip_options(), NPY_DATA_ALIGNMENT)
+        .map(|_| ())
+        .map_err(|e| Error::from((path.to_string(), e)))
+}
 
 pub trait ReadAndSeek: std::io::Read + std::io::Seek {}
 impl<T: std::io::Read + std::io::Seek> ReadAndSeek for T {}
@@ -46,5 +72,217 @@ fn check_for_extra_bytes<R: std::io::Read>(reader: &mut R) -> Result<(), Error> 
         Ok(())
     } else {
         Err(Error::Serialization(format!("found {} extra bytes after the expected end of data", extra)))
+    }
+}
+
+
+/// `std::io::Read` wrapper that counts bytes consumed; used by
+/// `parse_stored_npy_entry` and `labels::load_labels_mmap` to compute
+/// the NPY header byte length without re-seeking the underlying
+/// reader.
+pub(crate) struct CountingReader<'a, R: ?Sized> {
+    pub(crate) inner: &'a mut R,
+    pub(crate) bytes_read: usize,
+}
+
+impl<'a, R: std::io::Read + ?Sized> std::io::Read for CountingReader<'a, R> {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        let n = self.inner.read(buf)?;
+        self.bytes_read += n;
+        Ok(n)
+    }
+}
+
+/// Parse a STORED (uncompressed) NPY entry inside a ZIP archive and
+/// return the array shape, DLPack dtype, and the byte offset of the
+/// raw element data within the file. Reads only the NPY header bytes
+/// (typically a few hundred); the element data itself is left for the
+/// caller to fetch via mmap, pread, or any other strategy.
+///
+/// On-disk format checks (STORED compression, native byte order,
+/// non-fortran order, non-structured dtype, exact payload length) are
+/// identical for all direct file-offset loaders.
+pub(crate) fn parse_stored_npy_entry<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    path: &str,
+) -> Result<(Vec<usize>, dlpk::sys::DLDataType, usize), Error> {
+    use crate::io::npy_header::{DataType, Header};
+    use crate::io::block::npy_descr_to_dtype;
+
+    let mut entry = archive.by_name(path).map_err(|e| (path.to_string(), e))?;
+
+    if entry.compression() != zip::CompressionMethod::Stored {
+        return Err(Error::Serialization(format!(
+            "entry '{}' uses compression {:?}, but direct-file-offset NPY parsing requires STORED entries",
+            path, entry.compression()
+        )));
+    }
+
+    let entry_size = entry.size() as usize;
+    let data_start = entry.data_start() as usize;
+
+    // Read the NPY header straight from the ZIP entry stream. The
+    // counting wrapper records the byte length so we can compute the
+    // element-data offset without a second pass through the file.
+    let mut counting = CountingReader { inner: &mut entry, bytes_read: 0 };
+    let header = Header::from_reader(&mut counting).map_err(|e| {
+        Error::Serialization(format!("invalid NPY header in '{}': {}", path, e))
+    })?;
+    let header_len = counting.bytes_read;
+    drop(entry);
+
+    if header.fortran_order {
+        return Err(Error::Serialization(format!(
+            "fortran-order arrays are not supported (in '{}')",
+            path
+        )));
+    }
+
+    let descr = match &header.type_descriptor {
+        DataType::Scalar(s) => s.as_str(),
+        _ => {
+            return Err(Error::Serialization(format!(
+                "structured arrays are not supported (in '{}')",
+                path
+            )));
+        }
+    };
+
+    let (code, bits, endian) = npy_descr_to_dtype(descr)?;
+
+    let native_ok = match endian {
+        Endianness::Native => true,
+        Endianness::Little => cfg!(target_endian = "little"),
+        Endianness::Big => cfg!(target_endian = "big"),
+    };
+    if !native_ok {
+        return Err(Error::Serialization(format!(
+            "direct-file-offset NPY parsing requires native byte order, but entry '{}' uses '{}'",
+            path, descr
+        )));
+    }
+
+    let dl_dtype = dlpk::sys::DLDataType { code, bits, lanes: 1 };
+    if header_len > entry_size {
+        return Err(Error::Serialization(format!(
+            "entry '{}' has an NPY header longer than the ZIP entry",
+            path
+        )));
+    }
+
+    let elem_size = (bits as usize / 8)
+        .checked_mul(dl_dtype.lanes as usize)
+        .ok_or_else(|| {
+            Error::Serialization(format!("entry '{}' has overflowing dtype size", path))
+        })?;
+
+    let expected_payload_len = header.shape.iter().try_fold(elem_size, |acc, &dim| {
+        acc.checked_mul(dim)
+    }).ok_or_else(|| {
+        Error::Serialization(format!(
+            "entry '{}' has overflowing shape/dtype payload length",
+            path
+        ))
+    })?;
+
+    let payload_len = entry_size - header_len;
+    if payload_len != expected_payload_len {
+        return Err(Error::Serialization(format!(
+            "entry '{}' payload length is {}, but shape {:?} and dtype bits={} lanes={} require {} bytes",
+            path, payload_len, header.shape, dl_dtype.bits, dl_dtype.lanes, expected_payload_len
+        )));
+    }
+
+    let raw_data_offset = data_start + header_len;
+
+    Ok((header.shape, dl_dtype, raw_data_offset))
+}
+
+
+/// Enumerate the gradient parameter names under a given prefix in a
+/// single pass through the archive's filename list. Used by mmap.rs
+/// and partial.rs.
+pub(crate) fn discover_gradient_parameters<R: std::io::Read + std::io::Seek>(
+    archive: &zip::ZipArchive<R>,
+    prefix: &str,
+) -> std::collections::HashSet<String> {
+    let mut parameters = std::collections::HashSet::new();
+    let gradient_prefix = format!("{}gradients/", prefix);
+    for name in archive.file_names() {
+        if name.starts_with(&gradient_prefix) && name.ends_with("/samples.npy") {
+            let (_, parameter) = name.split_at(gradient_prefix.len());
+            let parameter = parameter.split('/').next().expect("gradient parameter");
+            parameters.insert(parameter.to_string());
+        }
+    }
+    parameters
+}
+
+
+/// Load `info.json` from a ZIP archive (if present) and call
+/// `add_info(key, value)` for each entry.
+pub(crate) fn load_info_json<R: std::io::Read + std::io::Seek>(
+    archive: &mut zip::ZipArchive<R>,
+    mut add_info: impl FnMut(&str, &str),
+) -> Result<(), Error> {
+    use std::io::Read;
+    let info_path = String::from("info.json");
+    if !archive.file_names().any(|name| name == info_path) {
+        return Ok(());
+    }
+    let mut info_file = archive.by_name(&info_path).map_err(|e| (info_path, e))?;
+    let mut info = String::new();
+    info_file.read_to_string(&mut info)?;
+    let info = jzon::parse(&info).map_err(|e| Error::Serialization(e.to_string()))?;
+    let info = info
+        .as_object()
+        .ok_or_else(|| Error::Serialization("'info.json' should contain an object".into()))?;
+
+    for (key, value) in info.iter() {
+        let value = value
+            .as_str()
+            .ok_or_else(|| Error::Serialization("values in 'info.json' should be strings".into()))?;
+        add_info(key, value);
+    }
+    Ok(())
+}
+
+
+#[cfg(test)]
+mod tests {
+    use std::io::{Cursor, Write};
+
+    use zip::{ZipArchive, ZipWriter};
+
+    use super::npy_header::{DataType, Header};
+
+    #[test]
+    fn stored_npy_entry_rejects_truncated_payload() {
+        let mut buffer = Cursor::new(Vec::new());
+        {
+            let mut archive = ZipWriter::new(&mut buffer);
+            let options = zip::write::FileOptions::default()
+                .compression_method(zip::CompressionMethod::Stored);
+            archive.start_file("values.npy", options).unwrap();
+
+            let header = Header {
+                type_descriptor: DataType::Scalar(super::native_endian_prefix().to_string() + "f8"),
+                fortran_order: false,
+                shape: vec![2, 3],
+            };
+            header.write(&mut archive).unwrap();
+            archive.write_all(&[0; 5 * std::mem::size_of::<f64>()]).unwrap();
+            archive.finish().unwrap();
+        }
+
+        let archive_bytes = buffer.into_inner();
+        let mut archive = ZipArchive::new(Cursor::new(archive_bytes.as_slice())).unwrap();
+        let err = super::parse_stored_npy_entry(&mut archive, "values.npy")
+            .expect_err("truncated NPY payload should be rejected");
+
+        assert!(
+            err.to_string().contains("payload length"),
+            "unexpected error: {err}"
+        );
     }
 }

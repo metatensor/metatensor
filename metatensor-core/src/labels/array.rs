@@ -28,7 +28,7 @@ struct LabelsValuesArray {
 }
 
 #[allow(clippy::cast_possible_wrap)]
-pub(super) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size: usize) -> mts_array_t {
+pub(crate) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size: usize) -> mts_array_t {
     assert!(values.len() == count * size, "values length does not match count * size");
 
     let inner = Arc::new(LabelsValuesArray {

@@ -9,6 +9,7 @@ use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice, DLPackVersion};
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
 use super::labels::{load_labels, save_labels};
+use super::start_npy_zip_file;
 
 use crate::{TensorBlock, Labels, Error, mts_array_t};
 
@@ -130,7 +131,7 @@ pub(super) fn read_single_block<R, F>(
 
 /// Parse an NPY type descriptor string (e.g. `"<f8"`) into a DLPack data type code,
 /// bit width, and byte order.
-fn npy_descr_to_dtype(descr: &str) -> Result<(DLDataTypeCode, u8, Endianness), Error> {
+pub(super) fn npy_descr_to_dtype(descr: &str) -> Result<(DLDataTypeCode, u8, Endianness), Error> {
     if descr.len() < 3 {
         return Err(Error::Serialization(format!("invalid type descriptor: {}", descr)));
     }
@@ -353,28 +354,23 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
     values: bool,
     block: &TensorBlock,
 ) -> Result<(), Error> {
-    let options = zip::write::FileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
-        .large_file(true)
-        .last_modified_time(zip::DateTime::from_date_and_time(2000, 1, 1, 0, 0, 0).expect("invalid datetime"));
-
     let path = format!("{}values.npy", prefix);
-    archive.start_file(&path, options).map_err(|e| (path, e))?;
+    start_npy_zip_file(archive, &path)?;
     write_data(archive, &block.values)?;
 
     let path = format!("{}samples.npy", prefix);
-    archive.start_file(&path, options).map_err(|e| (path, e))?;
+    start_npy_zip_file(archive, &path)?;
     save_labels(archive, &block.samples)?;
 
     for (i, component) in block.components.iter().enumerate() {
         let path = format!("{}components/{}.npy", prefix, i);
-        archive.start_file(&path, options).map_err(|e| (path, e))?;
+        start_npy_zip_file(archive, &path)?;
         save_labels(archive, component)?;
     }
 
     if values {
         let path = format!("{}properties.npy", prefix);
-        archive.start_file(&path, options).map_err(|e| (path.clone(), e))?;
+        start_npy_zip_file(archive, &path)?;
         save_labels(archive, &block.properties)?;
     }
 

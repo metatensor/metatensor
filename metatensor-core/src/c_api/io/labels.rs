@@ -7,10 +7,11 @@ use std::io::{BufReader, BufWriter};
 
 use crate::Error;
 
-use super::{ExternalBuffer, mts_realloc_buffer_t};
+use super::{ExternalBuffer, mts_realloc_buffer_t, mts_create_mmap_array_callback_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::labels::mts_labels_t;
+use super::tensor::wrap_create_mmap_array;
 
 /// Load labels from the file at the given path.
 ///
@@ -65,6 +66,58 @@ pub unsafe extern "C" fn mts_labels_load(
         return std::ptr::null_mut();
     }
 
+    return result;
+}
+
+/// Load labels from `path` with entry-data creation handled by a callback.
+///
+/// `create_array` materialises the int32 entry array given
+/// `(shape=[n_entries, n_dimensions], dtype=int32, file_offset)` --
+/// typically a `numpy.frombuffer` view into a Python `mmap.mmap`, or
+/// an aligned copy when the file offset can not be exported as typed data.
+///
+/// The dimension names are read from the structured NPY dtype in the
+/// file itself; the callback only sees the numeric layout.
+///
+/// The file must be the single-`.mts` artifact produced by
+/// `mts_labels_save` (1-D structured-int32 array) and stored in
+/// native byte order.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback used to allocate the entry-data array
+/// @param user_data opaque pointer forwarded to `create_array`
+///
+/// @returns A pointer to the newly allocated labels, or a `NULL`
+///          pointer in case of error.
+#[no_mangle]
+pub unsafe extern "C" fn mts_labels_load_mmap(
+    path: *const c_char,
+    create_array: mts_create_mmap_array_callback_t,
+    user_data: *mut c_void,
+) -> *const mts_labels_t {
+    let mut result: *const mts_labels_t = std::ptr::null();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let wrapped = wrap_create_mmap_array(create_array, user_data);
+        let rust_labels = crate::io::load_labels_mmap(path, wrapped)
+            .map_err(|err| match err {
+                crate::Error::Serialization(message) => crate::Error::Serialization(format!(
+                    "unable to load Labels from '{}' via mmap: {}", path, message
+                )),
+                err => err,
+            })?;
+
+        let _ = &unwind_wrapper;
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(rust_labels));
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null();
+    }
     return result;
 }
 

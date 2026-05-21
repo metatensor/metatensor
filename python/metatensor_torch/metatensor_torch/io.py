@@ -23,7 +23,7 @@ else:
 # support str in TorchScript mode
 
 
-def load(file: str) -> TensorMap:
+def load(file: str, mmap: bool = False) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given ``file``.
 
@@ -37,16 +37,25 @@ def load(file: str) -> TensorMap:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+    :param mmap: if ``True``, return memory-mapped tensors when the stored payloads
+        are aligned for their dtypes. Unaligned payloads are copied into aligned
+        tensors. Requires ``file`` to be a real filesystem path; file-like objects
+        are rejected.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load(file=file)
+        return torch.ops.metatensor.load(file=file, mmap=mmap)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load(file=file)
+            return torch.ops.metatensor.load(file=file, mmap=mmap)
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load(file=str(file.resolve()))
+            return torch.ops.metatensor.load(file=str(file.resolve()), mmap=mmap)
         else:
+            if mmap:
+                raise TypeError(
+                    "mmap=True requires a filesystem path; file-like objects "
+                    "are not supported because mmap is a file-system operation"
+                )
             # assume a file-like object
             buffer = file.read()
             assert isinstance(buffer, bytes)
@@ -64,7 +73,7 @@ def load(file: str) -> TensorMap:
 load.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
-def load_block(file: str) -> TensorBlock:
+def load_block(file: str, mmap: bool = False) -> TensorBlock:
     """
     Load previously saved :py:class:`TensorBlock` from the given ``file``.
 
@@ -74,16 +83,24 @@ def load_block(file: str) -> TensorBlock:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+    :param mmap: if ``True``, return memory-mapped tensors when the stored payloads
+        are aligned for their dtypes. Unaligned payloads are copied into aligned
+        tensors. Requires ``file`` to be a real filesystem path.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load_block(file=file)
+        return torch.ops.metatensor.load_block(file=file, mmap=mmap)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load_block(file=file)
+            return torch.ops.metatensor.load_block(file=file, mmap=mmap)
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load_block(file=str(file.resolve()))
+            return torch.ops.metatensor.load_block(file=str(file.resolve()), mmap=mmap)
         else:
+            if mmap:
+                raise TypeError(
+                    "mmap=True requires a filesystem path; file-like objects "
+                    "are not supported because mmap is a file-system operation"
+                )
             # assume a file-like object
             buffer = file.read()
             assert isinstance(buffer, bytes)
@@ -99,7 +116,7 @@ def load_block(file: str) -> TensorBlock:
 load_block.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
-def load_labels(file: str) -> Labels:
+def load_labels(file: str, mmap: bool = False) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given ``file``.
 
@@ -109,16 +126,24 @@ def load_labels(file: str) -> Labels:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+    :param mmap: if ``True``, return Labels whose entry data is memory-mapped when
+        the stored payload is aligned for ``int32``. Unaligned payloads are copied
+        into aligned tensors. Requires ``file`` to be a real filesystem path.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load_labels(file=file)
+        return torch.ops.metatensor.load_labels(file=file, mmap=mmap)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load_labels(file=file)
+            return torch.ops.metatensor.load_labels(file=file, mmap=mmap)
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load_labels(file=str(file.resolve()))
+            return torch.ops.metatensor.load_labels(file=str(file.resolve()), mmap=mmap)
         else:
+            if mmap:
+                raise TypeError(
+                    "mmap=True requires a filesystem path; file-like objects "
+                    "are not supported because mmap is a file-system operation"
+                )
             # assume a file-like object
             buffer = file.read()
             assert isinstance(buffer, bytes)

@@ -17,6 +17,8 @@ class TensorMapHolder;
 /// TorchScript will always manipulate `TensorMapHolder` through a `torch::intrusive_ptr`
 using TensorMap = torch::intrusive_ptr<TensorMapHolder>;
 
+METATENSOR_TORCH_EXPORT TensorMap load(const std::string& path, bool mmap);
+
 /// Wrapper around `metatensor::TensorMap` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
@@ -163,7 +165,7 @@ public:
         return tensor_;
     }
 
-    /// Load a serialized TensorMap from the given path
+    /// Load a serialized TensorMap from the given path.
     static TensorMap load(const std::string& path);
 
     /// Load a serialized TensorMap from an in-memory buffer (represented as a
@@ -189,6 +191,8 @@ public:
     torch::Dict<std::string, std::string> info() const;
 
 private:
+    friend TensorMap load(const std::string& path, bool mmap);
+
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;
 

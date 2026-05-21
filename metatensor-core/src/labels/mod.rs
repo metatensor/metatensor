@@ -15,6 +15,8 @@ use crate::utils::ConstCString;
 
 mod array;
 use self::array::{create_array_from_vec, load_values_from_array};
+#[cfg(test)]
+pub(crate) use self::array::create_array_from_vec as create_test_array_from_vec;
 
 /// A single value inside a label. This is represented as a 32-bit signed
 /// integer

@@ -11,14 +11,28 @@ from .._status import check_pointer
 from ._utils import _save_buffer_raw
 
 
-def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
+def load_labels(file: Union[str, pathlib.Path, BinaryIO], mmap: bool = False) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given file.
 
     :param file: file to load: this can be a string, a :py:class:`pathlib.Path`
         containing the path to the file to load, or a file-like object opened in binary
         mode.
+    :param mmap: if ``True``, load the entry-data array through a file-offset
+        callback. The resulting array is read-only and uses a memory-mapped view
+        when the stored offset is aligned for the ``int32`` data, otherwise an
+        aligned copy. Requires ``file`` to be a real filesystem path.
     """
+    if mmap:
+        if not isinstance(file, (str, pathlib.Path)):
+            raise ValueError(
+                "mmap=True requires a filesystem path (str or pathlib.Path), "
+                "not a file-like object"
+            )
+        from ._mmap import load_labels_mmap as _load_labels_mmap
+
+        return _load_labels_mmap(file)
+
     if isinstance(file, (str, pathlib.Path)):
         lib = _get_library()
 

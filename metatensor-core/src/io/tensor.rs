@@ -1,4 +1,4 @@
-use std::io::{BufReader, Read};
+use std::io::BufReader;
 use std::sync::Arc;
 use std::ffi::CString;
 
@@ -12,6 +12,7 @@ use crate::{TensorMap, Error, mts_array_t};
 use super::PathOrBuffer;
 use super::labels::{load_labels, save_labels};
 use super::block::{read_single_block, write_single_block};
+use super::{start_npy_zip_file, stored_zip_options};
 
 
 /// Check if the file/buffer in `data` looks like it could contain a serialized
@@ -69,21 +70,14 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
 
     let mut tensor = TensorMap::new(Arc::new(keys), blocks)?;
 
-    // Load info.json, if it exists
-    let path = String::from("info.json");
-    if archive.file_names().any(|name| name == path) {
-        let mut info_file = archive.by_name(&path).map_err(|e| (path, e))?;
-
-        let mut info = String::new();
-        info_file.read_to_string(&mut info)?;
-        let info = jzon::parse(&info).map_err(|e| Error::Serialization(e.to_string()))?;
-        let info = info.as_object().ok_or_else(|| Error::Serialization("'info.json' should contain an object".into()))?;
-
-        for (key, value) in info.iter() {
-            let value = value.as_str().ok_or_else(|| Error::Serialization("values in 'info.json' should be strings".into()))?;
-            tensor.add_info(key, ConstCString::new(CString::new(value).expect("value in 'info.json' should not contain a NUL byte")));
-        }
-    }
+    super::load_info_json(&mut archive, |key, value| {
+        tensor.add_info(
+            key,
+            ConstCString::new(
+                CString::new(value).expect("value in 'info.json' should not contain a NUL byte"),
+            ),
+        );
+    })?;
 
     return Ok(tensor);
 }
@@ -97,13 +91,8 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
 pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) -> Result<(), Error> {
     let mut archive = ZipWriter::new(writer);
 
-    let options = zip::write::FileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
-        .large_file(true)
-        .last_modified_time(zip::DateTime::from_date_and_time(2000, 1, 1, 0, 0, 0).expect("invalid datetime"));
-
     let path = String::from("keys.npy");
-    archive.start_file(&path, options).map_err(|e| (path, e))?;
+    start_npy_zip_file(&mut archive, &path)?;
     save_labels(&mut archive, tensor.keys())?;
 
     for (block_i, block) in tensor.blocks().iter().enumerate() {
@@ -116,7 +105,7 @@ pub fn save<W: std::io::Write + std::io::Seek>(writer: W, tensor: &TensorMap) ->
     }
     if !info.is_empty() {
         let path = String::from("info.json");
-        archive.start_file(&path, options).map_err(|e| (path, e))?;
+        archive.start_file(&path, stored_zip_options()).map_err(|e| (path, e))?;
         info.write_pretty(&mut archive, 2)?;
     }
 

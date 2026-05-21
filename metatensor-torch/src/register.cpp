@@ -317,7 +317,7 @@ TORCH_LIBRARY(metatensor, m) {
     m.def("dtype_name(ScalarType dtype) -> str", scalar_type_name);
 
     m.def(
-        "load(str file) -> __torch__.torch.classes.metatensor.TensorMap",
+        "load(str file, bool mmap=False) -> __torch__.torch.classes.metatensor.TensorMap",
         metatensor_torch::load
     );
     m.def(
@@ -326,7 +326,7 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
-        "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
+        "load_block(str file, bool mmap=False) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block
     );
     m.def(
@@ -335,7 +335,7 @@ TORCH_LIBRARY(metatensor, m) {
     );
 
     m.def(
-        "load_labels(str file) -> __torch__.torch.classes.metatensor.Labels",
+        "load_labels(str file, bool mmap=False) -> __torch__.torch.classes.metatensor.Labels",
         metatensor_torch::load_labels
     );
     m.def(

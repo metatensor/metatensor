@@ -6,6 +6,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Added
+
+- `mmap=True` to `metatensor.torch.load`, `load_block`, and `load_labels` for
+  memory-mapped loading of `.mts` files.
+
 <!-- Possible sections for each package:
 
 ### Added

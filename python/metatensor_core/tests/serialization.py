@@ -87,6 +87,146 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
+def _data_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+
+def _block_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load_mmap_tensor(standalone_fn):
+    path = _data_mts_path()
+
+    if standalone_fn:
+        tensor = mts.load(path, mmap=True)
+    else:
+        tensor = TensorMap.load(path)  # canonical reference
+
+        # The mmap loader must produce a TensorMap with identical structure
+        # and equal values to the canonical streaming loader.
+        mmap_tensor = mts.io.load(path, mmap=True)
+        assert isinstance(mmap_tensor, TensorMap)
+        assert mmap_tensor.keys.names == tensor.keys.names
+        assert len(mmap_tensor.keys) == len(tensor.keys)
+        for ref, got in zip(tensor.blocks(), mmap_tensor.blocks(), strict=True):
+            assert got.values.shape == ref.values.shape
+            np.testing.assert_array_equal(
+                np.asarray(got.values), np.asarray(ref.values)
+            )
+        return
+
+    assert isinstance(tensor, TensorMap)
+    assert tensor.keys.names == [
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
+    ]
+    assert len(tensor.keys) == 27
+
+    block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert block.samples.names == ["system", "atom"]
+    assert block.values.shape == (9, 5, 3)
+    assert not block.values.flags.writeable, "mmap arrays should be read-only"
+
+    gradient = block.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+def test_load_mmap_block():
+    path = _block_mts_path()
+
+    block = mts.io.load_block(path, mmap=True)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape[0] > 0
+    assert not block.values.flags.writeable
+
+
+def test_load_mmap_pathlib():
+    # pathlib.Path inputs must work alongside str inputs.
+    path = Path(_data_mts_path())
+    tensor = mts.io.load(path, mmap=True)
+    assert isinstance(tensor, TensorMap)
+
+
+def _assert_readonly_mmap_view(array):
+    arr = np.asarray(array)
+    if arr.size == 0:
+        return
+
+    assert not arr.flags.writeable, "mmap arrays should be read-only"
+    base = arr.base
+    while base is not None and getattr(base, "base", None) is not None:
+        base = base.base
+    assert base is not None, (
+        "expected the array to be a view into an mmap, not an "
+        "independently-allocated buffer (base is None)"
+    )
+
+
+def _assert_readonly_array(array):
+    arr = np.asarray(array)
+    assert not arr.flags.writeable, "mmap-loaded arrays should be read-only"
+
+
+def test_load_mmap_values_are_views(tensor, tmp_path):
+    # Value arrays must be read-only views into a memory-mapped buffer, not
+    # freshly-allocated copies for files written by the aligned ZIP writer.
+    # Label arrays are loaded through the same file-offset callback and are
+    # read-only; unaligned label payloads are copied into aligned buffers
+    # before crossing the DLPack boundary.
+    path = tmp_path / "aligned.mts"
+    mts.save(path, tensor)
+    tensor = mts.io.load(path, mmap=True)
+    _assert_readonly_array(tensor.keys.values)
+    for block in tensor.blocks():
+        _assert_readonly_mmap_view(block.values)
+        _assert_readonly_array(block.samples.values)
+        for component in block.components:
+            _assert_readonly_array(component.values)
+        _assert_readonly_array(block.properties.values)
+
+        for parameter in block.gradients_list():
+            gradient = block.gradient(parameter)
+            _assert_readonly_mmap_view(gradient.values)
+            _assert_readonly_array(gradient.samples.values)
+            for component in gradient.components:
+                _assert_readonly_array(component.values)
+            _assert_readonly_array(gradient.properties.values)
+
+
+def test_mmap_loaders_are_not_public_aliases():
+    assert not hasattr(mts, "load_mmap")
+    assert not hasattr(mts, "load_block_mmap")
+    assert not hasattr(mts, "load_labels_mmap")
+
+    assert not hasattr(mts.io, "load_mmap")
+    assert not hasattr(mts.io, "load_block_mmap")
+    assert not hasattr(mts.io, "load_labels_mmap")
+    assert "load_mmap" not in mts.io.__all__
+    assert "load_block_mmap" not in mts.io.__all__
+    assert "load_labels_mmap" not in mts.io.__all__
+
+
 @pytest.mark.parametrize("use_numpy", (True, False))
 def test_load_deflate(use_numpy):
     # This file was saved using DEFLATE to compress the different ZIP archive members
@@ -137,7 +277,8 @@ def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
 
             size = os.path.getsize(file)
 
-        assert size == 8718
+        expected_size = 8718 if use_numpy else 9052
+        assert size == expected_size
         data = np.load(file)
 
     assert len(data.keys()) == 29

@@ -16,6 +16,8 @@ class TensorBlockHolder;
 /// TorchScript will always manipulate `TensorBlockHolder` through a `torch::intrusive_ptr`
 using TensorBlock = torch::intrusive_ptr<TensorBlockHolder>;
 
+METATENSOR_TORCH_EXPORT TensorBlock load_block(const std::string& path, bool mmap);
+
 /// Wrapper around `metatensor::TensorBlock` for integration with TorchScript
 ///
 /// Python/TorchScript code will typically manipulate
@@ -165,7 +167,7 @@ public:
     std::string repr() const;
 
 
-    /// Load a serialized TensorBlock from the given path
+    /// Load a serialized TensorBlock from the given path.
     static TensorBlock load(const std::string& path);
 
     /// Load a serialized TensorBlock from an in-memory buffer (represented as a
@@ -186,6 +188,8 @@ public:
     metatensor::TensorBlock release();
 
 private:
+    friend TensorBlock load_block(const std::string& path, bool mmap);
+
     /// Create a TensorBlockHolder containing gradients with respect to
     /// `parameter`
     TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent);
