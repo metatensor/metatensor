@@ -315,9 +315,9 @@ if __name__ == "__main__":
         },
         package_data={
             "metatensor-core": [
-                "metatensor/core/lib/*",
-                "metatensor/core/include/*",
-                "metatensor/core/include/metatensor/*",
+                "metatensor/lib/*",
+                "metatensor/include/*",
+                "metatensor/include/metatensor/*",
             ]
         },
     )
