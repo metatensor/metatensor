@@ -64,7 +64,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
-          version: "v0.10.0"
+          version: "v0.15.0"
 
       - name: setup MSVC command prompt
         uses: ilammy/msvc-dev-cmd@v1
