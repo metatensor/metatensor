@@ -133,7 +133,11 @@ jobs:
         run: |
           cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
-      - name: check the code can be compiled as a standalone crate
+      - name: check that the header is already generated and up to date
+        run: |
+          git diff --exit-code
+
+      - name: check that the code can be compiled as a standalone crate
         if: matrix.os != 'windows-2022'
         run: |
           ./scripts/package-core.sh rust/metatensor-sys/
@@ -150,7 +154,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          python-version: "3.14"
           enable-cache: true
           activate-environment: true
 
@@ -161,25 +165,13 @@ jobs:
           target: x86_64-unknown-linux-gnu
           components: rustfmt
 
-      - name: Cache Rust dependencies
-        uses: Leafwing-Studios/cargo-cache@v2.6.1
-        with:
-          sweep-cache: true
-
       - name: install python dependencies
         run: |
           uv pip install pycparser
 
-      - name: install bindgen conditionally
+      - name: install bindgen
         run: |
-          if ! cargo install --list | grep "bindgen-cli v0.72.1"; then
-            echo "Installing bindgen-cli v0.72.1 from git to use Cargo.lock"
-            git clone --depth 1 --branch v0.72.1 https://github.com/rust-lang/rust-bindgen
-            # Install from the local git clone using its Cargo.lock file
-            # This pins an older 'toml' version compatible with Rust 1.74.1
-            cargo install --path rust-bindgen/bindgen-cli --locked --force
-            rm -rf rust-bindgen
-          fi
+          cargo install bindgen-cli --version ^0.72.1
 
       - name: check that Rust/Python/Julia C API declarations are up to date
         run: |
@@ -200,9 +192,7 @@ jobs:
 
       - name: install ripgrep
         run: |
-          wget https://github.com/BurntSushi/ripgrep/releases/download/13.0.0/ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
-          tar xf ripgrep-13.0.0-x86_64-unknown-linux-musl.tar.gz
-          echo "$(pwd)/ripgrep-13.0.0-x86_64-unknown-linux-musl" >> $GITHUB_PATH
+          sudo apt install ripgrep
 
       - name: check for leftover dbg!
         run: |
