@@ -21,9 +21,9 @@
  * The value 0 (`MTS_SUCCESS`) is used to indicate successful operations.
  */
 enum mts_status_t
-#ifdef __cplusplus
+#if defined(__cplusplus) || __STDC_VERSION__ >= 202311L
   : int32_t
-#endif // __cplusplus
+#endif // defined(__cplusplus) || __STDC_VERSION__ >= 202311L
  {
   /**
    * Status code used when a function succeeded
@@ -62,7 +62,11 @@ enum mts_status_t
   MTS_INTERNAL_ERROR = 255,
 };
 #ifndef __cplusplus
+#if __STDC_VERSION__ >= 202311L
+typedef enum mts_status_t mts_status_t;
+#else
 typedef int32_t mts_status_t;
+#endif // __STDC_VERSION__ >= 202311L
 #endif // __cplusplus
 
 /**

@@ -103,6 +103,36 @@ pub(super) fn get_properties(ptr: *const mts_block_t) -> Labels {
 }
 
 impl<'a> TensorBlockRef<'a> {
+    /// Get the device on which the values of this block are stored.
+    #[inline]
+    pub fn device(&self) -> Result<dlpk::sys::DLDevice, Error> {
+        let mut device = dlpk::sys::DLDevice::cpu();
+        unsafe {
+            check_status(crate::c_api::mts_block_device(
+                self.as_ptr(),
+                &mut device,
+            ))?;
+        }
+        return Ok(device);
+    }
+
+    /// Get the data type of the values of this block.
+    #[inline]
+    pub fn dtype(&self) -> Result<dlpk::sys::DLDataType, Error> {
+        let mut dtype = dlpk::sys::DLDataType {
+            code: dlpk::sys::DLDataTypeCode::kDLFloat,
+            bits: 0,
+            lanes: 0,
+        };
+        unsafe {
+            check_status(crate::c_api::mts_block_dtype(
+                self.as_ptr(),
+                &mut dtype,
+            ))?;
+        }
+        return Ok(dtype);
+    }
+
     /// Get all the data and metadata inside this `TensorBlockRef` as a
     /// struct with separate fields, to allow borrowing them separately.
     #[inline]
@@ -360,5 +390,23 @@ mod tests {
         assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
         assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
         assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
+    }
+
+    #[test]
+    fn device_and_dtype() {
+        let block = TensorBlock::new(
+            ndarray::Array::from_elem(vec![2, 3], 1.0),
+            &Labels::new(["samples"], &[[0], [1]]),
+            &[],
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
+        ).unwrap();
+        let block = block.as_ref();
+
+        let device = block.device().unwrap();
+        assert_eq!(device.device_type, dlpk::sys::DLDeviceType::kDLCPU);
+
+        let dtype = block.dtype().unwrap();
+        assert_eq!(dtype.code, dlpk::sys::DLDataTypeCode::kDLFloat);
+        assert_eq!(dtype.bits, 64);
     }
 }
