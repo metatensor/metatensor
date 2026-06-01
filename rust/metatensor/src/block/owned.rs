@@ -70,6 +70,18 @@ impl TensorBlock {
         }
     }
 
+    /// Get the device on which the values of this block are stored.
+    #[inline]
+    pub fn device(&self) -> Result<dlpk::sys::DLDevice, Error> {
+        self.as_ref().device()
+    }
+
+    /// Get the data type of the values of this block.
+    #[inline]
+    pub fn dtype(&self) -> Result<dlpk::sys::DLDataType, Error> {
+        self.as_ref().dtype()
+    }
+
     /// Get the array for the values in this block
     #[inline]
     pub fn values(&self) -> ArrayRef<'_> {
@@ -213,5 +225,22 @@ mod tests {
         // this is only legal because TensorBlock == *mut mts_block_t
         assert_eq!(std::mem::size_of::<TensorBlock>(), std::mem::size_of::<*mut mts_block_t>());
         assert_eq!(std::mem::align_of::<TensorBlock>(), std::mem::align_of::<*mut mts_block_t>());
+    }
+
+    #[test]
+    fn device_and_dtype() {
+        let block = TensorBlock::new(
+            ndarray::Array::from_elem(vec![2, 3], 1.0),
+            &Labels::new(["samples"], &[[0], [1]]),
+            &[],
+            &Labels::new(["properties"], &[[-2], [0], [1]]),
+        ).unwrap();
+
+        let device = block.device().unwrap();
+        assert_eq!(device.device_type, dlpk::sys::DLDeviceType::kDLCPU);
+
+        let dtype = block.dtype().unwrap();
+        assert_eq!(dtype.code, dlpk::sys::DLDataTypeCode::kDLFloat);
+        assert_eq!(dtype.bits, 64);
     }
 }

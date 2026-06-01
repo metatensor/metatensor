@@ -153,6 +153,36 @@ impl TensorMap {
         return crate::io::save_buffer(self, buffer);
     }
 
+    /// Get the device on which the values of this `TensorMap` are stored.
+    #[inline]
+    pub fn device(&self) -> Result<dlpk::sys::DLDevice, Error> {
+        let mut device = dlpk::sys::DLDevice::cpu();
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_device(
+                self.ptr,
+                &mut device,
+            ))?;
+        }
+        return Ok(device);
+    }
+
+    /// Get the data type of the values of this `TensorMap`.
+    #[inline]
+    pub fn dtype(&self) -> Result<dlpk::sys::DLDataType, Error> {
+        let mut dtype = dlpk::sys::DLDataType {
+            code: dlpk::sys::DLDataTypeCode::kDLFloat,
+            bits: 0,
+            lanes: 0,
+        };
+        unsafe {
+            check_status(crate::c_api::mts_tensormap_dtype(
+                self.ptr,
+                &mut dtype,
+            ))?;
+        }
+        return Ok(dtype);
+    }
+
     /// Get the keys defined in this `TensorMap`
     #[inline]
     pub fn keys(&self) -> &Labels {
@@ -806,5 +836,17 @@ mod tests {
         assert_eq!(key, "version");
         assert_eq!(value, "1.0");
         assert!(info_iter.next().is_none());
+    }
+
+    #[test]
+    fn device_and_dtype() {
+        let tensor = test_tensor();
+
+        let device = tensor.device().unwrap();
+        assert_eq!(device.device_type, dlpk::sys::DLDeviceType::kDLCPU);
+
+        let dtype = tensor.dtype().unwrap();
+        assert_eq!(dtype.code, dlpk::sys::DLDataTypeCode::kDLFloat);
+        assert_eq!(dtype.bits, 64);
     }
 }
