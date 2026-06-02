@@ -129,13 +129,17 @@ jobs:
           echo "CMAKE_C_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
           echo "CMAKE_CXX_COMPILER_LAUNCHER=sccache" >> $GITHUB_ENV
 
-      - name: run tests
+      - name: Build the code
         run: |
-          cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
+          cargo build --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
       - name: check that the header is already generated and up to date
         run: |
           git diff --exit-code
+
+      - name: run tests
+        run: |
+          cargo test --package metatensor --package metatensor-core --target ${{ matrix.rust-target }} ${{ matrix.cargo-build-flags }}
 
       - name: check that the code can be compiled as a standalone crate
         if: matrix.os != 'windows-2022'
