@@ -5,6 +5,54 @@ use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
+fn cargo_target_dirs() -> Vec<PathBuf> {
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap_or(&manifest_dir);
+
+    let mut target_dirs = vec![workspace_root.join("target")];
+    if let Some(target_dir) = std::env::var_os("CARGO_TARGET_DIR") {
+        let target_dir = PathBuf::from(target_dir);
+        if target_dir.is_absolute() {
+            target_dirs.push(target_dir);
+        } else {
+            target_dirs.push(workspace_root.join(target_dir));
+        }
+    }
+
+    return target_dirs;
+}
+
+fn remove_cargo_paths_from_dynamic_library_env(command: &mut Command) {
+    let target_dirs = cargo_target_dirs();
+
+    for var in ["LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"] {
+        let Some(value) = std::env::var_os(var) else {
+            continue;
+        };
+
+        let mut entries = Vec::new();
+        let mut removed_path = false;
+        for entry in std::env::split_paths(&value) {
+            if target_dirs.iter().any(|root| entry.starts_with(root)) {
+                removed_path = true;
+            } else {
+                entries.push(entry);
+            }
+        }
+
+        if !removed_path {
+            continue;
+        }
+
+        if entries.is_empty() {
+            command.env_remove(var);
+        } else {
+            let joined = std::env::join_paths(entries).unwrap_or_else(|_| panic!("failed to rebuild {}", var));
+            command.env(var, joined);
+        }
+    }
+}
+
 fn build_type() -> &'static str {
     // assume that debug assertion means that we are building the code in
     // debug mode, even if that could be not true in some cases
@@ -76,6 +124,10 @@ pub fn ctest(build_dir: &Path) -> Command {
     ctest.arg("--output-on-failure");
     ctest.arg("--build-config");
     ctest.arg(build_type());
+
+    // `cargo test` injects dynamic-library search paths for the cargo target
+    // dir. Remove only these injected entries and keep any user-provided paths.
+    remove_cargo_paths_from_dynamic_library_env(&mut ctest);
 
     return ctest
 }
