@@ -227,6 +227,17 @@ impl Labels {
         }
     }
 
+    /// Consume the Labels and get the underlying raw pointer.
+    ///
+    /// After calling this function, the user is responsible for free-ing the
+    /// data in `mts_labels_t`, either by re-creating labels with
+    /// [`Labels::from_raw`] or passing it to a C API function that will call
+    /// [`crate::c_api::mts_labels_free`] on it.
+    #[inline]
+    pub fn into_raw(mut labels: Labels) -> *const mts_labels_t {
+        return std::mem::replace(&mut labels.ptr, std::ptr::null());
+    }
+
     /// Create a set of `Labels` with the given names, containing no entries.
     #[inline]
     pub fn empty(names: Vec<&str>) -> Labels {
@@ -1127,5 +1138,14 @@ mod tests {
         assert_eq!(err.message,
             "invalid parameter: 'aaa' in selection is not part of these Labels"
         );
+    }
+
+    #[test]
+    fn labels_into_raw() {
+        let original = Labels::new(["foo", "bar"], &[[1, 2], [3, 4], [5, 6]]);
+        let raw = Labels::into_raw(original);
+
+        let recovered = unsafe { Labels::from_raw(raw) };
+        assert_eq!(recovered, Labels::new(["foo", "bar"], &[[1, 2], [3, 4], [5, 6]]));
     }
 }

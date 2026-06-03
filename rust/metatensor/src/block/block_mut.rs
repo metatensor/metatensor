@@ -68,7 +68,7 @@ impl<'a> TensorBlockRefMut<'a> {
     /// is actually constrained by the lifetime of the owner of this
     /// `mts_block_t`; and that the owner is mutably borrowed by this
     /// `TensorBlockRefMut`.
-    pub(crate) unsafe fn from_raw(ptr: *mut mts_block_t) -> TensorBlockRefMut<'a> {
+    pub unsafe fn from_raw(ptr: *mut mts_block_t) -> TensorBlockRefMut<'a> {
         assert!(!ptr.is_null(), "pointer to mts_block_t should not be NULL");
 
         TensorBlockRefMut {
@@ -78,12 +78,12 @@ impl<'a> TensorBlockRefMut<'a> {
     }
 
     /// Get the underlying raw pointer
-    pub(super) fn as_ptr(&self) -> *const mts_block_t {
+    pub fn as_ptr(&self) -> *const mts_block_t {
         self.ptr
     }
 
     /// Get the underlying (mutable) raw pointer
-    pub(super) fn as_mut_ptr(&mut self) -> *mut mts_block_t {
+    pub fn as_mut_ptr(&mut self) -> *mut mts_block_t {
         self.ptr
     }
 

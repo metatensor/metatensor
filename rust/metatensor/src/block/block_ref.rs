@@ -44,7 +44,7 @@ impl<'a> TensorBlockRef<'a> {
     /// This is a **VERY** unsafe function, creating a lifetime out of thin air.
     /// Make sure the lifetime is actually constrained by the lifetime of the
     /// owner of this `mts_block_t`.
-    pub(crate) unsafe fn from_raw(ptr: *const mts_block_t) -> TensorBlockRef<'a> {
+    pub unsafe fn from_raw(ptr: *const mts_block_t) -> TensorBlockRef<'a> {
         assert!(!ptr.is_null(), "pointer to mts_block_t should not be NULL");
 
         TensorBlockRef {
@@ -54,7 +54,7 @@ impl<'a> TensorBlockRef<'a> {
     }
 
     /// Get the underlying raw pointer
-    pub(crate) fn as_ptr(&self) -> *const mts_block_t {
+    pub fn as_ptr(&self) -> *const mts_block_t {
         self.ptr
     }
 }

@@ -85,8 +85,8 @@ impl TensorMap {
     ///
     /// # Safety
     ///
-    /// The pointer must be non-null and created by `mts_tensormap` or
-    /// `TensorMap::into_raw`.
+    /// The pointer must be non-null and created by
+    /// [`crate::c_api::mts_tensormap`] or [`TensorMap::into_raw`].
     pub unsafe fn from_raw(ptr: *mut mts_tensormap_t) -> TensorMap {
         assert!(!ptr.is_null());
 
@@ -102,13 +102,27 @@ impl TensorMap {
 
     /// Extract the underlying raw pointer.
     ///
-    /// The pointer should be passed back to `TensorMap::from_raw` or
-    /// `mts_tensormap_free` to release the memory corresponding to this
-    /// `TensorMap`.
-    pub fn into_raw(mut map: TensorMap) -> *mut mts_tensormap_t {
-        let ptr = map.ptr;
-        map.ptr = std::ptr::null_mut();
-        return ptr;
+    /// The pointer should be passed back to [`TensorMap::from_raw`] or
+    /// [`crate::c_api::mts_tensormap_free`] to release the memory corresponding
+    /// to this `TensorMap`.
+    pub fn into_raw(mut tensor: TensorMap) -> *mut mts_tensormap_t {
+        return std::mem::replace(&mut tensor.ptr, std::ptr::null_mut());
+    }
+
+    /// Get the underlying raw pointer.
+    ///
+    /// After a call, this `TensorMap` is still managing the corresponding
+    /// memory. To fully release the pointer, use [`TensorMap::into_raw`].
+    pub fn as_ptr(&self) -> *const mts_tensormap_t {
+        self.ptr
+    }
+
+    /// Get the underlying (mutable) raw pointer
+    ///
+    /// After a call, this `TensorMap` is still managing the corresponding
+    /// memory. To fully release the pointer, use [`TensorMap::into_raw`].
+    pub fn as_mut_ptr(&mut self) -> *mut mts_tensormap_t {
+        self.ptr
     }
 
     /// Clone this `TensorMap`, cloning all the data and metadata contained inside.
@@ -848,5 +862,17 @@ mod tests {
         let dtype = tensor.dtype().unwrap();
         assert_eq!(dtype.code, dlpk::sys::DLDataTypeCode::kDLFloat);
         assert_eq!(dtype.bits, 64);
+    }
+
+    #[test]
+    fn tensor_map_into_raw() {
+        let tensor = test_tensor();
+        let raw = TensorMap::into_raw(tensor);
+
+        let recovered = unsafe { TensorMap::from_raw(raw) };
+        assert_eq!(
+            recovered.keys(),
+            &Labels::new(["key", "other"], &[[1, 0], [3, 1], [-4, 0]])
+        );
     }
 }
