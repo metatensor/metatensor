@@ -22,6 +22,9 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `TensorBlock::dtype` for retrieving the device and data type of the underlying
   arrays.
 
+- `TensorMap::{from,into}_raw`, `TensorBlock::{from,into}_raw` and
+  `Labels::{from,into}_raw` to enable conversion between Rust and C API types.
+
 ## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.3.0) - 2026-05-13
 
 ### Added

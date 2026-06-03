@@ -36,7 +36,7 @@ impl TensorBlock {
     ///
     /// The pointer must be non-null and point to a owned block, not a reference
     /// to a block from inside a [`TensorMap`](crate::TensorMap).
-    pub(crate) unsafe fn from_raw(ptr: *mut mts_block_t) -> TensorBlock {
+    pub unsafe fn from_raw(ptr: *mut mts_block_t) -> TensorBlock {
         assert!(!ptr.is_null(), "pointer to mts_block_t should not be NULL");
 
         TensorBlock {
@@ -44,13 +44,28 @@ impl TensorBlock {
         }
     }
 
-    /// Get the underlying raw pointer
-    pub(super) fn as_ptr(&self) -> *const mts_block_t {
+    /// Extract the underlying raw pointer.
+    ///
+    /// The pointer should be passed back to [`TensorBlock::from_raw`] or
+    /// [`crate::c_api::mts_block_free`] to release the memory corresponding
+    /// to this `TensorBlock`.
+    pub fn into_raw(mut block: TensorBlock) -> *mut mts_block_t {
+        return std::mem::replace(&mut block.ptr, std::ptr::null_mut());
+    }
+
+    /// Get the underlying raw pointer.
+    ///
+    /// After a call, this `TensorBlock` is still managing the corresponding
+    /// memory. To fully release the pointer, use [`TensorBlock::into_raw`].
+    pub fn as_ptr(&self) -> *const mts_block_t {
         self.ptr
     }
 
     /// Get the underlying (mutable) raw pointer
-    pub(super) fn as_mut_ptr(&mut self) -> *mut mts_block_t {
+    ///
+    /// After a call, this `TensorBlock` is still managing the corresponding
+    /// memory. To fully release the pointer, use [`TensorBlock::into_raw`].
+    pub fn as_mut_ptr(&mut self) -> *mut mts_block_t {
         self.ptr
     }
 
@@ -242,5 +257,21 @@ mod tests {
         let dtype = block.dtype().unwrap();
         assert_eq!(dtype.code, dlpk::sys::DLDataTypeCode::kDLFloat);
         assert_eq!(dtype.bits, 64);
+    }
+
+    #[test]
+    fn tensor_block_into_raw() {
+        let block = TensorBlock::new(
+            ndarray::Array::from_elem(vec![3, 2], 1.0),
+            &Labels::new(["samples"], &[[0], [1], [4]]),
+            &[],
+            &Labels::new(["properties"], &[[5], [3]]),
+        ).unwrap();
+
+        let raw = TensorBlock::into_raw(block);
+
+        let recovered = unsafe { TensorBlock::from_raw(raw) };
+        assert_eq!(recovered.samples(), Labels::new(["samples"], &[[0], [1], [4]]));
+        assert_eq!(recovered.properties(), Labels::new(["properties"], &[[5], [3]]));
     }
 }
