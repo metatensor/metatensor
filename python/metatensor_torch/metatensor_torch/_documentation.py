@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple, Union, overload
+from typing import Any, Dict, List, Optional, Tuple, Union, overload
 
 import torch
 
@@ -648,6 +648,45 @@ class Labels:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
+    @staticmethod
+    def unsafe_from_ptr(ptr: int) -> "Labels":
+        """
+        Create a :py:class:`Labels` from a raw ``mts_labels_t`` pointer. The
+        :py:class:`Labels` takes ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+
+        :param ptr: the pointer as an integer, which will be reinterpreted as a
+            ``mts_labels_t*``
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def release(self) -> int:
+        """
+        Release the underlying C pointer of these :py:class:`Labels`. The
+        holder is no longer managing the labels memory after the call. The user
+        is expected to re-create Labels with :py:func:`Labels.unsafe_from_ptr`,
+        or pass the pointer to a C function that will call ``mts_labels_free``.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def as_mts_labels_t(self) -> int:
+        """
+        Get the underlying ``mts_labels_t`` pointer as an integer. The holder
+        still manages the labels memory after the call. Use
+        :py:func:`Labels.release` to take ownership of the pointer.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
     def entry(self, index: int) -> LabelsEntry:
         """get a single entry in these labels, see also :py:func:`Labels.__getitem__`"""
         raise THIS_CODE_SHOULD_NOT_RUN
@@ -966,6 +1005,14 @@ class TensorBlock:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
+    @property
+    def is_view(self) -> bool:
+        """
+        Check if this :py:class:`TensorBlock` is a view (i.e. does not own the
+        underlying data).
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
     def to(
         self,
         dtype: Optional[torch.dtype] = None,
@@ -1051,6 +1098,71 @@ class TensorBlock:
         """
         Save this :py:class:`TensorBlock` to an in-memory buffer, this is equivalent to
         :py:func:`metatensor.torch.save_buffer`.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    @staticmethod
+    def unsafe_from_ptr(ptr: int) -> "TensorBlock":
+        """
+        Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer. The
+        :py:class:`TensorBlock` takes ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+
+        :param ptr: the pointer as an integer, which will be reinterpreted as a
+            ``mts_block_t*``
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    @staticmethod
+    def unsafe_view_from_ptr(ptr: int, parent: Any) -> "TensorBlock":
+        """
+        Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer, keeping a
+        reference to the ``parent`` to prevent garbage collection.
+
+        The :py:class:`TensorBlock` does **not** take ownership of the pointer, and
+        will not release the corresponding memory.
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+
+        :param ptr: the pointer as an integer, which will be reinterpreted as a
+            ``mts_block_t*``
+        :param parent: the parent object to keep alive
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def release(self) -> int:
+        """
+        Release the underlying C pointer of this :py:class:`TensorBlock`. The holder is
+        no longer managing the block memory after the call. The user is expected to
+        re-create a :py:class:`TensorBlock` with
+        :py:func:`TensorBlock.unsafe_from_ptr`, or pass the pointer to a C function
+        that will call ``mts_block_free``.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def as_mts_block_t(self) -> int:
+        """
+        Get the underlying ``mts_block_t`` pointer as an integer. The holder still
+        manages the block memory after the call. Use :py:func:`TensorBlock.release` to
+        take ownership of the pointer.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1387,6 +1499,14 @@ class TensorMap:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
+    @property
+    def is_view(self) -> bool:
+        """
+        Check if this :py:class:`TensorMap` is a view (i.e. does not own the
+        underlying data).
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
     def to(
         self,
         dtype: Optional[torch.dtype] = None,
@@ -1433,6 +1553,71 @@ class TensorMap:
     def info(self) -> Dict[str, str]:
         """
         Get all the key/value info pairs stored in this :py:class:`TensorMap`.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    @staticmethod
+    def unsafe_from_ptr(ptr: int) -> "TensorMap":
+        """
+        Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer. The
+        :py:class:`TensorMap` takes ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+
+        :param ptr: the pointer as an integer, which will be reinterpreted as a
+            ``mts_tensormap_t*``
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    @staticmethod
+    def unsafe_view_from_ptr(ptr: int, parent: Any) -> "TensorMap":
+        """
+        Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer, keeping a
+        reference to the ``parent`` to prevent garbage collection.
+
+        The :py:class:`TensorMap` does **not** take ownership of the pointer, and
+        will not release the corresponding memory.
+
+        .. warning::
+
+            PyTorch can execute ``static`` functions (like this one) coming from a
+            TorchScript extension, but fails when trying to save code calling this
+            function with :py:func:`torch.jit.save`, giving the following error:
+
+                Failed to downcast a Function to a GraphFunction
+
+            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
+
+        :param ptr: the pointer as an integer, which will be reinterpreted as a
+            ``mts_tensormap_t*``
+        :param parent: the parent object to keep alive
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def release(self) -> int:
+        """
+        Release the underlying C pointer of this :py:class:`TensorMap`. The holder is
+        no longer managing the tensor map memory after the call. The user is expected to
+        re-create a :py:class:`TensorMap` with
+        :py:func:`TensorMap.unsafe_from_ptr`, or pass the pointer to a C function
+        that will call ``mts_tensormap_free``.
+        """
+        raise THIS_CODE_SHOULD_NOT_RUN
+
+    def as_mts_tensormap_t(self) -> int:
+        """
+        Get the underlying ``mts_tensormap_t`` pointer as an integer. The holder still
+        manages the tensor map memory after the call. Use
+        :py:func:`TensorMap.release` to take ownership of the pointer.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 

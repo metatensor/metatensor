@@ -452,3 +452,64 @@ def test_script():
 
     module = TestModule()
     module = torch.jit.script(module)
+
+
+def test_block_ownership_transfer():
+    """Test releasing and recovering a TensorBlock via ``unsafe_from_ptr``"""
+    block = TensorBlock(
+        values=torch.full((3, 2), 11.0),
+        samples=Labels(names=["s"], values=torch.tensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
+    )
+    assert not block.is_view
+
+    message = (
+        "can not access this TensorBlock, it has been released or moved inside a "
+        "TensorMap or another TensorBlock"
+    )
+
+    raw = block.release()
+
+    with pytest.raises(RuntimeError, match=message):
+        block.as_mts_block_t()
+
+    recovered = TensorBlock.unsafe_from_ptr(raw)
+    assert torch.all(recovered.values == torch.full((3, 2), 11.0))
+    assert recovered.samples == Labels(
+        names=["s"], values=torch.tensor([[0], [2], [1]])
+    )
+    assert recovered.properties == Labels(names=["p"], values=torch.tensor([[1], [0]]))
+
+    raw = recovered.release()
+    with pytest.raises(RuntimeError, match=message):
+        recovered.as_mts_block_t()
+
+    TensorBlock.unsafe_from_ptr(raw)
+
+
+def test_block_unsafe_view():
+    """Test creating a non-owning view of a TensorBlock"""
+    block = TensorBlock(
+        values=torch.full((3, 2), 11.0),
+        samples=Labels(names=["s"], values=torch.tensor([[0], [2], [1]])),
+        components=[],
+        properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
+    )
+
+    raw = block.as_mts_block_t()
+    view = TensorBlock.unsafe_view_from_ptr(raw, block)
+
+    assert view.is_view
+    assert torch.all(view.values == torch.full((3, 2), 11.0))
+    assert view.samples == block.samples
+
+    message = (
+        "can not release this TensorBlock, it is a view inside another "
+        "TensorBlock or a TensorMap"
+    )
+    with pytest.raises(RuntimeError, match=message):
+        view.release()
+
+    # original block should still be usable after creating a view
+    assert block.samples == Labels(names=["s"], values=torch.tensor([[0], [2], [1]]))

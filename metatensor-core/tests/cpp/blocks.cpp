@@ -264,7 +264,7 @@ TEST_CASE("TensorBlock ownership transfer") {
     auto* raw = block.release();
     CHECK_THROWS_WITH(
         block.as_mts_block_t(),
-        "Can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
+        "can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
     );
 
     auto recovered = TensorBlock::unsafe_from_ptr(raw);
@@ -274,7 +274,7 @@ TEST_CASE("TensorBlock ownership transfer") {
     raw = recovered.release();
     CHECK_THROWS_WITH(
         recovered.as_mts_block_t(),
-        "Can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
+        "can not access this TensorBlock, it has been released or moved inside a TensorMap or another TensorBlock"
     );
     REQUIRE(mts_block_free(raw) == MTS_SUCCESS);
 }

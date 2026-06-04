@@ -157,6 +157,18 @@ public:
     /// Get the underlying metatensor::Labels
     const metatensor::Labels& as_metatensor() const;
 
+    /// Move the `metatensor::Labels` out of this class.
+    ///
+    /// This leaves the `LabelsHolder` in an empty state that should no
+    /// longer be used.
+    metatensor::Labels release();
+
+    /// Create a `LabelsHolder` from a pre-existing `metatensor::Labels`.
+    ///
+    /// The labels are moved into the new holder, taking ownership of the
+    /// underlying data.
+    static Labels from_metatensor(metatensor::Labels labels);
+
     /// Get the union of `this` and `other`
     Labels set_union(const Labels& other) const;
 

@@ -682,3 +682,26 @@ def test_equal_non_contiguous():
     labels_contiguous = Labels(names=["a", "b"], values=values_contiguous)
 
     assert labels_contiguous == labels_non_contiguous
+
+
+def test_labels_ownership_transfer():
+    """Test releasing and recovering Labels via ``unsafe_from_ptr``"""
+    labels = Labels(names=["foo", "bar"], values=torch.tensor([[1, 2], [3, 4], [5, 6]]))
+
+    message = "can not access these Labels, they have been released"
+
+    raw = labels.release()
+
+    with pytest.raises(RuntimeError, match=message):
+        labels.as_mts_labels_t()
+
+    recovered = Labels.unsafe_from_ptr(raw)
+    assert recovered == Labels(
+        names=["foo", "bar"], values=torch.tensor([[1, 2], [3, 4], [5, 6]])
+    )
+
+    raw = recovered.release()
+    with pytest.raises(RuntimeError, match=message):
+        recovered.as_mts_labels_t()
+
+    Labels.unsafe_from_ptr(raw)

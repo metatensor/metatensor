@@ -161,6 +161,19 @@ TORCH_LIBRARY(metatensor, m) {
         .def("save_buffer", &LabelsHolder::save_buffer)
         .def_static("load", &LabelsHolder::load)
         .def_static("load_buffer", &LabelsHolder::load_buffer)
+        .def_static("unsafe_from_ptr", [](int64_t ptr) -> Labels {
+            auto* labels_ptr = reinterpret_cast<mts_labels_t*>(ptr);
+            auto labels = metatensor::Labels::unsafe_from_ptr(labels_ptr);
+            return LabelsHolder::from_metatensor(std::move(labels));
+        })
+        .def("release", [](Labels self) -> int64_t {
+            const auto* ptr = self->release().release();
+            return reinterpret_cast<int64_t>(ptr);
+        })
+        .def("as_mts_labels_t", [](const Labels& self) -> int64_t {
+            const auto* ptr = self->as_metatensor().as_mts_labels_t();
+            return reinterpret_cast<int64_t>(ptr);
+        })
         .def("entry", labels_entry, DOCSTRING, {torch::arg("index")})
         .def("column", &LabelsHolder::column, DOCSTRING, {torch::arg("dimension")})
         .def_property("names", &LabelsHolder::names)
@@ -223,6 +236,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("gradients", &TensorBlockHolder::gradients)
         .def_property("device", &TensorBlockHolder::device)
         .def_property("dtype", &TensorBlockHolder::scalar_type)
+        .def_property("is_view", &TensorBlockHolder::is_view)
         .def("to", &TensorBlockHolder::to_positional, DOCSTRING, {
             torch::arg("_0") = torch::IValue(),
             torch::arg("_1") = torch::IValue(),
@@ -235,6 +249,24 @@ TORCH_LIBRARY(metatensor, m) {
         .def("save_buffer", &TensorBlockHolder::save_buffer)
         .def_static("load", &TensorBlockHolder::load)
         .def_static("load_buffer", &TensorBlockHolder::load_buffer)
+        .def_static("unsafe_from_ptr", [](int64_t ptr) -> TensorBlock {
+            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
+            auto block = metatensor::TensorBlock::unsafe_from_ptr(block_ptr);
+            return TensorBlockHolder::from_metatensor(std::move(block));
+        })
+        .def_static("unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent) -> TensorBlock {
+            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
+            auto block = metatensor::TensorBlock::unsafe_view_from_ptr(block_ptr);
+            return TensorBlockHolder::view_from_metatensor(std::move(block), std::move(parent));
+        })
+        .def("release", [](TensorBlock self) -> int64_t {
+            const auto* ptr = self->release().release();
+            return reinterpret_cast<int64_t>(ptr);
+        })
+        .def("as_mts_block_t", [](const TensorBlock& self) -> int64_t {
+            const auto* ptr = self->as_metatensor().as_mts_block_t();
+            return reinterpret_cast<int64_t>(ptr);
+        })
         .def_pickle(
             // __getstate__
             [](const TensorBlock& self){ return self->save_buffer(); },
@@ -258,6 +290,24 @@ TORCH_LIBRARY(metatensor, m) {
         .def("save_buffer", &TensorMapHolder::save_buffer)
         .def_static("load", &TensorMapHolder::load)
         .def_static("load_buffer", &TensorMapHolder::load_buffer)
+        .def_static("unsafe_from_ptr", [](int64_t ptr) -> TensorMap {
+            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
+            auto block = metatensor::TensorMap::unsafe_from_ptr(tensor_ptr);
+            return TensorMapHolder::from_metatensor(std::move(block));
+        })
+        .def_static("unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent) -> TensorMap {
+            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
+            auto block = metatensor::TensorMap::unsafe_view_from_ptr(tensor_ptr);
+            return TensorMapHolder::view_from_metatensor(std::move(block), std::move(parent));
+        })
+        .def("release", [](TensorMap self) -> int64_t {
+            const auto* ptr = self->release().release();
+            return reinterpret_cast<int64_t>(ptr);
+        })
+        .def("as_mts_tensormap_t", [](const TensorMap& self) -> int64_t {
+            const auto* ptr = self->as_metatensor().as_mts_tensormap_t();
+            return reinterpret_cast<int64_t>(ptr);
+        })
         .def("items", &TensorMapHolder::items)
         .def_property("keys", &TensorMapHolder::keys)
         .def("block_by_id", &TensorMapHolder::block_by_id, DOCSTRING,
@@ -293,6 +343,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("property_names", &TensorMapHolder::property_names)
         .def_property("device", &TensorMapHolder::device)
         .def_property("dtype", &TensorMapHolder::scalar_type)
+        .def_property("is_view", &TensorMapHolder::is_view)
         .def("to", &TensorMapHolder::to_positional, DOCSTRING, {
             torch::arg("_0") = torch::IValue(),
             torch::arg("_1") = torch::IValue(),

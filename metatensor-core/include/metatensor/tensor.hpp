@@ -579,7 +579,7 @@ public:
     mts_tensormap_t* as_mts_tensormap_t() & {
         if (tensor_ == nullptr) {
             throw Error(
-                "Can not access this TensorMap, it has been released"
+                "can not access this TensorMap, it has been released"
             );
         }
         return tensor_;
@@ -591,7 +591,7 @@ public:
     const mts_tensormap_t* as_mts_tensormap_t() const & {
         if (tensor_ == nullptr) {
             throw Error(
-                "Can not access this TensorMap, it has been released"
+                "can not access this TensorMap, it has been released"
             );
         }
         return tensor_;

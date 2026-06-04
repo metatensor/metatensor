@@ -67,6 +67,7 @@ TEST_CASE("Blocks") {
         CHECK_FALSE(block->has_gradient("not-there"));
 
         auto gradient = TensorBlockHolder::gradient(block, "g");
+        CHECK(gradient->is_view());
         CHECK((gradient->values().sizes() == std::vector<int64_t>{1, 3, 2}));
 
         auto sample_names = gradient->samples()->names();
@@ -102,6 +103,7 @@ TEST_CASE("Blocks") {
             LabelsHolder::create({"p"}, {{0}, {1}})
         );
 
+        CHECK_FALSE(block->is_view());
         CHECK(block->samples()->names()[0] == "s");
 
         auto mts_block = block->release();
@@ -109,8 +111,8 @@ TEST_CASE("Blocks") {
 
         CHECK_THROWS_WITH(
             block->samples(),
-            "Can not access this TensorBlock, it has been moved inside a "
-            "TensorMap or another TensorBlock"
+            "can not access this TensorBlock, it has been released or "
+            "moved inside a TensorMap or another TensorBlock"
         );
     }
 }

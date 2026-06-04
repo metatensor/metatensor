@@ -190,7 +190,7 @@ public:
     const mts_labels_t* as_mts_labels_t() const {
         if (labels_ == nullptr) {
             throw Error(
-                "Can not access these Labels, they have been released"
+                "can not access these Labels, they have been released"
             );
         }
         return labels_;

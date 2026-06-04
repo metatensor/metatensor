@@ -68,7 +68,7 @@ TEST_CASE("ownership transfer") {
     const auto* raw = original.release();
     CHECK_THROWS_WITH(
         original.as_mts_labels_t(),
-        "Can not access these Labels, they have been released"
+        "can not access these Labels, they have been released"
     );
 
     auto recovered = Labels::unsafe_from_ptr(raw);
@@ -77,7 +77,7 @@ TEST_CASE("ownership transfer") {
     raw = recovered.release();
     CHECK_THROWS_WITH(
         recovered.as_mts_labels_t(),
-        "Can not access these Labels, they have been released"
+        "can not access these Labels, they have been released"
     );
     REQUIRE(mts_labels_free(raw) == MTS_SUCCESS);
 }

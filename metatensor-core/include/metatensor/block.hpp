@@ -272,7 +272,7 @@ public:
     mts_block_t* as_mts_block_t() & {
         if (block_ == nullptr) {
             throw Error(
-                "Can not access this TensorBlock, it has been released or "
+                "can not access this TensorBlock, it has been released or "
                 "moved inside a TensorMap or another TensorBlock"
             );
         }
@@ -286,7 +286,7 @@ public:
     const mts_block_t* as_mts_block_t() const & {
         if (block_ == nullptr) {
             throw Error(
-                "Can not access this TensorBlock, it has been released or "
+                "can not access this TensorBlock, it has been released or "
                 "moved inside a TensorMap or another TensorBlock"
             );
         }

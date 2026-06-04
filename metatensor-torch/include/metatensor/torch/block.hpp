@@ -137,6 +137,11 @@ public:
         return this->values().scalar_type();
     }
 
+    /// Check if this block is a view (i.e. does not own the underlying data).
+    bool is_view() const {
+        return !parent_.isNone();
+    }
+
     /// Move all arrays in this block to the given `dtype` and `device`.
     TensorBlock to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
@@ -185,12 +190,31 @@ public:
     /// longer be used.
     metatensor::TensorBlock release();
 
-private:
-    /// Create a TensorBlockHolder containing gradients with respect to
-    /// `parameter`
-    TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent);
-    friend class torch::intrusive_ptr<TensorBlockHolder>;
+    /// Get a mutable reference to the underlying `metatensor::TensorBlock`
+    metatensor::TensorBlock& as_metatensor() {
+        return block_;
+    }
 
+    /// Get a const reference to the underlying `metatensor::TensorBlock`
+    const metatensor::TensorBlock& as_metatensor() const {
+        return block_;
+    }
+
+    /// Create a `TensorBlockHolder` from a pre-existing
+    /// `metatensor::TensorBlock`.
+    ///
+    /// The block is moved into the new holder, taking ownership of the
+    /// underlying data.
+    static TensorBlock from_metatensor(metatensor::TensorBlock block);
+
+    /// Create a `TensorBlockHolder` which is a view of a pre-existing
+    /// `metatensor::TensorBlock`.
+    ///
+    /// The view does not own the underlying data. The `parent` is kept alive
+    /// as long as this block is alive.
+    static TensorBlock view_from_metatensor(metatensor::TensorBlock block, torch::IValue parent);
+
+private:
     /// Underlying metatensor TensorBlock
     metatensor::TensorBlock block_;
 
@@ -198,9 +222,15 @@ private:
     /// block contains gradients), or a `TensorMap`.
     torch::IValue parent_;
 
-    /// If this TensorBlock contains gradients, these are gradients w.r.t. this
-    /// parameter
+    /// If this TensorBlock is storing gradients inside another TensorBlock
+    /// store the parameter with respect to which the gradients are computed
     std::string parameter_;
+
+    /// Create a TensorBlockHolder containing gradients with respect to
+    /// `parameter`
+    TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent);
+
+    friend class torch::intrusive_ptr<TensorBlockHolder>;
 };
 
 }

@@ -589,3 +589,34 @@ torch::Dict<std::string, std::string> TensorMapHolder::info() const {
     }
     return result;
 }
+
+metatensor::TensorMap TensorMapHolder::release() {
+    if (!parent_.isNone()) {
+        throw std::runtime_error(
+            "can not release this TensorMap, it is a view inside another object"
+        );
+    }
+
+    return std::move(tensor_);
+}
+
+TensorMap TensorMapHolder::from_metatensor(metatensor::TensorMap tensor) {
+    return torch::make_intrusive<TensorMapHolder>(std::move(tensor));
+}
+
+TensorMap TensorMapHolder::view_from_metatensor(metatensor::TensorMap tensor, torch::IValue parent) {
+    if (parent.isNone()) {
+        C10_THROW_ERROR(ValueError,
+            "`parent` cannot be None when creating a TensorMap view"
+        );
+    }
+
+    if (!tensor.is_view()) {
+        C10_THROW_ERROR(ValueError,
+            "the provided metatensor::TensorMap is not a view, "
+            "cannot create a metatensor_torch::TensorMap view from it"
+        );
+    }
+
+    return torch::make_intrusive<TensorMapHolder>(std::move(tensor), std::move(parent));
+}
