@@ -1,4 +1,5 @@
 import copy
+import re
 import sys
 import warnings
 
@@ -569,7 +570,7 @@ def test_different_device():
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        block_1 = TensorBlock(
+        block_meta = TensorBlock(
             values=torch.tensor([[3.0, 4.0]], device="meta"),
             samples=Labels.range("s", 1),
             components=[],
@@ -578,12 +579,12 @@ def test_different_device():
 
     message = (
         "Blocks values and keys for this TensorMap are on different devices: "
-        "keys are always on CPU, and blocks values are on device 'meta'."
+        "keys are always on CPU, and blocks values are on device 'meta'"
     )
     with pytest.warns(DeviceWarning, match=message):
-        _ = TensorMap(Labels.range("k", 1), [block_1.copy()])
+        _ = TensorMap(Labels.range("k", 1), [block_meta.copy()])
 
-    block_2 = TensorBlock(
+    block_cpu = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
         samples=Labels.range("s", 1),
         components=[],
@@ -591,10 +592,12 @@ def test_different_device():
     )
 
     message = (
-        "all blocks in a TensorMap must have the same device, got 'meta' and 'cpu'"
+        "invalid parameter: tried to build a TensorMap from blocks "
+        "on different devices: at least 'CPU:0' and 'ExtDev:0' were detected"
     )
-    with pytest.raises(ValueError, match=message):
-        _ = TensorMap(Labels.range("k", 2), [block_1, block_2])
+
+    with pytest.raises(MetatensorError, match=message):
+        _ = TensorMap(Labels.range("k", 2), [block_cpu, block_meta])
 
 
 def test_different_dtype():
@@ -612,9 +615,10 @@ def test_different_dtype():
     )
 
     message = (
-        "all blocks in a TensorMap must have the same dtype, got float64 and float32"
+        "invalid parameter: tried to build a TensorMap from blocks with "
+        "different dtypes: at least 'f64' and 'f32' were detected"
     )
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(MetatensorError, match=message):
         _ = TensorMap(Labels.range("k", 2), [block_1, block_2])
 
 
@@ -759,3 +763,63 @@ def test_keys_to_samples_fill_value_default(tensor):
 
     for i in range(len(tensor_default)):
         assert_equal(tensor_default.block(i).values, tensor_explicit.block(i).values)
+
+
+def test_ownership_transfer(tensor):
+    """Test releasing and recovering a TensorMap via ``unsafe_from_ptr``"""
+    assert not tensor.is_view
+    keys = tensor.keys
+    raw = tensor.release()
+
+    message = "this TensorMap has been released and can no longer be used"
+    with pytest.raises(ValueError, match=re.escape(message)):
+        tensor.as_mts_tensormap_t()
+
+    recovered = TensorMap.unsafe_from_ptr(raw)
+    assert recovered.keys == keys
+
+    raw = recovered.release()
+    with pytest.raises(ValueError, match=re.escape(message)):
+        recovered.as_mts_tensormap_t()
+
+    TensorMap.unsafe_from_ptr(raw)
+
+
+def test_block_view_ownership(tensor):
+    """Test that block views from a TensorMap keep the TensorMap alive"""
+    block = tensor.block(0)
+    assert block.is_view
+
+    message = (
+        "can not release this TensorBlock, it is a view inside another TensorBlock "
+        "or a TensorMap"
+    )
+    with pytest.raises(RuntimeError, match=re.escape(message)):
+        block.release()
+
+    block.samples
+    block.values
+
+    # The tensor map should still be usable
+    assert tensor.keys.names == ["key_1", "key_2"]
+
+
+def test_unsafe_view(tensor):
+    """Test creating a non-owning view of a TensorMap"""
+    assert not tensor.is_view
+
+    raw = tensor.as_mts_tensormap_t()
+    view = TensorMap.unsafe_view_from_ptr(raw, parent=tensor)
+
+    assert view.is_view
+    assert view.keys == tensor.keys
+
+    # creating a view should not prevent using the original
+    assert tensor.keys.names == ["key_1", "key_2"]
+
+    message = (
+        "can not release this TensorMap, it is already a view inside "
+        "another TensorMap or TensorBlock"
+    )
+    with pytest.raises(RuntimeError, match=re.escape(message)):
+        view.release()

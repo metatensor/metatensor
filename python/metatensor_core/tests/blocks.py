@@ -567,3 +567,50 @@ def test_to_torch_multiple_args():
         assert isinstance(block.gradient("g").values, torch.Tensor)
         assert block.values.dtype == torch.float32
         assert block.gradient("g").values.dtype == torch.float32
+
+
+def test_ownership_transfer(block):
+    """Test releasing and recovering a TensorBlock via ``unsafe_from_ptr``"""
+    assert not block.is_view
+    raw = block.release()
+
+    message = (
+        "this block has been released or moved inside a TensorBlock "
+        "or TensorMap and can no longer be used"
+    )
+    with pytest.raises(ValueError, match=re.escape(message)):
+        block.as_mts_block_t()
+
+    recovered = TensorBlock.unsafe_from_ptr(raw)
+    assert recovered.samples == Labels(["s"], np.array([[0], [2], [4]]))
+    assert recovered.properties == Labels(["p"], np.array([[5], [3]]))
+
+    raw = recovered.release()
+    message = (
+        "this block has been released or moved inside a TensorBlock "
+        "or TensorMap and can no longer be used"
+    )
+    with pytest.raises(ValueError, match=re.escape(message)):
+        recovered.as_mts_block_t()
+
+    TensorBlock.unsafe_from_ptr(raw)
+
+
+def test_unsafe_view(block):
+    """Test creating a non-owning view of a TensorBlock"""
+    raw = block.as_mts_block_t()
+    view = TensorBlock.unsafe_view_from_ptr(raw, parent=block)
+
+    assert view.is_view
+    assert view.samples == block.samples
+    assert view.properties == block.properties
+
+    message = (
+        "can not release this TensorBlock, it is a view inside another TensorBlock "
+        "or a TensorMap"
+    )
+    with pytest.raises(RuntimeError, match=re.escape(message)):
+        view.release()
+
+    # original block should still be usable after creating a view
+    assert block.samples == Labels(["s"], np.array([[0], [2], [4]]))

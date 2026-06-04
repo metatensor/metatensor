@@ -2,13 +2,13 @@ import ctypes
 import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import BinaryIO, Dict, List, Optional, Sequence, Union
+from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
 from . import _data
 from ._block import TensorBlock, _to_arguments_parse
-from ._c_api import c_uintptr_t, mts_array_t, mts_block_t
+from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_tensormap_t
 from ._c_lib import _get_library
 from ._data import Device, DeviceWarning, DType
 from ._labels import Labels, LabelsEntry
@@ -59,37 +59,7 @@ class TensorMap:
                 )
 
         self._lib = _get_library()
-
-        blocks_array_t = ctypes.POINTER(mts_block_t) * len(blocks)
-        blocks_array = blocks_array_t(*[block._ptr for block in blocks])
-
-        for block in blocks:
-            if block._parent is not None:
-                raise ValueError(
-                    "can not use blocks from another TensorMap in a new one, "
-                    "use TensorBlock.copy() to make a copy of each block first"
-                )
-
-            block_origin = _data.data_origin(block._raw_values)
-            first_block_origin = _data.data_origin(blocks[0]._raw_values)
-            if block_origin != first_block_origin:
-                raise ValueError(
-                    "all blocks in a TensorMap must have the same origin, "
-                    f"got '{_data.data_origin_name(first_block_origin)}' "
-                    f"and '{_data.data_origin_name(block_origin)}'"
-                )
-
-            if block.device != blocks[0].device:
-                raise ValueError(
-                    "all blocks in a TensorMap must have the same device, "
-                    f"got '{blocks[0].device}' and '{block.device}'"
-                )
-
-            if block.dtype != blocks[0].dtype:
-                raise ValueError(
-                    "all blocks in a TensorMap must have the same dtype, "
-                    f"got {blocks[0].dtype} and {block.dtype}"
-                )
+        self._parent = None
 
         if len(blocks) > 0 and not _data.array_device_is_cpu(blocks[0].values):
             warnings.warn(
@@ -102,32 +72,88 @@ class TensorMap:
                 stacklevel=2,
             )
 
-        # all blocks are moved into the tensor map, assign NULL to `block._ptr` to
-        # prevent accessing invalid data from Python and double free
-        for block in blocks:
-            block._move_ptr()
+        blocks_array_t = ctypes.POINTER(mts_block_t) * len(blocks)
+        blocks_array = blocks_array_t(*[block.release() for block in blocks])
 
         self._ptr = self._lib.mts_tensormap(
-            keys._as_mts_labels_t(), blocks_array, len(blocks)
+            keys.as_mts_labels_t(), blocks_array, len(blocks)
         )
         check_pointer(self._ptr)
 
-        for block in blocks:
-            block._is_inside_map = True
-
     @staticmethod
-    def _from_ptr(ptr):
-        """Create a tensor map from a pointer owning its data"""
-        check_pointer(ptr)
+    def unsafe_from_ptr(tensor: ctypes.POINTER(mts_tensormap_t)):
+        """
+        Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer.
+
+        The :py:class:`TensorMap` takes ownership of the pointer, and will
+        release the corresponding memory when garbage-collected.
+        """
+        assert tensor, "mts_tensormap_t pointer is null"
         obj = TensorMap.__new__(TensorMap)
         obj._lib = _get_library()
-        obj._ptr = ptr
-        obj._blocks = []
+        obj._ptr = tensor
+        obj._parent = None
         return obj
 
+    @staticmethod
+    def unsafe_view_from_ptr(tensor: ctypes.POINTER(mts_tensormap_t), parent: Any):
+        """
+        Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer, keeping a
+        reference to the ``parent`` to prevent garbage collection.
+
+        The :py:class:`TensorMap` does **not** take ownership of the pointer, and will
+        not release the memory.
+        """
+        assert parent is not None, (
+            "please use TensorMap.unsafe_from_ptr to take ownership of a pointer"
+        )
+
+        obj = TensorMap.unsafe_from_ptr(tensor)
+        obj._parent = parent
+        return obj
+
+    def as_mts_tensormap_t(self) -> ctypes.POINTER(mts_tensormap_t):
+        """
+        Get the underlying C pointer for this :py:class:`TensorMap`.
+
+        This class still manages the tensor map memory after the call. Use
+        :py:meth:`TensorMap.release` to take ownership of the pointer.
+        """
+        if not self._ptr:
+            raise ValueError(
+                "this TensorMap has been released and can no longer be used"
+            )
+
+        return self._ptr
+
+    def release(self) -> ctypes.POINTER(mts_tensormap_t):
+        """
+        Release the underlying C pointer of this :py:class:`TensorMap`.
+
+        This class is no longer managing the tensor map memory after the call,
+        the user is expected to re-create a :py:class:`TensorMap` with
+        :py:meth:`TensorMap.unsafe_from_ptr`, or pass the pointer to a C function
+        that will call ``mts_tensormap_free``.
+        """
+        if self._parent is not None:
+            raise RuntimeError(
+                "can not release this TensorMap, it is already a view inside "
+                "another TensorMap or TensorBlock"
+            )
+
+        ptr = self.as_mts_tensormap_t()
+        self._ptr = None
+        return ptr
+
     def __del__(self):
-        if hasattr(self, "_lib") and self._lib is not None and hasattr(self, "_ptr"):
-            self._lib.mts_tensormap_free(self._ptr)
+        if (
+            hasattr(self, "_lib")
+            and self._lib is not None
+            and hasattr(self, "_ptr")
+            and hasattr(self, "_parent")
+        ):
+            if self._parent is None:
+                self._lib.mts_tensormap_free(self._ptr)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -146,7 +172,8 @@ class TensorMap:
         """
         if deep:
             new_ptr = self._lib.mts_tensormap_copy(self._ptr)
-            return TensorMap._from_ptr(new_ptr)
+            check_pointer(new_ptr)
+            return TensorMap.unsafe_from_ptr(new_ptr)
         else:
             new_blocks = [block.copy(deep=False) for block in self.blocks()]
             return TensorMap(keys=self.keys, blocks=new_blocks)
@@ -303,7 +330,7 @@ class TensorMap:
         """The set of keys labeling the blocks in this tensor map."""
         result = self._lib.mts_tensormap_keys(self._ptr)
         check_pointer(result)
-        return Labels._from_mts_labels_t(result)
+        return Labels.unsafe_from_ptr(result)
 
     def block_by_id(self, index: int) -> TensorBlock:
         """
@@ -322,7 +349,8 @@ class TensorMap:
 
         block = ctypes.POINTER(mts_block_t)()
         self._lib.mts_tensormap_block_by_id(self._ptr, block, index)
-        return TensorBlock._from_ptr(block, parent=self)
+        check_pointer(block)
+        return TensorBlock.unsafe_view_from_ptr(block, parent=self)
 
     def blocks_by_id(self, indices: Sequence[int]) -> TensorBlock:
         """
@@ -523,9 +551,10 @@ class TensorMap:
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fill_value_array = _make_fill_value_array(self, fill_value)
         ptr = self._lib.mts_tensormap_keys_to_samples(
-            self._ptr, keys_to_move._as_mts_labels_t(), fill_value_array, sort_samples
+            self._ptr, keys_to_move.as_mts_labels_t(), fill_value_array, sort_samples
         )
-        return TensorMap._from_ptr(ptr)
+        check_pointer(ptr)
+        return TensorMap.unsafe_from_ptr(ptr)
 
     def components_to_properties(
         self, dimensions: Union[str, Sequence[str]]
@@ -541,7 +570,8 @@ class TensorMap:
         ptr = self._lib.mts_tensormap_components_to_properties(
             self._ptr, c_dimensions, c_dimensions._length_
         )
-        return TensorMap._from_ptr(ptr)
+        check_pointer(ptr)
+        return TensorMap.unsafe_from_ptr(ptr)
 
     def keys_to_properties(
         self,
@@ -600,9 +630,10 @@ class TensorMap:
         keys_to_move = _normalize_keys_to_move(keys_to_move)
         fill_value_array = _make_fill_value_array(self, fill_value)
         ptr = self._lib.mts_tensormap_keys_to_properties(
-            self._ptr, keys_to_move._as_mts_labels_t(), fill_value_array, sort_samples
+            self._ptr, keys_to_move.as_mts_labels_t(), fill_value_array, sort_samples
         )
-        return TensorMap._from_ptr(ptr)
+        check_pointer(ptr)
+        return TensorMap.unsafe_from_ptr(ptr)
 
     @property
     def sample_names(self) -> List[str]:
@@ -662,6 +693,14 @@ class TensorMap:
             return None
 
         return self.block_by_id(0).dtype
+
+    @property
+    def is_view(self) -> bool:
+        """
+        Check if this :py:class:`TensorMap` is a view (i.e. does not own the
+        underlying data).
+        """
+        return self._parent is not None
 
     def to(self, *args, **kwargs) -> "TensorMap":
         """

@@ -10,6 +10,7 @@ import numpy as np
 
 from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
+from .._status import check_pointer
 from .._tensor import TensorMap
 from ._block import (
     CreateArrayCallback,
@@ -96,8 +97,8 @@ def load_custom_array(
         path = bytes(path)
 
     ptr = lib.mts_tensormap_load(path, mts_create_array_callback_t(create_array))
-
-    return TensorMap._from_ptr(ptr)
+    check_pointer(ptr)
+    return TensorMap.unsafe_from_ptr(ptr)
 
 
 def load_buffer_custom_array(
@@ -131,8 +132,8 @@ def load_buffer_custom_array(
         array.nbytes,
         mts_create_array_callback_t(create_array),
     )
-
-    return TensorMap._from_ptr(ptr)
+    check_pointer(ptr)
+    return TensorMap.unsafe_from_ptr(ptr)
 
 
 def _save_tensor(

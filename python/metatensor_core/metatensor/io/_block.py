@@ -18,7 +18,7 @@ from .._c_api import (
 )
 from .._c_lib import _get_library
 from .._data._array import _is_numpy_array, _is_torch_array, create_mts_array
-from .._status import catch_exceptions
+from .._status import catch_exceptions, check_pointer
 from ._labels import _labels_from_mts, _labels_to_mts
 from ._utils import _save_buffer_raw
 
@@ -198,8 +198,8 @@ def load_block_custom_array(
         path = bytes(path)
 
     ptr = lib.mts_block_load(path, mts_create_array_callback_t(create_array))
-
-    return TensorBlock._from_ptr(ptr, parent=None)
+    check_pointer(ptr)
+    return TensorBlock.unsafe_from_ptr(ptr)
 
 
 def load_block_buffer_custom_array(
@@ -233,8 +233,8 @@ def load_block_buffer_custom_array(
         array.nbytes,
         mts_create_array_callback_t(create_array),
     )
-
-    return TensorBlock._from_ptr(ptr, parent=None)
+    check_pointer(ptr)
+    return TensorBlock.unsafe_from_ptr(ptr)
 
 
 def _save_block(

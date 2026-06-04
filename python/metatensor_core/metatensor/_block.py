@@ -3,7 +3,7 @@ import ctypes
 import pathlib
 import warnings
 from pickle import PickleBuffer
-from typing import BinaryIO, Generator, List, Sequence, Tuple, Union
+from typing import Any, BinaryIO, Generator, List, Sequence, Tuple, Union
 
 import numpy as np
 
@@ -107,17 +107,17 @@ class TensorBlock:
 
         components_array = ctypes.ARRAY(ctypes.POINTER(mts_labels_t), len(components))()
         for i, component in enumerate(components):
-            components_array[i] = component._as_mts_labels_t()
+            components_array[i] = component.as_mts_labels_t()
 
         mts_array = create_mts_array(values)
-        self._actual_ptr = self._lib.mts_block(
+        self._ptr = self._lib.mts_block(
             mts_array,
-            samples._as_mts_labels_t(),
+            samples.as_mts_labels_t(),
             components_array,
             len(components_array),
-            properties._as_mts_labels_t(),
+            properties.as_mts_labels_t(),
         )
-        check_pointer(self._actual_ptr)
+        check_pointer(self._ptr)
 
         self._cached_dtype = _data.array_dtype(values)
         self._cached_device = _data.array_device(values)
@@ -133,46 +133,85 @@ class TensorBlock:
             )
 
     @staticmethod
-    def _from_ptr(ptr, parent):
+    def unsafe_from_ptr(block: ctypes.POINTER(mts_block_t)):
         """
-        create a block from a pointer, either owning its data (new block as a
-        copy of an existing one) or not (block inside a :py:class:`TensorMap`)
+        Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer.
+
+        The :py:class:`TensorBlock` takes ownership of the pointer, and will
+        release the corresponding memory when garbage-collected.
         """
-        check_pointer(ptr)
+        assert block, "mts_block_t pointer is null"
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
         obj._gradient_parameters = []
-        obj._actual_ptr = ptr
+        obj._ptr = block
         obj._cached_dtype = None
         obj._cached_device = None
+        obj._parent = None
+        return obj
+
+    @staticmethod
+    def unsafe_view_from_ptr(ptr: ctypes.POINTER(mts_block_t), parent: Any):
+        """
+        Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer, keeping a
+        reference to the ``parent`` to prevent garbage collection.
+
+        The :py:class:`TensorBlock` does **not** take ownership of the pointer, and will
+        not release the corresponding memory.
+        """
+        assert parent is not None, (
+            "please use TensorBlock.unsafe_from_ptr to take ownership of a pointer"
+        )
+
+        obj = TensorBlock.unsafe_from_ptr(ptr)
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from being garbage-collected & removing this block
         obj._parent = parent
         return obj
 
-    @property
-    def _ptr(self):
-        if self._actual_ptr is None:
+    def as_mts_block_t(self) -> ctypes.POINTER(mts_block_t):
+        """
+        Get the underlying C pointer for this :py:class:`TensorBlock`.
+
+        This class still manages the block memory after the call. Use
+        :py:meth:`TensorBlock.release` to take ownership of the pointer.
+        """
+        if not self._ptr:
             raise ValueError(
-                "this block has been moved inside a TensorMap/another TensorBlock "
-                "and can no longer be used"
+                "this block has been released or moved inside a TensorBlock "
+                "or TensorMap and can no longer be used"
             )
 
-        return self._actual_ptr
+        return self._ptr
 
-    def _move_ptr(self):
-        assert self._parent is None
-        self._actual_ptr = None
+    def release(self):
+        """
+        Release the underlying C pointer of this :py:class:`TensorBlock`.
+
+        This class is no longer managing the block memory after the call, the
+        user is expected to re-create a :py:class:`TensorBlock` with
+        :py:meth:`TensorBlock.unsafe_from_ptr`, or pass the pointer to a C
+        function that will call ``mts_block_free``.
+        """
+        if self._parent is not None:
+            raise RuntimeError(
+                "can not release this TensorBlock, it is a view inside another "
+                "TensorBlock or a TensorMap"
+            )
+
+        ptr = self.as_mts_block_t()
+        self._ptr = None
+        return ptr
 
     def __del__(self):
         if (
             hasattr(self, "_lib")
             and self._lib is not None
-            and hasattr(self, "_actual_ptr")
+            and hasattr(self, "_ptr")
             and hasattr(self, "_parent")
         ):
             if self._parent is None:
-                self._lib.mts_block_free(self._actual_ptr)
+                self._lib.mts_block_free(self._ptr)
 
     def __copy__(self):
         return self.copy(deep=False)
@@ -209,8 +248,9 @@ class TensorBlock:
         :param deep: if ``True``, create a deep copy of the block
         """
         if deep:
-            new_ptr = self._lib.mts_block_copy(self._ptr)
-            return TensorBlock._from_ptr(new_ptr, parent=None)
+            new_ptr = self._lib.mts_block_copy(self.as_mts_block_t())
+            check_pointer(new_ptr)
+            return TensorBlock.unsafe_from_ptr(new_ptr)
         else:
             new_block = TensorBlock(
                 values=self.values,
@@ -226,11 +266,9 @@ class TensorBlock:
             return new_block
 
     def __repr__(self) -> str:
-        if self._actual_ptr is None:
-            return (
-                "Empty TensorBlock (data has been moved to another "
-                "TensorBlock or TensorMap)"
-            )
+        if not self._ptr:
+            # The block has been released
+            return "TensorBlock(<empty>)"
 
         if len(self._gradient_parameters) != 0:
             s = f"Gradient TensorBlock ('{'/'.join(self._gradient_parameters)}')\n"
@@ -271,7 +309,7 @@ class TensorBlock:
     def _raw_values(self) -> mts_array_t:
         """Get the raw ``mts_array_t`` corresponding to this block's values"""
         data = mts_array_t()
-        self._lib.mts_block_data(self._ptr, data)
+        self._lib.mts_block_data(self.as_mts_block_t(), data)
         return data
 
     @property
@@ -331,9 +369,9 @@ class TensorBlock:
         return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
-        result = self._lib.mts_block_labels(self._ptr, axis)
+        result = self._lib.mts_block_labels(self.as_mts_block_t(), axis)
         check_pointer(result)
-        return Labels._from_mts_labels_t(result)
+        return Labels.unsafe_from_ptr(result)
 
     def gradient(self, parameter: str) -> "TensorBlock":
         """
@@ -393,10 +431,11 @@ class TensorBlock:
         gradient_block = ctypes.POINTER(mts_block_t)()
 
         self._lib.mts_block_gradient(
-            self._ptr, parameter.encode("utf8"), gradient_block
+            self.as_mts_block_t(), parameter.encode("utf8"), gradient_block
         )
 
-        gradient = TensorBlock._from_ptr(gradient_block, parent=self)
+        check_pointer(gradient_block)
+        gradient = TensorBlock.unsafe_view_from_ptr(gradient_block, parent=self)
 
         gradient._gradient_parameters = copy.deepcopy(self._gradient_parameters)
         gradient._gradient_parameters.append(parameter)
@@ -464,26 +503,15 @@ class TensorBlock:
                 f"got {self.device} and {gradient.device}"
             )
 
-        # mts_block_add_gradient already checks that all arrays have the same origin
-        # (i.e. they are all numpy, or all torch, or ...), so we don't need to check it
-        # again here.
-
-        gradient_ptr = gradient._ptr
-
-        # the gradient is moved inside this block, assign NULL to
-        # `gradient._ptr` to prevent accessing invalid data from Python and
-        # double free
-        gradient._move_ptr()
-
         self._lib.mts_block_add_gradient(
-            self._ptr, parameter.encode("utf8"), gradient_ptr
+            self.as_mts_block_t(), parameter.encode("utf8"), gradient.release()
         )
 
     def gradients_list(self) -> List[str]:
         """get a list of all gradients defined in this block"""
         parameters = ctypes.POINTER(ctypes.c_char_p)()
         count = c_uintptr_t()
-        self._lib.mts_block_gradients_list(self._ptr, parameters, count)
+        self._lib.mts_block_gradients_list(self.as_mts_block_t(), parameters, count)
 
         result = []
         for i in range(count.value):
@@ -525,6 +553,13 @@ class TensorBlock:
         if self._cached_device is None:
             self._cached_device = _data.array_device(self.values)
         return self._cached_device
+
+    @property
+    def is_view(self) -> bool:
+        """
+        Check if this block is a view (i.e. does not own the underlying data).
+        """
+        return self._parent is not None
 
     def to(self, *args, **kwargs) -> "TensorBlock":
         """
