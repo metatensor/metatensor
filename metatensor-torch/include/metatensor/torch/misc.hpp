@@ -25,7 +25,11 @@ namespace details {
 }
 
 /// Load a previously saved `TensorMap` from the given path.
-METATENSOR_TORCH_EXPORT TensorMap load(const std::string& path);
+///
+/// When `mmap` is true, numeric arrays are returned as private
+/// memory-mapped tensor views when the stored payloads are aligned for their
+/// dtypes. Unaligned payloads are copied into aligned tensors.
+METATENSOR_TORCH_EXPORT TensorMap load(const std::string& path, bool mmap = false);
 
 /// Load a previously saved `TensorMap` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)
@@ -41,7 +45,11 @@ METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TensorMap tensor);
 /******************************************************************************/
 
 /// Load a previously saved `TensorBlock` from the given path.
-METATENSOR_TORCH_EXPORT TensorBlock load_block(const std::string& path);
+///
+/// When `mmap` is true, numeric arrays are returned as private
+/// memory-mapped tensor views when the stored payloads are aligned for their
+/// dtypes. Unaligned payloads are copied into aligned tensors.
+METATENSOR_TORCH_EXPORT TensorBlock load_block(const std::string& path, bool mmap = false);
 
 /// Load a previously saved `TensorBlock` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)
@@ -57,7 +65,11 @@ METATENSOR_TORCH_EXPORT torch::Tensor save_buffer(TensorBlock block);
 /******************************************************************************/
 
 /// Load previously saved `Labels` from the given path.
-METATENSOR_TORCH_EXPORT Labels load_labels(const std::string& path);
+///
+/// When `mmap` is true, the Labels entry-data array is returned as a
+/// memory-mapped tensor view when the stored payload is aligned for `int32`.
+/// Unaligned payloads are copied into aligned tensors.
+METATENSOR_TORCH_EXPORT Labels load_labels(const std::string& path, bool mmap = false);
 
 /// Load previously saved `Labels` from the given in-memory buffer
 /// (represented as a `torch::Tensor` of bytes)

@@ -6,6 +6,28 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### metatensor-core C
+
+#### Added
+
+- `mts_tensormap_load_mmap` and `mts_block_load_mmap` for memory-mapped
+  loading of `.mts` files.
+- `mts_labels_load_mmap` for memory-mapped loading of serialized `Labels`.
+
+### metatensor-core C++
+
+#### Added
+
+- file-offset callback overloads for `metatensor::io::load`,
+  `metatensor::io::load_block`, and `metatensor::io::load_labels`.
+
+### metatensor-core Python
+
+#### Added
+
+- `mmap=True` to `metatensor.load`, `metatensor.io.load_block`, and
+  `metatensor.io.load_labels` for memory-mapped loading.
+
 <!-- Possible sections for each package:
 
 #### Added

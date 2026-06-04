@@ -1,4 +1,7 @@
 import os
+import subprocess
+import sys
+import textwrap
 from pathlib import Path
 from typing import Union
 
@@ -110,6 +113,95 @@ def test_load(tensor_path):
 
     loaded = TensorMap.load_buffer(buffer)
     check_tensor(loaded)
+
+
+def test_load_mmap(tensor_path):
+    # standalone function
+    loaded = mts.load(tensor_path, mmap=True)
+    check_tensor(loaded)
+
+    # Path
+    loaded = mts.load(Path(tensor_path), mmap=True)
+    check_tensor(loaded)
+
+    # mmap-loaded values must be equal to the canonical streaming loader
+    ref = mts.load(tensor_path)
+    mmap_tensor = mts.load(tensor_path, mmap=True)
+    for ref_block, got_block in zip(ref.blocks(), mmap_tensor.blocks(), strict=True):
+        assert ref_block.values.shape == got_block.values.shape
+        torch.testing.assert_close(ref_block.values, got_block.values)
+
+
+def test_load_mmap_values_are_mutable_private_views(tensor_path, tmp_path):
+    # The mmap loader returns torch tensors backed by a MAP_PRIVATE
+    # mapping of the .mts file, so in-place writes must be visible
+    # within the process (private-copy-on-write pages) but must NOT
+    # propagate back to the on-disk bytes -- confirmed by reloading
+    # the file with the normal loader and seeing the original values.
+    #
+    # The check runs in a subprocess for two reasons:
+    # 1. pytest's process keeps the mmap+tensor alive across tests via
+    #    its long-lived module + fixture caches; a clean subprocess
+    #    guarantees the only references to the mapping are the ones
+    #    this test creates, so the "reload sees original bytes"
+    #    assertion is not contaminated by an earlier test's mapping
+    #    or by a stale tensor sitting in `torch.utils.data`'s
+    #    debug buffers.
+    # 2. If MAP_PRIVATE were silently misconfigured as MAP_SHARED, the
+    #    in-place write would corrupt the on-disk fixture for every
+    #    subsequent test in the session; running in a subprocess
+    #    contains the blast radius to a single failing test rather
+    #    than poisoning the rest of the suite.
+    aligned_path = tmp_path / "aligned.mts"
+    mts.save(str(aligned_path), mts.load(tensor_path))
+
+    script = textwrap.dedent(
+        f"""
+        import torch
+        import metatensor.torch as mts
+
+        path = {str(aligned_path)!r}
+        tensor = mts.load(path, mmap=True)
+        block = tensor.block(dict(o3_lambda=2, center_type=6, neighbor_type=1))
+        original = block.values.clone()
+
+        block.values[0, 0, 0] = original[0, 0, 0] + 1.0
+        torch.testing.assert_close(
+            block.values[0, 0, 0],
+            original[0, 0, 0] + 1.0,
+        )
+
+        reloaded = mts.load(path)
+        reloaded_block = reloaded.block(
+            dict(o3_lambda=2, center_type=6, neighbor_type=1)
+        )
+        torch.testing.assert_close(reloaded_block.values, original)
+        """
+    )
+
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        text=True,
+        capture_output=True,
+        check=False,
+        cwd=tmp_path,
+    )
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_mmap_loaders_are_not_public_aliases():
+    assert not hasattr(mts, "load_mmap")
+    assert not hasattr(mts, "load_block_mmap")
+    assert not hasattr(mts, "load_labels_mmap")
+    assert not hasattr(TensorMap, "load_mmap")
+    assert not hasattr(TensorBlock, "load_mmap")
+    assert not hasattr(Labels, "load_mmap")
+
+
+def test_load_block_mmap(block_path):
+    block = mts.load_block(block_path, mmap=True)
+    check_block(block)
 
 
 def test_save(tmpdir, tensor_path):

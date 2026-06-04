@@ -139,6 +139,23 @@ namespace io {
         return TensorMap(ptr);
     }
 
+    /// Load a `TensorMap` from `path` using a file-offset array callback.
+    ///
+    /// metatensor parses each NPY header from the file and
+    /// dispatches the resulting `(shape, dtype, file_offset)` to
+    /// `create_array`. The callback decides how to materialise the array
+    /// (mmap view, copy, GPU upload via cuFile, ...). `user_data` is
+    /// forwarded to every callback invocation.
+    inline TensorMap load(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array,
+        void* user_data
+    ) {
+        auto* ptr = mts_tensormap_load_mmap(path.c_str(), create_array, user_data);
+        details::check_pointer(ptr);
+        return TensorMap(ptr);
+    }
+
     inline TensorMap load_buffer(
         const uint8_t* buffer,
         size_t buffer_count,
@@ -177,6 +194,18 @@ namespace io {
         return TensorBlock(ptr);
     }
 
+    /// Load a `TensorBlock` from `path` using a file-offset array callback.
+    /// See the matching `load` overload for callback semantics.
+    inline TensorBlock load_block(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array,
+        void* user_data
+    ) {
+        auto* ptr = mts_block_load_mmap(path.c_str(), create_array, user_data);
+        details::check_pointer(ptr);
+        return TensorBlock(ptr);
+    }
+
     inline TensorBlock load_block_buffer(
         const uint8_t* buffer,
         size_t buffer_count,
@@ -208,6 +237,21 @@ namespace io {
 
     inline Labels load_labels(const std::string& path) {
         const auto* ptr = mts_labels_load(path.c_str());
+        details::check_pointer(ptr);
+        return Labels(ptr);
+    }
+
+    /// Load Labels from `path`, using a callback to create the entry-data array
+    /// from its file offset.
+    /// The callback gets `(shape=[n_entries, n_dimensions], dtype=int32,
+    /// file_offset)`; dimension names are read from the file's structured NPY
+    /// dtype and stay inside the loader.
+    inline Labels load_labels(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array,
+        void* user_data
+    ) {
+        const auto* ptr = mts_labels_load_mmap(path.c_str(), create_array, user_data);
         details::check_pointer(ptr);
         return Labels(ptr);
     }

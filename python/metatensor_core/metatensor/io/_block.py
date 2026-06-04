@@ -125,7 +125,7 @@ def create_torch_array(shape_ptr, shape_count, dtype, array):
 
 
 def load_block(
-    file: Union[str, pathlib.Path, BinaryIO], use_numpy=False
+    file: Union[str, pathlib.Path, BinaryIO], use_numpy=False, mmap=False
 ) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from the given file.
@@ -137,7 +137,29 @@ def load_block(
         able to process more dtypes than the native implementation, which is limited to
         float64, but the native implementation is usually faster than going through
         numpy.
+    :param mmap: if ``True``, return numeric arrays as read-only ``numpy`` views into
+        a memory-mapped copy of the file when the stored payloads are aligned for
+        their dtypes. Unaligned payloads are copied into aligned arrays. Requires
+        ``file`` to be a path on a real filesystem and the file to use the
+        ``STORED`` (uncompressed) ZIP format with native byte order. Mutually
+        exclusive with ``use_numpy=True``.
     """
+    if mmap:
+        if use_numpy:
+            raise ValueError(
+                "use_numpy=True and mmap=True are mutually exclusive: "
+                "numpy.load(mmap_mode=...) only maps .npy files, while .mts "
+                "files are NPZ/ZIP archives"
+            )
+        if not isinstance(file, (str, pathlib.Path)):
+            raise ValueError(
+                "mmap=True requires a filesystem path (str or pathlib.Path), "
+                "not a file-like object"
+            )
+        from ._mmap import load_block_mmap as _load_block_mmap
+
+        return _load_block_mmap(file)
+
     if use_numpy:
         return _block_from_mts(file)
     else:

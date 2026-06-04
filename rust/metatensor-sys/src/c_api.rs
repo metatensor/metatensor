@@ -258,6 +258,16 @@ fn bindgen_test_layout_mts_array_t() {
         "Offset of field: mts_array_t::move_data"
     );
 }
+pub type mts_create_mmap_array_callback_t = ::std::option::Option<
+    unsafe extern "C" fn(
+        user_data: *mut ::std::os::raw::c_void,
+        shape: *const usize,
+        shape_count: usize,
+        dtype: DLDataType,
+        file_offset: usize,
+        array: *mut mts_array_t,
+    ) -> mts_status_t,
+>;
 pub type mts_realloc_buffer_t = ::std::option::Option<
     unsafe extern "C" fn(
         user_data: *mut ::std::os::raw::c_void,
@@ -468,6 +478,11 @@ extern "C" {
         dtype: *mut DLDataType,
     ) -> mts_status_t;
     pub fn mts_labels_load(path: *const ::std::os::raw::c_char) -> *const mts_labels_t;
+    pub fn mts_labels_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_mmap_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
+    ) -> *const mts_labels_t;
     pub fn mts_labels_load_buffer(buffer: *const u8, buffer_count: usize) -> *const mts_labels_t;
     #[must_use]
     pub fn mts_labels_save(
@@ -491,6 +506,11 @@ extern "C" {
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
     ) -> *mut mts_block_t;
+    pub fn mts_block_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_mmap_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
+    ) -> *mut mts_block_t;
     #[must_use]
     pub fn mts_block_save(
         path: *const ::std::os::raw::c_char,
@@ -512,6 +532,11 @@ extern "C" {
         buffer: *const u8,
         buffer_count: usize,
         create_array: mts_create_array_callback_t,
+    ) -> *mut mts_tensormap_t;
+    pub fn mts_tensormap_load_mmap(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_mmap_array_callback_t,
+        user_data: *mut ::std::os::raw::c_void,
     ) -> *mut mts_tensormap_t;
     #[must_use]
     pub fn mts_tensormap_save(

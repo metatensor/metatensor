@@ -695,6 +695,11 @@ private:
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
     friend Labels io::load_labels(const std::string &path);
+    friend Labels io::load_labels(
+        const std::string& path,
+        mts_create_mmap_array_callback_t create_array,
+        void* user_data
+    );
     friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
     friend class TensorMap;
     friend class TensorBlock;

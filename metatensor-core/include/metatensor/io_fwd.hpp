@@ -101,6 +101,14 @@ namespace metatensor {
             mts_create_array_callback_t create_array = details::default_create_array
         );
 
+        /// Load a previously saved `TensorMap` from the given path using a
+        /// callback that receives each array's file offset.
+        TensorMap load(
+            const std::string& path,
+            mts_create_mmap_array_callback_t create_array,
+            void* user_data
+        );
+
         /*!
         * Load a previously saved `TensorMap` from the given `buffer`, containing
         * `buffer_count` elements.
@@ -153,6 +161,14 @@ namespace metatensor {
             mts_create_array_callback_t create_array = details::default_create_array
         );
 
+        /// Load a previously saved `TensorBlock` from the given path using a
+        /// callback that receives each array's file offset.
+        TensorBlock load_block(
+            const std::string& path,
+            mts_create_mmap_array_callback_t create_array,
+            void* user_data
+        );
+
         /*!
         * Load a previously saved `TensorBlock` from the given `buffer`, containing
         * `buffer_count` elements.
@@ -189,6 +205,14 @@ namespace metatensor {
 
         /// Load previously saved `Labels` from the given path.
         Labels load_labels(const std::string& path);
+
+        /// Load `Labels` from `path`, using a callback to create the entry-data
+        /// array from its file offset. See `metatensor/io.hpp` for details.
+        Labels load_labels(
+            const std::string& path,
+            mts_create_mmap_array_callback_t create_array,
+            void* user_data
+        );
 
         /// Load previously saved `Labels` from the given `buffer`, containing
         /// `buffer_count` elements.

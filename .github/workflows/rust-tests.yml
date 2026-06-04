@@ -105,6 +105,21 @@ jobs:
           toolchain: ${{ matrix.rust-version }}
           target: ${{ matrix.rust-target }}
 
+      - name: Install uv
+        # The C++ install test creates a Python venv and pip-installs
+        # metatensor into it; that path is fragile on the ubuntu-24.04
+        # runner image since setuptools 80 dropped `_distutils_hack.add_shim`,
+        # which the system `python -m venv` + `python -m pip install --upgrade
+        # pip` bootstrap still references. Installing uv lets the test take
+        # the `uv venv` + `uv pip install` codepath (in metatensor-core/tests/
+        # utils/mod.rs::create_python_venv) which does not touch the broken
+        # distutils-precedence.pth shim at all.
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.13"
+          enable-cache: true
+          activate-environment: true
+
       - name: Cache Rust dependencies
         uses: Leafwing-Studios/cargo-cache@v2.6.1
         with:

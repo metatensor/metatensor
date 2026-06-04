@@ -12,7 +12,8 @@ use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::blocks::mts_block_t;
-use super::mts_create_array_callback_t;
+use super::{mts_create_array_callback_t, mts_create_mmap_array_callback_t};
+use super::tensor::wrap_create_mmap_array;
 
 
 /// Load a tensor block from the file at the given path.
@@ -171,6 +172,56 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<
             return Err(Error::CallbackError);
         }
     }
+}
+
+
+
+/// Load a `TensorBlock` from the file at the given path using memory mapping.
+///
+/// See `mts_tensormap_load_mmap` for callback semantics and file format
+/// constraints.
+///
+/// The memory allocated by this function should be released using
+/// `mts_block_free`.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback used to create the array (must be non-NULL)
+/// @param user_data opaque pointer forwarded to `create_array`
+///
+/// @returns A pointer to the newly allocated block, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[no_mangle]
+pub unsafe extern "C" fn mts_block_load_mmap(
+    path: *const c_char,
+    create_array: mts_create_mmap_array_callback_t,
+    user_data: *mut c_void,
+) -> *mut mts_block_t {
+    let mut result = std::ptr::null_mut();
+    let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
+    let status = catch_unwind(move || {
+        check_pointers_non_null!(path);
+
+        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let wrapped = wrap_create_mmap_array(create_array, user_data);
+        let block = crate::io::load_block_mmap(path, wrapped)
+            .map_err(|err| match err {
+                Error::Serialization(message) => Error::Serialization(format!(
+                    "unable to load a TensorBlock from '{}' via mmap: {}", path, message
+                )),
+                err => err,
+            })?;
+
+        let _ = &unwind_wrapper;
+        *(unwind_wrapper.0) = mts_block_t::into_boxed_raw(block);
+        Ok(())
+    });
+
+    if !status.is_success() {
+        return std::ptr::null_mut();
+    }
+
+    return result;
 }
 
 

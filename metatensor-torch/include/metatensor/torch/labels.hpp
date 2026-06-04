@@ -19,6 +19,8 @@ class LabelsEntryHolder;
 /// TorchScript will always manipulate `LabelsEntryHolder` through a `torch::intrusive_ptr`
 using LabelsEntry = torch::intrusive_ptr<LabelsEntryHolder>;
 
+METATENSOR_TORCH_EXPORT Labels load_labels(const std::string& path, bool mmap);
+
 namespace details {
     /// Transform a torch::IValue containing either a single string, a list of
     /// strings or a tuple of strings into a `std::vector<std::string>`.
@@ -190,7 +192,7 @@ public:
     /// in the `selection` but not in these `Labels` will be ignored.
     torch::Tensor select(const Labels& selection) const;
 
-    /// Load serialized Labels from the given path
+    /// Load serialized Labels from the given path.
     static Labels load(const std::string& path);
 
     /// Load serialized Labels from an in-memory buffer (represented as a
@@ -205,6 +207,8 @@ public:
     torch::Tensor save_buffer() const;
 
 private:
+    friend Labels load_labels(const std::string& path, bool mmap);
+
     /// main constructor, checking everything in debug mode & registering the
     /// `values` as the values array for the `labels`.
     LabelsHolder(std::vector<std::string> names, torch::Tensor values, metatensor::Labels labels);
