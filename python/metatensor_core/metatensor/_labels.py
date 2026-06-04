@@ -311,12 +311,17 @@ class Labels:
             values=np.arange(end, dtype=np.int32).reshape(-1, 1),
         )
 
-    @classmethod
-    def _from_mts_labels_t(cls, labels):
-        """Create Labels from an opaque mts_labels_t pointer."""
-        check_pointer(labels)
+    @staticmethod
+    def unsafe_from_ptr(labels: ctypes.POINTER(mts_labels_t)):
+        """
+        Create Labels from a raw ``mts_labels_t`` pointer.
 
-        obj = cls.__new__(cls)
+        The :py:class:`Labels` take ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+        """
+        assert labels, "mts_labels_t pointer is null"
+
+        obj = Labels.__new__(Labels)
         obj._lib = _get_library()
         obj._ptr = labels
 
@@ -333,24 +338,55 @@ class Labels:
 
         return obj
 
+    def release(self) -> ctypes.POINTER(mts_labels_t):
+        """
+        Release the underlying C pointer of these :py:class:`Labels`.
+
+        This class is no longer managing the labels memory after the call, the user is
+        expected to re-create Labels with :py:meth:`Labels.unsafe_from_ptr`, or pass the
+        pointer to a C function that will call `mts_labels_free`.
+        """
+        ptr = self.as_mts_labels_t()
+        self._ptr = None
+        return ptr
+
+    def as_mts_labels_t(self) -> ctypes.POINTER(mts_labels_t):
+        """
+        Get the underlying C pointer for these :py:class:`Labels`. This class still
+        manages the labels memory after the call. Use :py:meth:`Labels.release` to
+        take ownership of the pointerr
+        """
+        if not self._ptr:
+            raise RuntimeError("can not access these Labels, they have been released")
+
+        return self._ptr
+
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None:
             if hasattr(self, "_labels") and self._ptr is not None:
                 self._lib.mts_labels_free(self._ptr)
 
     def __deepcopy__(self, _memodict):
-        ptr = self._lib.mts_labels_clone(self._ptr)
+        ptr = self._lib.mts_labels_clone(self.as_mts_labels_t())
         check_pointer(ptr)
-        return Labels._from_mts_labels_t(ptr)
+        return Labels.unsafe_from_ptr(ptr)
 
     def __copy__(self):
         return self.__deepcopy__({})
 
     def __str__(self) -> str:
+        if not self._ptr:
+            # The Labels have been released
+            return "Labels(<empty>)"
+
         printed = self.print(4, 3)
         return f"Labels(\n   {printed}\n)"
 
     def __repr__(self) -> str:
+        if not self._ptr:
+            # The Labels have been released
+            return "Labels(<empty>)"
+
         printed = self.print(-1, 3)
         return f"Labels(\n   {printed}\n)"
 
@@ -418,9 +454,6 @@ class Labels:
         different values)
         """
         return not self.__eq__(other)
-
-    def _as_mts_labels_t(self):
-        return self._ptr
 
     # ===== Serialization support ===== #
 
@@ -500,7 +533,7 @@ class Labels:
     def _raw_values(self) -> mts_array_t:
         """Get the raw ``mts_array_t`` corresponding to these Labels' values"""
         data = mts_array_t()
-        self._lib.mts_labels_values(self._ptr, data)
+        self._lib.mts_labels_values(self.as_mts_labels_t(), data)
         return data
 
     @property
@@ -724,7 +757,7 @@ class Labels:
             c_entry[i] = ctypes.c_int32(v)
 
         self._lib.mts_labels_position(
-            self._ptr,
+            self.as_mts_labels_t(),
             c_entry,
             c_entry._length_,
             result,
@@ -759,14 +792,15 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_difference(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             None,
             0,
         )
 
-        return Labels._from_mts_labels_t(output)
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output)
 
     def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", np.ndarray]:
         """
@@ -800,14 +834,15 @@ class Labels:
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
         self._lib.mts_labels_difference(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
         )
 
-        return Labels._from_mts_labels_t(output), first_mapping
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output), first_mapping
 
     def union(self, other: "Labels") -> "Labels":
         """
@@ -831,8 +866,8 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_union(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             None,
             0,
@@ -840,7 +875,8 @@ class Labels:
             0,
         )
 
-        return Labels._from_mts_labels_t(output)
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output)
 
     def union_and_mapping(
         self, other: "Labels"
@@ -879,8 +915,8 @@ class Labels:
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_union(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
@@ -888,7 +924,8 @@ class Labels:
             len(second_mapping),
         )
 
-        return Labels._from_mts_labels_t(output), first_mapping, second_mapping
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output), first_mapping, second_mapping
 
     def intersection(self, other: "Labels") -> "Labels":
         """
@@ -910,8 +947,8 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             None,
             0,
@@ -919,7 +956,8 @@ class Labels:
             0,
         )
 
-        return Labels._from_mts_labels_t(output)
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output)
 
     def intersection_and_mapping(
         self, other: "Labels"
@@ -957,8 +995,8 @@ class Labels:
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_intersection(
-            self._as_mts_labels_t(),
-            other._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            other.as_mts_labels_t(),
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
@@ -966,7 +1004,8 @@ class Labels:
             len(second_mapping),
         )
 
-        return Labels._from_mts_labels_t(output), first_mapping, second_mapping
+        check_pointer(output)
+        return Labels.unsafe_from_ptr(output), first_mapping, second_mapping
 
     def select(self, selection: "Labels") -> np.ndarray:
         """
@@ -996,8 +1035,8 @@ class Labels:
         selected_count = c_uintptr_t(len(self))
 
         self._lib.mts_labels_select(
-            self._as_mts_labels_t(),
-            selection._as_mts_labels_t(),
+            self.as_mts_labels_t(),
+            selection.as_mts_labels_t(),
             selected.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64)),
             ctypes.pointer(selected_count),
         )

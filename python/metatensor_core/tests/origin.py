@@ -1,8 +1,10 @@
+import re
+
 import numpy as np
 import pytest
 import torch
 
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 
 def test_different_origins():
@@ -27,10 +29,11 @@ def test_different_origins():
         properties=Labels.single(),
     )
 
-    message = (
-        "all blocks in a TensorMap must have the same origin, "
-        "got 'python.numpy' and 'python.torch'"
+    message = re.escape(
+        "invalid parameter: tried to build a TensorMap from blocks with "
+        "different origins: at least ('python.numpy') and ('python.torch') "
+        "were detected"
     )
 
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(MetatensorError, match=message):
         TensorMap(keys=keys, blocks=[block_numpy, block_torch])

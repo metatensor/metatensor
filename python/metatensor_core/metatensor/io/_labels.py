@@ -29,7 +29,7 @@ def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
 
         ptr = lib.mts_labels_load(path)
         check_pointer(ptr)
-        return Labels._from_mts_labels_t(ptr)
+        return Labels.unsafe_from_ptr(ptr)
 
     else:
         # assume we have a file-like object
@@ -54,7 +54,7 @@ def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
     )
     check_pointer(ptr)
 
-    return Labels._from_mts_labels_t(ptr)
+    return Labels.unsafe_from_ptr(ptr)
 
 
 def _save_labels(
