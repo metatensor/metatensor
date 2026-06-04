@@ -134,6 +134,11 @@ public:
     /// Get the dtype for the values stored in this `TensorMap`
     torch::Dtype scalar_type() const;
 
+    /// Check if this TensorMap is a view (i.e. does not own the underlying data).
+    bool is_view() const {
+        return !parent_.isNone();
+    }
+
     /// Move this `TensorMap` to the given `dtype` and `device`.
     TensorMap to(
         torch::optional<torch::Dtype> dtype = torch::nullopt,
@@ -162,6 +167,30 @@ public:
     const metatensor::TensorMap& as_metatensor() const {
         return tensor_;
     }
+
+    /// Get a mutable reference to the underlying `metatensor::TensorMap`
+    metatensor::TensorMap& as_metatensor() {
+        return tensor_;
+    }
+
+    /// Move the `metatensor::TensorMap` out of this class.
+    ///
+    /// This leaves the `TensorMapHolder` in an empty state that should no
+    /// longer be used.
+    metatensor::TensorMap release();
+
+    /// Create a `TensorMapHolder` from a pre-existing `metatensor::TensorMap`.
+    ///
+    /// The tensor map is moved into the new holder, taking ownership of the
+    /// underlying data.
+    static TensorMap from_metatensor(metatensor::TensorMap tensor);
+
+    /// Create a `TensorMapHolder` which is a view of a pre-existing
+    /// `metatensor::TensorMap`.
+    ///
+    /// The view does not own the underlying data. The `parent` is kept alive
+    /// as long as this tensor map is alive.
+    static TensorMap view_from_metatensor(metatensor::TensorMap tensor, torch::IValue parent);
 
     /// Load a serialized TensorMap from the given path
     static TensorMap load(const std::string& path);
@@ -192,9 +221,18 @@ private:
     /// Underlying metatensor TensorMap
     metatensor::TensorMap tensor_;
 
+    /// Parent for this TensorMap, used to keep a reference on the parent object
+    torch::IValue parent_;
+
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
     explicit TensorMapHolder(metatensor::TensorMap tensor):
         tensor_(std::move(tensor)) {}
+
+    /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder` with a parent
+    explicit TensorMapHolder(metatensor::TensorMap tensor, torch::IValue parent):
+        tensor_(std::move(tensor)), parent_(std::move(parent)) {}
+
+    friend class torch::intrusive_ptr<TensorMapHolder>;
 };
 
 

@@ -256,7 +256,20 @@ torch::Tensor LabelsHolder::column(std::string dimension) {
 }
 
 const metatensor::Labels& LabelsHolder::as_metatensor() const {
+    if (labels_.as_mts_labels_t() == nullptr) {
+        throw std::runtime_error(
+            "can not access this Labels, it has been released"
+        );
+    }
     return labels_;
+}
+
+metatensor::Labels LabelsHolder::release() {
+    return std::move(labels_);
+}
+
+Labels LabelsHolder::from_metatensor(metatensor::Labels labels) {
+    return torch::make_intrusive<LabelsHolder>(std::move(labels));
 }
 
 Labels LabelsHolder::append(std::string name, torch::Tensor values) const {

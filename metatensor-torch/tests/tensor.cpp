@@ -24,6 +24,7 @@ TEST_CASE("TensorMap") {
 
         // block by index
         auto block = TensorMapHolder::block_by_id(tensor, 2);
+        CHECK(block->is_view());
         const auto values = block->values();
         CHECK(values[0][0][0].item<double>() == 3);
     }

@@ -381,6 +381,33 @@ torch::Tensor TensorBlockHolder::save_buffer() const {
 }
 
 metatensor::TensorBlock TensorBlockHolder::release() {
-    auto block = std::move(block_);
-    return block;
+    if (!parent_.isNone()) {
+        throw std::runtime_error(
+            "can not release this TensorBlock, it is a view inside another"
+            " TensorBlock or a TensorMap"
+        );
+    }
+
+    return std::move(block_);
+}
+
+TensorBlock TensorBlockHolder::from_metatensor(metatensor::TensorBlock block) {
+    return torch::make_intrusive<TensorBlockHolder>(std::move(block), torch::IValue());
+}
+
+TensorBlock TensorBlockHolder::view_from_metatensor(metatensor::TensorBlock block, torch::IValue parent) {
+    if (parent.isNone()) {
+        C10_THROW_ERROR(ValueError,
+            "`parent` cannot be None when creating a TensorBlock view"
+        );
+    }
+
+    if (!block.is_view()) {
+        C10_THROW_ERROR(ValueError,
+            "the provided metatensor::TensorBlock is not a view, "
+            "cannot create a metatensor_torch::TensorBlock view from it"
+        );
+    }
+
+    return torch::make_intrusive<TensorBlockHolder>(std::move(block), std::move(parent));
 }

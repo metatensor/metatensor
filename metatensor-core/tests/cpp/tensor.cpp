@@ -327,7 +327,7 @@ TEST_CASE("TensorMap ownership transfer") {
     auto* raw = tensor.release();
     CHECK_THROWS_WITH(
         tensor.as_mts_tensormap_t(),
-        "Can not access this TensorMap, it has been released"
+        "can not access this TensorMap, it has been released"
     );
 
     auto recovered = TensorMap::unsafe_from_ptr(raw);
@@ -336,7 +336,7 @@ TEST_CASE("TensorMap ownership transfer") {
     raw = recovered.release();
     CHECK_THROWS_WITH(
         recovered.as_mts_tensormap_t(),
-        "Can not access this TensorMap, it has been released"
+        "can not access this TensorMap, it has been released"
     );
     REQUIRE(mts_tensormap_free(raw) == MTS_SUCCESS);
 }

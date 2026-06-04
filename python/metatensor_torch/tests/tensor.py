@@ -788,3 +788,59 @@ def test_keys_to_samples_fill_value_default(tensor):
             tensor_default.block_by_id(i).values
             == tensor_explicit.block_by_id(i).values
         )
+
+
+def test_tensormap_ownership_transfer(tensor):
+    """Test releasing and recovering a TensorMap via ``unsafe_from_ptr``"""
+    assert not tensor.is_view
+    keys = tensor.keys
+
+    message = "can not access this TensorMap, it has been released"
+
+    raw = tensor.release()
+
+    with pytest.raises(RuntimeError, match=message):
+        tensor.as_mts_tensormap_t()
+
+    recovered = TensorMap.unsafe_from_ptr(raw)
+    assert recovered.keys == keys
+
+    raw = recovered.release()
+    with pytest.raises(RuntimeError, match=message):
+        recovered.as_mts_tensormap_t()
+
+    TensorMap.unsafe_from_ptr(raw)
+
+
+def test_tensormap_unsafe_view(tensor):
+    """Test creating a non-owning view of a TensorMap"""
+    assert not tensor.is_view
+
+    raw = tensor.as_mts_tensormap_t()
+    view = TensorMap.unsafe_view_from_ptr(raw, tensor)
+
+    assert view.is_view
+    assert view.keys == tensor.keys
+
+    # creating a view should not prevent using the original
+    assert tensor.keys.names == ["key_1", "key_2"]
+
+
+def test_tensormap_block_view_ownership(tensor):
+    """Test that block views from a TensorMap keep the TensorMap alive"""
+    block = tensor.block(0)
+    assert block.is_view
+
+    message = (
+        "can not release this TensorBlock, it is a view inside another "
+        "TensorBlock or a TensorMap"
+    )
+    with pytest.raises(RuntimeError, match=message):
+        block.release()
+
+    # The block should still be usable
+    block.samples
+    block.values
+
+    # The tensor map should still be usable
+    assert tensor.keys.names == ["key_1", "key_2"]
