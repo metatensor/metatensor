@@ -168,6 +168,10 @@ public:
     /// Load a serialized TensorBlock from the given path
     static TensorBlock load(const std::string& path);
 
+    /// Load a serialized TensorBlock from the given path using memory-mapped
+    /// I/O. See `TensorMapHolder::load_mmap` for semantics.
+    static TensorBlock load_mmap(const std::string& path);
+
     /// Load a serialized TensorBlock from an in-memory buffer (represented as a
     /// `torch::Tensor` of bytes)
     static TensorBlock load_buffer(torch::Tensor buffer);

@@ -1,4 +1,4 @@
-# ruff: disable[E402]
+# ruff: noqa: E402
 import importlib.metadata
 import sys
 

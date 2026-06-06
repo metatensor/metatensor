@@ -87,6 +87,341 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
     assert gradient.values.shape == (59, 3, 5, 3)
 
 
+def _data_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+
+
+def _block_mts_path():
+    return os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "block.mts",
+    )
+
+
+@pytest.mark.parametrize("standalone_fn", (True, False))
+def test_load_mmap_tensor(standalone_fn):
+    path = _data_mts_path()
+
+    if standalone_fn:
+        tensor = mts.load_mmap(path)
+    else:
+        tensor = TensorMap.load(path)  # canonical reference
+
+        # The mmap loader must produce a TensorMap with identical structure
+        # and equal values to the canonical streaming loader.
+        mmap_tensor = mts.io.load_mmap(path)
+        assert isinstance(mmap_tensor, TensorMap)
+        assert mmap_tensor.keys.names == tensor.keys.names
+        assert len(mmap_tensor.keys) == len(tensor.keys)
+        for ref, got in zip(tensor.blocks(), mmap_tensor.blocks(), strict=True):
+            assert got.values.shape == ref.values.shape
+            np.testing.assert_array_equal(
+                np.asarray(got.values), np.asarray(ref.values)
+            )
+        return
+
+    assert isinstance(tensor, TensorMap)
+    assert tensor.keys.names == [
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
+    ]
+    assert len(tensor.keys) == 27
+
+    block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert block.samples.names == ["system", "atom"]
+    assert block.values.shape == (9, 5, 3)
+    assert not block.values.flags.writeable, "mmap arrays should be read-only"
+
+    gradient = block.gradient("positions")
+    assert gradient.samples.names == ["sample", "system", "atom"]
+    assert gradient.values.shape == (59, 3, 5, 3)
+
+
+def test_load_mmap_block():
+    path = _block_mts_path()
+
+    block = mts.io.load_block_mmap(path)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape[0] > 0
+    assert not block.values.flags.writeable
+
+
+def test_load_mmap_pathlib():
+    # pathlib.Path inputs must work alongside str inputs.
+    path = Path(_data_mts_path())
+    tensor = mts.io.load_mmap(path)
+    assert isinstance(tensor, TensorMap)
+
+
+def test_load_partial_select_all():
+    # No filters: must equal canonical load.
+    path = _data_mts_path()
+    ref = mts.load(path)
+    got = mts.load_partial(path)
+    assert isinstance(got, TensorMap)
+    assert got.keys.names == ref.keys.names
+    assert len(got.keys) == len(ref.keys)
+    for ref_block, got_block in zip(ref.blocks(), got.blocks(), strict=True):
+        assert got_block.values.shape == ref_block.values.shape
+        np.testing.assert_array_equal(
+            np.asarray(got_block.values), np.asarray(ref_block.values)
+        )
+
+
+def test_load_partial_filter_keys():
+    path = _data_mts_path()
+    keys_filter = Labels(
+        names=["o3_lambda", "center_type"],
+        values=np.array([[2, 6]], dtype=np.int32),
+    )
+    got = mts.load_partial(path, keys=keys_filter)
+    assert isinstance(got, TensorMap)
+    # the matching keys filter selects 4 (o3_lambda=2, center_type=6,
+    # neighbor_type in {1,6,8}, o3_sigma=1)
+    assert len(got.keys) >= 1
+    for entry in got.keys:
+        assert entry["o3_lambda"] == 2
+        assert entry["center_type"] == 6
+
+
+def test_load_partial_filter_samples():
+    path = _data_mts_path()
+    # pick a sample selector that's present in the data
+    ref = mts.load(path)
+    ref_block = ref.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    first_sample = np.array(ref_block.samples.values[:1], dtype=np.int32)
+    samples_filter = Labels(names=ref_block.samples.names, values=first_sample)
+
+    got = mts.load_partial(path, samples=samples_filter)
+    got_block = got.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert got_block.samples.values.shape[0] == 1
+    np.testing.assert_array_equal(np.asarray(got_block.samples.values), first_sample)
+
+
+def test_load_partial_filter_properties():
+    """
+    Property selection drives the per-row scratch-buffer branch of
+    gather_selected_data (one pread per kept row into row_buf, then
+    column-subset scatter into dst). Verify the kept columns match the
+    canonical load byte-for-byte, in the requested order.
+    """
+    path = _data_mts_path()
+    ref = mts.load(path)
+    ref_block = ref.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert ref_block.properties.values.shape[0] >= 2, (
+        "test assumes the reference block has at least two properties"
+    )
+
+    # Keep the last property first, then the first; tests both subset
+    # selection and column reordering through the scratch buffer.
+    kept = ref_block.properties.values[[-1, 0], :].astype(np.int32, copy=True)
+    properties_filter = Labels(names=ref_block.properties.names, values=kept)
+
+    got = mts.load_partial(path, properties=properties_filter)
+    got_block = got.block(o3_lambda=2, center_type=6, neighbor_type=1)
+    assert got_block.properties.values.shape[0] == 2
+    np.testing.assert_array_equal(np.asarray(got_block.properties.values), kept)
+
+    # Every selected column must match the canonical block at the
+    # same property index, in the requested order.
+    ref_values = np.asarray(ref_block.values)
+    got_values = np.asarray(got_block.values)
+    ref_cols = [
+        int(np.where((ref_block.properties.values == row).all(axis=1))[0][0])
+        for row in kept
+    ]
+    np.testing.assert_array_equal(got_values, ref_values[..., ref_cols])
+
+
+def test_load_partial_nested_gradients(tmpdir):
+    block = TensorBlock(
+        values=np.arange(9, dtype=np.float64).reshape(3, 3),
+        samples=Labels.range("s", 3),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    gradient = TensorBlock(
+        values=np.arange(9, 18, dtype=np.float64).reshape(3, 3),
+        samples=Labels.range("sample", 3),
+        components=[],
+        properties=Labels.range("p", 3),
+    )
+
+    grad_grad = TensorBlock(
+        values=np.arange(45, dtype=np.float64).reshape(3, 5, 3),
+        samples=Labels.range("sample", 3),
+        components=[Labels.range("c", 5)],
+        properties=Labels.range("p", 3),
+    )
+
+    block_values = block.values.copy()
+    gradient_values = gradient.values.copy()
+    grad_grad_values = grad_grad.values.copy()
+
+    gradient.add_gradient("grad-of-grad", grad_grad)
+    block.add_gradient("grad", gradient)
+    tensor = TensorMap(Labels.single(), [block])
+
+    samples_filter = Labels(
+        names=["s"],
+        values=np.array([[0], [2]], dtype=np.int32),
+    )
+
+    tmpfile = "partial-grad-grad-test.mts"
+    with tmpdir.as_cwd():
+        mts.save(tmpfile, tensor)
+        loaded = mts.load_partial(tmpfile, samples=samples_filter)
+
+    loaded_block = loaded.block(0)
+    loaded_gradient = loaded_block.gradient("grad")
+    loaded_grad_grad = loaded_gradient.gradient("grad-of-grad")
+
+    np.testing.assert_array_equal(loaded_block.values, block_values[[0, 2], :])
+    np.testing.assert_array_equal(loaded_gradient.values, gradient_values[[0, 2], :])
+    np.testing.assert_array_equal(
+        loaded_gradient.samples.values,
+        np.array([[0], [1]], dtype=np.int32),
+    )
+    np.testing.assert_array_equal(
+        loaded_grad_grad.values,
+        grad_grad_values[[0, 2], :, :],
+    )
+    np.testing.assert_array_equal(
+        loaded_grad_grad.samples.values,
+        np.array([[0], [1]], dtype=np.int32),
+    )
+
+
+def test_load_block_partial_round_trip():
+    path = _block_mts_path()
+    block = mts.io.load_block_partial(path)
+    assert isinstance(block, TensorBlock)
+    assert block.values.shape[0] > 0
+
+
+def test_load_mmap_gds_values_equal():
+    """
+    Load a TensorMap via NVIDIA GPU Direct Storage (cuFile) and verify
+    every value array equals the canonical CPU load, byte-for-byte.
+
+    Skipped on systems without cupy + kvikio. When kvikio is in compat
+    mode (no nvidia-fs kernel module or non-GDS-capable filesystem),
+    cuFile still reads via POSIX but with a host bounce buffer; the
+    end result is the same GPU array, so we test both modes via the
+    same assertion.
+    """
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import is_using_real_gds, load_mmap_gds
+
+    path = _data_mts_path()
+    ref = mts.load(path)
+    gpu = load_mmap_gds(path)
+
+    print(f"GDS mode: {'direct DMA' if is_using_real_gds() else 'compat (POSIX)'}")
+    assert isinstance(gpu, TensorMap)
+    assert gpu.keys.names == ref.keys.names
+    assert len(gpu.keys) == len(ref.keys)
+
+    for ref_block, gpu_block in zip(ref.blocks(), gpu.blocks(), strict=True):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        assert gpu_np.shape == ref_np.shape
+        assert gpu_np.dtype == ref_np.dtype
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+
+def test_load_partial_mmap_gds_round_trip():
+    """
+    Multi-region GDS partial load: select half the blocks and one
+    sample row per surviving block; verify the GPU result equals the
+    canonical mts.load_partial result, byte-for-byte.
+    """
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import load_partial_mmap_gds
+
+    path = _data_mts_path()
+
+    # No filter at all: must equal full mts.load.
+    ref_full = mts.load(path)
+    gpu_full = load_partial_mmap_gds(path)
+    assert len(gpu_full.keys) == len(ref_full.keys)
+    for ref_block, gpu_block in zip(ref_full.blocks(), gpu_full.blocks(), strict=True):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+    # Key + sample filter.
+    keys_filter = Labels(
+        names=["o3_lambda", "center_type"],
+        values=np.array([[2, 6]], dtype=np.int32),
+    )
+    samples_filter = Labels(
+        names=["system"],
+        values=np.array([[0]], dtype=np.int32),
+    )
+    ref_filtered = mts.load_partial(path, keys=keys_filter, samples=samples_filter)
+    gpu_filtered = load_partial_mmap_gds(path, keys=keys_filter, samples=samples_filter)
+    assert len(gpu_filtered.keys) == len(ref_filtered.keys)
+    for ref_block, gpu_block in zip(
+        ref_filtered.blocks(), gpu_filtered.blocks(), strict=True
+    ):
+        ref_np = np.asarray(ref_block.values)
+        gpu_np = cupy.asnumpy(gpu_block.values)
+        np.testing.assert_array_equal(gpu_np, ref_np)
+
+
+def test_load_block_mmap_gds_values_equal():
+    cupy = pytest.importorskip("cupy")
+    pytest.importorskip("kvikio")
+    from metatensor.io._mmap_gds import load_block_mmap_gds
+
+    path = _block_mts_path()
+    ref = mts.io.load_block(path)
+    gpu = load_block_mmap_gds(path)
+    assert isinstance(gpu, TensorBlock)
+    ref_np = np.asarray(ref.values)
+    gpu_np = cupy.asnumpy(gpu.values)
+    np.testing.assert_array_equal(gpu_np, ref_np)
+
+
+def test_load_mmap_values_are_views():
+    # mmap-loaded arrays must be views into a memory-mapped buffer,
+    # not freshly-allocated copies. We assert: (a) values are read-only
+    # and (b) the .base chain leads to *some* non-None buffer (numpy
+    # arrays whose data is a fresh malloc would have base=None).
+    path = _data_mts_path()
+    tensor = mts.io.load_mmap(path)
+    for block in tensor.blocks():
+        arr = np.asarray(block.values)
+        assert not arr.flags.writeable, "mmap arrays should be read-only"
+        # walk to the lowest non-None base
+        base = arr.base
+        while base is not None and getattr(base, "base", None) is not None:
+            base = base.base
+        assert base is not None, (
+            "expected the array to be a view into an mmap, not an "
+            "independently-allocated buffer (base is None)"
+        )
+
+
 @pytest.mark.parametrize("use_numpy", (True, False))
 def test_load_deflate(use_numpy):
     # This file was saved using DEFLATE to compress the different ZIP archive members

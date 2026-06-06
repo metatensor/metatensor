@@ -1,4 +1,4 @@
-use std::io::{BufReader, Read};
+use std::io::BufReader;
 use std::sync::Arc;
 use std::ffi::CString;
 
@@ -69,21 +69,14 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
 
     let mut tensor = TensorMap::new(Arc::new(keys), blocks)?;
 
-    // Load info.json, if it exists
-    let path = String::from("info.json");
-    if archive.file_names().any(|name| name == path) {
-        let mut info_file = archive.by_name(&path).map_err(|e| (path, e))?;
-
-        let mut info = String::new();
-        info_file.read_to_string(&mut info)?;
-        let info = jzon::parse(&info).map_err(|e| Error::Serialization(e.to_string()))?;
-        let info = info.as_object().ok_or_else(|| Error::Serialization("'info.json' should contain an object".into()))?;
-
-        for (key, value) in info.iter() {
-            let value = value.as_str().ok_or_else(|| Error::Serialization("values in 'info.json' should be strings".into()))?;
-            tensor.add_info(key, ConstCString::new(CString::new(value).expect("value in 'info.json' should not contain a NUL byte")));
-        }
-    }
+    super::load_info_json(&mut archive, |key, value| {
+        tensor.add_info(
+            key,
+            ConstCString::new(
+                CString::new(value).expect("value in 'info.json' should not contain a NUL byte"),
+            ),
+        );
+    })?;
 
     return Ok(tensor);
 }

@@ -234,6 +234,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("save", &TensorBlockHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorBlockHolder::save_buffer)
         .def_static("load", &TensorBlockHolder::load)
+        .def_static("load_mmap", &TensorBlockHolder::load_mmap)
         .def_static("load_buffer", &TensorBlockHolder::load_buffer)
         .def_pickle(
             // __getstate__
@@ -257,6 +258,7 @@ TORCH_LIBRARY(metatensor, m) {
         .def("save", &TensorMapHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorMapHolder::save_buffer)
         .def_static("load", &TensorMapHolder::load)
+        .def_static("load_mmap", &TensorMapHolder::load_mmap)
         .def_static("load_buffer", &TensorMapHolder::load_buffer)
         .def("items", &TensorMapHolder::items)
         .def_property("keys", &TensorMapHolder::keys)
@@ -321,6 +323,10 @@ TORCH_LIBRARY(metatensor, m) {
         metatensor_torch::load
     );
     m.def(
+        "load_mmap(str file) -> __torch__.torch.classes.metatensor.TensorMap",
+        metatensor_torch::load_mmap
+    );
+    m.def(
         "load_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorMap",
         metatensor_torch::load_buffer
     );
@@ -328,6 +334,10 @@ TORCH_LIBRARY(metatensor, m) {
     m.def(
         "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
         metatensor_torch::load_block
+    );
+    m.def(
+        "load_block_mmap(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
+        metatensor_torch::load_block_mmap
     );
     m.def(
         "load_block_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorBlock",

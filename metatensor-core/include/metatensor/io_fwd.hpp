@@ -101,6 +101,24 @@ namespace metatensor {
             mts_create_array_callback_t create_array = details::default_create_array
         );
 
+        /// Load a previously saved `TensorMap` from the given path, selecting
+        /// a subset of keys, samples, and properties.
+        TensorMap load_partial(
+            const std::string& path,
+            const mts_labels_t* keys,
+            const mts_labels_t* samples,
+            const mts_labels_t* properties,
+            mts_create_array_callback_t create_array = details::default_create_array
+        );
+
+        /// Load a previously saved `TensorMap` from the given path using
+        /// memory-mapped I/O.
+        TensorMap load_mmap(
+            const std::string& path,
+            mts_create_file_array_callback_t create_array,
+            void* user_data
+        );
+
         /*!
         * Load a previously saved `TensorMap` from the given `buffer`, containing
         * `buffer_count` elements.
@@ -151,6 +169,23 @@ namespace metatensor {
         TensorBlock load_block(
             const std::string& path,
             mts_create_array_callback_t create_array = details::default_create_array
+        );
+
+        /// Load a previously saved `TensorBlock` from the given path, selecting
+        /// a subset of samples and properties.
+        TensorBlock load_block_partial(
+            const std::string& path,
+            const mts_labels_t* samples,
+            const mts_labels_t* properties,
+            mts_create_array_callback_t create_array = details::default_create_array
+        );
+
+        /// Load a previously saved `TensorBlock` from the given path using
+        /// memory-mapped I/O.
+        TensorBlock load_block_mmap(
+            const std::string& path,
+            mts_create_file_array_callback_t create_array,
+            void* user_data
         );
 
         /*!

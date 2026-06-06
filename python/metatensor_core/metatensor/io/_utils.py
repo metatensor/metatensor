@@ -42,12 +42,23 @@ def _save_buffer_raw(mts_function, data) -> ctypes.Array:
         ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t
     )
 
+    # Bind the realloc-callback handle and CFUNCTYPE wrapper to named locals so
+    # CPython keeps them alive for the full duration of mts_function. With
+    # inline expressions, ctypes.cast(...) / CFUNCTYPE(...) produced anonymous
+    # temporaries that CPython could drop mid-call: the realloc callback would
+    # then dereference a freed py_object wrapper, return a stale address, and
+    # the final buffer view would read from reused heap memory (observed on CI
+    # as the buffer surfacing libc-malloc pointer values instead of the saved
+    # zip bytes).
+    handle = ctypes.py_object(buffer)
+    handle_void_p = ctypes.cast(ctypes.pointer(handle), ctypes.c_void_p)
+    realloc_cb = realloc_type(realloc)
+
     mts_function(
         buffer_ptr,
         buffer_size,
-        # convert PyObject to void* to pass it to realloc
-        ctypes.cast(ctypes.pointer(ctypes.py_object(buffer)), ctypes.c_void_p),
-        realloc_type(realloc),
+        handle_void_p,
+        realloc_cb,
         data,
     )
 

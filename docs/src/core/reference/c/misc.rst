@@ -48,12 +48,22 @@ Tensors
 
 - :c:func:`mts_tensormap_save`: serialize and save a ``mts_tensormap_t`` to a file
 - :c:func:`mts_tensormap_load`: load a serialized ``mts_tensormap_t`` from a file
+- :c:func:`mts_tensormap_load_mmap`: memory-map a serialized
+  ``mts_tensormap_t`` from a file, materialising each value/gradient
+  array via a user-supplied ``mts_create_file_array_callback_t``
+- :c:func:`mts_tensormap_load_partial`: load a serialized
+  ``mts_tensormap_t``, restricted to a subset of keys, samples, and
+  properties chosen with ``Labels``-shaped filters
 - :c:func:`mts_tensormap_save_buffer`: serialize and save a ``mts_tensormap_t``
   to a in-memory buffer
 - :c:func:`mts_tensormap_load_buffer`: load a serialized ``mts_tensormap_t`` from
   an in-memory buffer
 
 .. doxygenfunction:: mts_tensormap_load
+
+.. doxygenfunction:: mts_tensormap_load_mmap
+
+.. doxygenfunction:: mts_tensormap_load_partial
 
 .. doxygenfunction:: mts_tensormap_save
 
@@ -64,6 +74,8 @@ Tensors
 
 .. doxygentypedef:: mts_create_array_callback_t
 
+.. doxygentypedef:: mts_create_file_array_callback_t
+
 .. doxygentypedef:: mts_realloc_buffer_t
 
 
@@ -72,12 +84,22 @@ Blocks
 
 - :c:func:`mts_block_save`: serialize and save a ``mts_block_t`` to a file
 - :c:func:`mts_block_load`: load a serialized ``mts_block_t`` from a file
+- :c:func:`mts_block_load_mmap`: memory-map a serialized ``mts_block_t``
+  from a file, materialising each value/gradient array via a
+  user-supplied ``mts_create_file_array_callback_t``
+- :c:func:`mts_block_load_partial`: load a serialized ``mts_block_t``,
+  restricted to a subset of samples and properties chosen with
+  ``Labels``-shaped filters
 - :c:func:`mts_block_save_buffer`: serialize and save a ``mts_block_t``
   to a in-memory buffer
 - :c:func:`mts_block_load_buffer`: load a serialized ``mts_block_t`` from
   a in-memory buffer
 
 .. doxygenfunction:: mts_block_load
+
+.. doxygenfunction:: mts_block_load_mmap
+
+.. doxygenfunction:: mts_block_load_partial
 
 .. doxygenfunction:: mts_block_save
 

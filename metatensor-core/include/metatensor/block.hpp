@@ -468,6 +468,17 @@ private:
         const std::string& path,
         mts_create_array_callback_t create_array
     );
+    friend TensorBlock metatensor::io::load_block_partial(
+        const std::string& path,
+        const mts_labels_t* samples,
+        const mts_labels_t* properties,
+        mts_create_array_callback_t create_array
+    );
+    friend TensorBlock metatensor::io::load_block_mmap(
+        const std::string& path,
+        mts_create_file_array_callback_t create_array,
+        void* user_data
+    );
     friend TensorBlock metatensor::io::load_block_buffer(
         const uint8_t* buffer,
         size_t buffer_count,
