@@ -1,6 +1,5 @@
 import copy
 import re
-import warnings
 
 import numpy as np
 import pytest
@@ -14,7 +13,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock
+from metatensor import Labels, MetatensorError, TensorBlock
 
 from . import _tests_utils
 
@@ -394,10 +393,10 @@ def test_nested_gradients():
 @pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_device():
     message = (
-        "Values and labels for this block are on different devices: "
-        "labels are always on CPU, and values are on device 'meta'."
+        "invalid parameter: invalid block: values and samples must be "
+        "on the same device, got 'ExtDev:0' and 'CPU:0'"
     )
-    with pytest.warns(DeviceWarning, match=message):
+    with pytest.raises(MetatensorError, match=message):
         block = TensorBlock(
             values=torch.tensor([[3.0, 4.0]], device="meta"),
             samples=Labels.range("s", 1),
@@ -405,15 +404,51 @@ def test_different_device():
             properties=Labels.range("p", 2),
         )
 
-    gradient = TensorBlock(
-        values=torch.tensor([[3.0, 4.0]], device="cpu"),
-        samples=Labels.range("sample", 1),
+    block = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
         components=[],
         properties=Labels.range("p", 2),
     )
 
-    message = "values and the new gradient must be on the same device, got meta and cpu"
-    with pytest.raises(ValueError, match=message):
+    gradient = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels.range("sample", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+    gradient = gradient.to(arrays="torch", device="meta")
+
+    message = (
+        "invalid parameter: the gradient values are on device 'ExtDev:0' "
+        "but the block values are on device 'CPU:0'"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        block.add_gradient("g", gradient)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
+def test_different_origin():
+    block = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    gradient = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("sample", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+    gradient = gradient.to(arrays="torch")
+
+    message = re.escape(
+        "invalid parameter: the gradient data has a different origin "
+        "('python.torch') than the value data ('python.numpy')"
+    )
+    with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
 
 
@@ -426,9 +461,10 @@ def test_different_dtype():
     )
 
     message = (
-        "values and the new gradient must have the same dtype, got float64 and float32"
+        "invalid parameter: the gradient values have dtype 'f32' "
+        "but the block values have dtype 'f64'"
     )
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(MetatensorError, match=message):
         block.add_gradient(
             "g",
             TensorBlock(
@@ -470,32 +506,39 @@ def test_to():
 
     # check that the code handles both positional and keyword arguments
     device = "cpu"
-    moved = block.to(device, dtype=np.float32, non_blocking=True)
-    moved = block.to(np.float32, device)
-    moved = block.to(np.float32, device=device)
-    moved = block.to(device, np.float32)
+    _ = block.to(device, dtype=np.float32, non_blocking=True)
+    _ = block.to(np.float32, device)
+    _ = block.to(np.float32, device=device)
+    _ = block.to(device, np.float32)
 
     message = "can not give a device twice in `TensorBlock.to`"
     with pytest.raises(ValueError, match=message):
-        moved = block.to("cpu", device="cpu")
+        _ = block.to("cpu", device="cpu")
 
     message = "can not give a dtype twice in `TensorBlock.to`"
     with pytest.raises(ValueError, match=message):
-        moved = block.to(np.float32, dtype=np.float32)
+        _ = block.to(np.float32, dtype=np.float32)
 
     # string positional arguments are assumed to be devices
     message = "can not move numpy array to non-cpu device: test"
     with pytest.raises(ValueError, match=message):
-        moved = block.to("test")
+        _ = block.to("test")
 
     message = "unexpected type in `TensorBlock.to`: <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        moved = block.to(np.array([0]))
+        _ = block.to(np.array([0]))
 
     if HAS_TORCH:
         block = converted.to(arrays="torch")
+
         assert isinstance(block.values, torch.Tensor)
-        assert isinstance(block.gradient("g").values, torch.Tensor)
+        assert isinstance(block.samples.values, torch.Tensor)
+        assert isinstance(block.properties.values, torch.Tensor)
+
+        gradient = block.gradient("g")
+        assert isinstance(gradient.values, torch.Tensor)
+        assert isinstance(gradient.samples.values, torch.Tensor)
+        assert isinstance(gradient.properties.values, torch.Tensor)
 
         devices = ["meta", torch.device("meta")]
         if _tests_utils.can_use_mps_backend():
@@ -508,13 +551,13 @@ def test_to():
             devices.append(torch.device("cuda"))
 
         for device in devices:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-
-                moved = block.to(device=device, non_blocking=True)
+            moved = block.to(device=device, non_blocking=True)
 
             assert moved.device.type == torch.device(device).type
+            assert moved.samples.device.type == torch.device(device).type
+
             assert moved.gradient("g").device.type == torch.device(device).type
+            assert moved.gradient("g").samples.device.type == torch.device(device).type
 
 
 def test_values_setter():

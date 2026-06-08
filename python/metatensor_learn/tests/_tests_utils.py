@@ -20,23 +20,25 @@ def random_single_block_no_components_tensor_map(use_torch):
 
     if use_torch:
         create_random_array = partial(torch.rand, device="cpu", dtype=torch.float32)
+        create_array = torch.tensor
     else:
         create_random_array = np.random.rand
+        create_array = np.array
 
     block = TensorBlock(
         values=create_random_array(4, 2),
         samples=Labels(
             ["sample", "system"],
-            np.array([[0, 0], [1, 1], [2, 2], [3, 3]], dtype=np.int32),
+            create_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
         ),
         components=[],
-        properties=Labels(["properties"], np.array([[0], [1]], dtype=np.int32)),
+        properties=Labels(["properties"], create_array([[0], [1]])),
     )
     positions_gradient = TensorBlock(
         values=create_random_array(7, 3, 2),
         samples=Labels(
             ["sample", "system", "atom"],
-            np.array(
+            create_array(
                 [
                     [0, 0, 1],
                     [0, 0, 2],
@@ -45,11 +47,10 @@ def random_single_block_no_components_tensor_map(use_torch):
                     [1, 1, 2],
                     [2, 2, 0],
                     [3, 3, 0],
-                ],
-                dtype=np.int32,
+                ]
             ),
         ),
-        components=[Labels(["direction"], np.array([[0], [1], [2]], dtype=np.int32))],
+        components=[Labels(["direction"], create_array([[0], [1], [2]]))],
         properties=block.properties,
     )
     block.add_gradient("positions", positions_gradient)
@@ -58,19 +59,19 @@ def random_single_block_no_components_tensor_map(use_torch):
         values=create_random_array(4, 6, 2),
         samples=Labels(
             ["sample", "system"],
-            np.array([[0, 0], [1, 1], [2, 2], [3, 3]], dtype=np.int32),
+            create_array([[0, 0], [1, 1], [2, 2], [3, 3]]),
         ),
         components=[
             Labels(
                 ["voigt_index"],
-                np.array([[0], [1], [2], [3], [4], [5]], dtype=np.int32),
+                create_array([[0], [1], [2], [3], [4], [5]]),
             )
         ],
         properties=block.properties,
     )
     block.add_gradient("cell", cell_gradient)
 
-    return TensorMap(Labels.single(), [block])
+    return TensorMap(Labels(["_"], create_array([[0]])), [block])
 
 
 def tensor(sample_indices):

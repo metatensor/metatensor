@@ -1,11 +1,8 @@
 import copy
 import ctypes
 import pathlib
-import warnings
 from pickle import PickleBuffer
 from typing import Any, BinaryIO, Generator, List, Sequence, Tuple, Union
-
-import numpy as np
 
 from . import _data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
@@ -13,10 +10,7 @@ from ._c_lib import _get_library
 from ._data import (
     Array,
     Device,
-    DeviceWarning,
     DType,
-    create_mts_array,
-    mts_array_to_python_array,
 )
 from ._labels import Labels
 from ._status import check_pointer
@@ -109,7 +103,7 @@ class TensorBlock:
         for i, component in enumerate(components):
             components_array[i] = component.as_mts_labels_t()
 
-        mts_array = create_mts_array(values)
+        mts_array = _data.create_mts_array(values)
         self._ptr = self._lib.mts_block(
             mts_array,
             samples.as_mts_labels_t(),
@@ -121,16 +115,6 @@ class TensorBlock:
 
         self._cached_dtype = _data.array_dtype(values)
         self._cached_device = _data.array_device(values)
-
-        if not _data.array_device_is_cpu(values):
-            warnings.warn(
-                "Values and labels for this block are on different devices: "
-                f"labels are always on CPU, and values are on device '{self.device}'. "
-                "If you are using PyTorch and need the labels to also be on "
-                f"{self.device}, you should use `metatensor.torch.TensorBlock`.",
-                category=DeviceWarning,
-                stacklevel=2,
-            )
 
     @staticmethod
     def unsafe_from_ptr(block: ctypes.POINTER(mts_block_t)):
@@ -321,7 +305,7 @@ class TensorBlock:
         ``ndarray`` and torch ``Tensor`` are supported.
         """
 
-        return mts_array_to_python_array(self._raw_values, parent=self)
+        return _data.mts_array_to_python_array(self._raw_values, parent=self)
 
     @values.setter
     def values(self, new_values):
@@ -491,18 +475,6 @@ class TensorBlock:
                 "a TensorMap or another TensorBlock"
             )
 
-        if self.dtype != gradient.dtype:
-            raise ValueError(
-                "values and the new gradient must have the same dtype, "
-                f"got {self.dtype} and {gradient.dtype}"
-            )
-
-        if self.device != gradient.device:
-            raise ValueError(
-                "values and the new gradient must be on the same device, "
-                f"got {self.device} and {gradient.device}"
-            )
-
         self._lib.mts_block_add_gradient(
             self.as_mts_block_t(), parameter.encode("utf8"), gradient.release()
         )
@@ -563,8 +535,8 @@ class TensorBlock:
 
     def to(self, *args, **kwargs) -> "TensorBlock":
         """
-        Move all the arrays in this block (values and gradients) to the given ``dtype``,
-        ``device`` and ``arrays`` backend.
+        Move all the data in this block (labels, values, and gradients) to the given
+        ``dtype``, ``device`` and ``arrays`` backend.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
@@ -579,7 +551,7 @@ class TensorBlock:
         """
         arrays = kwargs.pop("arrays", None)
         non_blocking = kwargs.pop("non_blocking", False)
-        dtype, device = _to_arguments_parse("`TensorBlock.to`", *args, **kwargs)
+        dtype, device = _data.to_arguments_parse("`TensorBlock.to`", *args, **kwargs)
 
         values = self.values
 
@@ -594,7 +566,15 @@ class TensorBlock:
                 values, device, non_blocking=non_blocking
             )
 
-        block = TensorBlock(values, self.samples, self.components, self.properties)
+        block = TensorBlock(
+            values,
+            self.samples.to(device=device, arrays=arrays, non_blocking=non_blocking),
+            [
+                c.to(device=device, arrays=arrays, non_blocking=non_blocking)
+                for c in self.components
+            ],
+            self.properties.to(device=device, arrays=arrays, non_blocking=non_blocking),
+        )
         for parameter, gradient in self.gradients():
             block.add_gradient(
                 parameter,
@@ -691,42 +671,3 @@ class TensorBlock:
         from .io import save_buffer
 
         return save_buffer(data=self, use_numpy=use_numpy)
-
-
-def _to_arguments_parse(context, *args, **kwargs):
-    """Parse arguments to the various `to()` functions"""
-    dtype = kwargs.get("dtype")
-    device = kwargs.get("device")
-
-    for positional in args:
-        if isinstance(positional, Device):
-            if device is None:
-                device = positional
-                continue
-            else:
-                raise ValueError(f"can not give a device twice in {context}")
-        elif isinstance(positional, DType):
-            if dtype is None:
-                dtype = positional
-                continue
-            else:
-                raise ValueError(f"can not give a dtype twice in {context}")
-        else:
-            # checking for numpy dtype is a bit more complex,
-            # since a lof of things can be dtypes in numpy
-            try:
-                positional_as_dtype = np.dtype(positional)
-            except TypeError:
-                # failed to parse as a dtype, this should end up in the TypeError below
-                positional_as_dtype = np.object_
-
-            if np.issubdtype(positional_as_dtype, np.number):
-                if dtype is None:
-                    dtype = positional
-                    continue
-                else:
-                    raise ValueError(f"can not give a dtype twice in {context}")
-
-        raise TypeError(f"unexpected type in {context}: {type(positional)}")
-
-    return dtype, device

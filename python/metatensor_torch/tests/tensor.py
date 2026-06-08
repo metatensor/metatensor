@@ -448,7 +448,7 @@ def test_different_device_error(tensor, dtype, device):
     if device == "cpu":
         return
 
-    message = "tried to build a TensorMap from blocks on different devices"
+    message = "got blocks on different devices"
     with pytest.raises(RuntimeError, match=message):
         TensorMap(
             keys=tensor.keys,
@@ -462,7 +462,7 @@ def test_different_device_error(tensor, dtype, device):
 
 
 def test_different_dtype():
-    message = "tried to build a TensorMap from blocks with different dtypes"
+    message = "got blocks with different dtypes"
     with pytest.raises(RuntimeError, match=message):
         TensorMap(
             keys=Labels.range("keys", 2),

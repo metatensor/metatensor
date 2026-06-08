@@ -1,8 +1,8 @@
 #![allow(clippy::default_trait_access)]
-use std::ffi::CString;
+use std::{ffi::CString, sync::Arc};
 use std::collections::BTreeSet;
 
-use dlpk::{DLDevice, DLDeviceType};
+use dlpk::{DLDevice, DLDeviceType, DLPackVersion};
 use hashbrown::HashMap;
 use hashbrown::hash_map::RawEntryMut;
 
@@ -296,6 +296,32 @@ impl Labels {
             sorted: OnceCell::new(),
             positions: OnceCell::new(),
         })
+    }
+
+
+    /// Move Labels to the given device, using the same array backend as `like`
+    pub fn to(labels: Arc<Labels>, device: DLDevice, like: &Labels) -> Result<Arc<Labels>, Error> {
+        if labels.device() == device {
+            return Ok(labels);
+        }
+
+        // Change the array backend used to match `like`
+        let dl_tensor = labels.values().as_dlpack(labels.device(), None, DLPackVersion::current())?;
+        let values = like.values().from_dlpack(dl_tensor)?;
+
+        // Copy to the target device if needed
+        let values = if values.device()? == device {
+            values
+        } else {
+            values.copy(device)?
+        };
+
+        let dims = labels.dimensions();
+        let new_labels = unsafe {
+            Labels::new_unchecked_uniqueness(&dims, values)?
+        };
+
+        return Ok(Arc::new(new_labels));
     }
 
     /// Get the values on CPU, materializinf them from the `mts_array_t` if

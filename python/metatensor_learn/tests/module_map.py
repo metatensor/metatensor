@@ -1,4 +1,3 @@
-import numpy as np
 import pytest
 
 from metatensor import Labels
@@ -31,9 +30,11 @@ class MockModule(torch.nn.Module):
 
 
 @pytest.mark.parametrize(
-    "out_properties", [None, [Labels(["a", "b"], np.array([[1, 1]]))]]
+    "out_properties", [None, [Labels(["a", "b"], torch.tensor([[1, 1]]))]]
 )
 def test_module_map(tensor, out_properties):
+    assert isinstance(tensor.keys.values, torch.Tensor)
+
     modules = []
     for key in tensor.keys:
         modules.append(
@@ -70,6 +71,8 @@ def test_to_device(tensor):
     Checks the `to` function of module map by moving the module to another device and
     checking that the output tensor is on this device.
     """
+    assert isinstance(tensor.keys.values, torch.Tensor)
+
     devices = ["meta"]
     if _tests_utils.can_use_mps_backend():
         devices.append("mps")
@@ -89,12 +92,12 @@ def test_to_device(tensor):
         module = ModuleMap(
             tensor.keys,
             modules,
-            out_properties=[Labels(["a", "b"], np.array([[1, 1]]))],
+            out_properties=[Labels(["a", "b"], torch.tensor([[1, 1]]))],
         )
 
-        assert module.in_keys.device == "cpu"
+        assert module.in_keys.device.type == "cpu"
         for label in module.out_properties:
-            assert label.device == "cpu"
+            assert label.device.type == "cpu"
 
         module.to(device=device)
 
@@ -105,9 +108,9 @@ def test_to_device(tensor):
         for parameter in module.parameters():
             assert parameter.device.type == device
 
-        assert module.in_keys.device == "cpu"
+        assert module.in_keys.device.type == device
         for label in module.out_properties:
-            assert label.device == "cpu"
+            assert label.device.type == device
 
 
 def test_to_dtype(tensor):

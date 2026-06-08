@@ -3,6 +3,14 @@ import re
 import numpy as np
 import pytest
 
+
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
 from metatensor import Labels, MetatensorError
 
 
@@ -453,3 +461,13 @@ def test_ownership_transfer():
         recovered.as_mts_labels_t()
 
     Labels.unsafe_from_ptr(raw)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
+def test_torch_backend():
+    labels = Labels(names=["a", "b"], values=torch.tensor([[0, 0], [1, 0]]))
+
+    values = labels.values
+    assert isinstance(values, torch.Tensor)
+    assert torch.all(values == torch.tensor([[0, 0], [1, 0]]))
+    assert labels.device == torch.device("cpu")

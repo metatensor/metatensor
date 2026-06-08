@@ -2,7 +2,6 @@ import os
 import warnings
 from typing import Dict, List
 
-import numpy as np
 import pytest
 
 from metatensor import Labels, TensorBlock, TensorMap
@@ -31,15 +30,15 @@ def devices_to_test():
 def _create_block(sample_name):
     return TensorBlock(
         values=torch.rand(3, 4, dtype=torch.float64),
-        samples=Labels([sample_name], np.arange(3).reshape(-1, 1)),
+        samples=Labels([sample_name], torch.arange(3).reshape(-1, 1)),
         components=[],
-        properties=Labels(["p"], np.arange(4).reshape(-1, 1)),
+        properties=Labels(["p"], torch.arange(4).reshape(-1, 1)),
     )
 
 
 def _create_tensor(key_name):
     return TensorMap(
-        keys=Labels([key_name], np.zeros((1, 1), dtype=np.int32)),
+        keys=Labels([key_name], torch.zeros((1, 1), dtype=torch.int32)),
         blocks=[_create_block("test")],
     )
 
@@ -49,7 +48,7 @@ class LabelsModule(nn.Module):
 
     def __init__(self, name):
         super().__init__()
-        values = np.arange(2).reshape(-1, 1)
+        values = torch.arange(2).reshape(-1, 1)
         self.labels = Labels([name], values)
         self.dict = {"labels": Labels([name], values)}
         self.list = [Labels([name], values)]
@@ -93,11 +92,11 @@ class TensorModule(nn.Module):
 class EverythingModule(nn.Module):
     def __init__(self, name):
         super().__init__()
-        self.labels = Labels([name], np.arange(2).reshape(-1, 1))
+        self.labels = Labels([name], torch.arange(2).reshape(-1, 1))
         self.block = _create_block(name)
         self.tensor = _create_tensor(name)
         self.tuple = (
-            Labels([name], np.arange(2).reshape(-1, 1)),
+            Labels([name], torch.arange(2).reshape(-1, 1)),
             _create_block(name),
             _create_tensor(name),
         )
@@ -110,7 +109,7 @@ class EverythingModule(nn.Module):
 
 def test_to(devices_to_test):
     def check_device_dtype(module, device, dtype):
-        assert module.labels.device == "cpu"
+        assert module.labels.device.type == device
 
         assert module.block.device.type == device
         assert module.block.dtype == dtype
@@ -118,17 +117,16 @@ def test_to(devices_to_test):
         assert module.tensor.device.type == device
         assert module.tensor.dtype == dtype
 
-        assert module.tuple[0].device == "cpu"
+        assert module.tuple[0].device.type == device
         assert module.tuple[1].device.type == device
         assert module.tuple[1].dtype == dtype
         assert module.tuple[2].device.type == device
         assert module.tuple[2].dtype == dtype
 
-        # labels are always on CPU for the metatensor-core backend
-        assert module.a.labels.device == "cpu"
-        assert module.a.dict["labels"].device == "cpu"
-        assert module.a.list[0].device == "cpu"
-        assert module.a.nested["dict"][42][0][0].device == "cpu"
+        assert module.a.labels.device.type == device
+        assert module.a.dict["labels"].device.type == device
+        assert module.a.list[0].device.type == device
+        assert module.a.nested["dict"][42][0][0].device.type == device
 
         assert module.b.block.device.type == device
         assert module.b.block.dtype == dtype

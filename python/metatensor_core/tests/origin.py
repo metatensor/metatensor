@@ -30,8 +30,8 @@ def test_different_origins():
     )
 
     message = re.escape(
-        "invalid parameter: tried to build a TensorMap from blocks with "
-        "different origins: at least ('python.numpy') and ('python.torch') "
+        "invalid parameter: invalid tensor map: got blocks with different "
+        "origins, at least ('python.numpy') and ('python.torch') "
         "were detected"
     )
 

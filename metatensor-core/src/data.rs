@@ -667,10 +667,14 @@ impl mts_array_t {
 }
 
 #[cfg(test)]
-pub(crate) use self::tests::TestArray;
+pub(crate) use self::tests::{TestArray, example_labels, example_labels_other_device};
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
+    use crate::Labels;
+
     use super::*;
 
     pub struct TestArray {
@@ -726,7 +730,7 @@ mod tests {
             return mts_array_t {
                 ptr: Box::into_raw(array).cast(),
                 origin: Some(TestArray::origin),
-                device: Some(TestArray::device_cuda),
+                device: Some(TestArray::device_ext),
                 dtype: Some(TestArray::dtype_f64),
                 as_dlpack: None,
                 from_dlpack: None,
@@ -778,8 +782,8 @@ mod tests {
             return mts_status_t::MTS_SUCCESS;
         }
 
-        unsafe extern "C" fn device_cuda(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
-            *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLCUDA, device_id: 0 };
+        unsafe extern "C" fn device_ext(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
+            *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLExtDev, device_id: 0 };
             return mts_status_t::MTS_SUCCESS;
         }
 
@@ -829,6 +833,19 @@ mod tests {
             let boxed = Box::from_raw(ptr);
             std::mem::drop(boxed);
         }
+    }
+
+    pub(crate) fn example_labels(name: &str, count: i32) -> Arc<Labels> {
+        return Arc::new(Labels::from_vec(&[name], (0..count).collect()).expect("invalid labels"));
+    }
+
+    pub(crate) fn example_labels_other_device(name: &str, count: usize) -> Arc<Labels> {
+        let values = TestArray::new_other_device(vec![count, 1]);
+        return Arc::new(
+            unsafe {
+                Labels::new_unchecked_uniqueness(&[name], values).expect("invalid labels")
+            }
+        );
     }
 
     #[test]

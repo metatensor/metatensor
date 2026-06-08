@@ -2,6 +2,8 @@ use std::collections::{BTreeMap, HashMap};
 use std::sync::Arc;
 use std::ffi::CString;
 
+use dlpk::DLDevice;
+
 use crate::utils::ConstCString;
 use crate::TensorBlock;
 use crate::{Labels, Error};
@@ -71,62 +73,57 @@ fn check_labels_dimensions(
     Ok(())
 }
 
-fn check_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
-    if blocks.is_empty() {
-        return Ok(());
-    }
+fn check_blocks_origin(blocks: &[TensorBlock]) -> Result<(), Error> {
+    assert!(!blocks.is_empty());
 
     let first_origin = blocks[0].values.origin()?;
     for block in blocks.iter().skip(1) {
         let block_origin = block.values.origin()?;
         if first_origin != block_origin {
             return Err(Error::InvalidParameter(format!(
-                "tried to build a TensorMap from blocks with different origins: at least ('{}') and ('{}') were detected",
+                "invalid tensor map: got blocks with different origins, \
+                at least ('{}') and ('{}') were detected",
                 get_data_origin(first_origin),
                 get_data_origin(block_origin),
             )));
         }
     }
 
-    Ok(())
+    return Ok(());
 }
 
-fn check_device(blocks: &[TensorBlock]) -> Result<(), Error> {
-    if blocks.is_empty() {
-        return Ok(());
-    }
-
+fn check_blocks_device(blocks: &[TensorBlock]) -> Result<DLDevice, Error> {
+    assert!(!blocks.is_empty());
     let first_device = blocks[0].values.device()?;
     for block in blocks.iter().skip(1) {
         let block_device = block.values.device()?;
         if first_device != block_device {
             return Err(Error::InvalidParameter(format!(
-                "tried to build a TensorMap from blocks on different devices: at least '{}' and '{}' were detected",
+                "invalid tensor map: got blocks on different devices, \
+                at least '{}' and '{}' were detected",
                 first_device, block_device,
             )));
         }
     }
 
-    Ok(())
+    return Ok(first_device);
 }
 
-fn check_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
-    if blocks.is_empty() {
-        return Ok(());
-    }
-
+fn check_blocks_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
+    assert!(!blocks.is_empty());
     let first_dtype = blocks[0].values.dtype()?;
     for block in blocks.iter().skip(1) {
         let block_dtype = block.values.dtype()?;
         if first_dtype != block_dtype {
             return Err(Error::InvalidParameter(format!(
-                "tried to build a TensorMap from blocks with different dtypes: at least '{}' and '{}' were detected",
+                "invalid tensor map: got blocks with different dtypes, \
+                at least '{}' and '{}' were detected",
                 first_dtype, block_dtype,
             )));
         }
     }
 
-    Ok(())
+    return Ok(());
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -175,11 +172,21 @@ impl TensorMap {
             )))
         }
 
-        check_origin(&blocks)?;
-        check_device(&blocks)?;
-        check_dtype(&blocks)?;
-
         if !blocks.is_empty() {
+            check_blocks_origin(&blocks)?;
+            let blocks_device = check_blocks_device(&blocks)?;
+            check_blocks_dtype(&blocks)?;
+
+            let keys_devices = keys.values().device()?;
+            if keys_devices != blocks_device {
+                return Err(Error::InvalidParameter(format!(
+                    "tried to build a TensorMap from keys and blocks on different devices: \
+                    the keys are on '{}' while the blocks are on '{}'",
+                    keys_devices,
+                    blocks_device,
+                )));
+            }
+
             // extract metadata from the first block
             let sample_dimensions = blocks[0].samples.dimensions();
             let component_dimensions = blocks[0].components.iter()
@@ -301,57 +308,50 @@ impl TensorMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::TestArray;
+    use crate::data::{TestArray, example_labels, example_labels_other_device};
 
     use super::*;
-    use super::utils::example_labels;
 
     #[test]
     #[allow(clippy::too_many_lines)]
     fn blocks_validation() {
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(&["samples"], &[0]),
-            vec![example_labels(&["components"], &[0])],
-            example_labels(&["properties"], &[0]),
+            example_labels("samples", 1),
+            vec![example_labels("components", 1)],
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 3, 1]),
-            example_labels(&["samples"], &[0, 1]),
-            vec![example_labels(&["components"], &[0, 1, 2])],
-            example_labels(&["properties"], &[0]),
+            example_labels("samples", 2),
+            vec![example_labels("components", 3)],
+            example_labels("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert!(result.is_ok());
-        // also check we have an empty info block
-        let mut result = result.unwrap();
-        assert!(result.info.is_empty());
-        // also check we can set info
-        result.info.insert("key".to_string(),
-                          ConstCString::new(CString::new("value").expect("CString::new failed")));
 
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(&["samples"], &[0]),
+            example_labels("samples", 1),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(&["something_else"], &[0, 1]),
+            example_labels("something_else", 2),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -363,20 +363,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(&["samples"], &[0]),
-            vec![example_labels(&["components"], &[0])],
-            example_labels(&["properties"], &[0]),
+            example_labels("samples", 1),
+            vec![example_labels("components", 1)],
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(&["samples"], &[0, 1]),
+            example_labels("samples", 2),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -389,20 +389,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1, 1]),
-            example_labels(&["samples"], &[0]),
-            vec![example_labels(&["components"], &[0])],
-            example_labels(&["properties"], &[0]),
+            example_labels("samples", 1),
+            vec![example_labels("components", 1)],
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 3, 1]),
-            example_labels(&["samples"], &[0, 1]),
-            vec![example_labels(&["something_else"], &[0, 1, 2])],
-            example_labels(&["properties"], &[0]),
+            example_labels("samples", 2),
+            vec![example_labels("something_else", 3)],
+            example_labels("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -414,20 +414,20 @@ mod tests {
         /**********************************************************************/
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(&["samples"], &[0]),
+            example_labels("samples", 1),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new(vec![2, 1]),
-            example_labels(&["samples"], &[0, 1]),
+            example_labels("samples", 2),
             vec![],
-            example_labels(&["something_else"], &[0]),
+            example_labels("something_else", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
@@ -443,26 +443,26 @@ mod tests {
     fn blocks_device_mismatch() {
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(&["samples"], &[0]),
+            example_labels("samples", 1),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new_other_device(vec![2, 1]),
-            example_labels(&["samples"], &[0, 1]),
+            example_labels_other_device("samples", 2),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels_other_device("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: tried to build a TensorMap from blocks on \
-            different devices: at least 'CPU:0' and 'CUDA:0' were detected"
+            "invalid parameter: invalid tensor map: got blocks on different \
+            devices, at least 'CPU:0' and 'ExtDev:0' were detected"
         );
     }
 
@@ -470,26 +470,26 @@ mod tests {
     fn blocks_dtype_mismatch() {
         let block_1 = TensorBlock::new(
             TestArray::new(vec![1, 1]),
-            example_labels(&["samples"], &[0]),
+            example_labels("samples", 1),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             TestArray::new_other_dtype(vec![2, 1]),
-            example_labels(&["samples"], &[0, 1]),
+            example_labels("samples", 2),
             vec![],
-            example_labels(&["properties"], &[0]),
+            example_labels("properties", 1),
         ).unwrap();
 
         let result = TensorMap::new(
-            example_labels(&["keys"], &[0, 1]),
+            example_labels("keys", 2),
             vec![block_1, block_2],
         );
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: tried to build a TensorMap from blocks with \
-            different dtypes: at least 'f64' and 'f32' were detected"
+            "invalid parameter: invalid tensor map: got blocks with different \
+            dtypes, at least 'f64' and 'f32' were detected"
         );
     }
 }

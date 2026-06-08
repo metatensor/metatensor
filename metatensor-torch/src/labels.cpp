@@ -44,6 +44,12 @@ static torch::Tensor normalize_int32_tensor(torch::Tensor values, size_t shape_l
         );
     }
 
+    if (values.requires_grad()) {
+        C10_THROW_ERROR(ValueError,
+            context + " can not require gradients"
+        );
+    }
+
     return values.to(torch::kI32);
 }
 
