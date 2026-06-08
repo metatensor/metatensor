@@ -1,16 +1,15 @@
 import ctypes
 import pathlib
-import warnings
 from pickle import PickleBuffer
 from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
 
 from . import _data
-from ._block import TensorBlock, _to_arguments_parse
+from ._block import TensorBlock
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_tensormap_t
 from ._c_lib import _get_library
-from ._data import Device, DeviceWarning, DType
+from ._data import Device, DType
 from ._labels import Labels, LabelsEntry
 from ._status import check_pointer
 
@@ -60,17 +59,6 @@ class TensorMap:
 
         self._lib = _get_library()
         self._parent = None
-
-        if len(blocks) > 0 and not _data.array_device_is_cpu(blocks[0].values):
-            warnings.warn(
-                "Blocks values and keys for this TensorMap are on different devices: "
-                f"keys are always on CPU, and blocks values are on device "
-                f"'{blocks[0].device}'. If you are using PyTorch and need the labels "
-                f"to also be on {blocks[0].device}, you should use "
-                "`metatensor.torch.TensorMap`.",
-                category=DeviceWarning,
-                stacklevel=2,
-            )
 
         blocks_array_t = ctypes.POINTER(mts_block_t) * len(blocks)
         blocks_array = blocks_array_t(*[block.release() for block in blocks])
@@ -720,28 +708,28 @@ class TensorMap:
         """
         arrays = kwargs.pop("arrays", None)
         non_blocking = kwargs.pop("non_blocking", False)
-        dtype, device = _to_arguments_parse("`TensorMap.to`", *args, **kwargs)
+        dtype, device = _data.to_arguments_parse("`TensorMap.to`", *args, **kwargs)
 
         blocks = []
 
-        with warnings.catch_warnings():
-            # do not warn on device mismatch between values/labels here,
-            # there will be a warning when constructing the TensorMap
-            warnings.simplefilter("ignore", DeviceWarning)
-
-            for block in self.blocks():
-                blocks.append(
-                    block.to(
-                        dtype=dtype,
-                        device=device,
-                        arrays=arrays,
-                        non_blocking=non_blocking,
-                    )
+        for block in self.blocks():
+            blocks.append(
+                block.to(
+                    dtype=dtype,
+                    device=device,
+                    arrays=arrays,
+                    non_blocking=non_blocking,
                 )
+            )
 
-        tensor = TensorMap(self.keys, blocks)
+        tensor = TensorMap(
+            self.keys.to(device=device, arrays=arrays, non_blocking=non_blocking),
+            blocks,
+        )
+
         for key, value in self.info().items():
             tensor.set_info(key, value)
+
         return tensor
 
     def set_info(self, key: str, value: str):

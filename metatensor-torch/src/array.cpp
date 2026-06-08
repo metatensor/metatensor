@@ -196,7 +196,7 @@ mts_data_origin_t TorchDataArray::origin() const {
 
 std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy(DLDevice device) const {
     auto torch_device = dlpack_device_to_torch(device);
-    auto tensor_copy = this->tensor().to(torch_device, /*non_blocking=*/true, /*copy=*/true);
+    auto tensor_copy = this->tensor().to(torch_device, /*non_blocking=*/false, /*copy=*/true);
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(std::move(tensor_copy)));
 }
 

@@ -1,21 +1,28 @@
 import ctypes
-import functools
 import io
-import operator
 import pathlib
 from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
 
+from . import _data
 from ._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_labels_t,
 )
 from ._c_lib import _get_library
-from ._data import Array, create_mts_array, mts_array_to_python_array
+from ._data import Array, Device
 from ._status import check_pointer
+
+
+try:
+    import torch
+
+    torch_int32 = torch.int32
+except ImportError:
+    torch_int32 = np.int32
 
 
 class LabelsEntry:
@@ -45,12 +52,13 @@ class LabelsEntry:
 
         self._names = names
 
-        if len(values.shape) != 1 or values.dtype != np.int32:
+        if len(values.shape) != 1 or values.dtype not in [np.int32, torch_int32]:
             raise ValueError(
                 "LabelsEntry values must be a 1-dimensional array of 32-bit integers"
             )
 
         self._values = values
+        self._cached_device = _data.array_device(values)
 
     @property
     def names(self) -> List[str]:
@@ -66,14 +74,11 @@ class LabelsEntry:
         return self._values
 
     @property
-    def device(self) -> str:
+    def device(self) -> Device:
         """
         Get the device of this labels entry.
-
-        This exists for compatibility with the TorchScript API, and always returns
-        ``"cpu"`` when called.
         """
-        return "cpu"
+        return self._cached_device
 
     def print(self) -> str:
         """
@@ -224,12 +229,16 @@ class Labels:
 
         names = _normalize_names_type(names)
 
-        if not isinstance(values, np.ndarray):
-            raise ValueError("`values` must be a numpy ndarray")
+        if not isinstance(values, Array.__supertype__):
+            raise ValueError("`values` must be a numpy ndarray or torch tensor")
+
+        backend = _data.array_backend(values)
 
         if len(values) == 0:
             # Explicitly define empty labels
             values = np.empty((0, len(names)), dtype=np.int32)
+            values = _data.array_change_backend(values, backend)
+
         if len(values.shape) != 2:
             # make sure the array is 2D
             raise ValueError("`values` must be a 2D array")
@@ -239,30 +248,49 @@ class Labels:
                 "`names` must have an entry for each column of the `values` array"
             )
 
-        try:
-            # We need to make sure the data is C-contiguous to take a pointer to
-            # it, and that it has the right type
-            values = np.ascontiguousarray(
-                values.astype(
+        if backend == "numpy":
+            try:
+                # We need to make sure the data has the right type
+                values = values.astype(
                     np.int32,
-                    order="C",
                     casting="same_kind",
                     subok=False,
                     copy=False,
                 )
-            )
-        except TypeError as e:
-            raise TypeError("Labels values must be convertible to integers") from e
+                # values should not be writeable
+                values.flags.writeable = False
+            except TypeError as e:
+                raise TypeError("Labels values must be convertible to integers") from e
+        elif backend == "torch":
+            if values.requires_grad:
+                raise ValueError("Labels values can not require gradients")
 
-        # values should not be writeable
-        values.flags.writeable = False
+            if not _data.array_dtype_is_integer(values):
+                raise TypeError("Labels values must be of integer dtype")
+
+            values = values.to(dtype=torch.int32, copy=False)
+
+        if values.ndim == 1:
+            values = values.reshape(-1, len(names))
 
         self._lib = _get_library()
-        self._ptr = _create_new_labels(
-            self._lib, names, values, assume_unique=assume_unique
-        )
+        c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
+        for i, n in enumerate(names):
+            c_names[i] = n.encode("utf8")
+
+        array = _data.create_mts_array(values)
+
+        if assume_unique:
+            ptr = self._lib.mts_labels_assume_unique(c_names, len(names), array)
+        else:
+            ptr = self._lib.mts_labels(c_names, len(names), array)
+
+        check_pointer(ptr)
+
+        self._ptr = ptr
         self._names = names
-        self._cached_values = None
+        self._cached_values = values
+        self._cached_device = None
 
     @staticmethod
     def single() -> "Labels":
@@ -335,6 +363,7 @@ class Labels:
         obj._names = names
 
         obj._cached_values = None
+        obj._cached_device = None
 
         return obj
 
@@ -442,11 +471,20 @@ class Labels:
                 f"can only compare between Labels for equality, got {type(other)}"
             )
 
-        return (
-            self._names == other._names
-            and self.values.shape == other.values.shape
-            and bool(np.all(self.values == other.values))
-        )
+        if self._names != other._names or self.values.shape != other.values.shape:
+            return False
+
+        self_is_torch = _data.array_backend(self.values) == "torch"
+        other_is_torch = _data.array_backend(other.values) == "torch"
+
+        if self_is_torch and other_is_torch:
+            return bool(torch.all(self.values == other.values))
+        elif self_is_torch:
+            return bool(np.all(self.values.cpu().numpy() == other.values))
+        elif other_is_torch:
+            return bool(np.all(self.values == other.values.cpu().numpy()))
+        else:
+            return bool(np.all(self.values == other.values))
 
     def __ne__(self, other: "Labels") -> bool:
         """
@@ -543,7 +581,9 @@ class Labels:
         as 2-dimensional tensor of 32-bit integers
         """
         if self._cached_values is None:
-            self._cached_values = mts_array_to_python_array(self._raw_values, self)
+            self._cached_values = _data.mts_array_to_python_array(
+                self._raw_values, self
+            )
 
         return self._cached_values
 
@@ -723,26 +763,62 @@ class Labels:
 
         return Labels(names=names, values=self.values)
 
-    def to(self, device, non_blocking=False) -> "Labels":
+    def to(self, *args, **kwargs) -> "Labels":
         """
-        Move the values for these Labels to the given ``device``. ``non_blocking`` is
-        ignored.
+        Move the values of these Labels to the given ``dtype``, ``device`` and
+        ``arrays`` backend.
 
-        In the Python version of metatensor, this returns the original labels without
-        change. This function is defined for compatibility with the TorchScript version
-        of metatensor.
+        :param dtype: new dtype to use for all arrays. The dtype stays the same if this
+            is set to ``None``.
+        :param device: new device to use for all arrays. The device stays the same if
+            this is set to ``None``.
+        :param Optional[str] arrays: new backend to use for the arrays. This can be
+            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
+            and must be given as a keyword argument (``arrays="numpy"``).
+        :param bool non_blocking: If this is ``True`` and the :py:class:`TensorBlock`
+            contains ``"torch"`` arrays, the function tries to move the data
+            asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        return self
+        arrays = kwargs.pop("arrays", None)
+        non_blocking = kwargs.pop("non_blocking", False)
+        dtype, device = _data.to_arguments_parse("`Labels.to`", *args, **kwargs)
+
+        if dtype is not None:
+            raise ValueError("Labels values must be int32, `dtype` can not be changed")
+
+        already_there = True
+        if arrays is not None:
+            already_there = already_there and arrays == _data.array_backend(self.values)
+
+        if device is not None:
+            already_there = already_there and str(device) == str(self.device)
+
+        if already_there:
+            # nothing to do
+            return self
+
+        # move the data as required
+        values = self.values
+
+        if arrays is not None:
+            values = _data.array_change_backend(values, arrays)
+
+        if device is not None:
+            values = _data.array_change_device(
+                values, device, non_blocking=non_blocking
+            )
+
+        return Labels(names=self.names, values=values, assume_unique=True)
 
     @property
-    def device(self) -> str:
+    def device(self) -> Device:
         """
         Get the device of these Labels.
-
-        This exists for compatibility with the TorchScript API, and always returns
-        ``"cpu"`` when called.
         """
-        return "cpu"
+        if self._cached_device is None:
+            self._cached_device = _data.array_device(self.values)
+
+        return self._cached_device
 
     def position(self, entry: Union[LabelsEntry, Sequence[int]]) -> Optional[int]:
         """
@@ -1122,30 +1198,6 @@ def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
     return names
 
 
-def _create_new_labels(
-    lib, names: List[str], values: np.ndarray, *, assume_unique: bool = False
-):
-
-    c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
-    for i, n in enumerate(names):
-        c_names[i] = n.encode("utf8")
-
-    # Ensure values is 2D int32 C-contiguous for the mts_array_t
-    if values.ndim == 1:
-        values = values.reshape(-1, len(names))
-    values = np.ascontiguousarray(values, dtype=np.int32)
-
-    array = create_mts_array(values)
-
-    if assume_unique:
-        ptr = lib.mts_labels_assume_unique(c_names, len(names), array)
-    else:
-        ptr = lib.mts_labels(c_names, len(names), array)
-
-    check_pointer(ptr)
-    return ptr
-
-
 def _print_string_center(output, string, width, last):
     delta = width - len(string)
     n_before = delta // 2
@@ -1261,15 +1313,3 @@ def _print_labels(
     output = output.getvalue()
     assert output[-1] == "\n"
     return output[:-1]
-
-
-def _ptr_to_const_ndarray(ptr, shape, dtype):
-    if functools.reduce(operator.mul, shape) == 0:
-        return np.empty(shape=shape, dtype=dtype)
-
-    assert ptr is not None
-    array = np.ctypeslib.as_array(ptr, shape=shape)
-    assert array.dtype == dtype
-    assert not array.flags["OWNDATA"]
-    array.flags["WRITEABLE"] = False
-    return array

@@ -15,11 +15,12 @@
 # declaring dependencies on `metatensor-core`, `metatensor-operation`, and
 # `metatensor-learn`; and an optional dependency on `metatensor-torch`.
 
+import warnings
+
 from . import utils  # noqa: F401
 from ._block import TensorBlock  # noqa: F401
 from ._data import (  # noqa: F401
     Array,
-    DeviceWarning,
     ExternalCpuArray,
     ExternalCudaArray,
     register_external_data_wrapper,
@@ -37,7 +38,6 @@ LabelsEntry.__module__ = __name__
 TensorBlock.__module__ = __name__
 TensorMap.__module__ = __name__
 MetatensorError.__module__ = __name__
-DeviceWarning.__module__ = __name__
 ExternalCpuArray.__module__ = __name__
 ExternalCudaArray.__module__ = __name__
 
@@ -59,6 +59,20 @@ if HAS_METATENSOR_OPERATIONS:
 # metatensor-operations was still initializing, and to provide a clearer error message
 # when metatensor-operations is not installed.
 def __getattr__(name):
+    if name == "DeviceWarning":
+
+        class DeviceWarning(Warning):
+            pass
+
+        warnings.warn(
+            "metatensor.DeviceWarning is no longer required and will be removed in a "
+            "future version. Please update your code to remove any reference to it.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        return DeviceWarning
+
     if HAS_METATENSOR_OPERATIONS:
         from . import operations
 

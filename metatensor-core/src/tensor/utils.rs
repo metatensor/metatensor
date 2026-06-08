@@ -172,18 +172,3 @@ pub fn merge_samples(
 
     return (merged_samples, samples_mappings);
 }
-
-/******************************************************************************/
-
-#[cfg(test)]
-pub use self::tests_utils::example_labels;
-
-#[cfg(test)]
-mod tests_utils {
-    use std::sync::Arc;
-    use crate::labels::Labels;
-
-    pub fn example_labels(names: &[&str], values: &[i32]) -> Arc<Labels> {
-        return Arc::new(Labels::from_vec(names, values.to_vec()).expect("invalid labels"));
-    }
-}

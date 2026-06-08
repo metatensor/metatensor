@@ -36,29 +36,7 @@ TensorBlockHolder::TensorBlockHolder(
         /* parameter */ "",
         /* parent */ torch::IValue()
     )
-{
-    auto values_device = this->values().device();
-    if (values_device != this->samples()->values().device()) {
-        C10_THROW_ERROR(ValueError,
-            "cannot create TensorBlock: values and samples must be on the same device, "
-            "got " + values_device.str() + " and " + this->samples()->values().device().str()
-        );
-    }
-    for (const auto& component : this->components()) {
-        if (values_device != component->values().device()) {
-            C10_THROW_ERROR(ValueError,
-                "cannot create TensorBlock: values and components must be on the same device, "
-                "got " + values_device.str() + " and " + component->values().device().str()
-            );
-        }
-    }
-    if (values_device != this->properties()->values().device()) {
-        C10_THROW_ERROR(ValueError,
-            "cannot create TensorBlock: values and properties must be on the same device, "
-            "got " + values_device.str() + " and " + this->properties()->values().device().str()
-        );
-    }
-}
+{}
 
 
 TensorBlockHolder::TensorBlockHolder(metatensor::TensorBlock block, torch::IValue parent):

@@ -89,8 +89,8 @@ TEST_CASE("Blocks") {
                 LabelsHolder::create({"p"}, {{0}, {1}})
             ),
             Catch::StartsWith(
-                "cannot create TensorBlock: values and samples must be on "
-                "the same device, got cpu and meta"
+                "invalid parameter: invalid block: values and "
+                "samples must be on the same device, got 'CPU:0' and 'ExtDev:0'"
             )
         );
     }

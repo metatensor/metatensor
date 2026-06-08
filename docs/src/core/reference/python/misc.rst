@@ -6,8 +6,6 @@ Error handling
 
 .. autoclass:: metatensor.MetatensorError
 
-.. autoclass:: metatensor.DeviceWarning
-
 
 CMake integration
 ^^^^^^^^^^^^^^^^^

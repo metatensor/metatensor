@@ -1,5 +1,5 @@
 import ctypes
-from typing import Union
+from typing import NewType, Union
 
 import numpy as np
 
@@ -33,6 +33,30 @@ try:
     HAS_TORCH = True
 except ImportError:
     HAS_TORCH = False
+
+if HAS_TORCH:
+    # This NewType is only used for typechecking and documentation purposes. If you are
+    # trying to add support for new array types, see `data.array.ArrayWrapper` instead.
+    Array = NewType("Array", Union[np.ndarray, torch.Tensor])
+else:
+    Array = NewType("Array", np.ndarray)
+
+Array.__doc__ = """
+An ``Array`` contains the actual data stored in a :py:class:`metatensor.TensorBlock`.
+
+This data is manipulated by ``metatensor`` in a completely opaque way: this library does
+not know what's inside the arrays appart from a small set of constrains:
+
+- the array contains numeric data (:py:func:`metatensor.load` and
+  :py:func:`metatensor.save` additionally requires contiguous arrays of 64-bit IEEE-754
+  floating points numbers);
+- they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
+- it is possible to create new arrays and move data from one array to another.
+
+The actual type of an ``Array`` depends on how the :py:class:`metatensor.TensorBlock`
+was created. Currently, :py:class:`numpy.ndarray` and :py:class:`torch.Tensor` are
+supported.
+"""
 
 
 def _register_origin(name):
@@ -78,6 +102,17 @@ def _origin_pytorch():
 if HAS_TORCH:
     torch_dtype = torch.dtype
     torch_device = torch.device
+
+    TORCH_INTEGER_DTYPES = {
+        torch.int8,
+        torch.int16,
+        torch.int32,
+        torch.int64,
+        torch.uint8,
+        torch.uint16,
+        torch.uint32,
+        torch.uint64,
+    }
 else:
 
     class torch_dtype:
@@ -86,12 +121,23 @@ else:
     class torch_device:
         pass
 
+    TORCH_INTEGER_DTYPES = {}
+
 
 DType = Union[np.dtype, torch_dtype]
 """Type representing a dtype in either numpy or torch"""
 
 Device = Union[str, torch_device]
 """Type representing a device in either numpy or torch"""
+
+
+def array_backend(array) -> str:
+    if _is_numpy_array(array):
+        return "numpy"
+    elif _is_torch_array(array):
+        return "torch"
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
 
 
 def array_dtype(array) -> DType:
@@ -105,9 +151,32 @@ def array_dtype(array) -> DType:
 def array_change_dtype(array, dtype: DType, non_blocking: bool):
     """Change the dtype of an array"""
     if _is_numpy_array(array):
-        return array.astype(dtype)
+        return array.astype(dtype, copy=False)
     elif _is_torch_array(array):
-        return array.to(dtype=dtype, non_blocking=non_blocking)
+        return array.to(dtype=dtype, non_blocking=non_blocking, copy=False)
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_dtype_is_integer(array) -> bool:
+    """Check if the dtype of an array is an integer type"""
+    if _is_numpy_array(array):
+        return np.issubdtype(array.dtype, np.integer)
+    elif _is_torch_array(array):
+        # no `is_integer` in torch, despite `is_floating_point` and `is_complex` =(
+        return array.dtype in TORCH_INTEGER_DTYPES
+    else:
+        raise TypeError(f"unknown array type: {type(array)}")
+
+
+def array_dtype_to_int32(array) -> Array:
+    """Convert the dtype of an array to int32"""
+    if _is_numpy_array(array):
+        return array.astype(
+            np.int32,
+        )
+    elif _is_torch_array(array):
+        return array.to(dtype=torch.int32, copy=False)
     else:
         raise TypeError(f"unknown array type: {type(array)}")
 
@@ -135,7 +204,7 @@ def array_device_is_cpu(array) -> bool:
 def array_change_device(array, device: Device, non_blocking: bool):
     """Change the device of an array"""
     if _is_numpy_array(array):
-        if device != "cpu":
+        if str(device) != "cpu":
             raise ValueError(f"can not move numpy array to non-cpu device: {device}")
         return array
     elif _is_torch_array(array):
@@ -154,6 +223,9 @@ def array_change_backend(array, backend: str):
                     "can not convert to `torch` arrays since PyTorch is not installed"
                 )
             else:
+                if not array.flags["WRITEABLE"]:
+                    # torch.from_numpy requires writeable arrays; copy if needed
+                    array = array.copy()
                 return torch.from_numpy(array)
         else:
             raise ValueError(f"unknown array backend: '{backend}'")
@@ -168,13 +240,6 @@ def array_change_backend(array, backend: str):
 
     else:
         raise TypeError(f"unknown array type: {type(array)}")
-
-
-class DeviceWarning(RuntimeWarning):
-    """
-    Custom warning class for device mismatch in :py:class:`TensorBlock` and
-    :py:class:`TensorMap`.
-    """
 
 
 class ArrayWrapper:
@@ -736,3 +801,42 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
     copy=_MTS_ARRAY_COPY,
     move_data=_MTS_ARRAY_MOVE_DATA,
 )
+
+
+def to_arguments_parse(context, *args, **kwargs):
+    """Parse arguments to the various `to()` functions"""
+    dtype = kwargs.get("dtype")
+    device = kwargs.get("device")
+
+    for positional in args:
+        if isinstance(positional, Device):
+            if device is None:
+                device = positional
+                continue
+            else:
+                raise ValueError(f"can not give a device twice in {context}")
+        elif isinstance(positional, DType):
+            if dtype is None:
+                dtype = positional
+                continue
+            else:
+                raise ValueError(f"can not give a dtype twice in {context}")
+        else:
+            # checking for numpy dtype is a bit more complex,
+            # since a lof of things can be dtypes in numpy
+            try:
+                positional_as_dtype = np.dtype(positional)
+            except TypeError:
+                # failed to parse as a dtype, this should end up in the TypeError below
+                positional_as_dtype = np.object_
+
+            if np.issubdtype(positional_as_dtype, np.number):
+                if dtype is None:
+                    dtype = positional
+                    continue
+                else:
+                    raise ValueError(f"can not give a dtype twice in {context}")
+
+        raise TypeError(f"unexpected type in {context}: {type(positional)}")
+
+    return dtype, device

@@ -76,7 +76,7 @@ class WignerDReal:
         Assumes the components of the block are [("o3_mu",),].
         """
         # Get the Wigner matrix for this l value
-        wig = self.matrices[angular_l].T
+        wig = self.matrices[int(angular_l)].T
 
         # Copy the block
         block_rotated = block.copy()

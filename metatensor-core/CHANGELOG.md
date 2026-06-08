@@ -17,6 +17,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-core C
+
+#### Changed
+
+- Labels no longer need to be on CPU; they can be on any device. The device of
+  labels must now match the device of the block values, and `TensorBlock`
+  creation validates this.
+- `TensorMap` now checks that the keys are on the same device as the blocks,
+  raising an error if they differ.
+
 ### metatensor-core C++
 
 #### Added
@@ -41,6 +51,15 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   create non-owning views of existing raw pointers.
 - `Labels.release`, `TensorBlock.release`, and `TensorMap.release` to take
   back ownership of the underlying pointers.
+
+#### Changed
+
+- `Labels` can now be created from any supported array type (e.g. torch
+  tensors), not just numpy arrays. `Labels.to()` now moves labels to the
+  target device and arrays backend, matching the behavior of `TensorBlock.to()`.
+- `TensorBlock.to()` and `TensorMap.to()` now also move labels (samples,
+  components, properties) in addition to values and gradients.
+
 
 ## [Version 0.2.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.0) - 2026-05-13
 

@@ -6,7 +6,8 @@ use crate::{Error, TensorBlock};
 use crate::data::{mts_array_t, mts_data_movement_t};
 
 use super::TensorMap;
-use super::utils::{KeyAndBlock, remove_dimensions_from_keys, merge_samples, merge_gradient_samples};
+use super::utils::{KeyAndBlock, remove_dimensions_from_keys};
+use super::utils::{merge_samples, merge_gradient_samples};
 
 impl TensorMap {
     /// Merge blocks with the same value for selected keys dimensions along the
@@ -111,7 +112,8 @@ impl TensorMap {
             }
         }
 
-        let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
+        let new_keys = Labels::to(Arc::new(splitted_keys.new_keys), self.keys.device(), &self.keys)?;
+        let mut tensor = TensorMap::new(new_keys, new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
@@ -178,6 +180,10 @@ fn merge_blocks_along_samples(
         fill_value,
     )?;
 
+    let data_device = new_data.device()?;
+    let merged_samples = Labels::to(merged_samples, data_device, &first_block.samples)?;
+    let new_properties = Labels::to(new_properties, data_device, &first_block.samples)?;
+
     let mut new_block = TensorBlock::new(
         new_data,
         merged_samples,
@@ -229,6 +235,8 @@ fn merge_blocks_along_samples(
             &gradients_to_merge,
             fill_value,
         )?;
+
+        let new_gradient_samples = Labels::to(new_gradient_samples, data_device, &first_block.samples)?;
 
         let new_gradient = TensorBlock::new(
             new_gradient,

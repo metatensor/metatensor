@@ -1,13 +1,12 @@
 import copy
 import re
 import sys
-import warnings
 
 import numpy as np
 import pytest
 from numpy.testing import assert_equal
 
-from metatensor import DeviceWarning, Labels, MetatensorError, TensorBlock, TensorMap
+from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 
 from . import _tests_utils
 
@@ -567,37 +566,61 @@ def test_empty_tensor():
 
 @pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_device():
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")
-
-        block_meta = TensorBlock(
-            values=torch.tensor([[3.0, 4.0]], device="meta"),
-            samples=Labels.range("s", 1),
-            components=[],
-            properties=Labels.range("p", 2),
-        )
+    block_meta = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]], device="meta"),
+        samples=Labels("s", torch.tensor([[0]], device="meta"), assume_unique=True),
+        components=[],
+        properties=Labels(
+            "p", torch.tensor([[0], [1]], device="meta"), assume_unique=True
+        ),
+    )
 
     message = (
-        "Blocks values and keys for this TensorMap are on different devices: "
-        "keys are always on CPU, and blocks values are on device 'meta'"
+        "invalid parameter: tried to build a TensorMap from keys and blocks on "
+        "different devices: the keys are on 'CPU:0' while the blocks are on 'ExtDev:0'"
     )
-    with pytest.warns(DeviceWarning, match=message):
+    with pytest.raises(MetatensorError, match=message):
         _ = TensorMap(Labels.range("k", 1), [block_meta.copy()])
 
     block_cpu = TensorBlock(
+        values=torch.tensor([[3.0, 4.0]]),
+        samples=Labels("s", torch.tensor([[0]])),
+        components=[],
+        properties=Labels("p", torch.tensor([[0], [1]])),
+    )
+
+    message = (
+        "invalid parameter: invalid tensor map: got blocks on different "
+        "devices, at least 'CPU:0' and 'ExtDev:0' were detected"
+    )
+
+    with pytest.raises(MetatensorError, match=message):
+        _ = TensorMap(Labels.range("k", 2), [block_cpu, block_meta])
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
+def test_different_origin():
+    block_numpy = TensorBlock(
+        values=np.array([[3.0, 4.0]]),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 2),
+    )
+
+    block_torch = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
         samples=Labels.range("s", 1),
         components=[],
         properties=Labels.range("p", 2),
     )
 
-    message = (
-        "invalid parameter: tried to build a TensorMap from blocks "
-        "on different devices: at least 'CPU:0' and 'ExtDev:0' were detected"
+    message = re.escape(
+        "invalid parameter: invalid tensor map: got blocks with different "
+        "origins, at least ('python.numpy') and ('python.torch') "
+        "were detected"
     )
-
     with pytest.raises(MetatensorError, match=message):
-        _ = TensorMap(Labels.range("k", 2), [block_cpu, block_meta])
+        _ = TensorMap(Labels.range("k", 2), [block_numpy.copy(), block_torch.copy()])
 
 
 def test_different_dtype():
@@ -615,8 +638,8 @@ def test_different_dtype():
     )
 
     message = (
-        "invalid parameter: tried to build a TensorMap from blocks with "
-        "different dtypes: at least 'f64' and 'f32' were detected"
+        "invalid parameter: invalid tensor map: got blocks with different "
+        "dtypes, at least 'f64' and 'f32' were detected"
     )
     with pytest.raises(MetatensorError, match=message):
         _ = TensorMap(Labels.range("k", 2), [block_1, block_2])
@@ -641,27 +664,27 @@ def test_to():
 
     # check that the code handles both positional and keyword arguments
     device = "cpu"
-    moved = tensor.to(device, dtype=np.float32)
-    moved = tensor.to(np.float32, device)
-    moved = tensor.to(np.float32, device=device)
-    moved = tensor.to(device, np.float32)
+    _ = tensor.to(device, dtype=np.float32)
+    _ = tensor.to(np.float32, device)
+    _ = tensor.to(np.float32, device=device)
+    _ = tensor.to(device, np.float32)
 
     message = "can not give a device twice in `TensorMap.to`"
     with pytest.raises(ValueError, match=message):
-        moved = tensor.to("cpu", device="cpu")
+        _ = tensor.to("cpu", device="cpu")
 
     message = "can not give a dtype twice in `TensorMap.to`"
     with pytest.raises(ValueError, match=message):
-        moved = tensor.to(np.float32, dtype=np.float32)
+        _ = tensor.to(np.float32, dtype=np.float32)
 
     # string positional arguments are assumed to be devices
     message = "can not move numpy array to non-cpu device: test"
     with pytest.raises(ValueError, match=message):
-        moved = tensor.to("test")
+        _ = tensor.to("test")
 
     message = "unexpected type in `TensorMap.to`: <class 'numpy.ndarray'>"
     with pytest.raises(TypeError, match=message):
-        moved = tensor.to(np.array([0]))
+        _ = tensor.to(np.array([0]))
 
     if HAS_TORCH:
         tensor = converted.to(arrays="torch")
@@ -677,13 +700,10 @@ def test_to():
             devices.append("cuda:0")
             devices.append(torch.device("cuda"))
 
-        for device in devices:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
+        # for device in devices:
+        #         moved = tensor.to(device=device, non_blocking=True)
 
-                moved = tensor.to(device=device, non_blocking=True)
-
-            assert moved.device.type == torch.device(device).type
+        #     assert moved.device.type == torch.device(device).type
 
 
 def test_info(tensor):

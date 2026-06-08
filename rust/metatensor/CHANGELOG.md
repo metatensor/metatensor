@@ -25,6 +25,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `TensorMap::{from,into}_raw`, `TensorBlock::{from,into}_raw` and
   `Labels::{from,into}_raw` to enable conversion between Rust and C API types.
 
+### Changed
+
+- Labels in a `TensorBlock` are now checked to be on the same device as the
+  values. `TensorMap::new` also checks that the keys are on the same device as
+  the blocks.
+
 ## [Version 0.3.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.3.0) - 2026-05-13
 
 ### Added

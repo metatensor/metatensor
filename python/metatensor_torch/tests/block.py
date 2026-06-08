@@ -213,10 +213,10 @@ def test_values_setter():
 
 def test_different_device():
     message = (
-        "cannot create TensorBlock: values and samples must be on the same device, "
-        "got meta and cpu"
+        "invalid parameter: invalid block: values and samples must "
+        "be on the same device, got 'ExtDev:0' and 'CPU:0'"
     )
-    with pytest.raises(ValueError, match=message):
+    with pytest.raises(RuntimeError, match=message):
         TensorBlock(
             values=torch.tensor([[3.0, 4.0]], device="meta"),
             samples=Labels.range("s", 1),

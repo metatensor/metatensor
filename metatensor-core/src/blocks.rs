@@ -31,7 +31,6 @@ impl<'a, T> IntoIterator for &'a ImmutableVec<T> {
 }
 
 fn check_data_and_labels(
-    context: &str,
     values: &mts_array_t,
     samples: &Labels,
     components: &[Arc<Labels>],
@@ -41,45 +40,75 @@ fn check_data_and_labels(
 
     if shape.len() != components.len() + 2 {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array has {} dimensions, but we have {} separate labels \
+            "invalid block: the values have {} dimensions, but we have {} separate labels \
             (1 for samples, {} for components and 1 for properties)",
-            context, shape.len(), components.len() + 2, components.len()
+            shape.len(), components.len() + 2, components.len()
         )));
     }
 
-    if shape[0] != samples.count() {
+    let samples_values = samples.values();
+    if shape[0] != samples_values.shape()?[0] {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis 0 is {} but we have {} sample label entries",
-            context, shape[0], samples.count()
+            "invalid block: the values shape along axis 0 is {} but we have {} sample label entries",
+            shape[0], samples_values.shape()?[0]
         )));
     }
 
     // ensure that all component labels have different dimensions
     let n_components = components.iter().map(|c| c.dimensions()).collect::<BTreeSet<_>>().len();
     if n_components != components.len() {
-        return Err(Error::InvalidParameter(format!(
-            "{}: some of the component dimensions appear more than once in component labels",
-            context,
-        )));
+        return Err(Error::InvalidParameter(
+            "invalid block: some of the component dimensions appear more than once in component labels".into(),
+        ));
     }
 
     let mut axis = 1;
+    let mut components_values = Vec::with_capacity(components.len());
     for component in components {
-        if shape[axis] != component.count() {
+        let component_values = component.values();
+        if shape[axis] != component_values.shape()?[0] {
             return Err(Error::InvalidParameter(format!(
-                "{}: the array shape along axis {} is {} but we have {} entries \
+                "invalid block: the values shape along axis {} is {} but we have {} entries \
                 for the corresponding component",
-                context, axis, shape[axis], component.count(),
+                axis, shape[axis], component_values.shape()?[0],
             )));
         }
+        components_values.push(component_values);
 
         axis += 1;
     }
 
-    if shape[axis] != properties.count() {
+    let properties_values = properties.values();
+    if shape[axis] != properties_values.shape()?[0] {
         return Err(Error::InvalidParameter(format!(
-            "{}: the array shape along axis {} is {} but we have {} property label entries",
-            context, axis, shape[axis], properties.count()
+            "invalid block: the values shape along axis {} is {} but we have {} property label entries",
+            axis, shape[axis], properties_values.shape()?[0]
+        )));
+    }
+
+    // check that all data is on the same device
+    let values_device = values.device()?;
+
+    if values_device != samples_values.device()? {
+        return Err(Error::InvalidParameter(format!(
+            "invalid block: values and samples must be on the same device, got '{}' and '{}'",
+            values_device, samples_values.device()?
+        )));
+    }
+
+    for component_values in components_values {
+        if values_device != component_values.device()? {
+            return Err(Error::InvalidParameter(format!(
+                "invalid block: values and components must be on the same device, got '{}' and '{}'",
+                values_device, component_values.device()?
+            )));
+        }
+    }
+
+    if values_device != properties_values.device()? {
+        return Err(Error::InvalidParameter(format!(
+            "invalid block: values and properties must be on the same device, got '{}' and '{}'",
+            values_device, properties_values.device()?
         )));
     }
 
@@ -132,7 +161,7 @@ impl TensorBlock {
         properties: Arc<Labels>,
     ) -> Result<TensorBlock, Error> {
         check_data_and_labels(
-            "data and labels don't match", &values, &samples, &components, &properties
+            &values, &samples, &components, &properties
         )?;
         check_component_labels(&components)?;
         let components = ImmutableVec(components);
@@ -395,13 +424,9 @@ fn check_gradient_samples(cpu_samples: &CpuLabels<'_>, samples_count: usize) -> 
 
 #[cfg(test)]
 mod tests {
-    use crate::data::TestArray;
+    use crate::data::{TestArray, example_labels, example_labels_other_device};
 
     use super::*;
-
-    fn example_labels(name: &str, count: i32) -> Arc<Labels> {
-        return Arc::new(Labels::from_vec(&[name], (0..count).collect()).expect("invalid labels"));
-    }
 
     #[test]
     fn no_components() {
@@ -415,23 +440,23 @@ mod tests {
         let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: the array shape \
-            along axis 0 is 3 but we have 4 sample label entries"
+            "invalid parameter: invalid block: the values shape along axis 0 is 3 \
+            but we have 4 sample label entries"
         );
 
         let values = TestArray::new(vec![4, 9]);
         let result = TensorBlock::new(values, samples.clone(), Vec::new(), properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: the array shape \
-            along axis 1 is 9 but we have 7 property label entries"
+            "invalid parameter: invalid block: the values shape along axis 1 is 9 \
+            but we have 7 property label entries"
         );
 
         let values = TestArray::new(vec![4, 1, 7]);
         let result = TensorBlock::new(values, samples, Vec::new(), properties);
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: the array has \
+            "invalid parameter: invalid block: the values have \
             3 dimensions, but we have 2 separate labels (1 for samples, 0 \
             for components and 1 for properties)"
         );
@@ -459,9 +484,9 @@ mod tests {
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: the array has 3 \
-            dimensions, but we have 4 separate labels (1 for samples, 2 for \
-            components and 1 for properties)"
+            "invalid parameter: invalid block: the values have 3 dimensions, \
+            but we have 4 separate labels (1 for samples, 2 for components and \
+            1 for properties)"
         );
 
         let values = TestArray::new(vec![3, 4, 4, 2]);
@@ -469,7 +494,7 @@ mod tests {
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: the array shape \
+            "invalid parameter: invalid block: the values shape \
             along axis 2 is 4 but we have 3 entries for the corresponding component"
         );
 
@@ -478,7 +503,7 @@ mod tests {
         let result = TensorBlock::new(values, samples.clone(), components, properties.clone());
         assert_eq!(
             result.unwrap_err().to_string(),
-            "invalid parameter: data and labels don't match: some of the \
+            "invalid parameter: invalid block: some of the \
             component dimensions appear more than once in component labels"
         );
 
@@ -720,21 +745,78 @@ mod tests {
         }
 
         #[test]
+        fn labels_device_mismatch() {
+            assert_eq!(
+                TensorBlock::new(
+                    TestArray::new_other_device(vec![4, 3, 7]),
+                    example_labels("samples", 4),
+                    vec![
+                        example_labels("components", 3)
+                    ],
+                    example_labels("properties", 7)
+                ).unwrap_err().to_string(),
+                "invalid parameter: invalid block: values and samples must be on \
+                the same device, got 'ExtDev:0' and 'CPU:0'"
+            );
+
+            assert_eq!(
+                TensorBlock::new(
+                    TestArray::new_other_device(vec![4, 3, 7]),
+                    example_labels_other_device("samples", 4),
+                    vec![
+                        example_labels("components", 3)
+                    ],
+                    example_labels("properties", 7)
+                ).unwrap_err().to_string(),
+                "invalid parameter: invalid block: values and components must be on \
+                the same device, got 'ExtDev:0' and 'CPU:0'"
+            );
+
+            assert_eq!(
+                TensorBlock::new(
+                    TestArray::new_other_device(vec![4, 3, 7]),
+                    example_labels_other_device("samples", 4),
+                    vec![
+                        example_labels_other_device("components", 3)
+                    ],
+                    example_labels("properties", 7)
+                ).unwrap_err().to_string(),
+                "invalid parameter: invalid block: values and properties must be on \
+                the same device, got 'ExtDev:0' and 'CPU:0'"
+            );
+
+            assert!(
+                TensorBlock::new(
+                    TestArray::new_other_device(vec![4, 3, 7]),
+                    example_labels_other_device("samples", 4),
+                    vec![
+                        example_labels_other_device("components", 3)
+                    ],
+                    example_labels_other_device("properties", 7)
+                ).is_ok(),
+            );
+        }
+
+        #[test]
         fn gradient_device_mismatch() {
-            let samples = example_labels("samples", 4);
-            let properties = example_labels("properties", 7);
-            let values = TestArray::new(vec![4, 7]);
-            let mut block = TensorBlock::new(values, samples, vec![], properties.clone()).unwrap();
+            let mut block = TensorBlock::new(
+                TestArray::new(vec![4, 7]),
+                example_labels("samples", 4),
+                vec![],
+                example_labels("properties", 7),
+            ).unwrap();
 
             let gradient = TensorBlock::new(
                 TestArray::new_other_device(vec![3, 7]),
-                example_labels("sample", 3),
+                example_labels_other_device("sample", 3),
                 vec![],
-                properties,
+                example_labels_other_device("properties", 7),
             ).unwrap();
+
+
             assert_eq!(
                 block.add_gradient("bad_device", gradient).unwrap_err().to_string(),
-                "invalid parameter: the gradient values are on device 'CUDA:0' \
+                "invalid parameter: the gradient values are on device 'ExtDev:0' \
                 but the block values are on device 'CPU:0'"
             );
         }
