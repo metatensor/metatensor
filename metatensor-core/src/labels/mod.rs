@@ -400,11 +400,21 @@ impl Labels {
     ///
     /// Mapping will be computed only if slices are not empty.
     #[allow(clippy::needless_range_loop)]
-    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
         if self.dimensions != other.dimensions {
-            return Err(Error::InvalidParameter(
-                "can not take the union of these Labels, they have different dimensions".into()
-            ));
+            return Err(Error::InvalidParameter(format!(
+                "can not take the union of these Labels, they have different dimensions: \
+                {:?}, and {:?}",
+                self.dimensions(), other.dimensions(),
+            )));
+        }
+
+        if self.device() != other.device() {
+            return Err(Error::InvalidParameter(format!(
+                "can not take the union of these Labels, they are on different devices: \
+                '{}', and '{}'",
+                self.device(), other.device(),
+            )));
         }
 
         let mut positions = self.get_or_init_positions().clone();
@@ -442,13 +452,15 @@ impl Labels {
         let cpu_values = values.clone();
         let values = create_array_from_vec(values, count, size);
 
-        return Ok(Labels {
+        let result = Labels {
             dimensions: self.dimensions.clone(),
             values,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted: OnceCell::new(),
             positions: OnceCell::with_value(positions),
-        });
+        };
+
+        return Labels::to(Arc::new(result), self.device(), self);
     }
 
     /// Compute the intersection of two labels, and optionally the mapping from
@@ -456,11 +468,21 @@ impl Labels {
     /// output.
     ///
     /// Mapping will be computed only if slices are not empty.
-    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
+    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
         if self.dimensions != other.dimensions {
-            return Err(Error::InvalidParameter(
-                "can not take the intersection of these Labels, they have different dimensions".into()
-            ));
+            return Err(Error::InvalidParameter(format!(
+                "can not take the intersection of these Labels, they have different dimensions: \
+                {:?}, and {:?}",
+                self.dimensions(), other.dimensions(),
+            )));
+        }
+
+        if self.device() != other.device() {
+            return Err(Error::InvalidParameter(format!(
+                "can not take the intersection of these Labels, they are on different devices: \
+                '{}', and '{}'",
+                self.device(), other.device(),
+            )));
         }
 
         // make `first` the Labels with fewest entries
@@ -513,13 +535,15 @@ impl Labels {
         let cpu_values = values.clone();
         let values = create_array_from_vec(values, count, size);
 
-        return Ok(Labels {
+        let result = Labels {
             dimensions: self.dimensions.clone(),
             values,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted,
             positions: OnceCell::new(),
-        });
+        };
+
+        return Labels::to(Arc::new(result), self.device(), self);
     }
 
     /// Compute the difference of two labels, and optionally the mapping from
@@ -527,11 +551,21 @@ impl Labels {
     /// output.
     ///
     /// Mapping will be computed only if slices are not empty.
-    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Labels, Error> {
+    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
         if self.dimensions != other.dimensions {
-            return Err(Error::InvalidParameter(
-                "can not take the difference of these Labels, they have different dimensions".into(),
-            ));
+            return Err(Error::InvalidParameter(format!(
+                "can not take the difference of these Labels, they have different dimensions: \
+                {:?}, and {:?}",
+                self.dimensions(), other.dimensions(),
+            )));
+        }
+
+        if self.device() != other.device() {
+            return Err(Error::InvalidParameter(format!(
+                "can not take the difference of these Labels, they are on different devices: \
+                '{}', and '{}'",
+                self.device(), other.device(),
+            )));
         }
 
         if !first_mapping.is_empty() {
@@ -574,13 +608,15 @@ impl Labels {
         let cpu_values = values.clone();
         let values = create_array_from_vec(values, count, size);
 
-        return Ok(Labels {
+        let result = Labels {
             dimensions: self.dimensions.clone(),
-            values: values,
+            values,
             cpu_values: OnceCell::with_value(cpu_values),
             sorted,
             positions: OnceCell::new(),
-        });
+        };
+
+        return Labels::to(Arc::new(result), self.device(), self);
     }
 
     /// Select entries in these `Labels` that match the `selection`.
@@ -598,6 +634,14 @@ impl Labels {
     /// valid indexes in `selected`.
     pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
         assert!(selected.len() == self.count());
+        if self.device() != selection.device() {
+            return Err(Error::InvalidParameter(format!(
+                "can not select from Labels, the selection is on a different device: \
+                '{}', and '{}'",
+                self.device(), selection.device(),
+            )));
+        }
+
         if cfg!(debug_assertions) {
             selected.fill(u64::MAX);
         }
@@ -817,7 +861,8 @@ mod tests {
         let err = first.union(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
-            "invalid parameter: can not take the union of these Labels, they have different dimensions"
+            "invalid parameter: can not take the union of these Labels, they have different dimensions: \
+            [\"aa\", \"bb\"], and [\"aa\"]"
         );
 
         // Take the union with an empty set of labels
@@ -866,7 +911,8 @@ mod tests {
         let err = first.intersection(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
-            "invalid parameter: can not take the intersection of these Labels, they have different dimensions"
+            "invalid parameter: can not take the intersection of these Labels, they have different dimensions: \
+            [\"aa\", \"bb\"], and [\"aa\"]"
         );
 
         // Take the intersection with an empty set of labels
@@ -904,7 +950,8 @@ mod tests {
         let err = first.difference(&labels, &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
-            "invalid parameter: can not take the difference of these Labels, they have different dimensions"
+            "invalid parameter: can not take the difference of these Labels, they have different dimensions: \
+            [\"aa\", \"bb\"], and [\"aa\"]"
         );
 
         // Take the difference with an empty set of labels

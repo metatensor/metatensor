@@ -289,7 +289,7 @@ fn merge_properties(
         // add mapping for the new block
         property_mappings.push(mapping_for_new_block);
 
-        new_properties = Arc::new(next_properties);
+        new_properties = next_properties;
     }
 
     Ok((new_properties, property_mappings))

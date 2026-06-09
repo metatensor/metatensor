@@ -331,12 +331,12 @@ def test_union():
 
     first = first.to(device)
 
-    message = "device mismatch in `Labels.union`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = "can not take the union of these Labels, they are on different devices"
+    with pytest.raises(RuntimeError, match=message):
         first.union(second)
 
-    message = "device mismatch in `Labels.union_and_mapping`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = "can not take the union of these Labels, they are on different devices"
+    with pytest.raises(RuntimeError, match=message):
         first.union_and_mapping(second)
 
     second = second.to(device)
@@ -373,12 +373,16 @@ def test_intersection():
 
     first = first.to(device)
 
-    message = "device mismatch in `Labels.intersection`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = (
+        "can not take the intersection of these Labels, they are on different devices"
+    )
+    with pytest.raises(RuntimeError, match=message):
         first.intersection(second)
 
-    message = "device mismatch in `Labels.intersection_and_mapping`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = (
+        "can not take the intersection of these Labels, they are on different devices"
+    )
+    with pytest.raises(RuntimeError, match=message):
         first.intersection_and_mapping(second)
 
     second = second.to(device)
@@ -412,12 +416,16 @@ def test_difference():
 
     first = first.to(device)
 
-    message = "device mismatch in `Labels.difference`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = (
+        "can not take the difference of these Labels, they are on different devices"
+    )
+    with pytest.raises(RuntimeError, match=message):
         first.difference(second)
 
-    message = "device mismatch in `Labels.difference_and_mapping`: got '.+' and 'cpu'"
-    with pytest.raises(ValueError, match=message):
+    message = (
+        "can not take the difference of these Labels, they are on different devices"
+    )
+    with pytest.raises(RuntimeError, match=message):
         first.difference_and_mapping(second)
 
     second = second.to(device)
@@ -510,6 +518,22 @@ def test_select():
     labels = Labels(["aa", "bb"], torch.empty((0, 2), dtype=torch.int32))
     selection = Labels(["aa"], torch.tensor([[1], [2], [5]]))
     assert len(labels.select(selection)) == 0
+
+    # check that select reports device mismatch
+    if len(AVAILABLE_DEVICES) == 0:
+        pytest.skip("no real device available")
+
+    device = AVAILABLE_DEVICES[0]
+
+    labels = Labels(["aa", "bb"], torch.tensor([[1, 1], [1, 2], [3, 2], [2, 1]]))
+    labels = labels.to(device)
+
+    message = (
+        "invalid parameter: can not select from Labels, the selection is on a "
+        "different device"
+    )
+    with pytest.raises(RuntimeError, match=message):
+        labels.select(selection)
 
 
 # define a wrapper class to make sure the types TorchScript uses for of all
