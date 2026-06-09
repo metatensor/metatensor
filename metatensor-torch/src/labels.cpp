@@ -485,32 +485,15 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
 }
 
 Labels LabelsHolder::set_union(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.union`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
-    auto result = LabelsHolder(labels_.set_union(other->labels_));
-    return result.to(device);
+    return torch::make_intrusive<LabelsHolder>(labels_.set_union(other->labels_));
 }
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.union_and_mapping`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_.set_union(
+    auto result = torch::make_intrusive<LabelsHolder>(labels_.set_union(
         other->labels_,
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
@@ -518,40 +501,24 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
         second_mapping.size(0)
     ));
 
+    auto device = this->device();
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
-        result.to(device),
+        std::move(result),
         first_mapping.to(device),
         second_mapping.to(device)
     );
 }
 
 Labels LabelsHolder::set_intersection(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.intersection`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
-    auto result = LabelsHolder(labels_.set_intersection(other->labels_));
-    return result.to(device);
+    return torch::make_intrusive<LabelsHolder>(labels_.set_intersection(other->labels_));
 }
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.intersection_and_mapping`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
 
-    auto result = LabelsHolder(labels_.set_intersection(
+    auto result = torch::make_intrusive<LabelsHolder>(labels_.set_intersection(
         other->labels_,
         first_mapping.data_ptr<int64_t>(),
         first_mapping.size(0),
@@ -559,65 +526,43 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
         second_mapping.size(0)
     ));
 
+    auto device = this->device();
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
-        result.to(device),
+        std::move(result),
         first_mapping.to(device),
         second_mapping.to(device)
     );
 }
 
 Labels LabelsHolder::set_difference(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.difference`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
-    auto result = LabelsHolder(labels_.set_difference(other->labels_));
-    return result.to(device);
+    return torch::make_intrusive<LabelsHolder>(labels_.set_difference(other->labels_));
 }
 
 std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Labels& other) const {
-    auto device = this->values_.device();
-    if (device != other->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.difference_and_mapping`: got '" + device.str() +
-            "' and '" + other->values_.device().str() + "'"
-        );
-    }
-
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto mapping = torch::zeros({this->count()}, options);
 
-    auto result = LabelsHolder(labels_.set_difference(
+    auto result = torch::make_intrusive<LabelsHolder>(labels_.set_difference(
         other->labels_,
         mapping.data_ptr<int64_t>(),
         mapping.size(0)
     ));
 
+    auto device = this->device();
     return std::make_tuple<Labels, torch::Tensor>(
-        result.to(device),
+        std::move(result),
         mapping.to(device)
     );
 }
 
 torch::Tensor LabelsHolder::select(const Labels& selection) const {
-    auto device = this->values_.device();
-    if (device != selection->values_.device()) {
-        C10_THROW_ERROR(ValueError,
-            "device mismatch in `Labels.select`: got '" + device.str() +
-            "' and '" + selection->values_.device().str() + "'"
-        );
-    }
-
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto selected = torch::zeros({this->count()}, options);
     auto selected_count = static_cast<size_t>(selected.size(0));
 
+    auto device = this->device();
     if (this->count() == 0) {
-        return selected;
+        return selected.to(device);
     }
 
     labels_.select(
@@ -631,7 +576,7 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
 
     selected.resize_({static_cast<int64_t>(selected_count)});
 
-    return selected;
+    return selected.to(device);
 }
 
 struct LabelsPrintData {
