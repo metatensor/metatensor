@@ -280,6 +280,30 @@ impl MtsArray {
     }
 }
 
+impl<const N: usize> From<Vec<[i32; N]>> for MtsArray {
+    fn from(mut values: Vec<[i32; N]>) -> Self {
+        // Flatten the Vec<[i32; N]> into a Vec<i32> without copying the data
+        let ptr = values.as_mut_ptr();
+        let len = values.len();
+        let cap = values.capacity();
+        std::mem::forget(values);
+        let flat = unsafe { Vec::from_raw_parts(ptr.cast::<i32>(), len * N, cap * N) };
+
+        let array = ndarray::Array::from_shape_vec(vec![len, N], flat)
+            .expect("shape mismatch when creating MtsArray from Vec<[i32; N]>");
+        MtsArray::from(array)
+    }
+}
+
+impl<const N: usize, const M: usize> From<[[i32; N]; M]> for MtsArray {
+    fn from(values: [[i32; N]; M]) -> Self {
+        let data: Vec<i32> = values.iter().flat_map(|v| v.iter()).copied().collect();
+        let array = ndarray::Array::from_shape_vec(vec![M, N], data)
+            .expect("shape mismatch when creating MtsArray from [[i32; N]; M]");
+        MtsArray::from(array)
+    }
+}
+
 impl<'a> From<&'a MtsArray> for ArrayRef<'a> {
     fn from(array: &'a MtsArray) -> ArrayRef<'a> {
         array.as_ref()

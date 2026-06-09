@@ -111,7 +111,8 @@ impl LabelValue {
 /// columns of this array. Each row/entry in this array is unique, and they are
 /// often (but not always) sorted in  lexicographic order.
 ///
-/// The main way to construct a new set of labels is to use a `LabelsBuilder`.
+/// The main way to construct a new set of labels is to use [`Labels::new`] or
+/// [`Labels::new_assume_unique`].
 ///
 /// Labels are internally reference counted and immutable, so cloning a `Labels`
 /// should be a cheap operation.
@@ -184,22 +185,65 @@ impl std::ops::Drop for Labels {
 impl Labels {
     /// Create a new set of Labels with the given names and values.
     ///
-    /// This is a convenience function replacing the manual use of
-    /// `LabelsBuilder`. If you need more flexibility or incremental `Labels`
-    /// construction, use `LabelsBuilder`.
+    /// The `values` can be any type that can be converted into an
+    /// [`MtsArray`], including `Vec<[i32; N]>`, `&[[i32; N]]`, or
+    /// `ndarray::Array`.
     ///
     /// # Panics
     ///
-    /// If the set of names is not valid, or any of the value is duplicated
+    /// If the set of names is not valid, or any of the value is duplicated.
     #[inline]
-    pub fn new<T, const N: usize>(names: [&str; N], values: &[[T; N]]) -> Labels
-        where T: Copy + Into<LabelValue>
-    {
-        let mut builder = LabelsBuilder::new(names.to_vec());
-        for entry in values {
-            builder.add(entry);
+    pub fn new<'a>(names: impl AsRef<[&'a str]>, values: impl Into<MtsArray>) -> Labels {
+        Self::new_impl(names.as_ref(), values, crate::c_api::mts_labels)
+    }
+
+    /// Create a new set of Labels with the given names and values, without
+    /// checking that the entries are unique.
+    ///
+    /// This is faster than [`Labels::new`] as it does not perform a uniqueness
+    /// check on the labels entries. It is the caller's responsibility to ensure
+    /// that entries are unique.
+    ///
+    /// # Panics
+    ///
+    /// If the set of names is not valid.
+    #[inline]
+    pub fn new_assume_unique<'a>(names: impl AsRef<[&'a str]>, values: impl Into<MtsArray>) -> Labels {
+        Self::new_impl(names.as_ref(), values, crate::c_api::mts_labels_assume_unique)
+    }
+
+    /// Common implementation for `new` and `new_assume_unique`
+    fn new_impl(
+        names: &[&str],
+        values: impl Into<MtsArray>,
+        creator: unsafe extern "C" fn(
+            *const *const std::os::raw::c_char,
+            usize,
+            crate::c_api::mts_array_t,
+        ) -> *const mts_labels_t
+    ) -> Labels {
+        let n_unique_names = names.iter().collect::<BTreeSet<_>>().len();
+        assert!(n_unique_names == names.len(), "invalid labels: the same name is used multiple times");
+
+        let mut raw_names = Vec::new();
+        let mut raw_names_ptr = Vec::new();
+        for name in names {
+            let c_name = CString::new(*name).expect("name contains a NULL byte");
+            raw_names_ptr.push(c_name.as_ptr());
+            raw_names.push(c_name);
         }
-        return builder.finish();
+
+        let array: MtsArray = values.into();
+        let ptr = unsafe {
+            creator(
+                raw_names_ptr.as_ptr(),
+                raw_names.len(),
+                array.into_raw(),
+            )
+        };
+        check_ptr(ptr).expect("invalid labels");
+
+        unsafe { Labels::from_raw(ptr) }
     }
 
     /// Get a pointer to the underlying `mts_labels_t`
@@ -240,17 +284,19 @@ impl Labels {
 
     /// Create a set of `Labels` with the given names, containing no entries.
     #[inline]
-    pub fn empty(names: Vec<&str>) -> Labels {
-        return LabelsBuilder::new(names).finish()
+    pub fn empty<'a>(names: impl AsRef<[&'a str]>) -> Labels {
+        let names = names.as_ref();
+        let array = ndarray::Array::<i32, _>::from_shape_vec(
+            vec![0, names.len()], vec![]
+        ).expect("shape mismatch when creating empty labels array");
+        Labels::new(names, array)
     }
 
     /// Create a set of `Labels` containing a single entry, to be used when
     /// there is no relevant information to store.
     #[inline]
     pub fn single() -> Labels {
-        let mut builder = LabelsBuilder::new(vec!["_"]);
-        builder.add(&[0]);
-        return builder.finish();
+        Labels::new(["_"], vec![[0i32]])
     }
 
     /// Load `Labels` from the file at `path`
@@ -746,124 +792,6 @@ impl<const N: usize> ExactSizeIterator for LabelsFixedSizeIter<'_, N> {
     }
 }
 
-/// Builder for [`Labels`]
-#[derive(Debug, Clone)]
-pub struct LabelsBuilder {
-    // cf `Labels` for the documentation of the fields
-    names: Vec<String>,
-    values: Vec<i32>,
-}
-
-impl LabelsBuilder {
-    /// Create a new empty `LabelsBuilder` with the given `names`
-    #[inline]
-    pub fn new(names: Vec<&str>) -> LabelsBuilder {
-        let n_unique_names = names.iter().collect::<BTreeSet<_>>().len();
-        assert!(n_unique_names == names.len(), "invalid labels: the same name is used multiple times");
-
-        LabelsBuilder {
-            names: names.into_iter().map(|s| s.into()).collect(),
-            values: Vec::new(),
-        }
-    }
-
-    /// Reserve space for `additional` other entries in the labels.
-    #[inline]
-    pub fn reserve(&mut self, additional: usize) {
-        self.values.reserve(additional * self.names.len());
-    }
-
-    /// Get the number of labels in a single value
-    #[inline]
-    pub fn size(&self) -> usize {
-        self.names.len()
-    }
-
-    /// Add a single `entry` to this set of labels.
-    ///
-    /// This function will panic when attempting to add the same `label` more
-    /// than once.
-    #[inline]
-    pub fn add<T>(&mut self, entry: &[T]) where T: Clone + Into<LabelValue> {
-        assert_eq!(
-            self.size(), entry.len(),
-            "wrong size for added label: got {}, but expected {}",
-            entry.len(), self.size()
-        );
-
-        // SmallVec allows us to convert everything to `LabelValue` without
-        // requiring an extra heap allocation
-        for e in entry {
-            self.values.push(Into::<LabelValue>::into(e.clone()).i32());
-        }
-    }
-
-    /// Common implementation for `finish` and `finish_unchecked`.
-    fn finish_with(
-        self,
-        creator: unsafe extern "C" fn(
-            *const *const std::os::raw::c_char,
-            usize,
-            crate::c_api::mts_array_t,
-        ) -> *const mts_labels_t
-    ) -> Labels {
-        let mut raw_names = Vec::new();
-        let mut raw_names_ptr = Vec::new();
-
-        for name in &self.names {
-            let name = CString::new(&**name).expect("name contains a NULL byte");
-            raw_names_ptr.push(name.as_ptr());
-            raw_names.push(name);
-        }
-
-        let size = raw_names_ptr.len();
-        let count = if size == 0 {
-            assert!(self.values.is_empty());
-            0
-        } else {
-            self.values.len() / size
-        };
-
-        // Wrap raw values in an ndarray-backed mts_array_t
-        let array = ndarray::Array::from_shape_vec(vec![count, size], self.values)
-                .expect("shape mismatch when creating labels array");
-        let array: MtsArray = array.into();
-
-        let ptr = unsafe {
-            creator(
-                raw_names_ptr.as_ptr(),
-                size,
-                array.into_raw(),
-            )
-        };
-        check_ptr(ptr).expect("invalid labels");
-
-        unsafe { Labels::from_raw(ptr) }
-    }
-
-    /// Finish building the `Labels`.
-    ///
-    /// This function checks that all entries in the labels are unique.
-    #[inline]
-    pub fn finish(self) -> Labels {
-        self.finish_with(crate::c_api::mts_labels)
-    }
-
-    /// Finish building the `Labels`, assuming that all entries are unique.
-    ///
-    /// This is faster than `finish` as it does not perform a uniqueness check
-    /// on the labels entries. It is the caller's responsibility to ensure that
-    /// entries are unique.
-    ///
-    /// # Panics
-    ///
-    /// If the set of names is not valid (contains duplicates or invalid names).
-    #[inline]
-    pub fn finish_assume_unique(self) -> Labels {
-        self.finish_with(crate::c_api::mts_labels_assume_unique)
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -871,12 +799,7 @@ mod tests {
 
     #[test]
     fn labels() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[2, 3]);
-        builder.add(&[1, 243]);
-        builder.add(&[-4, -2413]);
-
-        let labels = builder.finish();
+        let labels = Labels::new(["foo", "bar"], vec![[2, 3], [1, 243], [-4, -2413]]);
         assert_eq!(labels.names(), &["foo", "bar"]);
         assert_eq!(labels.size(), 2);
         assert_eq!(labels.count(), 3);
@@ -886,15 +809,11 @@ mod tests {
         assert_eq!(labels[1], [1, 243]);
         assert_eq!(labels[2], [-4, -2413]);
 
-        let builder = LabelsBuilder::new(vec![]);
-        let labels = builder.finish();
+        let labels = Labels::new(&[] as &[&str], Vec::<[i32; 0]>::new());
         assert_eq!(labels.size(), 0);
         assert_eq!(labels.count(), 0);
 
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[2, 3]);
-        builder.add(&[1, 243]);
-        let labels = builder.finish_assume_unique();
+        let labels = Labels::new_assume_unique(["foo", "bar"], vec![[2, 3], [1, 243]]);
         assert_eq!(labels.names(), &["foo", "bar"]);
         assert_eq!(labels.size(), 2);
         assert_eq!(labels.count(), 2);
@@ -904,11 +823,7 @@ mod tests {
     fn direct_construct() {
         let labels = Labels::new(
             ["foo", "bar"],
-            &[
-                [2, 3],
-                [1, 243],
-                [-4, -2413],
-            ]
+            vec![[2, 3], [1, 243], [-4, -2413]],
         );
 
         assert_eq!(labels.names(), &["foo", "bar"]);
@@ -922,12 +837,7 @@ mod tests {
 
     #[test]
     fn iter() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[2, 3]);
-        builder.add(&[1, 2]);
-        builder.add(&[4, 3]);
-
-        let labels = builder.finish();
+        let labels = Labels::new(["foo", "bar"], vec![[2, 3], [1, 2], [4, 3]]);
         let mut iter = labels.iter();
         assert_eq!(iter.len(), 3);
 
@@ -942,12 +852,7 @@ mod tests {
     fn par_iter() {
         use rayon::iter::IndexedParallelIterator;
 
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[2, 3]);
-        builder.add(&[1, 2]);
-        builder.add(&[4, 3]);
-
-        let labels = builder.finish();
+        let labels = Labels::new(["foo", "bar"], vec![[2, 3], [1, 2], [4, 3]]);
         let iter = labels.par_iter();
         assert_eq!(iter.len(), 3);
 
@@ -959,11 +864,7 @@ mod tests {
 
     #[test]
     fn iter_fixed_size() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[1, 2]);
-        builder.add(&[2, 3]);
-
-        let labels = builder.finish();
+        let labels = Labels::new(["foo", "bar"], vec![[1, 2], [2, 3]]);
 
         for (i, [a, b]) in labels.iter_fixed_size().enumerate() {
             assert_eq!(a.usize(), 1 + i);
@@ -974,30 +875,27 @@ mod tests {
     #[test]
     #[should_panic(expected = "wrong label size in `iter_fixed_size`: the entries contains 2 element but this function was called with size of 3")]
     fn iter_fixed_size_wrong_size() {
-        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+        let labels = Labels::new(["foo", "bar"], Vec::<[i32; 2]>::new());
 
         for [_, _, _] in labels.iter_fixed_size() {}
     }
 
     #[test]
-    #[should_panic(expected = "'33 bar' is not a valid label name")]
+    #[should_panic(expected = "invalid parameter: '33 bar' is not a valid label name")]
     fn invalid_label_name() {
-        LabelsBuilder::new(vec!["foo", "33 bar"]).finish();
+        Labels::new(["foo", "33 bar"], Vec::<[i32; 2]>::new());
     }
 
     #[test]
     #[should_panic(expected = "invalid labels: the same name is used multiple times")]
     fn duplicated_label_name() {
-        LabelsBuilder::new(vec!["foo", "bar", "foo"]).finish();
+        Labels::new(["foo", "bar", "foo"], Vec::<[i32; 3]>::new());
     }
 
     #[test]
     #[should_panic(expected = "can not have the same label entry multiple times: [0, 1] is already present")]
     fn duplicated_label_entry() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[0, 1]);
-        builder.add(&[0, 1]);
-        builder.finish();
+        Labels::new(["foo", "bar"], vec![[0, 1], [0, 1]]);
     }
 
     #[test]
@@ -1010,7 +908,7 @@ mod tests {
 
     #[test]
     fn empty_label() {
-        let labels = LabelsBuilder::new(vec!["foo", "bar"]).finish();
+        let labels = Labels::empty(vec!["foo", "bar"]);
 
         assert!(labels.is_empty());
         assert_eq!(labels.count(), 0);
@@ -1019,10 +917,7 @@ mod tests {
 
     #[test]
     fn position() {
-        let mut builder = LabelsBuilder::new(vec!["foo", "bar"]);
-        builder.add(&[1, 2]);
-        builder.add(&[2, 3]);
-        let labels = builder.finish();
+        let labels = Labels::new(["foo", "bar"], vec![[1, 2], [2, 3]]);
 
         assert!(labels.contains(&[LabelValue::new(1), LabelValue::new(2)]));
         assert_eq!(labels.position(&[LabelValue::new(1), LabelValue::new(2)]), Some(0));
@@ -1038,11 +933,7 @@ mod tests {
     fn indexing() {
         let labels = Labels::new(
             ["foo", "bar"],
-            &[
-                [2, 3],
-                [1, 243],
-                [-4, -2413],
-            ]
+            vec![[2, 3], [1, 243], [-4, -2413]],
         );
 
         assert_eq!(labels[1], [1, 243]);
@@ -1053,11 +944,7 @@ mod tests {
     fn debug() {
         let labels = Labels::new(
             ["foo", "bar"],
-            &[
-                [2, 3],
-                [1, 243],
-                [-4, -2413],
-            ]
+            vec![[2, 3], [1, 243], [-4, -2413]],
         );
 
         let expected = format!(
@@ -1069,8 +956,8 @@ mod tests {
 
     #[test]
     fn union() {
-        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
-        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+        let first = Labels::new(["aa", "bb"], [[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], [[2, 3], [1, 2], [4, 5]]);
 
         let mut first_mapping = vec![0; first.count()];
         let mut second_mapping = vec![0; second.count()];
@@ -1085,8 +972,8 @@ mod tests {
 
     #[test]
     fn intersection() {
-        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
-        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+        let first = Labels::new(["aa", "bb"], [[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], [[2, 3], [1, 2], [4, 5]]);
 
         let mut first_mapping = vec![0_i64; first.count()];
         let mut second_mapping = vec![0_i64; second.count()];
@@ -1101,8 +988,8 @@ mod tests {
 
     #[test]
     fn difference() {
-        let first = Labels::new(["aa", "bb"], &[[0, 1], [1, 2]]);
-        let second = Labels::new(["aa", "bb"], &[[2, 3], [1, 2], [4, 5]]);
+        let first = Labels::new(["aa", "bb"], [[0, 1], [1, 2]]);
+        let second = Labels::new(["aa", "bb"], [[2, 3], [1, 2], [4, 5]]);
 
         let mut mapping = vec![0_i64; first.count()];
         let union = first.difference(&second, Some(&mut mapping)).unwrap();
@@ -1116,14 +1003,14 @@ mod tests {
     #[test]
     fn selection() {
         // selection with a subset of names
-        let labels = Labels::new(["aa", "bb"], &[[1, 1], [1, 2], [3, 2], [2, 1]]);
-        let selection = Labels::new(["aa"], &[[1], [2], [5]]);
+        let labels = Labels::new(["aa", "bb"], [[1, 1], [1, 2], [3, 2], [2, 1]]);
+        let selection = Labels::new(["aa"], [[1], [2], [5]]);
 
         let selected = labels.select(&selection).unwrap();
         assert_eq!(selected, [0, 1, 3]);
 
         // selection with the same names
-        let selection = Labels::new(["aa", "bb"], &[[1, 1], [2, 1], [5, 1], [1, 2]]);
+        let selection = Labels::new(["aa", "bb"], [[1, 1], [2, 1], [5, 1], [1, 2]]);
         let selected = labels.select(&selection).unwrap();
         assert_eq!(selected, [0, 3, 1]);
 
@@ -1142,10 +1029,10 @@ mod tests {
 
     #[test]
     fn labels_into_raw() {
-        let original = Labels::new(["foo", "bar"], &[[1, 2], [3, 4], [5, 6]]);
+        let original = Labels::new(["foo", "bar"], [[1, 2], [3, 4], [5, 6]]);
         let raw = Labels::into_raw(original);
 
         let recovered = unsafe { Labels::from_raw(raw) };
-        assert_eq!(recovered, Labels::new(["foo", "bar"], &[[1, 2], [3, 4], [5, 6]]));
+        assert_eq!(recovered, Labels::new(["foo", "bar"], [[1, 2], [3, 4], [5, 6]]));
     }
 }

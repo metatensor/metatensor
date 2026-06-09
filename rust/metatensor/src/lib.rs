@@ -40,7 +40,7 @@ pub use self::data::{ArrayRef, ArrayRefMut};
 pub use self::data::{Array, EmptyArray, MtsArray};
 
 mod labels;
-pub use self::labels::{Labels, LabelsBuilder, LabelValue};
+pub use self::labels::{Labels, LabelValue};
 pub use self::labels::{LabelsIter, LabelsFixedSizeIter};
 
 #[cfg(feature = "rayon")]

@@ -248,20 +248,20 @@ mod tests {
     #[test]
     #[allow(clippy::float_cmp)]
     fn gradients() {
-        let properties = Labels::new(["p"], &[[-2], [0], [1]]);
+        let properties = Labels::new(["p"], [[-2], [0], [1]]);
         let mut block = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], 1.0),
-            &Labels::new(["s"], &[[0], [1]]), &[], &properties,
+            &Labels::new(["s"], [[0], [1]]), &[], &properties,
         ).unwrap();
 
         block.add_gradient("g", TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], -1.0),
-            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+            &Labels::new(["sample"], [[0], [1]]), &[], &properties,
         ).unwrap()).unwrap();
 
         block.add_gradient("f", TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], -2.0),
-            &Labels::new(["sample"], &[[0], [1]]), &[], &properties,
+            &Labels::new(["sample"], [[0], [1]]), &[], &properties,
         ).unwrap()).unwrap();
 
 
@@ -292,35 +292,35 @@ mod tests {
     fn block_data() {
         let mut block = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 1, 3], 1.0),
-            &Labels::new(["samples"], &[[0], [1]]),
-            &[Labels::new(["component"], &[[0]])],
-            &Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["samples"], [[0], [1]]),
+            &[Labels::new(["component"], [[0]])],
+            &Labels::new(["properties"], [[-2], [0], [1]]),
         ).unwrap();
         let mut block = block.as_ref_mut();
 
         {
             let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
             assert_eq!(*values, ndarray::Array::from_elem(vec![2, 1, 3], 1.0));
-            assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
-            assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
-            assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
+            assert_eq!(block.samples(), Labels::new(["samples"], [[0], [1]]));
+            assert_eq!(block.components(), [Labels::new(["component"], [[0]])]);
+            assert_eq!(block.properties(), Labels::new(["properties"], [[-2], [0], [1]]));
         }
 
         let block = block.data_mut();
         let values = block.values.to_ndarray_lock::<f64>().read().unwrap();
         assert_eq!(*values, ndarray::Array::from_elem(vec![2, 1, 3], 1.0));
-        assert_eq!(*block.samples, Labels::new(["samples"], &[[0], [1]]));
-        assert_eq!(*block.components, [Labels::new(["component"], &[[0]])]);
-        assert_eq!(*block.properties, Labels::new(["properties"], &[[-2], [0], [1]]));
+        assert_eq!(*block.samples, Labels::new(["samples"], [[0], [1]]));
+        assert_eq!(*block.components, [Labels::new(["component"], [[0]])]);
+        assert_eq!(*block.properties, Labels::new(["properties"], [[-2], [0], [1]]));
     }
 
     #[test]
     fn device_and_dtype() {
         let mut block = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], 1.0),
-            &Labels::new(["samples"], &[[0], [1]]),
+            &Labels::new(["samples"], [[0], [1]]),
             &[],
-            &Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["properties"], [[-2], [0], [1]]),
         ).unwrap();
         let block = block.as_ref_mut();
 

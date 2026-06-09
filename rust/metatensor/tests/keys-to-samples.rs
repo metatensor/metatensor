@@ -115,7 +115,7 @@ fn unsorted_samples() {
 
 #[test]
 fn user_provided_entries() {
-    let keys_to_move = Labels::new(["key_2"], &[[3]]);
+    let keys_to_move = Labels::new(["key_2"], [[3]]);
     let result = example_tensor().keys_to_samples(&keys_to_move, make_fill_value(0.0), false);
 
     assert_eq!(
@@ -147,10 +147,7 @@ fn empty_samples() {
         /* values           */ 0.0,
         /* gradient_values  */ 0.0,
     ));
-    let keys = Labels::new(
-        ["key_1", "key_2"],
-        &[[0, 0], [1, 0]]
-    );
+    let keys = Labels::new(["key_1", "key_2"], [[0, 0], [1, 0]]);
 
     let tensor = TensorMap::new(keys, blocks).unwrap();
 
@@ -159,10 +156,6 @@ fn empty_samples() {
 
     assert_eq!(
         tensor.block_by_id(0).samples(),
-        Labels::new(["samples", "key_1"], &[
-            [0, 0],
-            [2, 0],
-            [4, 0],
-        ])
+        Labels::new(["samples", "key_1"], [[0, 0], [2, 0], [4, 0]])
     );
 }

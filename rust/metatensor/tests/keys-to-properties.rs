@@ -92,7 +92,7 @@ fn unsorted_samples() {
 
 #[test]
 fn user_provided_entries_different_properties() {
-    let keys_to_move = Labels::new(["key_1"], &[[0]]);
+    let keys_to_move = Labels::new(["key_1"], [[0]]);
     let result = example_tensor().keys_to_properties(&keys_to_move, make_fill_value(0.0), false);
 
     assert_eq!(
@@ -125,7 +125,7 @@ fn empty_properties() {
     ));
     let keys = Labels::new(
         ["key_1", "key_2"],
-        &[[0, 0], [1, 0]],
+        [[0, 0], [1, 0]],
     );
 
     let mut tensor = TensorMap::new(keys, blocks).unwrap();
@@ -135,12 +135,7 @@ fn empty_properties() {
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
-        Labels::new(["key_1", "properties"], &[
-            [0, 0],
-            [0, 1],
-            [0, 2],
-            [0, 3],
-        ])
+        Labels::new(["key_1", "properties"], [[0, 0], [0, 1], [0, 2], [0, 3]])
     );
 }
 
@@ -176,7 +171,7 @@ fn example_tensor_same_properties_in_all_blocks() -> TensorMap {
 
     let keys = Labels::new(
         ["key_1", "key_2"],
-        &[[0, 0], [1, 0], [0, 1]]
+        [[0, 0], [1, 0], [0, 1]]
     );
 
     return TensorMap::new(keys, blocks).unwrap();
@@ -190,7 +185,7 @@ fn keys_to_move_in_different_order() {
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
-        Labels::new(["key_1", "key_2", "properties"], &[
+        Labels::new(["key_1", "key_2", "properties"], [
             [0, 0, 0],
             [0, 0, 1],
             [0, 0, 2],
@@ -211,7 +206,7 @@ fn keys_to_move_in_different_order() {
 
     assert_eq!(
         tensor.block_by_id(0).properties(),
-        Labels::new(["key_2", "key_1", "properties"], &[
+        Labels::new(["key_2", "key_1", "properties"], [
             [0, 0, 0],
             [0, 0, 1],
             [0, 0, 2],
@@ -233,7 +228,7 @@ fn keys_to_move_in_different_order() {
 fn user_provided_entries() {
     let reference_tensor = example_tensor_same_properties_in_all_blocks();
 
-    let keys_to_move = Labels::new(["key_1"], &[[0], [1]]);
+    let keys_to_move = Labels::new(["key_1"], [[0], [1]]);
     let tensor = reference_tensor.keys_to_properties(&keys_to_move, make_fill_value(0.0), true).unwrap();
 
     // The new first block contains the old first two blocks merged
@@ -289,7 +284,7 @@ fn user_provided_entries() {
     /**********************************************************************/
 
     // only keep a subset of the data
-    let keys_to_move = Labels::new(["key_1"], &[[0]]);
+    let keys_to_move = Labels::new(["key_1"], [[0]]);
     let tensor = reference_tensor.keys_to_properties(&keys_to_move, make_fill_value(0.0), true).unwrap();
 
     let block = tensor.block_by_id(0);
@@ -336,7 +331,7 @@ fn user_provided_entries() {
 
     /**********************************************************************/
     // request keys not present in the input
-    let keys_to_move = Labels::new(["key_1"], &[[0], [1], [2]]);
+    let keys_to_move = Labels::new(["key_1"], [[0], [1], [2]]);
     let tensor = reference_tensor.keys_to_properties(&keys_to_move, make_fill_value(0.0), true).unwrap();
 
     let block = tensor.block_by_id(0);
@@ -394,7 +389,7 @@ fn user_provided_entries() {
 fn nan_fill_value() {
     let reference_tensor = example_tensor_same_properties_in_all_blocks();
 
-    let keys_to_move = Labels::new(["key_1"], &[[0], [1]]);
+    let keys_to_move = Labels::new(["key_1"], [[0], [1]]);
     let tensor = reference_tensor.keys_to_properties(&keys_to_move, make_fill_value(f64::NAN), true).unwrap();
 
     // The new first block merges blocks with key_1=0 and key_1=1.

@@ -21,9 +21,14 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `TensorMap::device`, `TensorMap::dtype`, `TensorBlock::device`, and
   `TensorBlock::dtype` for retrieving the device and data type of the underlying
   arrays.
-
 - `TensorMap::{from,into}_raw`, `TensorBlock::{from,into}_raw` and
   `Labels::{from,into}_raw` to enable conversion between Rust and C API types.
+- `Labels::new_assume_unique`, replacing `LabelsBuilder::finish_assume_unique`.
+
+### Removed
+
+- Removed `LabelsBuilder`, and changed `Labels::new` to take something that can
+  be converted into an `MtsArray` of i32 as the values.
 
 ### Changed
 
