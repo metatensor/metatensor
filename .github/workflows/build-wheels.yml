@@ -493,7 +493,7 @@ jobs:
 
       - name: setup libtorch
         run: |
-          curl --output libtorch.zip ${{ matrix.libtorch-url }}
+          curl --location --output libtorch.zip ${{ matrix.libtorch-url }}
           unzip -q libtorch.zip -d $CMAKE_PREFIX_PATH/
           mv $CMAKE_PREFIX_PATH/libtorch/* $CMAKE_PREFIX_PATH/
 
