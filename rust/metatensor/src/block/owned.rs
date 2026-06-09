@@ -222,16 +222,16 @@ mod tests {
     fn block() {
         let block = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 1, 3], 1.0),
-            &Labels::new(["samples"], &[[0], [1]]),
-            &[Labels::new(["component"], &[[0]])],
-            &Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["samples"], [[0], [1]]),
+            &[Labels::new(["component"], [[0]])],
+            &Labels::new(["properties"], [[-2], [0], [1]]),
         ).unwrap();
 
         let values = block.values().to_ndarray_lock::<f64>().read().unwrap();
         assert_eq!(*values, ndarray::Array::from_elem(vec![2, 1, 3], 1.0));
-        assert_eq!(block.samples(), Labels::new(["samples"], &[[0], [1]]));
-        assert_eq!(block.components(), [Labels::new(["component"], &[[0]])]);
-        assert_eq!(block.properties(), Labels::new(["properties"], &[[-2], [0], [1]]));
+        assert_eq!(block.samples(), Labels::new(["samples"], [[0], [1]]));
+        assert_eq!(block.components(), [Labels::new(["component"], [[0]])]);
+        assert_eq!(block.properties(), Labels::new(["properties"], [[-2], [0], [1]]));
     }
 
     #[test]
@@ -246,9 +246,9 @@ mod tests {
     fn device_and_dtype() {
         let block = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], 1.0),
-            &Labels::new(["samples"], &[[0], [1]]),
+            &Labels::new(["samples"], [[0], [1]]),
             &[],
-            &Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["properties"], [[-2], [0], [1]]),
         ).unwrap();
 
         let device = block.device().unwrap();
@@ -263,15 +263,15 @@ mod tests {
     fn tensor_block_into_raw() {
         let block = TensorBlock::new(
             ndarray::Array::from_elem(vec![3, 2], 1.0),
-            &Labels::new(["samples"], &[[0], [1], [4]]),
+            &Labels::new(["samples"], [[0], [1], [4]]),
             &[],
-            &Labels::new(["properties"], &[[5], [3]]),
+            &Labels::new(["properties"], [[5], [3]]),
         ).unwrap();
 
         let raw = TensorBlock::into_raw(block);
 
         let recovered = unsafe { TensorBlock::from_raw(raw) };
-        assert_eq!(recovered.samples(), Labels::new(["samples"], &[[0], [1], [4]]));
-        assert_eq!(recovered.properties(), Labels::new(["properties"], &[[5], [3]]));
+        assert_eq!(recovered.samples(), Labels::new(["samples"], [[0], [1], [4]]));
+        assert_eq!(recovered.properties(), Labels::new(["properties"], [[5], [3]]));
     }
 }

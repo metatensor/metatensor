@@ -190,20 +190,11 @@ mod block {
 /// the native-endian write path for every supported scalar type, and full
 /// round-trip for f64 (the type produced by the default create_array callback).
 mod dtype_serialization {
-    use metatensor::{Labels, LabelsBuilder, TensorBlock};
+    use metatensor::{Labels, TensorBlock};
 
     fn make_labels() -> (Labels, Labels) {
-        let mut samples = LabelsBuilder::new(vec!["s"]);
-        samples.add(&[0]);
-        samples.add(&[1]);
-        let samples = samples.finish();
-
-        let mut properties = LabelsBuilder::new(vec!["p"]);
-        properties.add(&[0]);
-        properties.add(&[1]);
-        properties.add(&[2]);
-        let properties = properties.finish();
-
+        let samples = Labels::new(["s"], vec![[0], [1]]);
+        let properties = Labels::new(["p"], vec![[0], [1], [2]]);
         (samples, properties)
     }
 
@@ -259,11 +250,8 @@ mod dtype_serialization {
     /// Verify that an empty (zero-element) array round-trips.
     #[test]
     fn empty_array_roundtrip() {
-        let samples = LabelsBuilder::new(vec!["s"]).finish();
-        let mut properties = LabelsBuilder::new(vec!["p"]);
-        properties.add(&[0]);
-        properties.add(&[1]);
-        let properties = properties.finish();
+        let samples = Labels::empty(vec!["s"]);
+        let properties = Labels::new(["p"], vec![[0], [1]]);
         let data = ndarray::Array::<f64, _>::from_elem(vec![0, 2], 0.0);
         let block = TensorBlock::new(data, &samples, &[], &properties).unwrap();
 

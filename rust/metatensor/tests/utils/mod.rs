@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 #![allow(clippy::needless_return)]
 
-use metatensor::{MtsArray, Labels, LabelsBuilder, TensorBlock, TensorMap};
+use metatensor::{MtsArray, Labels, TensorBlock, TensorMap};
 
 
 /// Create an mts_array_t fill value with the given scalar
@@ -10,11 +10,7 @@ pub fn make_fill_value(scalar: f64) -> MtsArray {
 }
 
 pub fn example_labels<const N: usize>(names: Vec<&str>, values: Vec<[i32; N]>) -> Labels {
-    let mut builder = LabelsBuilder::new(names);
-    for entry in values {
-        builder.add(&entry);
-    }
-    return builder.finish();
+    Labels::new(&names, values)
 }
 
 pub fn example_block(
@@ -90,15 +86,7 @@ pub fn example_tensor() -> TensorMap {
         /* gradient_values  */ 14.0,
     );
 
-    let keys = Labels::new(
-        ["key_1", "key_2"],
-        &[
-            [0, 0],
-            [1, 0],
-            [2, 2],
-            [2, 3],
-        ]
-    );
+    let keys = Labels::new(["key_1", "key_2"], [[0, 0], [1, 0], [2, 2], [2, 3]]);
 
     return TensorMap::new(keys, vec![block_1, block_2, block_3, block_4]).unwrap();
 }

@@ -739,27 +739,27 @@ mod tests {
     fn test_tensor() -> TensorMap {
         let block_1 = TensorBlock::new(
             ndarray::Array::from_elem(vec![2, 3], 1.0),
-            &Labels::new(["samples"], &[[0], [1]]),
+            &Labels::new(["samples"], [[0], [1]]),
             &[],
-            &Labels::new(["properties"], &[[-2], [0], [1]]),
+            &Labels::new(["properties"], [[-2], [0], [1]]),
         ).unwrap();
 
         let block_2 = TensorBlock::new(
             ndarray::Array::from_elem(vec![1, 1], 3.0),
-            &Labels::new(["samples"], &[[1]]),
+            &Labels::new(["samples"], [[1]]),
             &[],
-            &Labels::new(["properties"], &[[1]]),
+            &Labels::new(["properties"], [[1]]),
         ).unwrap();
 
         let block_3 = TensorBlock::new(
             ndarray::Array::from_elem(vec![3, 2], -4.0),
-            &Labels::new(["samples"], &[[0], [1], [3]]),
+            &Labels::new(["samples"], [[0], [1], [3]]),
             &[],
-            &Labels::new(["properties"], &[[-2], [1]]),
+            &Labels::new(["properties"], [[-2], [1]]),
         ).unwrap();
 
         return TensorMap::new(
-            Labels::new(["key", "other"], &[[1, 0], [3, 1], [-4, 0]]),
+            Labels::new(["key", "other"], [[1, 0], [3, 1], [-4, 0]]),
             vec![block_1, block_2, block_3],
         ).unwrap();
     }
@@ -774,7 +774,7 @@ mod tests {
         let block = tensor.block_mut_by_id(2);
         assert_eq!(block.values().shape().unwrap(), [3, 2]);
 
-        let selection = Labels::new(["key"], &[[1]]);
+        let selection = Labels::new(["key"], [[1]]);
 
         let block = tensor.block(&selection).unwrap();
         {
@@ -872,7 +872,7 @@ mod tests {
         let recovered = unsafe { TensorMap::from_raw(raw) };
         assert_eq!(
             recovered.keys(),
-            &Labels::new(["key", "other"], &[[1, 0], [3, 1], [-4, 0]])
+            &Labels::new(["key", "other"], [[1, 0], [3, 1], [-4, 0]])
         );
     }
 }

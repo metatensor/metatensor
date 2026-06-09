@@ -1,4 +1,4 @@
-use metatensor::{EmptyArray, Labels, LabelsBuilder, TensorBlock, TensorMap};
+use metatensor::{EmptyArray, Labels, TensorBlock, TensorMap};
 
 
 mod utils {
@@ -429,18 +429,15 @@ use utils::{BenchFn, BenchmarkResult};
 use utils::{bench_function, bench_function_with_setup};
 
 fn range_labels(name: &str, count: usize) -> Labels {
-    let mut builder = LabelsBuilder::new(vec![name]);
-    for i in 0..count {
-        builder.add(&[i]);
-    }
-    builder.finish_assume_unique()
+    let values: Vec<[i32; 1]> = (0..count).map(|i| [i as i32]).collect();
+    Labels::new_assume_unique([name], values)
 }
 
 fn bench_labels_small(n_samples: Option<usize>, n_warmup: Option<usize>) -> BenchmarkResult {
-    let values = vec![[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 1]];
     bench_function(
         || {
-            std::hint::black_box(Labels::new(["a", "b", "c"], &values));
+            let values = vec![[0, 0, 0], [0, 0, 1], [0, 1, 0], [1, 0, 0], [1, 1, 1]];
+            std::hint::black_box(Labels::new(["a", "b", "c"], values));
         },
         n_samples,
         n_warmup,
@@ -457,10 +454,11 @@ fn bench_labels_large(n_samples: Option<usize>, n_warmup: Option<usize>) -> Benc
         }
     }
 
-    bench_function(
-        || {
-            std::hint::black_box(Labels::new(["a", "b", "c"], &values));
+    bench_function_with_setup(
+        |v| {
+            std::hint::black_box(Labels::new(["a", "b", "c"], v));
         },
+        || values.clone(),
         n_samples,
         n_warmup,
     )
@@ -476,14 +474,11 @@ fn bench_labels_large_assume_unique(n_samples: Option<usize>, n_warmup: Option<u
         }
     }
 
-    bench_function(
-        || {
-            let mut builder = LabelsBuilder::new(vec!["a", "b", "c"]);
-            for value in &values {
-                builder.add(value);
-            }
-            std::hint::black_box(builder.finish_assume_unique());
+    bench_function_with_setup(
+        |values| {
+            std::hint::black_box(Labels::new_assume_unique(["a", "b", "c"], values));
         },
+        || values.clone(),
         n_samples,
         n_warmup,
     )
