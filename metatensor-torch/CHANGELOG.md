@@ -17,6 +17,38 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.9.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.9.2) - 2026-06-10
+
+### metatensor-torch C++
+
+#### Added
+
+- `LabelsHolder::release` and `LabelsHolder::from_metatensor` to release and
+  take back ownership of the underlying `metatensor::Labels`.
+- `TensorBlockHolder::from_metatensor` to take back ownership of the underlying
+  `metatensor::TensorBlock`.
+- `TensorBlockHolder::view_from_metatensor` to create a `TensorBlockHolder` that
+  holds a view of an existing `metatensor::TensorBlock`, and
+  `TensorBlockHolder::is_view`.
+- `TensorMapHolder::release` and `TensorMapHolder::from_metatensor` to release
+  and take back ownership of the underlying `metatensor::TensorMap`.
+- `TensorMapHolder::view_from_metatensor` to create a `TensorMapHolder` that
+  holds a view of an existing `metatensor::TensorMap`, and
+  `TensorMapHolder::is_view`.
+
+### metatensor-torch Python
+
+#### Added
+
+- `TensorMap.unsafe_from_ptr`, `TensorBlock.unsafe_from_ptr` and
+  `Labels.unsafe_from_ptr` to create Python classes from raw pointers, passed as integers.
+- `TensorMap.unsafe_view_from_ptr` and `TensorBlock.unsafe_view_from_ptr` to
+  create non-owning views from existing raw pointers, as well as
+  `TensorMap.is_view` and `TensorBlock.is_view`.
+- `Labels.release`, `TensorBlock.release`, and `TensorMap.release` to take
+  back ownership of the underlying pointers.
+
+
 ## [Version 0.9.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.9.1) - 2026-05-15
 
 ### Added

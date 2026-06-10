@@ -142,7 +142,7 @@ if __name__ == "__main__":
     else:
         # we are building from a sdist/installing from a wheel
         install_requires.append("metatensor-operations >=0.5.0,<0.6")
-        install_requires.append("metatensor-core >=0.2.0,<0.3")
+        install_requires.append("metatensor-core >=0.2.1,<0.3")
 
     setup(
         version=create_version_number(METATENSOR_LEARN_VERSION),

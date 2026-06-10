@@ -16,6 +16,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.4.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.4.0) - 2026-06-10
+
 ### Added
 
 - `TensorMap::device`, `TensorMap::dtype`, `TensorBlock::device`, and
