@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.1) - 2026-06-10
+
 ### metatensor-core C
 
 #### Changed
@@ -48,7 +50,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `TensorMap.unsafe_from_ptr`, `TensorBlock.unsafe_from_ptr` and
   `Labels.unsafe_from_ptr` to create Python classes from raw ctypes pointers
 - `TensorMap.unsafe_view_from_ptr` and `TensorBlock.unsafe_view_from_ptr` to
-  create non-owning views of existing raw pointers.
+  create non-owning views from existing raw pointers, as well as
+  `TensorMap.is_view` and `TensorBlock.is_view`.
 - `Labels.release`, `TensorBlock.release`, and `TensorMap.release` to take
   back ownership of the underlying pointers.
 
