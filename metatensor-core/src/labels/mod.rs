@@ -676,9 +676,9 @@ impl Labels {
         assert!(selected.len() == self.count());
         if self.device() != selection.device() {
             return Err(Error::InvalidParameter(format!(
-                "can not select from Labels, the selection is on a different device: \
-                '{}', and '{}'",
-                self.device(), selection.device(),
+                "can not select from Labels, the selection is on a different \
+                device ({}) than the labels being selected ({})",
+                selection.device(), self.device(),
             )));
         }
 
