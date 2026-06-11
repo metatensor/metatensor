@@ -95,26 +95,39 @@ def test_labels_names(tensor):
     assert tensor.property_names == ["p"]
 
 
-def test_block(tensor):
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_block(tensor, dtype, device):
+    tensor = tensor.to(dtype, device)
+
     # block by index
     block = tensor.block(2)
-    assert torch.all(block.values == torch.full((4, 3, 1), 3.0))
+    assert torch.all(
+        block.values == torch.full((4, 3, 1), 3.0, device=device, dtype=dtype)
+    )
 
     # block by index with __getitem__
     block = tensor[2]
-    assert torch.all(block.values == torch.full((4, 3, 1), 3.0))
+    assert torch.all(
+        block.values == torch.full((4, 3, 1), 3.0, device=device, dtype=dtype)
+    )
 
     # block by dict
     block = tensor.block(dict(key_1=1, key_2=0))
-    assert torch.all(block.values == torch.full((3, 1, 3), 2.0))
+    assert torch.all(
+        block.values == torch.full((3, 1, 3), 2.0, device=device, dtype=dtype)
+    )
 
-    # block by Label entry
+    # block by Labels entry
     block = tensor.block(tensor.keys[0])
-    assert torch.all(block.values == torch.full((3, 1, 1), 1.0))
+    assert torch.all(
+        block.values == torch.full((3, 1, 1), 1.0, device=device, dtype=dtype)
+    )
 
-    # block by Label entry with __getitem__
+    # block by Labels entry with __getitem__
     block = tensor[tensor.keys[0]]
-    assert torch.all(block.values == torch.full((3, 1, 1), 1.0))
+    assert torch.all(
+        block.values == torch.full((3, 1, 1), 1.0, device=device, dtype=dtype)
+    )
 
     # 0 blocks matching criteria
     msg = "could not find blocks matching the selection \\(key_1=4, key_2=3\\)"
@@ -158,29 +171,46 @@ def test_block(tensor):
     assert block.values.shape == (8, 10)
 
 
-def test_blocks(tensor):
+@pytest.mark.parametrize("dtype,device", AVAILABLE_DTYPE_DEVICES)
+def test_blocks(tensor, dtype, device):
+    tensor = tensor.to(dtype, device)
+
     # block by index
     blocks = tensor.blocks(2)
     assert len(blocks) == 1
-    assert torch.all(blocks[0].values == torch.full((4, 3, 1), 3.0))
+    assert torch.all(
+        blocks[0].values == torch.full((4, 3, 1), 3.0, device=device, dtype=dtype)
+    )
 
     blocks = tensor.blocks([2, 3, 0])
     assert len(blocks) == 3
-    assert torch.all(blocks[0].values == torch.full((4, 3, 1), 3.0))
-    assert torch.all(blocks[1].values == torch.full((4, 3, 1), 4.0))
-    assert torch.all(blocks[2].values == torch.full((3, 1, 1), 1.0))
+    assert torch.all(
+        blocks[0].values == torch.full((4, 3, 1), 3.0, device=device, dtype=dtype)
+    )
+    assert torch.all(
+        blocks[1].values == torch.full((4, 3, 1), 4.0, device=device, dtype=dtype)
+    )
+    assert torch.all(
+        blocks[2].values == torch.full((3, 1, 1), 1.0, device=device, dtype=dtype)
+    )
 
     # block by kwargs
     blocks = tensor.blocks(dict(key_1=1, key_2=0))
     assert len(blocks) == 1
-    assert torch.all(blocks[0].values == torch.full((3, 1, 3), 2.0))
+    assert torch.all(
+        blocks[0].values == torch.full((3, 1, 3), 2.0, device=device, dtype=dtype)
+    )
 
     # more than one block
     blocks = tensor.blocks(dict(key_2=0))
     assert len(blocks) == 2
 
-    assert torch.all(blocks[0].values == torch.full((3, 1, 1), 1.0))
-    assert torch.all(blocks[1].values == torch.full((3, 1, 3), 2.0))
+    assert torch.all(
+        blocks[0].values == torch.full((3, 1, 1), 1.0, device=device, dtype=dtype)
+    )
+    assert torch.all(
+        blocks[1].values == torch.full((3, 1, 3), 2.0, device=device, dtype=dtype)
+    )
 
     # Type errors
     msg = (
