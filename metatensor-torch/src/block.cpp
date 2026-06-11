@@ -305,39 +305,10 @@ TensorBlock TensorBlockHolder::load_buffer(torch::Tensor buffer) {
 
 
 void TensorBlockHolder::save(const std::string& path) const {
-    // check that device is CPU
-    if (this->values().device() != torch::kCPU) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorBlock with device " + this->values().device().str() +
-            ", only CPU is supported"
-        );
-    }
-    // check that dtype is float64
-    if (this->scalar_type() != torch::kFloat64) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorBlock with dtype " + scalar_type_name(this->scalar_type()) +
-            ", only float64 is supported"
-        );
-    }
-
     metatensor::io::save(path, this->block_);
 }
 
 torch::Tensor TensorBlockHolder::save_buffer() const {
-    // check that device is CPU
-    if (this->values().device() != torch::kCPU) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorBlock with device " + this->values().device().str() +
-            ", only CPU is supported"
-        );
-    }
-    // check that dtype is float64
-    if (this->scalar_type() != torch::kFloat64) {
-        C10_THROW_ERROR(ValueError,
-            "cannot save TensorBlock with dtype " + scalar_type_name(this->scalar_type()) +
-            ", only float64 is supported"
-        );
-    }
     auto buffer = metatensor::io::save_buffer(this->block_);
     // move the buffer to the heap so it can escape this function
     // `torch::from_blob` does not take ownership of the data,

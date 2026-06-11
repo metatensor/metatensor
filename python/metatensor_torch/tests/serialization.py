@@ -12,13 +12,13 @@ from metatensor.torch import Labels, TensorBlock, TensorMap
 from . import _tests_utils
 
 
-AVAILABLE_DEVICES = []
+AVAILABLE_NON_CPU_DEVICES = []
 
 if _tests_utils.can_use_mps_backend():
-    AVAILABLE_DEVICES.append(torch.device("mps:0"))
+    AVAILABLE_NON_CPU_DEVICES.append(torch.device("mps:0"))
 
 if torch.cuda.is_available():
-    AVAILABLE_DEVICES.append(torch.device("cuda:0"))
+    AVAILABLE_NON_CPU_DEVICES.append(torch.device("cuda:0"))
 
 
 @pytest.fixture
@@ -151,13 +151,15 @@ def test_save(tmpdir, tensor_path):
     with tmpdir.as_cwd():
         # different dtype
         tensor_f32 = tensor.to(torch.float32)
-        mts.save_buffer(tensor_f32)
+        buffer = mts.save_buffer(tensor_f32)
         mts.save(tmpfile, tensor_f32)
 
         # different device
-        if len(AVAILABLE_DEVICES) > 0:
-            tensor_device = tensor_f32.to(AVAILABLE_DEVICES[0])
-            mts.save_buffer(tensor_device)
+        for device in AVAILABLE_NON_CPU_DEVICES:
+            tensor_device = tensor_f32.to(device)
+            saved = mts.save_buffer(tensor_device)
+            assert torch.all(buffer == saved)
+
             mts.save(tmpfile, tensor_device)
 
 
@@ -247,17 +249,19 @@ def test_save_block(tmpdir, block_path):
     saved = tensor.save_buffer()
     assert torch.all(buffer == saved)
 
-    block_f32 = block.to(torch.float32)
-    with pytest.raises(ValueError, match="only float64 is supported"):
-        mts.save_buffer(block_f32)
-    with pytest.raises(ValueError, match="only float64 is supported"):
+    with tmpdir.as_cwd():
+        # different dtype
+        block_f32 = block.to(torch.float32)
+        buffer = mts.save_buffer(block_f32)
         mts.save(tmpfile, block_f32)
 
-    block_meta = block.to(torch.device("meta"))
-    with pytest.raises(ValueError, match="only CPU is supported"):
-        mts.save_buffer(block_meta)
-    with pytest.raises(ValueError, match="only CPU is supported"):
-        mts.save(tmpfile, block_meta)
+        # different device
+        for device in AVAILABLE_NON_CPU_DEVICES:
+            block_device = block_f32.to(device)
+            saved = mts.save_buffer(block_device)
+            assert torch.all(buffer == saved)
+
+            mts.save(tmpfile, block_device)
 
 
 def test_pickle_block(tmpdir, block_path):
@@ -325,13 +329,22 @@ def test_save_labels(tmpdir, labels_path):
 
     # save with buffer
     buffer = torch.tensor(np.fromfile(labels_path, dtype="uint8"))
-    tensor = mts.load_labels_buffer(buffer)
+    labels = mts.load_labels_buffer(buffer)
 
-    saved = mts.save_buffer(tensor)
+    saved = mts.save_buffer(labels)
     assert torch.all(buffer == saved)
 
-    saved = tensor.save_buffer()
+    saved = labels.save_buffer()
     assert torch.all(buffer == saved)
+
+    # different device
+    with tmpdir.as_cwd():
+        for device in AVAILABLE_NON_CPU_DEVICES:
+            labels_device = labels.to(device)
+            saved = mts.save_buffer(labels_device)
+            assert torch.all(buffer == saved)
+
+            mts.save(tmpfile, labels_device)
 
 
 def test_pickle_labels(tmpdir, labels_path):
