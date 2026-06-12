@@ -19,20 +19,22 @@ static LABELS_ORIGIN: OnceLock<mts_data_origin_t> = OnceLock::new();
 
 /// Internal struct backing the `mts_array_t` for Labels values.
 struct LabelsValuesArray {
-    /// Owned copy of the label values (i32 data)
-    values: Vec<LabelValue>,
+    /// Shared copy of the label values (i32 data)
+    values: Arc<[LabelValue]>,
     /// 2D shape: [count, size]
     shape: [usize; 2],
     shape_dlpack: [i64; 2],
     strides_dlpack: [i64; 2],
 }
 
+
+/// Create an `mts_array_t` for labels values exclusively
 #[allow(clippy::cast_possible_wrap)]
-pub(super) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size: usize) -> mts_array_t {
+pub fn create_array_from_vec(values: Arc<[LabelValue]>, count: usize, size: usize) -> mts_array_t {
     assert!(values.len() == count * size, "values length does not match count * size");
 
     let inner = Arc::new(LabelsValuesArray {
-        values,
+        values: values,
         shape: [count, size],
         shape_dlpack: [count as i64, size as i64],
         strides_dlpack: [size as i64, 1],
@@ -61,12 +63,25 @@ pub(super) fn create_array_from_vec(values: Vec<LabelValue>, count: usize, size:
 /// Calls `as_dlpack` with CPU device, reads the i32 data, and returns
 /// it as `Vec<LabelValue>`.
 #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result<Vec<LabelValue>, Error> {
+pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result<Arc<[LabelValue]>, Error> {
+    // Fast path for arrays we created ourselves: if the array's origin matches
+    // the one we registered for labels values, we can skip the DLPack
+    // round-trip and just return the existing data directly.
+    if let Some(&origin) = LABELS_ORIGIN.get() {
+        if array.origin()? == origin {
+            let array = unsafe {
+                array.ptr.cast::<LabelsValuesArray>().as_ref().expect("pointer should not be NULL")
+            };
+
+            return Ok(Arc::clone(&array.values));
+        }
+    }
+
     let shape = array.shape()?;
     let count = shape[0];
 
     if count == 0 || size == 0 {
-        return Ok(Vec::new());
+        return Ok(Arc::from([]));
     }
 
     if array.device()?.device_type == dlpk::DLDeviceType::kDLExtDev {
@@ -102,7 +117,7 @@ pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result
     if contiguous {
         // If the data is contiguous, we can read it directly as a single slice.
         let slice = unsafe { std::slice::from_raw_parts(data_ptr, count * size) };
-        return Ok(slice.to_vec());
+        return Ok(Arc::from(slice.to_vec().into_boxed_slice()));
     } else {
         // copy non-contiguous data into a contiguous Vec.
         let mut values = Vec::with_capacity(count * size);
@@ -115,7 +130,7 @@ pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result
                 values.push(value);
             }
         }
-        return Ok(values);
+        return Ok(Arc::from(values.into_boxed_slice()));
     }
 }
 
@@ -316,8 +331,13 @@ unsafe extern "C" fn labels_array_from_dlpack(
         let mut values;
         if (strides == [shape[1], 1]) || (shape[0] == 1 && strides[1] == 1) || shape[2] == 1 {
             // If the data is contiguous, we can read it directly as a single slice.
-            let slice = unsafe { std::slice::from_raw_parts(values_ptr, (shape[0] * shape[1]) as usize) };
-            values = slice.to_vec();
+            let size = (shape[0] * shape[1]) as usize;
+            if size == 0 {
+                values = Vec::new();
+            } else {
+                let slice = unsafe { std::slice::from_raw_parts(values_ptr, size) };
+                values = slice.to_vec();
+            }
         } else {
             // otherwise we need to copy the data into a contiguous Vec one element at a time.
             values = vec![0; (shape[0] * shape[1]) as usize];
@@ -332,7 +352,11 @@ unsafe extern "C" fn labels_array_from_dlpack(
             }
         }
 
-        *new_array = create_array_from_vec(values, shape[0] as usize, shape[1] as usize);
+        *new_array = create_array_from_vec(
+            Arc::from(values.into_boxed_slice()),
+            shape[0] as usize,
+            shape[1] as usize
+        );
 
         Ok(())
     })

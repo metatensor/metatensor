@@ -365,7 +365,11 @@ impl TensorBlock {
         }
         let new_properties = unsafe {
             // SAFETY: the new property can only contain unique entries by construction
-            Labels::from_vec_unchecked_uniqueness(&new_property_dimensions, new_property_values).expect("invalid labels")
+            Labels::from_vec_device_like_unchecked_uniqueness(
+                &new_property_dimensions,
+                new_property_values,
+                old_properties.values()
+            ).expect("invalid labels in components_to_properties")
         };
 
         let mut new_shape = self.values.shape()?.to_vec();
@@ -515,7 +519,7 @@ mod tests {
         let component = Arc::new(Labels::from_vec(
             &["component_1", "component_2"],
             vec![0, 1],
-        ).expect("invalid labels"));
+        ).unwrap());
 
         let result = TensorBlock::new(values, samples.clone(), vec![component], properties.clone());
         assert_eq!(
@@ -525,7 +529,7 @@ mod tests {
         );
 
         let values = TestArray::new(vec![3, 0, 2]);
-        let component = Arc::new(Labels::empty(&["component"]).expect("invalid labels"));
+        let component = Arc::new(Labels::from_vec(&["component"], Vec::new()).unwrap());
 
         let result = TensorBlock::new(values, samples, vec![component], properties);
         assert_eq!(
@@ -548,7 +552,7 @@ mod tests {
             let gradient_samples = Arc::new(Labels::from_vec(
                 &["sample", "foo"],
                 vec![0, 0, /**/ 1, 1, /**/ 3, -2],
-            ).expect("invalid labels"));
+            ).unwrap());
 
             let gradient = TensorBlock::new(
                 TestArray::new(vec![3, 7]),
@@ -626,7 +630,7 @@ mod tests {
 
             let gradient = TensorBlock::new(
                 TestArray::new(vec![0, 7]),
-                Arc::new(Labels::empty(&[]).unwrap()),
+                Arc::new(Labels::from_vec(&[], Vec::new()).unwrap()),
                 vec![],
                 properties.clone(),
             ).unwrap();

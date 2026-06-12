@@ -85,10 +85,13 @@ impl TensorMap {
             assert!(splitted_keys.new_keys.count() > 1);
             let mut matching = vec![0; self.keys.count()];
             for entry in &splitted_keys.new_keys.to_cpu() {
-                let selection = Labels::from_vec(
-                    &splitted_keys.new_keys.dimensions(),
-                    entry.to_vec(),
-                ).expect("invalid labels");
+                let selection = unsafe {
+                    Labels::from_vec_device_like_unchecked_uniqueness(
+                        &splitted_keys.new_keys.dimensions(),
+                        entry.to_vec(),
+                        self.keys.values()
+                    ).expect("invalid labels in keys_to_properties")
+                };
 
                 let n_matched = self.keys.select(&selection, &mut matching)?;
 
@@ -123,8 +126,7 @@ impl TensorMap {
             }
         }
 
-        let keys = Labels::to(Arc::new(splitted_keys.new_keys), self.keys.device(), &self.keys)?;
-        let mut tensor = TensorMap::new(keys, new_blocks)?;
+        let mut tensor = TensorMap::new(Arc::new(splitted_keys.new_keys), new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
         }
@@ -179,6 +181,7 @@ fn merge_blocks_along_properties(
         blocks_to_merge,
         &first_block.samples.dimensions(),
         sort_samples,
+        first_block.samples.values()
     );
 
     let mut new_properties = IndexSet::new();
@@ -213,10 +216,11 @@ fn merge_blocks_along_properties(
 
     let new_properties = unsafe {
         // SAFETY: the values come from a set, so they are already unique
-        Arc::new(Labels::from_vec_unchecked_uniqueness(
+        Arc::new(Labels::from_vec_device_like_unchecked_uniqueness(
             &new_property_names,
-            new_properties.iter().flatten().copied().collect()
-        ).expect("invalid labels"))
+            new_properties.iter().flatten().copied().collect(),
+            first_block.properties.values()
+        ).expect("invalid labels in merge_blocks_along_properties"))
     };
 
     let new_components = first_block.components.to_vec();
@@ -277,9 +281,6 @@ fn merge_blocks_along_properties(
         }
     }
 
-    let data_device = new_data.device()?;
-    let merged_samples = Labels::to(merged_samples, data_device, &first_block.samples)?;
-    let new_properties = Labels::to(new_properties, data_device, &first_block.samples)?;
     let mut new_block = TensorBlock::new(
         new_data,
         merged_samples,
@@ -290,7 +291,10 @@ fn merge_blocks_along_properties(
     // now collect & merge the different gradients
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
-            blocks_to_merge, parameter, &samples_mappings
+            blocks_to_merge,
+            parameter,
+            &samples_mappings,
+            first_gradient.samples.values(),
         );
 
         let mut new_shape = first_gradient.values.shape()?.to_vec();
@@ -332,8 +336,6 @@ fn merge_blocks_along_properties(
 
             new_gradient.move_data(&gradient.values, &movements)?;
         }
-
-        let new_gradient_samples = Labels::to(new_gradient_samples, data_device, &first_block.samples)?;
 
         let new_gradient = TensorBlock::new(
             new_gradient,

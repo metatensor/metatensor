@@ -836,14 +836,14 @@ mod tests {
     }
 
     pub(crate) fn example_labels(name: &str, count: i32) -> Arc<Labels> {
-        return Arc::new(Labels::from_vec(&[name], (0..count).collect()).expect("invalid labels"));
+        return Arc::new(Labels::from_vec(&[name], (0..count).collect()).unwrap());
     }
 
     pub(crate) fn example_labels_other_device(name: &str, count: usize) -> Arc<Labels> {
         let values = TestArray::new_other_device(vec![count, 1]);
         return Arc::new(
             unsafe {
-                Labels::new_unchecked_uniqueness(&[name], values).expect("invalid labels")
+                Labels::new_unchecked_uniqueness(&[name], values).unwrap()
             }
         );
     }
