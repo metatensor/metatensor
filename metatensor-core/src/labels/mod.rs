@@ -1,5 +1,6 @@
 #![allow(clippy::default_trait_access)]
-use std::{ffi::CString, sync::Arc};
+use std::ffi::CString;
+use std::sync::Arc;
 
 use dlpk::{DLDevice, DLDeviceType, DLPackVersion};
 use hashbrown::HashMap;
@@ -13,7 +14,8 @@ use crate::data::mts_array_t;
 use crate::utils::ConstCString;
 
 mod array;
-use self::array::{create_array_from_vec, load_values_from_array};
+use self::array::load_values_from_array;
+pub use self::array::create_array_from_vec;
 
 /// A single value inside a label. This is represented as a 32-bit signed
 /// integer
@@ -65,7 +67,7 @@ pub struct Labels {
     /// Number of rows in `values`.
     count: usize,
     /// CPU values, lazily materialized from array via DLPack
-    cpu_values: OnceCell<Vec<LabelValue>>,
+    cpu_values: OnceCell<Arc<[LabelValue]>>,
     /// Whether the entries of the labels (i.e. the rows of the 2D array) are
     /// sorted in lexicographical order. This is lazily initialized on first
     /// access.
@@ -184,10 +186,6 @@ fn check_unique_entries(values: &[LabelValue], size: usize) -> Result<bool, Erro
 }
 
 impl Labels {
-    pub fn empty(dimensions: &[&str]) -> Result<Labels, Error> {
-        return Labels::from_vec(dimensions, Vec::new());
-    }
-
     /// Create new Labels with the given dimension names and values.
     ///
     /// The values are given as a flatten, row-major array, and we will check
@@ -218,45 +216,64 @@ impl Labels {
         }
     }
 
-    /// Helper constructor to make tests more readable
+    /// Helper constructor to make tests more readable. This always use a CPU
+    /// array backend, and should not be used outside of tests.
+    #[cfg(test)]
     pub fn from_vec(dimensions: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
-        return Labels::from_vec_impl(dimensions, values, true);
+        return Labels::from_vec_impl(dimensions, values, None, true);
     }
 
-    pub unsafe fn from_vec_unchecked_uniqueness(dimensions: &[&str], values: Vec<LabelValue>) -> Result<Labels, Error> {
+    /// Create an array from the given values, using the same backend and device
+    /// as `like`.
+    pub fn from_vec_device_like(dimensions: &[&str], values: Vec<LabelValue>, like: &mts_array_t) -> Result<Labels, Error> {
+        return Labels::from_vec_impl(dimensions, values, Some(like), true);
+    }
+
+    /// Create an array from the given values, using the same backend and device
+    /// as `like`, but without checking for uniqueness of entries (caller must
+    /// ensure that entries are unique).
+    pub unsafe fn from_vec_device_like_unchecked_uniqueness(dimensions: &[&str], values: Vec<LabelValue>, like: &mts_array_t) -> Result<Labels, Error> {
         if cfg!(debug_assertions) {
-            return Labels::from_vec_impl(dimensions, values, true);
+            return Labels::from_vec_impl(dimensions, values, Some(like), true);
         } else {
-            return Labels::from_vec_impl(dimensions, values, false);
+            return Labels::from_vec_impl(dimensions, values, Some(like), false);
         }
     }
 
-    fn from_vec_impl(dimensions: &[&str], values: Vec<LabelValue>, check_unique: bool) -> Result<Labels, Error> {
+    /// Common implementation for all `Labels::from_vec` constructors
+    fn from_vec_impl(dimensions: &[&str], values: Vec<LabelValue>, like: Option<&mts_array_t>, check_unique: bool) -> Result<Labels, Error> {
         let dimensions = Labels::validate_dimensions(dimensions)?;
 
-        if dimensions.is_empty() {
-            assert!(values.is_empty());
-            return Ok(Labels {
-                dimensions: Vec::new(),
-                values: create_array_from_vec(Vec::new(), 0, 0),
-                count: 0,
-                cpu_values: OnceCell::with_value(Vec::new()),
-                sorted: OnceCell::with_value(true),
-                positions: Default::default(),
-            });
-        }
-
-        let size = dimensions.len();
-        let count = values.len() / size;
-
         let mut sorted = OnceCell::new();
-        if check_unique {
-            let is_sorted = check_unique_entries(&values, size)?;
-            sorted = OnceCell::with_value(is_sorted);
-        }
+        let (count, size) = if dimensions.is_empty() {
+            assert!(values.is_empty());
+            (0, 0)
+        } else {
+            let size = dimensions.len();
+            assert!(values.len() % size == 0, "values length must be a multiple of the number of dimensions");
 
-        let cpu_values = values.clone();
-        let values = create_array_from_vec(values, count, size);
+            if check_unique {
+                let is_sorted = check_unique_entries(&values, size)?;
+                sorted = OnceCell::with_value(is_sorted);
+            }
+
+            (values.len() / size, size)
+        };
+
+        let cpu_values = Arc::from(values.into_boxed_slice());
+        let mut values = create_array_from_vec(Arc::clone(&cpu_values), count, size);
+
+        if let Some(like) = like {
+            // Change the array backend used to match `like`
+            let dl_tensor = values.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current())?;
+            values = like.from_dlpack(dl_tensor)?;
+
+            // Copy to the target device if needed
+            let device = like.device()?;
+            if device.device_type != DLDeviceType::kDLCPU {
+                values = values.copy(device)?;
+            }
+        }
 
         Ok(Labels {
             dimensions,
@@ -302,9 +319,9 @@ impl Labels {
             assert!(values.shape()?.iter().product::<usize>() == 0);
             return Ok(Labels {
                 dimensions: Vec::new(),
-                values: create_array_from_vec(Vec::new(), 0, 0),
+                values: create_array_from_vec(Arc::from([]), 0, 0),
                 count: 0,
-                cpu_values: OnceCell::with_value(Vec::new()),
+                cpu_values: OnceCell::with_value(Arc::from([])),
                 sorted: OnceCell::with_value(true),
                 positions: Default::default(),
             });
@@ -333,32 +350,6 @@ impl Labels {
             sorted,
             positions: OnceCell::new(),
         })
-    }
-
-
-    /// Move Labels to the given device, using the same array backend as `like`
-    pub fn to(labels: Arc<Labels>, device: DLDevice, like: &Labels) -> Result<Arc<Labels>, Error> {
-        if labels.device() == device {
-            return Ok(labels);
-        }
-
-        // Change the array backend used to match `like`
-        let dl_tensor = labels.values().as_dlpack(labels.device(), None, DLPackVersion::current())?;
-        let values = like.values().from_dlpack(dl_tensor)?;
-
-        // Copy to the target device if needed
-        let values = if values.device()? == device {
-            values
-        } else {
-            values.copy(device)?
-        };
-
-        let dims = labels.dimensions();
-        let new_labels = unsafe {
-            Labels::new_unchecked_uniqueness(&dims, values)?
-        };
-
-        return Ok(Arc::new(new_labels));
     }
 
     /// Get the values on CPU, materializinf them from the `mts_array_t` if
@@ -437,7 +428,7 @@ impl Labels {
     ///
     /// Mapping will be computed only if slices are not empty.
     #[allow(clippy::needless_range_loop)]
-    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
+    pub fn union(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
         if self.dimensions != other.dimensions {
             return Err(Error::InvalidParameter(format!(
                 "can not take the union of these Labels, they have different dimensions: \
@@ -446,7 +437,7 @@ impl Labels {
             )));
         }
 
-        if self.device() != other.device() {
+        if !self.is_empty() && !other.is_empty() && self.device() != other.device() {
             return Err(Error::InvalidParameter(format!(
                 "can not take the union of these Labels, they are on different devices: \
                 '{}', and '{}'",
@@ -484,21 +475,18 @@ impl Labels {
             }
         }
 
-        let size = self.size();
-        let count = if size == 0 { 0 } else { values.len() / size };
-        let cpu_values = values.clone();
-        let values = create_array_from_vec(values, count, size);
-
-        let result = Labels {
-            dimensions: self.dimensions.clone(),
-            values,
-            count,
-            cpu_values: OnceCell::with_value(cpu_values),
-            sorted: OnceCell::new(),
-            positions: OnceCell::with_value(positions),
+        let mut result = unsafe {
+            Labels::from_vec_device_like_unchecked_uniqueness(
+                &self.dimensions(),
+                values,
+                self.values()
+            ).expect("created invalid labels in union")
         };
 
-        return Labels::to(Arc::new(result), self.device(), self);
+        // we have the positions, save them to avoid recomputing them later if needed
+        result.positions = OnceCell::with_value(positions);
+
+        return Ok(result);
     }
 
     /// Compute the intersection of two labels, and optionally the mapping from
@@ -506,7 +494,7 @@ impl Labels {
     /// output.
     ///
     /// Mapping will be computed only if slices are not empty.
-    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
+    pub fn intersection(&self, other: &Labels, first_mapping: &mut [i64], second_mapping: &mut [i64]) -> Result<Labels, Error> {
         if self.dimensions != other.dimensions {
             return Err(Error::InvalidParameter(format!(
                 "can not take the intersection of these Labels, they have different dimensions: \
@@ -515,7 +503,7 @@ impl Labels {
             )));
         }
 
-        if self.device() != other.device() {
+        if !self.is_empty() && !other.is_empty() && self.device() != other.device() {
             return Err(Error::InvalidParameter(format!(
                 "can not take the intersection of these Labels, they are on different devices: \
                 '{}', and '{}'",
@@ -558,31 +546,22 @@ impl Labels {
             }
         }
 
-        let sorted = if first.sorted.get() == Some(&true) {
+        let result = unsafe {
+            Labels::from_vec_device_like_unchecked_uniqueness(
+                &self.dimensions(),
+                values,
+                self.values()
+            ).expect("created invalid labels in intersection")
+        };
+
+
+        if first.sorted.get() == Some(&true) {
             // if the input was sorted, the output will be as well, since we
             // can only remove entries
-            OnceCell::with_value(true)
-        } else {
-            // we'll need to check, since the removed entries could be the ones
-            // out of order
-            OnceCell::new()
-        };
+            let _ = result.sorted.set(true);
+        }
 
-        let size = self.size();
-        let count = if size == 0 { 0 } else { values.len() / size };
-        let cpu_values = values.clone();
-        let values = create_array_from_vec(values, count, size);
-
-        let result = Labels {
-            dimensions: self.dimensions.clone(),
-            values,
-            count,
-            cpu_values: OnceCell::with_value(cpu_values),
-            sorted,
-            positions: OnceCell::new(),
-        };
-
-        return Labels::to(Arc::new(result), self.device(), self);
+        return Ok(result);
     }
 
     /// Compute the difference of two labels, and optionally the mapping from
@@ -590,7 +569,7 @@ impl Labels {
     /// output.
     ///
     /// Mapping will be computed only if slices are not empty.
-    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Arc<Labels>, Error> {
+    pub fn difference(&self, other: &Labels, first_mapping: &mut [i64]) -> Result<Labels, Error> {
         if self.dimensions != other.dimensions {
             return Err(Error::InvalidParameter(format!(
                 "can not take the difference of these Labels, they have different dimensions: \
@@ -599,7 +578,7 @@ impl Labels {
             )));
         }
 
-        if self.device() != other.device() {
+        if !self.is_empty() && !other.is_empty() && self.device() != other.device() {
             return Err(Error::InvalidParameter(format!(
                 "can not take the difference of these Labels, they are on different devices: \
                 '{}', and '{}'",
@@ -632,31 +611,22 @@ impl Labels {
             }
         }
 
-        let sorted = if self.sorted.get() == Some(&true) {
+        let result = unsafe {
+            Labels::from_vec_device_like_unchecked_uniqueness(
+                &self.dimensions(),
+                values,
+                self.values()
+            ).expect("created invalid labels in intersection")
+        };
+
+
+        if self.sorted.get() == Some(&true) {
             // if the input was sorted, the output will be as well, since we
             // can only remove entries
-            OnceCell::with_value(true)
-        } else {
-            // we'll need to check, since the removed entries could be the ones
-            // out of order
-            OnceCell::new()
-        };
+            let _ = result.sorted.set(true);
+        }
 
-        let size = self.size();
-        let count = if size == 0 { 0 } else { values.len() / size };
-        let cpu_values = values.clone();
-        let values = create_array_from_vec(values, count, size);
-
-        let result = Labels {
-            dimensions: self.dimensions.clone(),
-            values: values,
-            count: count,
-            cpu_values: OnceCell::with_value(cpu_values),
-            sorted: sorted,
-            positions: OnceCell::new(),
-        };
-
-        return Labels::to(Arc::new(result), self.device(), self);
+        return Ok(result);
     }
 
     /// Select entries in these `Labels` that match the `selection`.
@@ -674,7 +644,7 @@ impl Labels {
     /// valid indexes in `selected`.
     pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
         assert!(selected.len() == self.count());
-        if self.device() != selection.device() {
+        if !self.is_empty() && !selection.is_empty() && self.device() != selection.device() {
             return Err(Error::InvalidParameter(format!(
                 "can not select from Labels, the selection is on a different \
                 device ({}) than the labels being selected ({})",
@@ -843,10 +813,10 @@ mod tests {
 
     #[test]
     fn valid_dimensions() {
-        let e = Labels::empty(&["not an ident"]).err().unwrap();
+        let e = Labels::from_vec(&["not an ident"], Vec::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: 'not an ident' is not a valid label dimension");
 
-        let e = Labels::empty(&["not", "there", "not"]).err().unwrap();
+        let e = Labels::from_vec(&["not", "there", "not"], Vec::new()).err().unwrap();
         assert_eq!(e.to_string(), "invalid parameter: label dimensions must be unique, got 'not' multiple times");
     }
 
@@ -896,7 +866,7 @@ mod tests {
         assert_eq!(first_mapping, &[0, 1, 2]);
         assert_eq!(second_mapping, &[3, 1]);
 
-        let labels = Labels::empty(&["aa"]).unwrap();
+        let labels = Labels::from_vec(&["aa"], Vec::new()).unwrap();
         let err = first.union(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -905,7 +875,7 @@ mod tests {
         );
 
         // Take the union with an empty set of labels
-        let empty = Labels::empty(&["aa", "bb"]).unwrap();
+        let empty = Labels::from_vec(&["aa", "bb"], Vec::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -946,7 +916,7 @@ mod tests {
         assert_eq!(first_mapping, &[-1, 0, -1]);
         assert_eq!(second_mapping, &[-1, 0]);
 
-        let labels = Labels::empty(&["aa"]).unwrap();
+        let labels = Labels::from_vec(&["aa"], Vec::new()).unwrap();
         let err = first.intersection(&labels, &mut [], &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -955,7 +925,7 @@ mod tests {
         );
 
         // Take the intersection with an empty set of labels
-        let empty = Labels::empty(&["aa", "bb"]).unwrap();
+        let empty = Labels::from_vec(&["aa", "bb"], Vec::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
         let second_mapping = &mut vec![0; empty.count()];
 
@@ -985,7 +955,7 @@ mod tests {
         assert_eq!(difference.values_cpu(), &[2, 3, /**/ 4, 5]);
         assert_eq!(first_mapping, &[0, -1, 1]);
 
-        let labels = Labels::empty(&["aa"]).unwrap();
+        let labels = Labels::from_vec(&["aa"], Vec::new()).unwrap();
         let err = first.difference(&labels, &mut []).unwrap_err();
         assert_eq!(
             format!("{}", err),
@@ -994,7 +964,7 @@ mod tests {
         );
 
         // Take the difference with an empty set of labels
-        let empty = Labels::empty(&["aa", "bb"]).unwrap();
+        let empty = Labels::from_vec(&["aa", "bb"], Vec::new()).unwrap();
         let first_mapping = &mut vec![0; first.count()];
 
         let difference = first.difference(&empty, first_mapping).unwrap();

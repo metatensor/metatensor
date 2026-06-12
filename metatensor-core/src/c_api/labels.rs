@@ -446,7 +446,7 @@ pub unsafe extern "C" fn mts_labels_union(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(result_rust);
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
 
         Ok(())
     })
@@ -512,7 +512,7 @@ pub unsafe extern "C" fn mts_labels_intersection(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(result_rust);
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
 
         Ok(())
     })
@@ -569,7 +569,7 @@ pub unsafe extern "C" fn mts_labels_difference(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(result_rust);
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
 
         Ok(())
     })

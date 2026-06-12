@@ -1,9 +1,11 @@
 use std::io::BufReader;
+use std::sync::Arc;
 
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
+
 use crate::{Error, Labels};
 
 
@@ -61,7 +63,11 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
 
     check_for_extra_bytes(&mut reader)?;
 
-    return Labels::from_vec(&names, data);
+    let array = crate::labels::create_array_from_vec(
+        Arc::from(data.into_boxed_slice()), header.shape[0], names.len()
+    );
+
+    return Labels::new(&names, array);
 }
 
 /// Write `Labels` to the writer using numpy's NPY format.

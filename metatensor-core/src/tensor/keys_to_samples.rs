@@ -76,10 +76,13 @@ impl TensorMap {
         } else {
             let mut matching = vec![0; self.keys.count()];
             for entry in &splitted_keys.new_keys.to_cpu() {
-                let selection = Labels::from_vec(
-                    &splitted_keys.new_keys.dimensions(),
-                    entry.to_vec()
-                ).expect("invalid labels");
+                let selection = unsafe {
+                    Labels::from_vec_device_like_unchecked_uniqueness(
+                        &splitted_keys.new_keys.dimensions(),
+                        entry.to_vec(),
+                        self.keys.values()
+                    ).expect("invalid labels in keys_to_samples")
+                };
 
                 let n_matched = self.keys.select(&selection, &mut matching)?;
 
@@ -112,7 +115,7 @@ impl TensorMap {
             }
         }
 
-        let new_keys = Labels::to(Arc::new(splitted_keys.new_keys), self.keys.device(), &self.keys)?;
+        let new_keys = Arc::new(splitted_keys.new_keys);
         let mut tensor = TensorMap::new(new_keys, new_blocks)?;
         for (k, v) in &self.info {
             tensor.add_info(k, v.clone());
@@ -160,6 +163,7 @@ fn merge_blocks_along_samples(
         blocks_to_merge,
         &new_sample_names,
         sort_samples,
+        first_block.samples.values()
     );
 
     let new_components = first_block.components.to_vec();
@@ -180,10 +184,6 @@ fn merge_blocks_along_samples(
         fill_value,
     )?;
 
-    let data_device = new_data.device()?;
-    let merged_samples = Labels::to(merged_samples, data_device, &first_block.samples)?;
-    let new_properties = Labels::to(new_properties, data_device, &first_block.samples)?;
-
     let mut new_block = TensorBlock::new(
         new_data,
         merged_samples,
@@ -194,7 +194,10 @@ fn merge_blocks_along_samples(
     // now collect & merge the different gradients
     for (parameter, first_gradient) in first_block.gradients() {
         let new_gradient_samples = merge_gradient_samples(
-            blocks_to_merge, parameter, &samples_mappings
+            blocks_to_merge,
+            parameter,
+            &samples_mappings,
+            first_gradient.samples.values()
         );
 
         let new_components = first_gradient.components.to_vec();
@@ -235,8 +238,6 @@ fn merge_blocks_along_samples(
             &gradients_to_merge,
             fill_value,
         )?;
-
-        let new_gradient_samples = Labels::to(new_gradient_samples, data_device, &first_block.samples)?;
 
         let new_gradient = TensorBlock::new(
             new_gradient,
@@ -289,7 +290,7 @@ fn merge_properties(
         // add mapping for the new block
         property_mappings.push(mapping_for_new_block);
 
-        new_properties = next_properties;
+        new_properties = Arc::new(next_properties);
     }
 
     Ok((new_properties, property_mappings))

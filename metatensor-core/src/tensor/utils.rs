@@ -3,7 +3,8 @@ use std::sync::Arc;
 
 use indexmap::IndexSet;
 
-use crate::labels::{Labels, LabelValue};
+use crate::data::mts_array_t;
+use crate::labels::{LabelValue, Labels};
 use crate::{Error, TensorBlock};
 
 /// single block and part of the associated key, this is used for the various
@@ -62,18 +63,24 @@ pub fn remove_dimensions_from_keys(keys: &Labels, to_remove: &[&str]) -> Result<
         remaining_keys.insert(entry);
     }
 
-    let values = remaining_keys.into_iter().reduce(|mut values, entry| {
+    let mut values = remaining_keys.into_iter().reduce(|mut values, entry| {
         values.extend_from_slice(&entry);
         values
     }).expect("the set should contain at least an empty vector");
 
-    let remaining_keys = if values.is_empty() {
-        Labels::from_vec(&["_"], vec![0]).expect("invalid labels")
-    } else {
-        unsafe {
-            // SAFETY: the values come from an IndexSet and should already be unique
-            Labels::from_vec_unchecked_uniqueness(&remaining_names, values).expect("invalid labels")
-        }
+    if values.is_empty() {
+        values = vec![0];
+    }
+
+    if remaining_names.is_empty() {
+        remaining_names.push("_");
+    }
+
+    let remaining_keys = unsafe {
+        // SAFETY: the values come from an IndexSet and should already be unique
+        Labels::from_vec_device_like_unchecked_uniqueness(
+            &remaining_names, values, keys.values()
+        ).expect("invalid labels in remove_dimensions_from_keys")
     };
 
     return Ok(RemovedDimensionsKeys {
@@ -86,6 +93,7 @@ pub fn merge_gradient_samples(
     blocks: &[KeyAndBlock],
     gradient_name: &str,
     samples_mappings: &[Vec<usize>],
+    like: &mts_array_t,
 ) -> Arc<Labels> {
     let mut new_sample_values = BTreeSet::new();
     let mut new_sample_dimensions = None;
@@ -108,12 +116,14 @@ pub fn merge_gradient_samples(
         }
     }
 
+    let new_sample_dimensions = new_sample_dimensions.expect("missing gradient sample names");
+    let values: Vec<i32> = new_sample_values.iter().flatten().copied().collect();
+
     let labels = unsafe {
         // SAFETY: values should already be unique since they come from a set
-        Labels::from_vec_unchecked_uniqueness(
-            &new_sample_dimensions.expect("missing gradient sample names"),
-            new_sample_values.iter().flatten().copied().collect()
-        ).expect("invalid labels")
+        Labels::from_vec_device_like_unchecked_uniqueness(
+            &new_sample_dimensions, values, like
+        ).expect("invalid labels in merge_gradient_samples")
     };
 
     return Arc::new(labels);
@@ -122,7 +132,8 @@ pub fn merge_gradient_samples(
 pub fn merge_samples(
     blocks: &[KeyAndBlock],
     new_sample_names: &[&str],
-    sort: bool
+    sort: bool,
+    like: &mts_array_t,
 ) -> (Arc<Labels>, Vec<Vec<usize>>) {
     let add_key_to_samples = blocks[0].block.samples.size() < new_sample_names.len();
 
@@ -144,12 +155,12 @@ pub fn merge_samples(
         merged_samples.sort_unstable();
     }
 
+    let values: Vec<i32> = merged_samples.iter().flatten().copied().collect();
     let merged_samples = unsafe {
         // SAFETY: values should already be unique since they come from a set
-        Labels::from_vec_unchecked_uniqueness(
-            new_sample_names,
-            merged_samples.iter().flatten().copied().collect()
-        ).expect("invalid labels")
+        Labels::from_vec_device_like_unchecked_uniqueness(
+            new_sample_names, values, like
+        ).expect("invalid labels in merge_samples")
     };
 
     let merged_samples = Arc::new(merged_samples);
