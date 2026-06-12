@@ -773,6 +773,11 @@ class TensorMap:
             result[key] = self.get_info(key)
         return result
 
+    # used by featomic, kept here until we update featomic to use the public API
+    @staticmethod
+    def _from_ptr(ptr):
+        return TensorMap.unsafe_from_ptr(ptr)
+
 
 def _make_fill_value_array(tensor, fill_value):
     """

@@ -1169,6 +1169,10 @@ class Labels:
 
         return self.values[:, index]
 
+    # used by featomic, kept here until we update featomic to use the public API
+    def _as_mts_labels_t(self):
+        return self.as_mts_labels_t()
+
 
 def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
     """
