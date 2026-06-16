@@ -557,26 +557,30 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
 
 torch::Tensor LabelsHolder::select(const Labels& selection) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
-    auto selected = torch::zeros({this->count()}, options);
-    auto selected_count = static_cast<size_t>(selected.size(0));
+    std::vector<uint64_t> selected(this->count());
+    auto selected_count = selected.size();
 
     auto device = this->device();
     if (this->count() == 0) {
-        return selected.to(device);
+        auto tensor_selected = torch::zeros({0}, options);
+        return tensor_selected.to(device);
     }
 
     labels_.select(
         selection->labels_,
-        // we assume that we can pass a pointer to `int64_t` instead of
-        // `uint64_t`, which should be fine on all platforms since they all use
-        // 2-complement representation and the values should always be positive.
-        reinterpret_cast<uint64_t*>(selected.mutable_data_ptr()),
+        selected.data(),
         &selected_count
     );
+    selected.resize(selected_count);
 
-    selected.resize_({static_cast<int64_t>(selected_count)});
+    auto selected_i64 = std::vector<int64_t>();
+    selected_i64.reserve(selected.size());
+    for (auto value: selected) {
+        selected_i64.push_back(static_cast<int64_t>(value));
+    }
+    auto tensor_selected = torch::tensor(selected_i64, options);
 
-    return selected.to(device);
+    return tensor_selected.to(device);
 }
 
 struct LabelsPrintData {
