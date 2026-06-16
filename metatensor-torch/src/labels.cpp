@@ -237,7 +237,7 @@ Labels LabelsHolder::single() {
 Labels LabelsHolder::empty(torch::IValue names_ivalue) {
     auto names = details::normalize_names(names_ivalue, "empty");
     auto options = torch::TensorOptions().dtype(torch::kInt32).device(torch::kCPU);
-    auto values = torch::tensor(std::vector<int>(), options).reshape({0, static_cast<int64_t>(names.size())});
+    auto values = torch::empty({0, static_cast<int64_t>(names.size())}, options);
     return torch::make_intrusive<LabelsHolder>(std::move(names), std::move(values));
 }
 
@@ -332,7 +332,11 @@ Labels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
     }
 
     auto new_names = std::vector<std::string>();
-
+    auto dimensions_indexes_tensor = torch::empty(
+        {static_cast<int64_t>(dimensions_indexes.size())},
+        torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
+    );
+    size_t i = 0;
     for (auto index : dimensions_indexes) {
         if (index < 0) {
             index += static_cast<int64_t>(names.size());
@@ -345,9 +349,11 @@ Labels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
             );
         }
         new_names.push_back(names[index]);
+        dimensions_indexes_tensor.index_put_({static_cast<int64_t>(i)}, index);
+        i++;
     }
 
-    auto new_values = this->values().index({torch::indexing::Slice(), torch::tensor(dimensions_indexes)});
+    auto new_values = this->values().index({torch::indexing::Slice(), dimensions_indexes_tensor});
 
     return torch::make_intrusive<LabelsHolder>(std::move(new_names), std::move(new_values));
 }
@@ -431,15 +437,35 @@ torch::optional<int64_t> LabelsHolder::position(torch::IValue entry) const {
     if (entry.isCustomClass()) {
         const auto& labels_entry = entry.toCustomClass<LabelsEntryHolder>();
         auto values = labels_entry->values().to(torch::kCPU).contiguous();
+        const int32_t* entry;
+        std::vector<int32_t> entry_vector;
+        if (values.has_storage()) {
+            entry = static_cast<const int32_t*>(values.data_ptr());
+        } else {
+            for (int64_t i = 0; i < values.size(0); i++) {
+                entry_vector.push_back(values[i].item<int32_t>());
+            }
+            entry = entry_vector.data();
+        }
         position = labels.position(
-            static_cast<const int32_t*>(values.data_ptr()),
+            entry,
             values.size(0)
         );
     } else if (entry.isTensor()) {
         auto tensor = normalize_int32_tensor(entry.toTensor(), 1, "entry passed to Labels::position");
         tensor = tensor.to(torch::kCPU).contiguous();
+        const int32_t* entry_ptr;
+        std::vector<int32_t> entry_vector;
+        if (tensor.has_storage()) {
+            entry_ptr = static_cast<const int32_t*>(tensor.data_ptr());
+        } else {
+            for (int64_t i = 0; i < tensor.size(0); i++) {
+                entry_vector.push_back(tensor[i].item<int32_t>());
+            }
+            entry_ptr = entry_vector.data();
+        }
         position = labels.position(
-            static_cast<const int32_t*>(tensor.data_ptr()),
+            entry_ptr,
             tensor.size(0)
         );
     } else if (entry.isIntList()) {
@@ -492,16 +518,24 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
+    std::vector<int64_t> first_mapping_vector(this->count());
+    std::vector<int64_t> second_mapping_vector(other->count());
 
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_union(
         other->labels_,
-        first_mapping.data_ptr<int64_t>(),
-        first_mapping.size(0),
-        second_mapping.data_ptr<int64_t>(),
-        second_mapping.size(0)
+        first_mapping_vector.data(),
+        first_mapping_vector.size(),
+        second_mapping_vector.data(),
+        second_mapping_vector.size()
     ));
 
     auto device = this->device();
+    for (size_t i = 0; i < first_mapping_vector.size(); i++) {
+        first_mapping.index_put_({static_cast<int64_t>(i)}, first_mapping_vector[i]);
+    }
+    for (size_t i = 0; i < second_mapping_vector.size(); i++) {
+        second_mapping.index_put_({static_cast<int64_t>(i)}, second_mapping_vector[i]);
+    }
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         std::move(result),
         first_mapping.to(device),
@@ -517,16 +551,23 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto first_mapping = torch::zeros({this->count()}, options);
     auto second_mapping = torch::zeros({other->count()}, options);
-
+    std::vector<int64_t> first_mapping_vector(this->count());
+    std::vector<int64_t> second_mapping_vector(other->count());
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_intersection(
         other->labels_,
-        first_mapping.data_ptr<int64_t>(),
-        first_mapping.size(0),
-        second_mapping.data_ptr<int64_t>(),
-        second_mapping.size(0)
+        first_mapping_vector.data(),
+        first_mapping_vector.size(),
+        second_mapping_vector.data(),
+        second_mapping_vector.size()
     ));
 
     auto device = this->device();
+    for (size_t i = 0; i < first_mapping_vector.size(); i++) {
+        first_mapping.index_put_({static_cast<int64_t>(i)}, first_mapping_vector[i]);
+    }
+    for (size_t i = 0; i < second_mapping_vector.size(); i++) {
+        second_mapping.index_put_({static_cast<int64_t>(i)}, second_mapping_vector[i]);
+    }
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         std::move(result),
         first_mapping.to(device),
@@ -541,14 +582,17 @@ Labels LabelsHolder::set_difference(const Labels& other) const {
 std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Labels& other) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
     auto mapping = torch::zeros({this->count()}, options);
-
+    std::vector<int64_t> mapping_vector(this->count());
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_difference(
         other->labels_,
-        mapping.data_ptr<int64_t>(),
-        mapping.size(0)
+        mapping_vector.data(),
+        mapping_vector.size()
     ));
 
     auto device = this->device();
+    for (size_t i = 0; i < mapping_vector.size(); i++) {
+        mapping.index_put_({static_cast<int64_t>(i)}, mapping_vector[i]);
+    }
     return std::make_tuple<Labels, torch::Tensor>(
         std::move(result),
         mapping.to(device)
@@ -573,12 +617,14 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
     );
     selected.resize(selected_count);
 
-    auto selected_i64 = std::vector<int64_t>();
-    selected_i64.reserve(selected.size());
-    for (auto value: selected) {
-        selected_i64.push_back(static_cast<int64_t>(value));
+    auto tensor_selected = torch::empty(
+        {static_cast<int64_t>(selected.size())},
+        options
+    );
+
+    for (size_t i = 0; i < static_cast<int64_t>(selected.size()); i++) {
+        tensor_selected.index_put_({static_cast<int64_t>(i)}, static_cast<int64_t>(selected[i]));
     }
-    auto tensor_selected = torch::tensor(selected_i64, options);
 
     return tensor_selected.to(device);
 }
