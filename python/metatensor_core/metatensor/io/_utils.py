@@ -52,7 +52,11 @@ def _save_buffer_raw(mts_function, data) -> ctypes.Array:
     )
 
     # remove extra data from the buffer, resizing it to the number of written bytes
-    # (stored in buffer_size by the mts_function)
-    buffer = _resize_array(buffer, buffer_size.value)
-
-    return buffer
+    # (stored in buffer_size by the mts_function). The original buffer was already
+    # resized by realloc during the C call; we create a view with the correct type
+    # metadata and keep the original buffer alive by attaching it to the result.
+    n = buffer_size.value
+    ctypes.resize(buffer, n)
+    result = (ctypes.c_char * n).from_address(ctypes.addressof(buffer))
+    result._keepalive = buffer
+    return result
