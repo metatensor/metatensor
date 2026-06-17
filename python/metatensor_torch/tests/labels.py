@@ -731,35 +731,52 @@ def test_labels_ownership_transfer():
     Labels.unsafe_from_ptr(raw)
 
 
-LABELS = Labels(['a', 'b'], torch.tensor([[0, 0], [1, 0], [2, 1]], dtype=torch.int32))
-OTHER = Labels(['a', 'b'], torch.tensor([[1, 0], [3, 1]], dtype=torch.int32))
-SELECTION = Labels(['a'], torch.tensor([[1], [2]], dtype=torch.int32))
+LABELS = Labels(["a", "b"], torch.tensor([[0, 0], [1, 0], [2, 1]], dtype=torch.int32))
+OTHER = Labels(["a", "b"], torch.tensor([[1, 0], [3, 1]], dtype=torch.int32))
+SELECTION = Labels(["a"], torch.tensor([[1], [2]], dtype=torch.int32))
 ENTRY_TENSOR = torch.tensor([1, 0], dtype=torch.int32)
-@pytest.mark.parametrize("op", [
-    (lambda: LABELS.values.sum()),
-    (lambda: LABELS.column('a').sum()),
-    (lambda: LABELS.position(ENTRY_TENSOR)),
-    (lambda: LABELS.position(torch.tensor([1, 0], dtype=torch.int32))),
-    (lambda: LABELS.position([1, 0])),
-    (lambda: LABELS.select(SELECTION).sum()),
-    (lambda: LABELS.union(OTHER).values.sum()),
-    (lambda: LABELS.intersection(OTHER).values.sum()),
-    (lambda: LABELS.difference(OTHER).values.sum()),
-    (lambda: LABELS.union_and_mapping(OTHER)[1].sum()),
-    (lambda: LABELS.union_and_mapping(OTHER)[2].sum()),
-    (lambda: LABELS.intersection_and_mapping(OTHER)[1].sum()),
-    (lambda: LABELS.difference_and_mapping(OTHER)[1].sum()),
-    (lambda: LABELS.append('c', torch.tensor([5, 6, 7], dtype=torch.int32)).values.sum()),
-    (lambda: LABELS.insert(1, 'c', torch.tensor([5, 6, 7], dtype=torch.int32)).values.sum()),
-    (lambda: LABELS.permute([1, 0]).values.sum()),
-    (lambda: LABELS.remove('b').values.sum()),
-    (lambda: LABELS.rename('b', 'bb').values.sum()),
-    (lambda: LABELS.to('cpu').values.sum()),
-    (lambda: Labels.empty(['x', 'y']).values.sum()),
-    (lambda: Labels.range('x', 3).values.sum()),
-    (lambda: Labels.single().values.sum()),
-    (lambda: Labels(['x'], torch.tensor([[0], [1]], dtype=torch.int32)).values.sum()),
-])
+
+
+@pytest.mark.parametrize(
+    "op",
+    [
+        (lambda: LABELS.values.sum()),
+        (lambda: LABELS.column("a").sum()),
+        (lambda: LABELS.position(ENTRY_TENSOR)),
+        (lambda: LABELS.position(torch.tensor([1, 0], dtype=torch.int32))),
+        (lambda: LABELS.position([1, 0])),
+        (lambda: LABELS.select(SELECTION).sum()),
+        (lambda: LABELS.union(OTHER).values.sum()),
+        (lambda: LABELS.intersection(OTHER).values.sum()),
+        (lambda: LABELS.difference(OTHER).values.sum()),
+        (lambda: LABELS.union_and_mapping(OTHER)[1].sum()),
+        (lambda: LABELS.union_and_mapping(OTHER)[2].sum()),
+        (lambda: LABELS.intersection_and_mapping(OTHER)[1].sum()),
+        (lambda: LABELS.difference_and_mapping(OTHER)[1].sum()),
+        (
+            lambda: LABELS.append(
+                "c", torch.tensor([5, 6, 7], dtype=torch.int32)
+            ).values.sum()
+        ),
+        (
+            lambda: LABELS.insert(
+                1, "c", torch.tensor([5, 6, 7], dtype=torch.int32)
+            ).values.sum()
+        ),
+        (lambda: LABELS.permute([1, 0]).values.sum()),
+        (lambda: LABELS.remove("b").values.sum()),
+        (lambda: LABELS.rename("b", "bb").values.sum()),
+        (lambda: LABELS.to("cpu").values.sum()),
+        (lambda: Labels.empty(["x", "y"]).values.sum()),
+        (lambda: Labels.range("x", 3).values.sum()),
+        (lambda: Labels.single().values.sum()),
+        (
+            lambda: Labels(
+                ["x"], torch.tensor([[0], [1]], dtype=torch.int32)
+            ).values.sum()
+        ),
+    ],
+)
 def test_labels_operation_compatible_with_JVP(op):
     def as_float(extra):
         if extra is None:
