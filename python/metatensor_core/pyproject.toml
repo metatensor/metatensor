@@ -36,6 +36,7 @@ changelog = "https://docs.metatensor.org/latest/core/CHANGELOG.html"
 [build-system]
 requires = [
     "setuptools >=77",
+    "wheel",
     "packaging >=23",
     "cmake",
 ]
