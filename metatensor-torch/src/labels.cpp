@@ -516,26 +516,30 @@ Labels LabelsHolder::set_union(const Labels& other) const {
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping(const Labels& other) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
-    auto first_mapping = torch::zeros({this->count()}, options);
-    auto second_mapping = torch::zeros({other->count()}, options);
-    std::vector<int64_t> first_mapping_vector(this->count());
-    std::vector<int64_t> second_mapping_vector(other->count());
+    auto first_mapping_vector = std::make_shared<std::vector<int64_t>>(this->count());
+    auto second_mapping_vector = std::make_shared<std::vector<int64_t>>(other->count());
 
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_union(
         other->labels_,
-        first_mapping_vector.data(),
-        first_mapping_vector.size(),
-        second_mapping_vector.data(),
-        second_mapping_vector.size()
+        first_mapping_vector->data(),
+        first_mapping_vector->size(),
+        second_mapping_vector->data(),
+        second_mapping_vector->size()
     ));
-
+    
     auto device = this->device();
-    for (size_t i = 0; i < first_mapping_vector.size(); i++) {
-        first_mapping.index_put_({static_cast<int64_t>(i)}, first_mapping_vector[i]);
-    }
-    for (size_t i = 0; i < second_mapping_vector.size(); i++) {
-        second_mapping.index_put_({static_cast<int64_t>(i)}, second_mapping_vector[i]);
-    }
+    auto first_mapping = torch::from_blob(
+        first_mapping_vector->data(),
+        {static_cast<int64_t>(first_mapping_vector->size())},
+        [first_mapping_vector](void*) {},
+        options
+    );
+    auto second_mapping = torch::from_blob(
+        second_mapping_vector->data(),
+        {static_cast<int64_t>(second_mapping_vector->size())},
+        [second_mapping_vector](void*) {},
+        options
+    );
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         std::move(result),
         first_mapping.to(device),
@@ -549,25 +553,29 @@ Labels LabelsHolder::set_intersection(const Labels& other) const {
 
 std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_mapping(const Labels& other) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
-    auto first_mapping = torch::zeros({this->count()}, options);
-    auto second_mapping = torch::zeros({other->count()}, options);
-    std::vector<int64_t> first_mapping_vector(this->count());
-    std::vector<int64_t> second_mapping_vector(other->count());
+    auto first_mapping_vector = std::make_shared<std::vector<int64_t>>(this->count());
+    auto second_mapping_vector = std::make_shared<std::vector<int64_t>>(other->count());
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_intersection(
         other->labels_,
-        first_mapping_vector.data(),
-        first_mapping_vector.size(),
-        second_mapping_vector.data(),
-        second_mapping_vector.size()
+        first_mapping_vector->data(),
+        first_mapping_vector->size(),
+        second_mapping_vector->data(),
+        second_mapping_vector->size()
     ));
-
+    
     auto device = this->device();
-    for (size_t i = 0; i < first_mapping_vector.size(); i++) {
-        first_mapping.index_put_({static_cast<int64_t>(i)}, first_mapping_vector[i]);
-    }
-    for (size_t i = 0; i < second_mapping_vector.size(); i++) {
-        second_mapping.index_put_({static_cast<int64_t>(i)}, second_mapping_vector[i]);
-    }
+    auto first_mapping = torch::from_blob(
+        first_mapping_vector->data(),
+        {static_cast<int64_t>(first_mapping_vector->size())},
+        [first_mapping_vector](void*) {},
+        options
+    );
+    auto second_mapping = torch::from_blob(
+        second_mapping_vector->data(),
+        {static_cast<int64_t>(second_mapping_vector->size())},
+        [second_mapping_vector](void*) {},
+        options
+    );
     return std::make_tuple<Labels, torch::Tensor, torch::Tensor>(
         std::move(result),
         first_mapping.to(device),
@@ -581,18 +589,20 @@ Labels LabelsHolder::set_difference(const Labels& other) const {
 
 std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Labels& other) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
-    auto mapping = torch::zeros({this->count()}, options);
-    std::vector<int64_t> mapping_vector(this->count());
+    auto mapping_vector = std::make_shared<std::vector<int64_t>>(this->count());
     auto result = torch::make_intrusive<LabelsHolder>(labels_.set_difference(
         other->labels_,
-        mapping_vector.data(),
-        mapping_vector.size()
+        mapping_vector->data(),
+        mapping_vector->size()
     ));
-
+    
     auto device = this->device();
-    for (size_t i = 0; i < mapping_vector.size(); i++) {
-        mapping.index_put_({static_cast<int64_t>(i)}, mapping_vector[i]);
-    }
+    auto mapping = torch::from_blob(
+        mapping_vector->data(),
+        {static_cast<int64_t>(mapping_vector->size())},
+        [mapping_vector](void*) {},
+        options
+    );
     return std::make_tuple<Labels, torch::Tensor>(
         std::move(result),
         mapping.to(device)
@@ -601,8 +611,8 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
 
 torch::Tensor LabelsHolder::select(const Labels& selection) const {
     auto options = torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU);
-    std::vector<uint64_t> selected(this->count());
-    auto selected_count = selected.size();
+    auto selected = std::make_shared<std::vector<uint64_t>>(this->count());
+    auto selected_count = selected->size();
 
     auto device = this->device();
     if (this->count() == 0) {
@@ -612,19 +622,17 @@ torch::Tensor LabelsHolder::select(const Labels& selection) const {
 
     labels_.select(
         selection->labels_,
-        selected.data(),
+        selected->data(),
         &selected_count
     );
-    selected.resize(selected_count);
+    selected->resize(selected_count);
 
-    auto tensor_selected = torch::empty(
-        {static_cast<int64_t>(selected.size())},
+    auto tensor_selected = torch::from_blob(
+        selected->data(),
+        {static_cast<int64_t>(selected->size())},
+        [selected](void*) {},
         options
     );
-
-    for (size_t i = 0; i < static_cast<int64_t>(selected.size()); i++) {
-        tensor_selected.index_put_({static_cast<int64_t>(i)}, static_cast<int64_t>(selected[i]));
-    }
 
     return tensor_selected.to(device);
 }
