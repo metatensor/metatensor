@@ -200,6 +200,7 @@ pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
         let mut cmd = Command::new(find_python());
         cmd.arg("-m");
         cmd.arg("venv");
+        cmd.arg("--clear");
         cmd.arg(&build_dir);
 
         run_command(cmd, "python to create virtualenv with `venv`");
