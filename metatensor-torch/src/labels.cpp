@@ -348,7 +348,10 @@ Labels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
             );
         }
         new_names.push_back(names[dimensions_indexes[i]]);
-        dimensions_indexes_tensor.index_put_({static_cast<int64_t>(i)}, dimensions_indexes[i]);
+        dimensions_indexes_tensor.index_put_(
+            {static_cast<int64_t>(i)},
+            dimensions_indexes[i]
+        );
     }
 
     auto new_values = this->values().index({torch::indexing::Slice(), dimensions_indexes_tensor});
