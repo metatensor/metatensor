@@ -43,14 +43,35 @@ fn main() {
         println!("cargo:rerun-if-changed={}", metatensor_core.display());
     }
 
-    let install_dir = cmake::Config::new(&metatensor_core)
-        .define("CARGO_EXE", env!("CARGO"))
-        .define("RUST_BUILD_TARGET", std::env::var("TARGET").unwrap())
+    let mut config = cmake::Config::new(&metatensor_core);
+
+    let target = std::env::var("TARGET").unwrap();
+    let out_dir = std::env::var("OUT_DIR").unwrap();
+
+    // Use a short temp directory for the cmake build to avoid path length
+    // issues on deeply-nested build dirs.
+    let short_out = {
+        use std::hash::Hasher;
+        let mut hasher = std::collections::hash_map::DefaultHasher::new();
+        std::hash::Hash::hash(&out_dir, &mut hasher,);
+        let mut tmp = std::env::temp_dir();
+        tmp.push(format!("metatensor-build-{:x}", hasher.finish()));
+        tmp
+    };
+    config.out_dir(&short_out);
+
+    // Override install prefix to the real cargo OUT_DIR so cmake installs
+    // directly there instead of in the short temp build directory.
+    config.define("CMAKE_INSTALL_PREFIX", &out_dir);
+
+    config.define("CARGO_EXE", env!("CARGO"))
+        .define("RUST_BUILD_TARGET", &target)
         .define("BUILD_SHARED_LIBS", if cfg!(feature="static") { "OFF" } else { "ON" })
         .define("CMAKE_INSTALL_LIBDIR", "lib")
         .define("METATENSOR_INSTALL_BOTH_STATIC_SHARED", "OFF")
         .build();
 
+    let install_dir = PathBuf::from(out_dir);
     let lib_install_dir = install_dir.join("lib");
     assert!(lib_install_dir.is_dir(), "installation of metatensor-core failed");
 
