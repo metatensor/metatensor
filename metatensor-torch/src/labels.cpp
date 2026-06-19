@@ -336,21 +336,19 @@ Labels LabelsHolder::permute(std::vector<int64_t> dimensions_indexes) const {
         {static_cast<int64_t>(dimensions_indexes.size())},
         torch::TensorOptions().dtype(torch::kInt64).device(torch::kCPU)
     );
-    size_t i = 0;
-    for (auto index : dimensions_indexes) {
-        if (index < 0) {
-            index += static_cast<int64_t>(names.size());
+    for (size_t i = 0; i < dimensions_indexes.size(); i++) {
+        if (dimensions_indexes[i] < 0) {
+            dimensions_indexes[i] += static_cast<int64_t>(names.size());
         }
-        if (index >= names.size()) {
+        if (dimensions_indexes[i] >= static_cast<int64_t>(names.size())) {
             C10_THROW_ERROR(
                 IndexError,
-                "out of range index "  + std::to_string(index) + " for labels dimensions (" +
+                "out of range index "  + std::to_string(dimensions_indexes[i]) + " for labels dimensions (" +
                 std::to_string(names.size()) + ")"
             );
         }
-        new_names.push_back(names[index]);
-        dimensions_indexes_tensor.index_put_({static_cast<int64_t>(i)}, index);
-        i++;
+        new_names.push_back(names[dimensions_indexes[i]]);
+        dimensions_indexes_tensor.index_put_({static_cast<int64_t>(i)}, dimensions_indexes[i]);
     }
 
     auto new_values = this->values().index({torch::indexing::Slice(), dimensions_indexes_tensor});
