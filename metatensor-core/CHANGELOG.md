@@ -17,6 +17,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.2) - 2026-06-24
+
+### metatensor-core C
+
+#### Fixed
+
+- Labels created inside metatensor-core (e.g. in `keys_to_samples`) are now
+  created on the same device as the input data, instead of always being created
+  on CPU.
+
+
 ## [Version 0.2.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.1) - 2026-06-10
 
 ### metatensor-core C
