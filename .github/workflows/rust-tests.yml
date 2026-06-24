@@ -110,15 +110,6 @@ jobs:
         with:
           sweep-cache: true
 
-      - name: setup Python
-        uses: actions/setup-python@v6
-        if: matrix.container == null
-        with:
-          # Python 3.14.5 fails with "No module named pip.__main__; 'pip' is a
-          # package and cannot be directly executed" when using a venv, so we
-          # use 3.14.4 for now
-          python-version: "3.14.4"
-
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
