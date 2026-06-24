@@ -17,7 +17,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
-## [Version 0.9.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.9.2) - 2026-06-10
+## [Version 0.10.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.0) - 2026-06-24
 
 ### metatensor-torch C++
 
@@ -35,6 +35,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `TensorMapHolder::view_from_metatensor` to create a `TensorMapHolder` that
   holds a view of an existing `metatensor::TensorMap`, and
   `TensorMapHolder::is_view`.
+
+#### Fixed
+
+- `TensorBlock` can now be saved to disk even when they are not on CPU
+- `TensorMap::block` and `TensorMap::blocks` now keep the selection on device
 
 ### metatensor-torch Python
 
