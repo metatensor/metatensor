@@ -18,6 +18,11 @@ static void check_loaded_tensor(metatensor::TensorMap& tensor);
 static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
 
 TEST_CASE("TensorMap") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(TensorMap) == 32);
+    CHECK(sizeof(details::TensorMapInfo) == 32);
+
     SECTION("keys") {
         auto tensor = test_tensor_map();
         CHECK(tensor.keys() == Labels({"key_1", "key_2"}, {{0, 0}, {1, 0}, {2, 2}, {2, 3}}));

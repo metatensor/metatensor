@@ -234,7 +234,7 @@ unsafe extern "C" fn labels_array_as_dlpack(
             return Err(Error::InvalidParameter(
                 format!(
                     "invalid `max_version` in LabelsArray::as_dlpack: \
-                    we got v{}.{}, but we support v{}.{})",
+                    we got v{}.{}, but we support v{}.{}",
                     max_version.major, max_version.minor, current.major, current.minor
                 )
             ));

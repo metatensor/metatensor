@@ -69,7 +69,10 @@ public:
         const Labels& samples,
         const std::vector<Labels>& components,
         const Labels& properties
-    ): TensorBlock(details::create_block(std::move(values), samples, components, properties), /*view*/ false) {}
+    ): TensorBlock(details::create_block(std::move(values), samples, components, properties), /*view*/ false)
+    {
+        (void)reserved_;
+    }
 
     ~TensorBlock() {
         if (!is_view_) {
@@ -490,5 +493,9 @@ private:
 
     mts_block_t* block_;
     bool is_view_;
+
+    /// reserve some space for future expansion of the class without breaking
+    /// ABI
+    uint8_t reserved_[16];
 };
 } // namespace metatensor

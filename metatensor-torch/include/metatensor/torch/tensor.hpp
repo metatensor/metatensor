@@ -224,6 +224,10 @@ private:
     /// Parent for this TensorMap, used to keep a reference on the parent object
     torch::IValue parent_;
 
+    /// reserved space for future expansion of the class without breaking
+    // ABI compatibility
+    uint8_t reserved_[32];
+
     /// Wrap an existing `metatensor::TensorMap` into a `TensorMapHolder`
     explicit TensorMapHolder(metatensor::TensorMap tensor):
         tensor_(std::move(tensor)) {}

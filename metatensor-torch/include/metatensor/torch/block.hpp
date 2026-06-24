@@ -226,6 +226,10 @@ private:
     /// store the parameter with respect to which the gradients are computed
     std::string parameter_;
 
+    /// reserved space for future expansion of the class without breaking
+    // ABI compatibility
+    uint8_t reserved_[32];
+
     /// Create a TensorBlockHolder containing gradients with respect to
     /// `parameter`
     TensorBlockHolder(metatensor::TensorBlock block, std::string parameter, torch::IValue parent);

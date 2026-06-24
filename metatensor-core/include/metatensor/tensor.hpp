@@ -40,6 +40,8 @@ class TensorMapInfo {
 public:
     /// @private Create an iterator for the given `tensor`
     explicit TensorMapInfo(mts_tensormap_t* tensor) : tensor_(tensor) {
+        (void)reserved_;
+
         details::check_status(mts_tensormap_info_keys(
             tensor_,
             &keys_,
@@ -104,6 +106,10 @@ private:
     mts_tensormap_t* tensor_;
     const char* const* keys_;
     uintptr_t count_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[8];
 };
 
 }
@@ -122,6 +128,8 @@ class TensorMap final {
 public:
     /// Create a new TensorMap with the given `keys` and `blocks`
     TensorMap(Labels keys, std::vector<TensorBlock> blocks): tensor_(nullptr), is_view_(false) {
+        (void)reserved_;
+
         auto c_blocks = std::vector<mts_block_t*>();
         for (auto& block: blocks) {
             // We will move the data inside the new map, let's release the
@@ -668,6 +676,10 @@ private:
 
     mts_tensormap_t* tensor_;
     bool is_view_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[16];
 };
 
 } // namespace metatensor

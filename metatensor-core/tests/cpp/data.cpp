@@ -6,6 +6,37 @@
 #include <metatensor.hpp>
 using namespace metatensor;
 
+TEST_CASE("Array sizes") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(MtsArray) == 128);
+    CHECK(sizeof(mts_array_t) == 104);
+
+    CHECK(sizeof(DataArrayBase) == 8);
+
+    size_t base_size = sizeof(void*)
+                    + sizeof(std::vector<size_t>)
+                    + sizeof(std::vector<int64_t>)
+                    + sizeof(bool) + 7 // padding
+                    + sizeof(void*)
+                    + sizeof(std::function<void(void*)>);
+    CHECK(sizeof(NDArray<double>) == base_size + 16);
+    CHECK(sizeof(NDArray<char>) == base_size + 16);
+
+    base_size = sizeof(DataArrayBase)
+              + sizeof(std::vector<uintptr_t>)
+              + sizeof(std::vector<int64_t>)
+              + sizeof(std::shared_ptr<std::vector<double>>);
+    CHECK(sizeof(SimpleDataArray<double>) == base_size + 16);
+    CHECK(sizeof(SimpleDataArray<char>) == base_size + 16);
+
+    base_size = 2 * sizeof(void*)
+              + sizeof(std::vector<size_t>)
+              + sizeof(std::vector<int64_t>);
+    CHECK(sizeof(DLPackArray<double>) == base_size + 16);
+    CHECK(sizeof(DLPackArray<char>) == base_size + 16);
+}
+
 TEST_CASE("Data Array") {
     auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
     auto array = DataArrayBase::to_mts_array(std::move(data));

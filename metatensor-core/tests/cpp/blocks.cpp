@@ -9,6 +9,10 @@ using namespace metatensor;
 static void check_loaded_block(metatensor::TensorBlock& block);
 
 TEST_CASE("Blocks") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(TensorBlock) == 32);
+
     SECTION("no components") {
         auto block = TensorBlock(
             std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({3, 2})),

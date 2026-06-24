@@ -7,6 +7,18 @@ using namespace metatensor_torch;
 #include <catch.hpp>
 
 TEST_CASE("Labels") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(LabelsHolder) == sizeof(torch::CustomClassHolder)
+                                 + sizeof(std::vector<std::string>)
+                                 + sizeof(torch::Tensor)
+                                 + sizeof(metatensor::Labels)
+                                 + 32);
+    CHECK(sizeof(LabelsEntryHolder) == sizeof(torch::CustomClassHolder)
+                                      + sizeof(torch::Tensor)
+                                      + sizeof(Labels)
+                                      + 32);
+
     SECTION("constructor") {
         auto names = std::vector<std::string>{"a", "bb"};
         auto values = std::vector<int64_t>{0, 0, 1, 0, 0, -1, 1, -2};

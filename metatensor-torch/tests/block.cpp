@@ -6,6 +6,14 @@ using namespace metatensor_torch;
 #include <catch.hpp>
 
 TEST_CASE("Blocks") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(TensorBlockHolder) == sizeof(torch::CustomClassHolder)
+                                     + sizeof(metatensor::TensorBlock)
+                                     + sizeof(torch::IValue)
+                                     + sizeof(std::string)
+                                     + 32);
+
     SECTION("constructors and data") {
         auto block = TensorBlockHolder(
             torch::full({3, 2}, 11.0),
