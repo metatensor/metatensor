@@ -48,6 +48,8 @@ public:
     Labels(const std::vector<std::string>& dimensions, MtsArray values):
         labels_(nullptr)
     {
+        (void)reserved_;
+
         auto c_dimensions = std::vector<const char*>();
         c_dimensions.reserve(dimensions.size());
         for (const auto& name: dimensions) {
@@ -729,6 +731,10 @@ private:
 
     /// Owning pointer to the opaque labels
     const mts_labels_t* labels_;
+
+    /// reserve some space for future expansion of the class without breaking
+    /// ABI
+    uint8_t reserved_[24];
 
     friend bool operator==(const Labels& lhs, const Labels& rhs);
 };

@@ -363,6 +363,8 @@ public:
         managed_(managed),
         data_(nullptr)
     {
+        (void)reserved_;
+
         if (managed_ == nullptr) {
             shape_ = {};
             strides_ = {};
@@ -524,6 +526,10 @@ private:
     std::vector<size_t> shape_;
     /// Strides extracted from the DLTensor (in element counts)
     std::vector<int64_t> strides_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[16];
 };
 
 /// Compare this `DLPackArray` with another `DLPackArray`. The arrays are equal if
@@ -554,7 +560,9 @@ template<typename T>
 class NDArray {
 public:
     /// Create a new empty `NDArray`.
-    NDArray(): NDArray(nullptr, {}, true) {}
+    NDArray(): NDArray(nullptr, {}, true) {
+        (void)reserved_;
+    }
 
     /// Create a new `NDArray` using a non-owning view in `const` memory with
     /// the given `shape`.
@@ -793,6 +801,10 @@ private:
     void* owned_data_ = nullptr;
     /// Custom delete function for the `owned_data_`.
     std::function<void(void*)> deleter_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[16];
 };
 
 
@@ -846,7 +858,9 @@ bool operator!=(const NDArray<T>& lhs, const DLPackArray<T>& rhs) {
 class MtsArray final {
 public:
     /// Create an `MtsArray` that takes ownership of the given `mts_array_t`.
-    explicit MtsArray(mts_array_t array): array_(array) {}
+    explicit MtsArray(mts_array_t array): array_(array) {
+        (void)reserved_;
+    }
 
     ~MtsArray() {
         if (array_.destroy != nullptr) {
@@ -867,6 +881,10 @@ public:
 
     /// MtsArray can be copy-assigned
     MtsArray& operator=(const MtsArray& other) {
+        if (this == &other) {
+            return *this;
+        }
+
         if (other.array_.copy == nullptr) {
             throw Error("invalid mts_array_t: null copy function pointer");
         }
@@ -1072,6 +1090,10 @@ public:
 
 private:
     mts_array_t array_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[24];
 };
 
 /// `DataArrayBase` manages n-dimensional arrays used as data in a block or
@@ -1341,7 +1363,10 @@ public:
     SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
         shape_(std::move(shape)),
         strides_(details::contiguous_strides(shape_)),
-        data_(std::make_shared<std::vector<T>>(details::product(shape_), value)) {}
+        data_(std::make_shared<std::vector<T>>(details::product(shape_), value))
+    {
+        (void)reserved_;
+    }
 
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
@@ -1730,6 +1755,10 @@ private:
     std::vector<uintptr_t> shape_;
     std::vector<int64_t> strides_;
     std::shared_ptr<std::vector<T>> data_;
+
+    /// reserved space for future expansion of the class without breaking
+    /// ABI compatibility
+    uint8_t reserved_[16];
 
     template <typename U>
     friend bool operator==(const SimpleDataArray<U>& lhs, const SimpleDataArray<U>& rhs);

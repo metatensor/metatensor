@@ -7,6 +7,10 @@
 using namespace metatensor;
 
 TEST_CASE("Labels") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(Labels) == 32);
+
     std::unique_ptr<DataArrayBase> array = std::make_unique<SimpleDataArray<int32_t>>(
         std::vector<size_t>{3, 2},
         std::vector<int32_t>{1, 2, 3, 4, 5, 6}

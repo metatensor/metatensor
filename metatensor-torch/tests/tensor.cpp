@@ -12,6 +12,13 @@ using namespace metatensor_torch;
 static TensorMap test_tensor_map();
 
 TEST_CASE("TensorMap") {
+    // Any change here means the ABI will break and the new version will need to
+    // be a major version bump.
+    CHECK(sizeof(TensorMapHolder) == sizeof(torch::CustomClassHolder)
+                                    + sizeof(metatensor::TensorMap)
+                                    + sizeof(torch::IValue)
+                                    + 32);
+
     SECTION("keys") {
         auto tensor = test_tensor_map();
 

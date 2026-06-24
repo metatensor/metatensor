@@ -231,6 +231,10 @@ private:
 
     /// Underlying metatensor labels
     metatensor::Labels labels_;
+
+    /// reserved space for future expansion of the class without breaking
+    // ABI compatibility
+    uint8_t padding_[32];
 };
 
 /// Check two `LabelsHolder` for equality
@@ -314,6 +318,10 @@ private:
     torch::Tensor values_;
 
     Labels labels_;
+
+    /// reserved space for future expansion of the class without breaking
+    // ABI compatibility
+    uint8_t reserved_[32];
 };
 
 
