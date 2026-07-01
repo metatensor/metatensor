@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-24.04
     name: check C API declarations
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -55,7 +55,7 @@ jobs:
     name: check leftover debug print
 
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: install ripgrep
         run: |
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-24.04
     name: check benchmarks
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Install uv
         uses: astral-sh/setup-uv@v7
@@ -107,7 +107,7 @@ jobs:
 
       - name: Setup sccache
         if: ${{ !env.ACT }}
-        uses: mozilla-actions/sccache-action@v0.0.9
+        uses: mozilla-actions/sccache-action@v0.0.10
         with:
           version: "v0.10.0"
 
