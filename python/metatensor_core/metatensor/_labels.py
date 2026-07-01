@@ -8,13 +8,15 @@ import numpy as np
 
 from . import _data
 from ._c_api import (
+    DLDataType,
+    DLDataTypeCode,
     c_uintptr_t,
     mts_array_t,
     mts_labels_t,
 )
 from ._c_lib import _get_library
 from ._data import Array, Device
-from ._status import check_pointer
+from ._status import check_pointer, check_status
 
 
 try:
@@ -138,6 +140,72 @@ class LabelsEntry:
         return not self.__eq__(other)
 
 
+def _labels_values_mts_array(array: Array, size: int) -> (mts_array_t, Array):
+    if isinstance(array, mts_array_t):
+        shape_ptr = ctypes.POINTER(c_uintptr_t)()
+        shape_count = c_uintptr_t()
+        check_status(
+            array.shape(array.ptr, ctypes.byref(shape_ptr), ctypes.byref(shape_count))
+        )
+        shape = [shape_ptr[i] for i in range(shape_count.value)]
+
+        if len(shape) != 2:
+            raise ValueError("`values` must be a 2D array")
+
+        if shape[1] != size:
+            raise ValueError(
+                "`names` must have an entry for each column of the `values` array"
+            )
+
+        dtype = DLDataType()
+        check_status(array.dtype(array.ptr, ctypes.byref(dtype)))
+        if dtype.code != DLDataTypeCode.kDLInt or dtype.bits != 32 or dtype.lanes != 1:
+            raise TypeError("Labels values must be of dtype int32")
+
+        return array, None
+    else:
+        values = array
+        backend = _data.array_backend(values)
+
+        if len(values) == 0:
+            # Explicitly define empty labels
+            values = np.empty((0, size), dtype=np.int32)
+            values = _data.array_change_backend(values, backend)
+
+        if len(values.shape) != 2:
+            # make sure the array is 2D
+            raise ValueError("`values` must be a 2D array")
+
+        if values.shape[1] != size:
+            raise ValueError(
+                "`names` must have an entry for each column of the `values` array"
+            )
+
+        if backend == "numpy":
+            try:
+                # We need to make sure the data has the right type
+                values = values.astype(
+                    np.int32,
+                    casting="same_kind",
+                    subok=False,
+                    copy=False,
+                )
+                # values should not be writeable
+                values.flags.writeable = False
+            except TypeError as e:
+                raise TypeError("Labels values must be convertible to integers") from e
+        elif backend == "torch":
+            if values.requires_grad:
+                raise ValueError("Labels values can not require gradients")
+
+            if not _data.array_dtype_is_integer(values):
+                raise TypeError("Labels values must be of integer dtype")
+
+            values = values.to(dtype=torch.int32, copy=False)
+
+        return _data.create_mts_array(values), values
+
+
 class Labels:
     """
     A set of labels carrying metadata associated with a :py:class:`TensorMap`.
@@ -213,7 +281,7 @@ class Labels:
     def __init__(
         self,
         names: Union[str, Sequence[str]],
-        values: np.ndarray,
+        values: Array,
         assume_unique: bool = False,
     ):
         """
@@ -227,58 +295,19 @@ class Labels:
             either by construction or because you checked.
         """
 
-        names = _normalize_names_type(names)
-
         if not isinstance(values, Array.__supertype__):
-            raise ValueError("`values` must be a numpy ndarray or torch tensor")
-
-        backend = _data.array_backend(values)
-
-        if len(values) == 0:
-            # Explicitly define empty labels
-            values = np.empty((0, len(names)), dtype=np.int32)
-            values = _data.array_change_backend(values, backend)
-
-        if len(values.shape) != 2:
-            # make sure the array is 2D
-            raise ValueError("`values` must be a 2D array")
-
-        if len(names) != values.shape[1]:
             raise ValueError(
-                "`names` must have an entry for each column of the `values` array"
+                "`values` must be a numpy ndarray, torch tensor, or mts_array_t, "
+                f"got {type(values)}"
             )
 
-        if backend == "numpy":
-            try:
-                # We need to make sure the data has the right type
-                values = values.astype(
-                    np.int32,
-                    casting="same_kind",
-                    subok=False,
-                    copy=False,
-                )
-                # values should not be writeable
-                values.flags.writeable = False
-            except TypeError as e:
-                raise TypeError("Labels values must be convertible to integers") from e
-        elif backend == "torch":
-            if values.requires_grad:
-                raise ValueError("Labels values can not require gradients")
-
-            if not _data.array_dtype_is_integer(values):
-                raise TypeError("Labels values must be of integer dtype")
-
-            values = values.to(dtype=torch.int32, copy=False)
-
-        if values.ndim == 1:
-            values = values.reshape(-1, len(names))
-
+        names = _normalize_names_type(names)
         self._lib = _get_library()
+        array, values = _labels_values_mts_array(values, len(names))
+
         c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
         for i, n in enumerate(names):
             c_names[i] = n.encode("utf8")
-
-        array = _data.create_mts_array(values)
 
         if assume_unique:
             ptr = self._lib.mts_labels_assume_unique(c_names, len(names), array)

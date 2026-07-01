@@ -19,6 +19,16 @@ except ImportError:
     HAS_TORCH = False
 
 
+AVAILABLE_DEVICES = [("cpu", "numpy")]
+
+if HAS_TORCH:
+    AVAILABLE_DEVICES.append(("cpu", "torch"))
+    if torch.cuda.is_available():
+        AVAILABLE_DEVICES.append(("cuda:0", "torch"))
+    if _tests_utils.can_use_mps_backend():
+        AVAILABLE_DEVICES.append(("mps", "torch"))
+
+
 @pytest.fixture
 def tensor():
     return _tests_utils.tensor()
@@ -198,57 +208,95 @@ def test_labels_names(tensor):
 
 
 def test_block(tensor):
-    # block by index
-    block = tensor.block(2)
-    assert_equal(block.values, np.full((4, 3, 1), 3.0))
+    base_tensor = tensor.to(dtype=np.float32)
+    for device, arrays in AVAILABLE_DEVICES:
+        tensor = base_tensor.to(device=device, arrays=arrays)
 
-    # block by index with __getitem__
-    block = tensor[2]
-    assert_equal(block.values, np.full((4, 3, 1), 3.0))
+        def _values(block):
+            values = block.values
+            if torch is not None and isinstance(values, torch.Tensor):
+                return values.cpu().numpy()
+            return values
 
-    # block by kwargs
-    block = tensor.block(key_1=1, key_2=0)
-    assert_equal(block.values, np.full((3, 1, 3), 2.0))
+        # block by index
+        block = tensor.block(2)
+        assert_equal(_values(block), np.full((4, 3, 1), 3.0, dtype=np.float32))
 
-    # block by Label entry
-    block = tensor.block(tensor.keys[0])
-    assert_equal(block.values, np.full((3, 1, 1), 1.0))
+        # block by index with __getitem__
+        block = tensor[2]
+        assert_equal(_values(block), np.full((4, 3, 1), 3.0, dtype=np.float32))
 
-    # block by Label entry with __getitem__
-    block = tensor[tensor.keys[0]]
-    assert_equal(block.values, np.full((3, 1, 1), 1.0))
+        # block by kwargs
+        block = tensor.block(key_1=1, key_2=0)
+        assert_equal(_values(block), np.full((3, 1, 3), 2.0, dtype=np.float32))
 
-    # 0 blocks matching criteria
-    msg = "couldn't find any block matching \\(key_1=3\\)"
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(key_1=3)
+        # block by Label entry
+        block = tensor.block(tensor.keys[0])
+        assert_equal(_values(block), np.full((3, 1, 1), 1.0, dtype=np.float32))
 
-    # more than one block matching criteria
-    msg = (
-        "more than one block matched \\(key_2=0\\), use `TensorMap.blocks` "
-        "to get all of them"
-    )
-    with pytest.raises(ValueError, match=msg):
-        tensor.block(key_2=0)
+        # block by Label entry with __getitem__
+        block = tensor[tensor.keys[0]]
+        assert_equal(_values(block), np.full((3, 1, 1), 1.0, dtype=np.float32))
+
+        # block by Labels (single entry)
+        if arrays == "torch":
+            labels = Labels(
+                names=["key_1", "key_2"],
+                values=torch.tensor([[1, 0]], device=device),
+            )
+        else:
+            labels = Labels(
+                names=["key_1", "key_2"],
+                values=np.array([[1, 0]]),
+            )
+        block = tensor.block(labels)
+        assert_equal(_values(block), np.full((3, 1, 3), 2.0, dtype=np.float32))
+
+        # block by dict
+        block = tensor.block({"key_1": 2, "key_2": 3})
+        assert_equal(_values(block), np.full((4, 3, 1), 4.0, dtype=np.float32))
+
+        # 0 blocks matching criteria
+        msg = r"couldn't find any block matching \(key_1=3\)"
+        with pytest.raises(ValueError, match=msg):
+            tensor.block(key_1=3)
+
+        # more than one block matching criteria
+        msg = (
+            r"more than one block matched \(key_2=0\), use `TensorMap.blocks` "
+            "to get all of them"
+        )
+        with pytest.raises(ValueError, match=msg):
+            tensor.block(key_2=0)
 
 
 def test_blocks(tensor):
-    # block by index
-    blocks = tensor.blocks(2)
-    assert len(blocks) == 1
-    assert_equal(blocks[0].values, np.full((4, 3, 1), 3.0))
+    base_tensor = tensor.to(dtype=np.float32)
+    for device, arrays in AVAILABLE_DEVICES:
+        tensor = base_tensor.to(device=device, arrays=arrays)
 
-    # block by kwargs
-    blocks = tensor.blocks(key_1=1, key_2=0)
-    assert len(blocks) == 1
-    assert_equal(blocks[0].values, np.full((3, 1, 3), 2.0))
+        def _values(block):
+            values = block.values
+            if torch is not None and isinstance(values, torch.Tensor):
+                return values.cpu().numpy()
+            return values
 
-    # more than one block
-    blocks = tensor.blocks(key_2=0)
-    assert len(blocks) == 2
+        # block by index
+        blocks = tensor.blocks(2)
+        assert len(blocks) == 1
+        assert_equal(_values(blocks[0]), np.full((4, 3, 1), 3.0, dtype=np.float32))
 
-    assert_equal(blocks[0].values, np.full((3, 1, 1), 1.0))
-    assert_equal(blocks[1].values, np.full((3, 1, 3), 2.0))
+        # block by kwargs
+        blocks = tensor.blocks(key_1=1, key_2=0)
+        assert len(blocks) == 1
+        assert_equal(_values(blocks[0]), np.full((3, 1, 3), 2.0, dtype=np.float32))
+
+        # more than one block
+        blocks = tensor.blocks(key_2=0)
+        assert len(blocks) == 2
+
+        assert_equal(_values(blocks[0]), np.full((3, 1, 1), 1.0, dtype=np.float32))
+        assert_equal(_values(blocks[1]), np.full((3, 1, 3), 2.0, dtype=np.float32))
 
 
 def test_iter(tensor):

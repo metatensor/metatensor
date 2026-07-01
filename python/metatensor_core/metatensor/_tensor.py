@@ -7,11 +7,20 @@ import numpy as np
 
 from . import _data
 from ._block import TensorBlock
-from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_tensormap_t
+from ._c_api import (
+    DLDevice,
+    DLDeviceType,
+    DLManagedTensorVersioned,
+    DLPackVersion,
+    c_uintptr_t,
+    mts_array_t,
+    mts_block_t,
+    mts_tensormap_t,
+)
 from ._c_lib import _get_library
 from ._data import Device, DType
 from ._labels import Labels, LabelsEntry
-from ._status import check_pointer
+from ._status import check_pointer, check_status
 
 
 class TensorMap:
@@ -417,7 +426,7 @@ class TensorMap:
         elif isinstance(selection, int):
             return self.block_by_id(selection)
         else:
-            selection = _normalize_selection(selection)
+            selection = _normalize_selection(selection, like=self.keys)
 
         keys = self.keys
         matching = keys.select(selection)
@@ -471,7 +480,7 @@ class TensorMap:
         elif isinstance(selection, int):
             return [self.block_by_id(selection)]
         else:
-            selection = _normalize_selection(selection)
+            selection = _normalize_selection(selection, like=self.keys)
 
         keys = self.keys
         matching = keys.select(selection)
@@ -833,8 +842,69 @@ def _can_cast_to_numpy_int(value):
     return np.can_cast(value, np.int32, casting="same_kind")
 
 
+def _array_like(values: List[int], like: Labels) -> mts_array_t:
+    """
+    Convert a list of integers to an array with the same dtype, device and array backend
+    as ``like``.
+
+    :param values: list of integers to convert
+    :param like: Labels whose array backend and device to match
+    :return: a new ``mts_array_t`` with the same dtype, device and array backend as
+        ``like``
+    """
+    np_values = np.array(values, dtype=np.int32).reshape(1, -1)
+    cpu_array = _data.create_mts_array(np_values)
+
+    try:
+        like_array = like._raw_values
+
+        dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+        device = DLDevice(device_type=DLDeviceType.kDLCPU, device_id=0)
+        version = DLPackVersion(major=1, minor=0)
+        status = cpu_array.as_dlpack(
+            cpu_array.ptr,
+            ctypes.byref(dl_managed_ptr),
+            device,
+            None,
+            version,
+        )
+        check_status(status)
+
+        result_array = mts_array_t()
+        status = like_array.from_dlpack(
+            like_array.ptr,
+            dl_managed_ptr,
+            ctypes.byref(result_array),
+        )
+        check_status(status)
+
+        target_device = DLDevice()
+        status = like_array.device(like_array.ptr, ctypes.byref(target_device))
+        check_status(status)
+
+        if target_device.device_type != DLDeviceType.kDLCPU:
+            device_array = mts_array_t()
+            status = result_array.copy(
+                result_array.ptr,
+                target_device,
+                ctypes.byref(device_array),
+            )
+            check_status(status)
+
+            if result_array.destroy:
+                result_array.destroy(result_array.ptr)
+
+            result_array = device_array
+
+        return result_array
+    finally:
+        if cpu_array.destroy:
+            cpu_array.destroy(cpu_array.ptr)
+
+
 def _normalize_selection(
     selection: Union[Labels, LabelsEntry, Dict[str, int]],
+    like: Labels,
 ) -> Labels:
     if isinstance(selection, dict):
         for key, value in selection.items():
@@ -848,11 +918,11 @@ def _normalize_selection(
                 )
 
         if len(selection) == 0:
-            return Labels([], np.empty((0, 0), dtype=np.int32))
+            return Labels([], _array_like([], like))
         else:
             return Labels(
                 list(selection.keys()),
-                np.array([[np.int32(v) for v in selection.values()]], dtype=np.int32),
+                _array_like([np.int32(v) for v in selection.values()], like),
             )
 
     elif isinstance(selection, Labels):

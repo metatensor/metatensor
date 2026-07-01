@@ -28,16 +28,7 @@ from metatensor._c_api import (
 )
 from metatensor._status import catch_exceptions, check_status
 
-
-# Kanged from the metatensor-torch _test_utils
-def can_use_mps_backend():
-    return (
-        # Github Actions M1 runners don't have a GPU accessible
-        os.environ.get("GITHUB_ACTIONS") is None
-        and hasattr(torch.backends, "mps")
-        and torch.backends.mps.is_built()
-        and torch.backends.mps.is_available()
-    )
+from ._tests_utils import can_use_mps_backend
 
 
 def free_mts_array(array):
@@ -152,10 +143,7 @@ class MtsArrayMixin:
         array = self.create_array((2, 3, 4))
         mts_array = metatensor._data.create_mts_array(array)
 
-        for device, dl_device in self.available_devices():
-            if device == "mps" and torch.__version__ < "2.8.0":
-                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
-
+        for _, dl_device in self.available_devices():
             copy = mts_array_t()
             # copy from CPU to the given device
             check_status(mts_array.copy(mts_array.ptr, dl_device, copy))
@@ -216,9 +204,6 @@ class MtsArrayMixin:
 
     def test_as_dlpack(self):
         for device, dl_device in self.available_devices():
-            if device == "mps" and torch.__version__ < "2.8.0":
-                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
-
             # Create a sample array
             array = self.create_array((2, 3), device=device)
             mts_array = metatensor._data.create_mts_array(array)
@@ -274,55 +259,48 @@ class MtsArrayMixin:
 
     def test_from_dlpack(self):
         for device, dl_device in self.available_devices():
-            if device == "mps" and torch.__version__ < "2.8.0":
-                pytest.skip("DLPack support for MPS requires PyTorch 2.8+")
+            f32_array = self.create_array(
+                (2, 3), device=device, dtype=self.dtype_from_numpy(np.float32)
+            )
+            mts_f32_array = metatensor._data.create_mts_array(f32_array)
 
-                f32_array = self.create_array(
-                    (2, 3), device=device, dtype=self.dtype_from_numpy(np.float32)
+            i8_array = self.create_array(
+                (20, 2, 7), device=device, dtype=self.dtype_from_numpy(np.int8)
+            )
+            mts_i8_array = metatensor._data.create_mts_array(i8_array)
+
+            f32_dl_tensor = call_as_dlpack(mts_f32_array, dl_device)
+            i8_dl_tensor = call_as_dlpack(mts_i8_array, dl_device)
+
+            new_f32_array = mts_array_t()
+            check_status(
+                mts_f32_array.from_dlpack(
+                    mts_f32_array.ptr, f32_dl_tensor, new_f32_array
                 )
-                mts_f32_array = metatensor._data.create_mts_array(f32_array)
+            )
 
-                i8_array = self.create_array(
-                    (20, 2, 7), device=device, dtype=self.dtype_from_numpy(np.int8)
-                )
-                mts_i8_array = metatensor._data.create_mts_array(i8_array)
+            new_i8_array = mts_array_t()
+            check_status(
+                mts_f32_array.from_dlpack(mts_f32_array.ptr, i8_dl_tensor, new_i8_array)
+            )
 
-                f32_dl_tensor = call_as_dlpack(mts_f32_array, dl_device)
-                i8_dl_tensor = call_as_dlpack(mts_i8_array, dl_device)
+            assert_equal(
+                self.to_numpy(f32_array),
+                self.to_numpy(
+                    metatensor._data.mts_array_to_python_array(new_f32_array)
+                ),
+            )
 
-                new_f32_array = mts_array_t()
-                check_status(
-                    mts_f32_array.from_dlpack(
-                        mts_f32_array.ptr, f32_dl_tensor, new_f32_array
-                    )
-                )
+            assert_equal(
+                self.to_numpy(i8_array),
+                self.to_numpy(metatensor._data.mts_array_to_python_array(new_i8_array)),
+            )
 
-                new_i8_array = mts_array_t()
-                check_status(
-                    mts_f32_array.from_dlpack(
-                        mts_f32_array.ptr, i8_dl_tensor, new_i8_array
-                    )
-                )
+            free_mts_array(mts_f32_array)
+            free_mts_array(mts_i8_array)
 
-                assert_equal(
-                    self.to_numpy(f32_array),
-                    self.to_numpy(
-                        metatensor._data.mts_array_to_python_array(new_f32_array)
-                    ),
-                )
-
-                assert_equal(
-                    self.to_numpy(i8_array),
-                    self.to_numpy(
-                        metatensor._data.mts_array_to_python_array(new_i8_array)
-                    ),
-                )
-
-                free_mts_array(mts_f32_array)
-                free_mts_array(mts_i8_array)
-
-                free_mts_array(new_f32_array)
-                free_mts_array(new_i8_array)
+            free_mts_array(new_f32_array)
+            free_mts_array(new_i8_array)
 
 
 class TestNumpyData(MtsArrayMixin):

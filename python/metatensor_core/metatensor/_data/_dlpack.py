@@ -264,16 +264,6 @@ class DLPackArray:
         if stream is not None:
             raise RuntimeError("only `stream=None` is supported")
 
-        if self._versioned:
-            version = pointer[0].version
-            version = (version.major, version.minor)
-            if max_version is not None:
-                if version[0] > max_version[0]:
-                    raise RuntimeError(
-                        f"requested DLPack version {max_version}, but tensor has "
-                        f"version {version}"
-                    )
-
         if dl_device is not None and dl_device != self.__dlpack_device__():
             raise RuntimeError("device conversion is not supported")
 
@@ -282,7 +272,22 @@ class DLPackArray:
 
         self._pointer = None
         if self._versioned:
-            capsule = make_dlpack_versioned_capsule(pointer)
+            version = pointer[0].version
+            version_tuple = (version.major, version.minor)
+
+            if max_version is not None and version_tuple[0] > max_version[0]:
+                raise RuntimeError(
+                    f"requested DLPack version {max_version}, but tensor has "
+                    f"version {version_tuple}"
+                )
+
+            if max_version is not None and max_version >= (1, 0):
+                capsule = make_dlpack_versioned_capsule(pointer)
+            else:
+                # Consumer doesn't signal DLPack v1 support (e.g. PyTorch < 2.9.0),
+                # wrap as unversioned for compatibility
+                unversioned_ptr = wrap_versioned_as_unversioned(pointer)
+                capsule = make_dlpack_unversioned_capsule(unversioned_ptr)
         else:
             capsule = make_dlpack_unversioned_capsule(pointer)
 

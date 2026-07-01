@@ -186,7 +186,7 @@ fn python_in_venv(venv_dir: &Path) -> PathBuf {
     python
 }
 
-/// Create a fresh Python virtualenv using uv if available, else fallback to
+/// Create a Python virtualenv using uv if available, else fallback to
 /// `python -m venv`, and return the path to the python executable in the venv
 pub fn create_python_venv(build_dir: PathBuf) -> PathBuf {
     if let Some(uv_bin) = find_uv() {
