@@ -1,9 +1,11 @@
 use std::ffi::CString;
 
-use crate::errors::{check_status, check_ptr};
-use crate::{TensorMap, Error};
+use dlpk::DLDataType;
 
-use super::{realloc_vec, create_ndarray};
+use crate::errors::{check_status, check_ptr};
+use crate::{TensorMap, Error, MtsArray};
+
+use super::{realloc_vec, create_ndarray, CREATE_ARRAY_CALLBACK, create_array_callback_wrapper};
 
 /// Load the serialized tensor map from the given path.
 ///
@@ -38,16 +40,38 @@ use super::{realloc_vec, create_ndarray};
 ///                                                                     / <n_components>.npy
 ///                                                     /   data.npy
 /// ```
+///
+/// All arrays are loaded as `ndarray::ArrayD` by default. If you want to load
+/// arrays as a custom type, use [`load_custom_array`] instead.
 pub fn load(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
+    return load_custom_array(path, create_ndarray);
+}
+
+/// Load the serialized tensor map from the given path.
+///
+/// See the [`load`] function for more information on the data format.
+///
+/// All arrays will be created through the `create_array` callback.
+pub fn load_custom_array<F>(path: impl AsRef<std::path::Path>, create_array: F) -> Result<TensorMap, Error>
+    where F: Fn(&[usize], DLDataType) -> Result<MtsArray, Error> + 'static
+{
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = Some(Box::new(create_array));
+    });
 
     let ptr = unsafe {
         crate::c_api::mts_tensormap_load(
             path.as_ptr(),
-            Some(create_ndarray)
+            Some(create_array_callback_wrapper)
         )
     };
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = None;
+    });
 
     check_ptr(ptr)?;
 
@@ -57,14 +81,35 @@ pub fn load(path: impl AsRef<std::path::Path>) -> Result<TensorMap, Error> {
 /// Load a serialized `TensorMap` from a `buffer`.
 ///
 /// See the [`load`] function for more information on the data format.
+///
+/// All arrays are loaded as `ndarray::ArrayD` by default. If you want to load
+/// arrays as a custom type, use [`load_buffer_custom_array`] instead.
 pub fn load_buffer(buffer: &[u8]) -> Result<TensorMap, Error> {
+    return load_buffer_custom_array(buffer, create_ndarray);
+}
+
+/// Load a serialized `TensorMap` from a `buffer` using a custom array
+/// creation function.
+///
+/// All arrays will be created through the `create_array` callback.
+pub fn load_buffer_custom_array<F>(buffer: &[u8], create_array: F) -> Result<TensorMap, Error>
+    where F: Fn(&[usize], DLDataType) -> Result<MtsArray, Error> + 'static
+{
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = Some(Box::new(create_array));
+    });
+
     let ptr = unsafe {
         crate::c_api::mts_tensormap_load_buffer(
             buffer.as_ptr(),
             buffer.len(),
-            Some(create_ndarray)
+            Some(create_array_callback_wrapper)
         )
     };
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = None;
+    });
 
     check_ptr(ptr)?;
 

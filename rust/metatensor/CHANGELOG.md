@@ -16,6 +16,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- `load_custom_array`, `load_buffer_custom_array`, `load_block_custom_array`,
+  and `load_block_buffer_custom_array` functions to load TensorMaps and
+  TensorBlocks with custom array types.
+
 ## [Version 0.4.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.4.1) - 2026-06-24
 
 ### Fixed
