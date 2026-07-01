@@ -246,4 +246,5 @@ def can_use_mps_backend():
         and hasattr(torch.backends, "mps")
         and torch.backends.mps.is_built()
         and torch.backends.mps.is_available()
+        and torch.__version__ >= "2.8.0"
     )

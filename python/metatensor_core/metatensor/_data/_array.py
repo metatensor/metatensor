@@ -37,9 +37,9 @@ except ImportError:
 if HAS_TORCH:
     # This NewType is only used for typechecking and documentation purposes. If you are
     # trying to add support for new array types, see `data.array.ArrayWrapper` instead.
-    Array = NewType("Array", Union[np.ndarray, torch.Tensor])
+    Array = NewType("Array", Union[np.ndarray, torch.Tensor, mts_array_t])
 else:
-    Array = NewType("Array", np.ndarray)
+    Array = NewType("Array", Union[np.ndarray, mts_array_t])
 
 Array.__doc__ = """
 An ``Array`` contains the actual data stored in a :py:class:`metatensor.TensorBlock`.
