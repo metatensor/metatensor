@@ -1,21 +1,43 @@
 use std::ffi::CString;
 
-use crate::errors::{check_ptr, check_status};
-use crate::{Error, TensorBlock, TensorBlockRef};
+use dlpk::DLDataType;
 
-use super::{realloc_vec, create_ndarray};
+use crate::errors::{check_ptr, check_status};
+use crate::{Error, MtsArray, TensorBlock, TensorBlockRef};
+
+use super::{realloc_vec, create_ndarray, CREATE_ARRAY_CALLBACK, create_array_callback_wrapper};
 
 /// Load previously saved `TensorBlock` from the file at the given path.
+///
+/// All arrays are loaded as `ndarray::ArrayD` by default. If you want to load
+/// arrays as a custom type, use [`load_block_custom_array`] instead.
 pub fn load_block(path: impl AsRef<std::path::Path>) -> Result<TensorBlock, Error> {
+    return load_block_custom_array(path, create_ndarray);
+}
+
+/// Load previously saved `TensorBlock` from the file at the given path.
+///
+/// All arrays will be created through the `create_array` callback.
+pub fn load_block_custom_array<F>(path: impl AsRef<std::path::Path>, create_array: F) -> Result<TensorBlock, Error>
+    where F: Fn(&[usize], DLDataType) -> Result<MtsArray, Error> + 'static
+{
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = Some(Box::new(create_array));
+    });
 
     let ptr = unsafe {
         crate::c_api::mts_block_load(
             path.as_ptr(),
-            Some(create_ndarray)
+            Some(create_array_callback_wrapper)
         )
     };
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = None;
+    });
 
     check_ptr(ptr)?;
 
@@ -23,14 +45,34 @@ pub fn load_block(path: impl AsRef<std::path::Path>) -> Result<TensorBlock, Erro
 }
 
 /// Load a serialized `TensorBlock` from a `buffer`.
+///
+/// All arrays are loaded as `ndarray::ArrayD` by default. If you want to load
+/// arrays as a custom type, use [`load_block_buffer_custom_array`] instead.
 pub fn load_block_buffer(buffer: &[u8]) -> Result<TensorBlock, Error> {
+    return load_block_buffer_custom_array(buffer, create_ndarray);
+}
+
+/// Load a serialized `TensorBlock` from a `buffer`.
+///
+/// All arrays will be created through the `create_array` callback.
+pub fn load_block_buffer_custom_array<F>(buffer: &[u8], create_array: F) -> Result<TensorBlock, Error>
+    where F: Fn(&[usize], DLDataType) -> Result<MtsArray, Error> + 'static
+{
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = Some(Box::new(create_array));
+    });
+
     let ptr = unsafe {
         crate::c_api::mts_block_load_buffer(
             buffer.as_ptr(),
             buffer.len(),
-            Some(create_ndarray)
+            Some(create_array_callback_wrapper)
         )
     };
+
+    CREATE_ARRAY_CALLBACK.with(|callback| {
+        *callback.borrow_mut() = None;
+    });
 
     check_ptr(ptr)?;
 

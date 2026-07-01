@@ -341,6 +341,112 @@ mod labels {
     }
 }
 
+mod custom_array {
+    use std::io::Read;
+
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use dlpk::sys::{DLDataTypeCode, DLDataType};
+    use metatensor::MtsArray;
+
+    const BLOCK_DATA_PATH: &str = "../../metatensor-core/tests/block.mts";
+    const TENSOR_DATA_PATH: &str = "../../metatensor-core/tests/data.mts";
+
+    fn make_array(shape: &[usize], dtype: DLDataType) -> Result<MtsArray, metatensor::Error> {
+        match (dtype.code, dtype.bits) {
+            (DLDataTypeCode::kDLFloat, 64) => {
+                Ok(ndarray::Array::<f64, _>::zeros(shape).into())
+            }
+            (DLDataTypeCode::kDLFloat, 32) => {
+                Ok(ndarray::Array::<f32, _>::zeros(shape).into())
+            }
+            (DLDataTypeCode::kDLInt, 32) => {
+                Ok(ndarray::Array::<i32, _>::zeros(shape).into())
+            }
+            (DLDataTypeCode::kDLInt, 64) => {
+                Ok(ndarray::Array::<i64, _>::zeros(shape).into())
+            }
+            (DLDataTypeCode::kDLUInt, 8) => {
+                Ok(ndarray::Array::<u8, _>::zeros(shape).into())
+            }
+            _ => {
+                Err(metatensor::Error {
+                    code: None,
+                    message: format!(
+                        "unsupported dtype in test create_array: code={:?} bits={}",
+                        dtype.code, dtype.bits
+                    ),
+                })
+            }
+        }
+    }
+
+    #[test]
+    fn block_load_file() {
+        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
+            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+            make_array(shape, dtype)
+        };
+
+        let block = metatensor::io::load_block_custom_array(BLOCK_DATA_PATH, create_array).unwrap();
+        assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
+        assert_eq!(block.values().shape().unwrap(), [9, 5, 3]);
+    }
+
+    #[test]
+    fn block_load_buffer() {
+        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        let mut file = std::fs::File::open(BLOCK_DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
+            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+            make_array(shape, dtype)
+        };
+
+        let block = metatensor::io::load_block_buffer_custom_array(&buffer, create_array).unwrap();
+        assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
+        assert_eq!(block.values().shape().unwrap(), [9, 5, 3]);
+    }
+
+    #[test]
+    fn tensor_load_file() {
+        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
+            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+            make_array(shape, dtype)
+        };
+
+        let tensor = metatensor::io::load_custom_array(TENSOR_DATA_PATH, create_array).unwrap();
+        assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
+        assert_eq!(tensor.keys().count(), 27);
+    }
+
+    #[test]
+    fn tensor_load_buffer() {
+        use std::io::Read;
+        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+
+        let mut file = std::fs::File::open(TENSOR_DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
+            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+            make_array(shape, dtype)
+        };
+
+        let tensor = metatensor::io::load_buffer_custom_array(&buffer, create_array).unwrap();
+        assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
+        assert_eq!(tensor.keys().count(), 27);
+    }
+}
+
 mod error_paths {
     #[test]
     fn load_invalid_buffer_as_tensor() {
