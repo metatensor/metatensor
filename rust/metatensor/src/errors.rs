@@ -50,7 +50,9 @@ unsafe extern "C" fn error_deleter(data: *mut std::ffi::c_void) {
     let _ = unsafe { Box::from_raw(data.cast::<Error>()) };
 }
 
-fn store_last_error(error: Error) -> mts_status_t {
+/// Store the last error in the metatensor-core C API, and return
+/// `MTS_CALLBACK_ERROR`
+pub(crate) fn store_last_error(error: Error) -> mts_status_t {
     let c_message = std::ffi::CString::new(error.message.clone()).expect("found NULL byte in error message");
     let c_origin = std::ffi::CString::new("Rust Error").expect("found NULL byte in error origin");
     let status = unsafe {

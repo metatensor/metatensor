@@ -1,16 +1,12 @@
 //! Input/Output facilities for storing [`crate::TensorMap`] and
 //! [`crate::Labels`] on disk
 
-use std::cell::RefCell;
 use std::os::raw::c_void;
 
 use dlpk::sys::{DLDataType, DLDataTypeCode};
 
 use crate::c_api::{MTS_SUCCESS, mts_array_t, mts_status_t};
 use crate::MtsArray;
-
-use crate::Error;
-use crate::errors::catch_unwind;
 
 mod tensor;
 pub use self::tensor::{load, load_custom_array, load_buffer, load_buffer_custom_array};
@@ -57,18 +53,21 @@ macro_rules! create_typed_array {
 }
 
 
-fn create_ndarray(shape: &[usize], dtype: DLDataType) -> Result<MtsArray, Error> {
+extern "C" fn create_ndarray(shape: *const usize, shape_count: usize, dtype: DLDataType, array: *mut mts_array_t) -> mts_status_t {
     if dtype.lanes != 1 {
-        return Err(crate::Error {
+        let error = crate::Error {
             code: None,
             message: format!(
                 "unsupported dtype in create_ndarray: lanes={} (expected 1)",
                 dtype.lanes
             ),
-        });
+        };
+        return crate::errors::store_last_error(error);
     }
 
-    let array = match (dtype.code, dtype.bits) {
+    let shape = unsafe { std::slice::from_raw_parts(shape, shape_count) };
+
+    let new_array = match (dtype.code, dtype.bits) {
         (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
         (DLDataTypeCode::kDLFloat, 64) => create_typed_array!(shape, c_array, f64),
         (DLDataTypeCode::kDLInt, 8) => create_typed_array!(shape, c_array, i8),
@@ -84,46 +83,20 @@ fn create_ndarray(shape: &[usize], dtype: DLDataType) -> Result<MtsArray, Error>
         (DLDataTypeCode::kDLComplex, 64) => create_typed_array!(shape, c_array, [f32; 2]),
         (DLDataTypeCode::kDLComplex, 128) => create_typed_array!(shape, c_array, [f64; 2]),
         _ => {
-            return Err(crate::Error {
+            let error = crate::Error {
                 code: None,
                 message: format!(
                     "unsupported dtype in create_ndarray: code={:?} bits={}",
                     dtype.code, dtype.bits
                 ),
-            });
+            };
+            return crate::errors::store_last_error(error);
         }
     };
 
-    return Ok(array);
-}
+    unsafe {
+        *array = new_array.into_raw();
+    }
 
-type CreateArrayCallback = dyn Fn(&[usize], DLDataType) -> Result<MtsArray, Error>;
-thread_local! {
-    static CREATE_ARRAY_CALLBACK: RefCell<Option<Box<CreateArrayCallback>>> = RefCell::new(None);
-}
-
-/// Wrap the function in `CREATE_ARRAY_CALLBACK` as a C-compatible callback
-unsafe extern "C" fn create_array_callback_wrapper(
-    shape: *const usize,
-    shape_count: usize,
-    dtype: DLDataType,
-    array: *mut mts_array_t,
-) -> mts_status_t {
-    catch_unwind(|| {
-        let shape = unsafe {
-            std::slice::from_raw_parts(shape, shape_count)
-        };
-
-        let new_array = CREATE_ARRAY_CALLBACK.with(|callback| {
-            let borrow = callback.borrow();
-            let callback = borrow.as_ref().expect("no custom array callback set in thread-local storage");
-            callback(shape, dtype)
-        })?;
-
-        unsafe {
-            *array = new_array.into_raw();
-        }
-
-        Ok(())
-    })
+    return MTS_SUCCESS;
 }
