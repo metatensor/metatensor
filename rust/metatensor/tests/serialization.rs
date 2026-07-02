@@ -348,100 +348,94 @@ mod custom_array {
 
     use dlpk::sys::{DLDataTypeCode, DLDataType};
     use metatensor::MtsArray;
+    use metatensor::c_api::{MTS_CALLBACK_ERROR, MTS_SUCCESS, mts_array_t, mts_status_t};
 
     const BLOCK_DATA_PATH: &str = "../../metatensor-core/tests/block.mts";
     const TENSOR_DATA_PATH: &str = "../../metatensor-core/tests/data.mts";
 
-    fn make_array(shape: &[usize], dtype: DLDataType) -> Result<MtsArray, metatensor::Error> {
-        match (dtype.code, dtype.bits) {
+    static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+    static CREATE_ARRAY_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
+    extern "C" fn create_array(shape: *const usize, shape_count: usize, dtype: DLDataType, array: *mut mts_array_t) -> mts_status_t {
+        CALL_COUNT.fetch_add(1, Ordering::SeqCst);
+
+        let shape = unsafe { std::slice::from_raw_parts(shape, shape_count) };
+
+        let new_array: MtsArray = match (dtype.code, dtype.bits) {
             (DLDataTypeCode::kDLFloat, 64) => {
-                Ok(ndarray::Array::<f64, _>::zeros(shape).into())
+                ndarray::Array::<f64, _>::zeros(shape).into()
             }
             (DLDataTypeCode::kDLFloat, 32) => {
-                Ok(ndarray::Array::<f32, _>::zeros(shape).into())
+                ndarray::Array::<f32, _>::zeros(shape).into()
             }
             (DLDataTypeCode::kDLInt, 32) => {
-                Ok(ndarray::Array::<i32, _>::zeros(shape).into())
+                ndarray::Array::<i32, _>::zeros(shape).into()
             }
             (DLDataTypeCode::kDLInt, 64) => {
-                Ok(ndarray::Array::<i64, _>::zeros(shape).into())
+                ndarray::Array::<i64, _>::zeros(shape).into()
             }
             (DLDataTypeCode::kDLUInt, 8) => {
-                Ok(ndarray::Array::<u8, _>::zeros(shape).into())
+                ndarray::Array::<u8, _>::zeros(shape).into()
             }
             _ => {
-                Err(metatensor::Error {
-                    code: None,
-                    message: format!(
-                        "unsupported dtype in test create_array: code={:?} bits={}",
-                        dtype.code, dtype.bits
-                    ),
-                })
+                return MTS_CALLBACK_ERROR;
             }
+        };
+
+        unsafe {
+            *array = new_array.into_raw();
         }
+
+        MTS_SUCCESS
     }
 
     #[test]
     fn block_load_file() {
-        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
 
-        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
-            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
-            make_array(shape, dtype)
-        };
-
-        let block = metatensor::io::load_block_custom_array(BLOCK_DATA_PATH, create_array).unwrap();
+        let block = metatensor::io::load_block_custom_array(BLOCK_DATA_PATH, Some(create_array)).unwrap();
         assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
         assert_eq!(block.values().shape().unwrap(), [9, 5, 3]);
     }
 
     #[test]
     fn block_load_buffer() {
-        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
 
         let mut file = std::fs::File::open(BLOCK_DATA_PATH).unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
-        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
-            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
-            make_array(shape, dtype)
-        };
+        let block = metatensor::io::load_block_buffer_custom_array(&buffer, Some(create_array)).unwrap();
 
-        let block = metatensor::io::load_block_buffer_custom_array(&buffer, create_array).unwrap();
         assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
         assert_eq!(block.values().shape().unwrap(), [9, 5, 3]);
     }
 
     #[test]
     fn tensor_load_file() {
-        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
 
-        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
-            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
-            make_array(shape, dtype)
-        };
+        let tensor = metatensor::io::load_custom_array(TENSOR_DATA_PATH, Some(create_array)).unwrap();
 
-        let tensor = metatensor::io::load_custom_array(TENSOR_DATA_PATH, create_array).unwrap();
         assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
         assert_eq!(tensor.keys().count(), 27);
     }
 
     #[test]
     fn tensor_load_buffer() {
-        use std::io::Read;
-        static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
 
         let mut file = std::fs::File::open(TENSOR_DATA_PATH).unwrap();
         let mut buffer = Vec::new();
         file.read_to_end(&mut buffer).unwrap();
 
-        let create_array = |shape: &[usize], dtype: DLDataType| -> Result<MtsArray, metatensor::Error> {
-            CALL_COUNT.fetch_add(1, Ordering::SeqCst);
-            make_array(shape, dtype)
-        };
+        let tensor = metatensor::io::load_buffer_custom_array(&buffer, Some(create_array)).unwrap();
 
-        let tensor = metatensor::io::load_buffer_custom_array(&buffer, create_array).unwrap();
         assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
         assert_eq!(tensor.keys().count(), 27);
     }
