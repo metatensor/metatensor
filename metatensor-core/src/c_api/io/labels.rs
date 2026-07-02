@@ -88,8 +88,11 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        check_pointers_non_null!(buffer);
+        if buffer_count == 0 {
+            return Err(Error::Serialization("unable to load Labels from empty buffer".into()));
+        }
 
+        check_pointers_non_null!(buffer);
         let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
         let cursor = std::io::Cursor::new(slice);
 

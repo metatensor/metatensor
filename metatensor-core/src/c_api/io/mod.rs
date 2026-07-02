@@ -2,7 +2,7 @@ use std::os::raw::c_void;
 
 use dlpk::sys::DLDataType;
 
-use crate::data::mts_array_t;
+use crate::{Error, data::mts_array_t};
 use super::status::mts_status_t;
 
 mod labels;
@@ -31,6 +31,29 @@ type mts_create_array_callback_t = unsafe extern "C" fn(
     dtype: DLDataType,
     array: *mut mts_array_t,
 ) -> mts_status_t;
+
+/// Wrap a `mts_create_array_callback_t` into a Rust closure
+fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(&[usize], DLDataType) -> Result<mts_array_t, Error> + '_ {
+    |shape: &[usize], dtype: DLDataType| {
+        let mut array = mts_array_t::null();
+        let status = unsafe {
+            create_array(
+                shape.as_ptr(),
+                shape.len(),
+                dtype,
+                &mut array
+            )
+        };
+
+        if status.is_success() {
+            return Ok(array);
+        } else {
+            crate::c_api::add_error_context("failed to create a new array");
+            return Err(Error::CallbackError);
+        }
+    }
+}
+
 
 /// Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
 /// and `mts_labels_save_buffer`.
