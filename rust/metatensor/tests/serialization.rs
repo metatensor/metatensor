@@ -445,40 +445,49 @@ mod error_paths {
     #[test]
     fn load_invalid_buffer_as_tensor() {
         let data = b"this is not a valid mts file";
-        let err = metatensor::io::load_buffer(data);
-        assert!(err.is_err());
+        let result = metatensor::io::load_buffer(data);
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load a TensorMap from buffer: invalid Zip archive: Could not find central directory end: at '<root>'"
+        );
     }
 
     #[test]
     fn load_invalid_buffer_as_block() {
         let data = b"this is not a valid mts file";
-        let err = metatensor::io::load_block_buffer(data);
-        assert!(err.is_err());
+        let result = metatensor::io::load_block_buffer(data);
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load a TensorBlock from buffer: invalid Zip archive: Could not find central directory end: at '<root>'"
+        );
     }
 
     #[test]
     fn load_invalid_buffer_as_labels() {
         let data = b"this is not a valid mts file";
-        let err = metatensor::io::load_labels_buffer(data);
-        assert!(err.is_err());
+        let result = metatensor::io::load_labels_buffer(data);
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load Labels from buffer: start does not match magic string"
+        );
     }
 
     #[test]
     fn load_nonexistent_file() {
-        let err = metatensor::io::load("/nonexistent/path/to/file.mts");
-        assert!(err.is_err());
+        let result = metatensor::io::load("/nonexistent/path/to/file.mts");
+        assert!(result.unwrap_err().message.starts_with("io error:"));
     }
 
     #[test]
     fn load_block_nonexistent_file() {
-        let err = metatensor::io::load_block("/nonexistent/path/to/file.mts");
-        assert!(err.is_err());
+        let result = metatensor::io::load_block("/nonexistent/path/to/file.mts");
+        assert!(result.unwrap_err().message.starts_with("io error:"));
     }
 
     #[test]
     fn load_labels_nonexistent_file() {
-        let err = metatensor::io::load_labels("/nonexistent/path/to/file.mts");
-        assert!(err.is_err());
+        let result = metatensor::io::load_labels("/nonexistent/path/to/file.mts");
+        assert!(result.unwrap_err().message.starts_with("io error:"));
     }
 
     #[test]
@@ -526,8 +535,11 @@ mod error_paths {
         let mut buffer = Vec::new();
         std::io::Read::read_to_end(&mut file, &mut buffer).unwrap();
         let result = metatensor::io::load_buffer(&buffer);
-        // block data does not have keys.npy, so loading as tensor should fail
-        assert!(result.is_err());
+
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load a TensorMap from buffer, use `load_block_buffer` to load TensorBlock: specified file not found in archive: at 'keys.npy'"
+        );
     }
 
     #[test]
@@ -537,20 +549,32 @@ mod error_paths {
         let mut buffer = Vec::new();
         std::io::Read::read_to_end(&mut file, &mut buffer).unwrap();
         let result = metatensor::io::load_block_buffer(&buffer);
-        // tensor data does not have values.npy at the root, so loading as block should fail
-        assert!(result.is_err());
+
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load a TensorBlock from buffer, use `load` to load TensorMap: specified file not found in archive: at 'values.npy'"
+        );
     }
 
     #[test]
     fn empty_buffer_fails() {
         let result = metatensor::io::load_buffer(b"");
-        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load TensorMap from empty buffer"
+        );
 
         let result = metatensor::io::load_block_buffer(b"");
-        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load TensorBlock from empty buffer"
+        );
 
         let result = metatensor::io::load_labels_buffer(b"");
-        assert!(result.is_err());
+        assert_eq!(
+            result.unwrap_err().message,
+            "serialization format error: unable to load Labels from empty buffer"
+        );
     }
 
     #[test]

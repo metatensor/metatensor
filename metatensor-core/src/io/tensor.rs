@@ -50,7 +50,7 @@ pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
 /// See the C API documentation for more information on the file format.
 pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     where R: std::io::Read + std::io::Seek,
-          F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>
+          F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
 {
     let mut archive = ZipArchive::new(reader).map_err(|e| ("<root>".into(), e))?;
 

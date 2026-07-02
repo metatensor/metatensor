@@ -46,7 +46,7 @@ pub fn looks_like_block_data(mut data: PathOrBuffer) -> bool {
 /// `TensorBlock`.
 pub fn load_block<R, F>(reader: R, create_array: F) -> Result<TensorBlock, Error>
     where R: std::io::Read + std::io::Seek,
-          F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>
+          F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
 {
     let mut archive = ZipArchive::new(reader).map_err(|e| ("<root>".into(), e))?;
 
@@ -77,7 +77,7 @@ pub(super) fn read_single_block<R, F>(
     create_array: &F,
 ) -> Result<TensorBlock, Error>
     where R: std::io::Read + std::io::Seek,
-          F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>
+          F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
 {
     let path = format!("{}values.npy", prefix);
     let data_file = archive.by_name(&path).map_err(|e| (path, e))?;
@@ -190,7 +190,7 @@ where R: std::io::Read,
 // Read a data array from the given reader, using numpy's NPY format
 #[allow(clippy::too_many_lines)]
 fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<usize>), Error>
-    where R: std::io::Read, F: Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error>
+    where R: std::io::Read, F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
 {
     let header = Header::from_reader(&mut reader)?;
     if header.fortran_order {
@@ -208,7 +208,7 @@ fn read_data<R, F>(mut reader: R, create_array: &F) -> Result<(mts_array_t, Vec<
     let dl_dtype = DLDataType { code: file_code, bits: file_bits, lanes: 1 };
 
     let shape = header.shape;
-    let array = create_array(shape.clone(), dl_dtype)?;
+    let array = create_array(&shape, dl_dtype)?;
 
     let num_elements: usize = shape.iter().product();
     if num_elements == 0 {

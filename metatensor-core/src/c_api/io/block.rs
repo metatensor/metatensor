@@ -3,16 +3,13 @@ use std::ffi::CStr;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 
-use dlpk::sys::DLDataType;
-
 use crate::Error;
-use crate::data::mts_array_t;
 
 use super::{ExternalBuffer, mts_realloc_buffer_t};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::blocks::mts_block_t;
-use super::mts_create_array_callback_t;
+use super::{mts_create_array_callback_t, wrap_create_array};
 
 
 /// Load a tensor block from the file at the given path.
@@ -108,13 +105,15 @@ pub unsafe extern "C" fn mts_block_load_buffer(
     let mut result = std::ptr::null_mut();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
+        if buffer_count == 0 {
+            return Err(Error::Serialization("unable to load TensorBlock from empty buffer".into()));
+        }
+
         check_pointers_non_null!(buffer);
-        assert!(buffer_count > 0);
-
-        let create_array = wrap_create_array(&create_array);
-
         let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
         let cursor = std::io::Cursor::new(slice);
+
+        let create_array = wrap_create_array(&create_array);
 
         let block = crate::io::load_block(cursor, create_array)
             .map_err(|err| match err {
@@ -150,27 +149,6 @@ pub unsafe extern "C" fn mts_block_load_buffer(
     }
 
     return result;
-}
-
-fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(Vec<usize>, DLDataType) -> Result<mts_array_t, Error> + '_ {
-    |shape: Vec<usize>, dtype: DLDataType| {
-        let mut array = mts_array_t::null();
-        let status = unsafe {
-            create_array(
-                shape.as_ptr(),
-                shape.len(),
-                dtype,
-                &mut array
-            )
-        };
-
-        if status.is_success() {
-            return Ok(array);
-        } else {
-            crate::c_api::add_error_context("failed to create a new array in mts_block_load");
-            return Err(Error::CallbackError);
-        }
-    }
 }
 
 
