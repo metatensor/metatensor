@@ -52,8 +52,13 @@ macro_rules! create_typed_array {
     }};
 }
 
-
-extern "C" fn create_ndarray(shape: *const usize, shape_count: usize, dtype: DLDataType, array: *mut mts_array_t) -> mts_status_t {
+/// Callback function to create a new `mts_array_t` when loading `TensorMap` or
+/// `TensorBlock` from a buffer or a file.
+///
+/// This is an implementation of `mts_create_array_callback_t` that creates a
+/// new `ndarray::ArrayD` as the backing array for the `mts_array_t`. It is used
+/// by default in [`load_buffer`] and [`load_block_buffer`].
+pub unsafe extern "C" fn create_ndarray(shape: *const usize, shape_count: usize, dtype: DLDataType, array: *mut mts_array_t) -> mts_status_t {
     if dtype.lanes != 1 {
         let error = crate::Error {
             code: None,
@@ -65,7 +70,7 @@ extern "C" fn create_ndarray(shape: *const usize, shape_count: usize, dtype: DLD
         return crate::errors::store_last_error(error);
     }
 
-    let shape = unsafe { std::slice::from_raw_parts(shape, shape_count) };
+    let shape = std::slice::from_raw_parts(shape, shape_count);
 
     let new_array = match (dtype.code, dtype.bits) {
         (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
@@ -94,9 +99,7 @@ extern "C" fn create_ndarray(shape: *const usize, shape_count: usize, dtype: DLD
         }
     };
 
-    unsafe {
-        *array = new_array.into_raw();
-    }
+    *array = new_array.into_raw();
 
     return MTS_SUCCESS;
 }
