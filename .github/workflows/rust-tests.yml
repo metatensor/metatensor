@@ -119,7 +119,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
-          version: "v0.15.0"
+          version: "v0.16.0"
 
       - name: Setup sccache environnement variables
         if: ${{ !env.ACT }}

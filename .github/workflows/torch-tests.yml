@@ -71,7 +71,7 @@ jobs:
 
       # we get torch from pip to run the C++ test
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: "3.11"
           enable-cache: true
@@ -86,7 +86,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
-          version: "v0.15.0"
+          version: "v0.16.0"
 
       - name: Setup sccache environnement variables
         if: ${{ !env.ACT }}
