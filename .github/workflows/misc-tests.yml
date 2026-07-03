@@ -19,7 +19,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: "3.14"
           enable-cache: true
@@ -89,7 +89,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v7
+        uses: astral-sh/setup-uv@v8.2.0
         with:
           python-version: ${{ matrix.python-version }}
           enable-cache: true
@@ -109,7 +109,7 @@ jobs:
         if: ${{ !env.ACT }}
         uses: mozilla-actions/sccache-action@v0.0.10
         with:
-          version: "v0.10.0"
+          version: "v0.16.0"
 
       - name: setup MSVC command prompt
         uses: ilammy/msvc-dev-cmd@v1
