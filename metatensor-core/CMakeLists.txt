@@ -80,46 +80,7 @@ if(${METATENSOR_MAIN_PROJECT} AND NOT "${CACHED_LAST_CMAKE_BUILD_TYPE}" STREQUAL
     message(STATUS "Building metatensor in ${CMAKE_BUILD_TYPE} mode")
 endif()
 
-find_program(CARGO_EXE "cargo" DOC "path to cargo (Rust build system)")
-if (NOT CARGO_EXE)
-    message(FATAL_ERROR
-        "could not find cargo, please make sure the Rust compiler is installed \
-        (see https://www.rust-lang.org/tools/install) or set CARGO_EXE"
-    )
-endif()
-
-execute_process(
-    COMMAND ${CARGO_EXE} "--version" "--verbose"
-    RESULT_VARIABLE CARGO_STATUS
-    OUTPUT_VARIABLE CARGO_VERSION_RAW
-)
-
-if(CARGO_STATUS AND NOT CARGO_STATUS EQUAL 0)
-    message(FATAL_ERROR
-        "could not run cargo, please make sure the Rust compiler is installed \
-        (see https://www.rust-lang.org/tools/install)"
-    )
-endif()
-
-set(REQUIRED_RUST_VERSION "1.74.0")
-if (CARGO_VERSION_RAW MATCHES "cargo ([0-9]+\\.[0-9]+\\.[0-9]+).*")
-    set(CARGO_VERSION "${CMAKE_MATCH_1}")
-else()
-    message(FATAL_ERROR "failed to determine cargo version, output was: ${CARGO_VERSION_RAW}")
-endif()
-
-if (${CARGO_VERSION} VERSION_LESS ${REQUIRED_RUST_VERSION})
-    message(FATAL_ERROR
-        "your Rust installation is too old (you have version ${CARGO_VERSION}), \
-        at least ${REQUIRED_RUST_VERSION} is required"
-    )
-else()
-    if(NOT "${CACHED_LAST_CARGO_VERSION}" STREQUAL ${CARGO_VERSION})
-        set(CACHED_LAST_CARGO_VERSION ${CARGO_VERSION} CACHE INTERNAL "Last version of cargo used in configuration")
-        message(STATUS "Using cargo version ${CARGO_VERSION} at ${CARGO_EXE}")
-        set(CARGO_VERSION_CHANGED TRUE)
-    endif()
-endif()
+include(cmake/detect_cargo.cmake)
 
 # ============================================================================ #
 # determine Cargo flags
@@ -147,16 +108,6 @@ endif()
 set(CARGO_TARGET_DIR ${CMAKE_CURRENT_BINARY_DIR}/target)
 set(CARGO_BUILD_ARG "${CARGO_BUILD_ARG};--target-dir=${CARGO_TARGET_DIR}")
 
-if (CARGO_VERSION_RAW MATCHES "host: ([a-zA-Z0-9_\\-]*)\n")
-    set(RUST_HOST_TARGET "${CMAKE_MATCH_1}")
-    if (RUST_HOST_TARGET MATCHES "([a-zA-Z0-9_]*)\\-")
-        set(RUST_HOST_ARCH "${CMAKE_MATCH_1}")
-    else()
-        message(FATAL_ERROR "failed to determine host CPU arch, target was: ${RUST_HOST_TARGET}")
-    endif()
-else()
-    message(FATAL_ERROR "failed to determine host target, output was: ${CARGO_VERSION_RAW}")
-endif()
 
 if (WIN32)
     # on Windows, we need to use the same ABI in both CMake and cargo. If the
