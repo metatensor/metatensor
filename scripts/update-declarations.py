@@ -484,7 +484,7 @@ use dlpk::sys::*;
 #[cfg_attr(feature="static", link(name="metatensor", kind = "static", modifiers = "-whole-archive"))]
 #[cfg_attr(all(not(feature="static"), not(target_os="windows")), link(name="metatensor", kind = "dylib"))]
 #[cfg_attr(all(not(feature="static"), target_os="windows"), link(name="metatensor.dll", kind = "dylib"))]
-extern "C" {}
+unsafe extern "C" {}
 """  # noqa: E501
 
 

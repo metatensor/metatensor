@@ -31,7 +31,7 @@ use super::{mts_create_array_callback_t, wrap_create_array};
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_load(
     path: *const c_char,
     create_array: mts_create_array_callback_t,
@@ -43,7 +43,9 @@ pub unsafe extern "C" fn mts_block_load(
 
         let create_array = wrap_create_array(&create_array);
 
-        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let path = unsafe {
+            CStr::from_ptr(path).to_str().expect("use UTF-8 for path")
+        };
         let file = BufReader::new(File::open(path)?);
         let block = crate::io::load_block(file, create_array)
             .map_err(|err| match err {
@@ -96,7 +98,7 @@ pub unsafe extern "C" fn mts_block_load(
 /// @returns A pointer to the newly allocated tensor block, or a `NULL` pointer
 ///          in case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
@@ -110,7 +112,9 @@ pub unsafe extern "C" fn mts_block_load_buffer(
         }
 
         check_pointers_non_null!(buffer);
-        let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+        let slice = unsafe {
+            std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
+        };
         let cursor = std::io::Cursor::new(slice);
 
         let create_array = wrap_create_array(&create_array);
@@ -118,7 +122,9 @@ pub unsafe extern "C" fn mts_block_load_buffer(
         let block = crate::io::load_block(cursor, create_array)
             .map_err(|err| match err {
                 Error::Serialization(message) => {
-                    let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+                    let slice = unsafe {
+                        std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
+                    };
                     let mut cursor = std::io::Cursor::new(slice);
                     if crate::io::looks_like_labels_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
                         Error::Serialization(format!(
@@ -163,7 +169,7 @@ pub unsafe extern "C" fn mts_block_load_buffer(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_save(
     path: *const c_char,
     block: *const mts_block_t,
@@ -171,9 +177,13 @@ pub unsafe extern "C" fn mts_block_save(
     catch_unwind(|| {
         check_pointers_non_null!(path, block);
 
-        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let path = unsafe {
+            CStr::from_ptr(path).to_str().expect("use UTF-8 for path")
+        };
         let file = BufWriter::new(File::create(path)?);
-        crate::io::save_block(file, &*block)?;
+
+        let block = unsafe { &*block };
+        crate::io::save_block(file, block)?;
 
         Ok(())
     })
@@ -204,7 +214,7 @@ pub unsafe extern "C" fn mts_block_save(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
 ///          message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn mts_block_save_buffer(
     buffer: *mut *mut u8,
@@ -222,22 +232,27 @@ pub unsafe extern "C" fn mts_block_save_buffer(
             ));
         }
 
-        if (*buffer).is_null() {
-            assert_eq!(*buffer_count, 0);
+        if unsafe { (*buffer).is_null() && (*buffer_count) != 0 } {
+            return Err(Error::InvalidParameter(
+                "`buffer` is NULL but `buffer_count` is not 0 in mts_block_save_buffer".into()
+            ));
         }
 
         let mut external_buffer = ExternalBuffer {
             data: buffer,
-            allocated: *buffer_count as u64,
+            allocated: unsafe { *buffer_count } as u64,
             writen: 0,
             realloc_user_data,
             realloc: realloc.expect("we checked"),
             current: 0,
         };
 
-        crate::io::save_block(&mut external_buffer, &*block)?;
+        let block = unsafe { &*block };
+        crate::io::save_block(&mut external_buffer, block)?;
 
-        *buffer_count = external_buffer.current as usize;
+        unsafe {
+            *buffer_count = external_buffer.current as usize;
+        }
 
         Ok(())
     })

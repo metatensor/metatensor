@@ -265,11 +265,9 @@ mod utils {
                 result.max,
             );
 
-            if let Some(baseline) = baseline {
-                if let Some(b) = baseline.get(name) {
-                    let ratio = result.mean / b.mean;
-                    fields.push_str(&format!(",\"vs_baseline\":{}", ratio));
-                }
+            if let Some(baseline) = baseline && let Some(b) = baseline.get(name) {
+                let ratio = result.mean / b.mean;
+                fields.push_str(&format!(",\"vs_baseline\":{}", ratio));
             }
 
             entries.push(format!("\"{}\":{{{}}}", json_escape(name), fields));

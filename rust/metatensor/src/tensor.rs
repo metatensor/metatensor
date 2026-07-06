@@ -90,9 +90,11 @@ impl TensorMap {
     pub unsafe fn from_raw(ptr: *mut mts_tensormap_t) -> TensorMap {
         assert!(!ptr.is_null());
 
-        let keys_ptr = crate::c_api::mts_tensormap_keys(ptr);
+        let keys_ptr = unsafe {
+            crate::c_api::mts_tensormap_keys(ptr)
+        };
         assert!(!keys_ptr.is_null(), "failed to get the keys");
-        let keys = Labels::from_raw(keys_ptr);
+        let keys = unsafe { Labels::from_raw(keys_ptr) };
 
         return TensorMap {
             ptr,
@@ -246,16 +248,18 @@ impl TensorMap {
     /// `ptr`.
     #[inline]
     unsafe fn raw_block_mut_by_id<'a>(ptr: *mut mts_tensormap_t, index: usize) -> TensorBlockRefMut<'a> {
-        let mut block = std::ptr::null_mut();
+        unsafe {
+            let mut block = std::ptr::null_mut();
 
-        check_status(
-            crate::c_api::mts_tensormap_block_by_id(
-            ptr,
-            &mut block,
-            index,
-        )).expect("failed to get a block");
+            check_status(
+                crate::c_api::mts_tensormap_block_by_id(
+                ptr,
+                &mut block,
+                index,
+            )).expect("failed to get a block");
 
-        return TensorBlockRefMut::from_raw(block);
+            return TensorBlockRefMut::from_raw(block);
+        }
     }
 
     /// Get a reference to the block matching the given selection.

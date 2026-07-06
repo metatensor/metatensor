@@ -22,7 +22,7 @@ use super::super::labels::mts_labels_t;
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_load(
     path: *const c_char,
 ) -> *const mts_labels_t {
@@ -32,7 +32,9 @@ pub unsafe extern "C" fn mts_labels_load(
     let status = catch_unwind(move || {
         check_pointers_non_null!(path);
 
-        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let path = unsafe {
+            CStr::from_ptr(path).to_str().expect("use UTF-8 for path")
+        };
         let file = BufReader::new(File::open(path)?);
 
         let rust_labels = crate::io::load_labels(file)
@@ -79,7 +81,7 @@ pub unsafe extern "C" fn mts_labels_load(
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
@@ -93,7 +95,9 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
         }
 
         check_pointers_non_null!(buffer);
-        let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+        let slice = unsafe {
+            std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
+        };
         let cursor = std::io::Cursor::new(slice);
 
         let rust_labels = crate::io::load_labels(cursor)
@@ -101,7 +105,9 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
                 Error::Serialization(message) => {
                     // check if the buffer actually contains TensorMap and
                     // not Labels
-                    let slice = std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count);
+                    let slice = unsafe {
+                        std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
+                    };
                     let mut cursor = std::io::Cursor::new(slice);
 
                     if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
@@ -145,7 +151,7 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_save(
     path: *const c_char,
     labels: *const mts_labels_t,
@@ -153,11 +159,13 @@ pub unsafe extern "C" fn mts_labels_save(
     catch_unwind(move || {
         check_pointers_non_null!(path, labels);
 
-        let path = CStr::from_ptr(path).to_str().expect("use UTF-8 for path");
+        let path = unsafe {
+            CStr::from_ptr(path).to_str().expect("use UTF-8 for path")
+        };
         let mut file = BufWriter::new(File::create(path)?);
 
-        let labels_ref: &crate::Labels = &*labels;
-        crate::io::save_labels(&mut file, labels_ref)?;
+        let labels = unsafe { &*labels };
+        crate::io::save_labels(&mut file, labels)?;
 
         Ok(())
     })
@@ -189,7 +197,7 @@ pub unsafe extern "C" fn mts_labels_save(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
 ///          message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(clippy::cast_possible_truncation)]
 pub unsafe extern "C" fn mts_labels_save_buffer(
     buffer: *mut *mut u8,
@@ -207,23 +215,27 @@ pub unsafe extern "C" fn mts_labels_save_buffer(
             ));
         }
 
-        if (*buffer).is_null() {
-            assert_eq!(*buffer_count, 0);
+        if unsafe { (*buffer).is_null() && (*buffer_count) != 0 } {
+            return Err(Error::InvalidParameter(
+                "`buffer` is NULL but `buffer_count` is not 0 in mts_labels_save_buffer".into()
+            ));
         }
 
         let mut external_buffer = ExternalBuffer {
             data: buffer,
-            allocated: *buffer_count as u64,
+            allocated: unsafe { *buffer_count } as u64,
             writen: 0,
             realloc_user_data,
             realloc: realloc.expect("we checked"),
             current: 0,
         };
 
-        let labels_ref: &crate::Labels = &*labels;
-        crate::io::save_labels(&mut external_buffer, labels_ref)?;
+        let labels = unsafe { &*labels };
+        crate::io::save_labels(&mut external_buffer, labels)?;
 
-        *buffer_count = external_buffer.current as usize;
+        unsafe {
+            *buffer_count = external_buffer.current as usize;
+        }
 
         Ok(())
     })

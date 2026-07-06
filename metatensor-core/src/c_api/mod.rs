@@ -24,7 +24,7 @@ mod utils;
 /// status code, and the message is stored and accessible through
 /// `mts_last_error`. To print the error message and Rust backtrace anyway,
 /// users can set the `RUST_BACKTRACE` environment variable to 1.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn mts_disable_panic_printing() {
     let previous = std::panic::take_hook();
     std::panic::set_hook(Box::new(move |info| {
@@ -48,7 +48,7 @@ static VERSION: Lazy<CString> = Lazy::new(|| {
 /// Get the runtime version of the metatensor library as a string.
 ///
 /// This version follows the `<major>.<minor>.<patch>[-<dev>]` format.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn mts_version() -> *const c_char {
     return VERSION.as_ptr();
 }
