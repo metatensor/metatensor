@@ -128,12 +128,12 @@ impl std::fmt::Debug for Labels {
 }
 
 fn init_positions(values: &[LabelValue], size: usize) -> HashMap<LabelsEntry, usize, LabelsHasher> {
-    debug_assert!(values.len() % size == 0);
+    debug_assert!(values.len().is_multiple_of(size));
 
     let mut positions = HashMap::with_hasher(LabelsHasher::default());
 
     if size != 0 {
-        assert!(values.len() % size == 0);
+        assert!(values.len().is_multiple_of(size));
         for (i, entry) in values.chunks_exact(size).enumerate() {
             // entries should be unique!
             unsafe {
@@ -250,7 +250,7 @@ impl Labels {
             (0, 0)
         } else {
             let size = dimensions.len();
-            assert!(values.len() % size == 0, "values length must be a multiple of the number of dimensions");
+            assert!(values.len().is_multiple_of(size), "values length must be a multiple of the number of dimensions");
 
             if check_unique {
                 let is_sorted = check_unique_entries(&values, size)?;
@@ -387,7 +387,7 @@ impl Labels {
     /// Check whether entries in these Labels are sorted in lexicographic order,
     /// and cache the result.
     pub fn is_sorted(&self) -> bool {
-        *self.sorted.get_or_init(|| is_sorted::IsSorted::is_sorted(&mut self.values_cpu().chunks_exact(self.size())))
+        *self.sorted.get_or_init(|| self.values_cpu().chunks_exact(self.size()).is_sorted())
     }
 
     /// Get the backing `mts_array_t` for the label values.
@@ -722,7 +722,7 @@ impl CpuLabels<'_> {
     /// Iterate over the entries in these Labels
     pub fn iter(&self) -> Iter<'_> {
         let values = self.values_cpu();
-        debug_assert!(values.len() % self.dimensions.len().max(1) == 0);
+        debug_assert!(values.len().is_multiple_of(self.dimensions.len().max(1)));
         return Iter {
             ptr: values.as_ptr(),
             cur: 0,

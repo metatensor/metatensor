@@ -3,7 +3,7 @@ name = "metatensor-python"
 version = "0.0.0"
 edition = "2021"
 publish = false
-rust-version = "1.74"
+rust-version = "1.88"
 
 [lib]
 path = "lib.rs"

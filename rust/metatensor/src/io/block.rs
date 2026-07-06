@@ -84,7 +84,7 @@ pub fn save_block_buffer(block: TensorBlockRef, buffer: &mut Vec<u8>) -> Result<
         check_status(crate::c_api::mts_block_save_buffer(
             &mut buffer_ptr,
             &mut buffer_count,
-            (buffer as *mut Vec<u8>).cast(),
+            std::ptr::from_mut(buffer).cast(),
             Some(realloc_vec),
             block.as_ptr(),
         ))?;

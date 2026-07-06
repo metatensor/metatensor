@@ -121,7 +121,7 @@ pub fn save_buffer(tensor: &TensorMap, buffer: &mut Vec<u8>) -> Result<(), Error
         check_status(crate::c_api::mts_tensormap_save_buffer(
             &mut buffer_ptr,
             &mut buffer_count,
-            (buffer as *mut Vec<u8>).cast(),
+            std::ptr::from_mut(buffer).cast(),
             Some(realloc_vec),
             tensor.ptr,
         ))?;

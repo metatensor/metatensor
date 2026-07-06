@@ -511,7 +511,7 @@ def generate_rust():
                 "--blocklist-type",
                 "DL.*",
                 "--rust-target",
-                "1.74",
+                "1.88",
                 "--raw-line",
                 RUST_START,
                 "--",

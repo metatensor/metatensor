@@ -225,15 +225,16 @@ consider:
 
     cargo tree # to find where the offending
 
-For handling these issues it may be worthwhile to have a local copy of our MSRV, for 1.74, for instance:
+For handling these issues it may be worthwhile to have a local copy of our MSRV
+(currently 1.88):
 
 .. code-block:: bash
 
-    rustup toolchain install "1.74"
+    rustup toolchain install "1.88"
     # run tests / see breakage
-    cargo +1.74 test
+    cargo +1.88 test
     # nail down the dependency
-    cargo +1.74 tree
+    cargo +1.88 tree
 
 .. note::
 

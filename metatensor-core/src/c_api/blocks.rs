@@ -259,7 +259,7 @@ pub unsafe extern "C" fn mts_block_gradient(
                 "can not find gradients with respect to '{}' in this block", parameter
             ))
         })?;
-        (*gradient) = (gradient_rust as *mut TensorBlock).cast();
+        (*gradient) = std::ptr::from_mut(gradient_rust).cast();
 
         Ok(())
     })

@@ -160,7 +160,7 @@ impl<'a> ArrayRef<'a> {
         let function = self.array.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
 
         let mut tensor = std::ptr::null_mut();
-        let stream_c = stream.as_ref().map_or(std::ptr::null(), |s| s as *const i64);
+        let stream_c = stream.as_ref().map_or(std::ptr::null(), std::ptr::from_ref);
 
         unsafe {
             check_status(function(self.array.ptr, &mut tensor, device, stream_c, max_version))?;
@@ -425,7 +425,7 @@ impl<'a> ArrayRefMut<'a> {
         let function = self.array.as_dlpack.expect("mts_array_t.as_dlpack function is NULL");
 
         let mut tensor = std::ptr::null_mut();
-        let stream_c = stream.as_ref().map_or(std::ptr::null(), |s| s as *const i64);
+        let stream_c = stream.as_ref().map_or(std::ptr::null(), std::ptr::from_ref);
 
         unsafe {
             check_status(function(

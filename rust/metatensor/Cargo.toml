@@ -2,7 +2,7 @@
 name = "metatensor"
 version = "0.4.2"
 edition = "2021"
-rust-version = "1.74"
+rust-version = "1.88"
 
 description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"
 readme = "../../README.md"
@@ -15,14 +15,12 @@ bench = false
 
 [dependencies]
 metatensor-sys = {version = "0.2.2", path="../metatensor-sys"}
-dlpk = { version = "0.3.1", features = ["ndarray", "half", "sync"]}
-half = "<2.5"
+dlpk = { version = "0.4.0", features = ["ndarray", "half", "sync"]}
+half = "2.7"
 
 once_cell = "1"
 ndarray = {version = "0.17"}
 rayon = {version = "1", optional = true}
-# We need to pin this for compatibility with rustc 1.74
-rayon-core = {version = "=1.12", optional = true}
 
 
 [features]
@@ -31,10 +29,7 @@ default = []
 static = ["metatensor-sys/static"]
 
 [dev-dependencies]
-# pin for compatibility with rustc 1.74
-tempfile = "=3.24.0"
-half = "<2.5"
-dlpk = { version = "0.3.1", features = ["ndarray", "half", "sync"]}
+tempfile = "3"
 regex = "1"
 json = "0.12"
 

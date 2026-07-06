@@ -51,7 +51,7 @@ pub fn save_labels_buffer(labels: &Labels, buffer: &mut Vec<u8>) -> Result<(), E
         check_status(crate::c_api::mts_labels_save_buffer(
             &mut buffer_ptr,
             &mut buffer_count,
-            (buffer as *mut Vec<u8>).cast(),
+            std::ptr::from_mut(buffer).cast(),
             Some(realloc_vec),
             labels.as_mts_labels_t(),
         ))?;
