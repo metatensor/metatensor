@@ -2,7 +2,7 @@
 name = "metatensor-sys"
 # This should be kept in sync with metatensor-core version number
 version = "0.2.2"
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 
 description = "Bindings to the metatensor C library"

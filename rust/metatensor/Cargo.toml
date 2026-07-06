@@ -1,7 +1,7 @@
 [package]
 name = "metatensor"
 version = "0.4.2"
-edition = "2021"
+edition = "2024"
 rust-version = "1.88"
 
 description = "Self-describing sparse tensor data format for atomistic machine learning and beyond"

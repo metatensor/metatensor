@@ -16,7 +16,7 @@ use super::utils::copy_str_to_c;
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_register_data_origin(
     name: *const c_char,
     origin: *mut mts_data_origin_t,
@@ -24,8 +24,10 @@ pub unsafe extern "C" fn mts_register_data_origin(
     catch_unwind(|| {
         check_pointers_non_null!(name, origin);
 
-        let name = CStr::from_ptr(name).to_str().unwrap();
-        *origin = crate::register_data_origin(name.into());
+        unsafe {
+            let name = CStr::from_ptr(name).to_str().unwrap();
+            *origin = crate::register_data_origin(name.into());
+        }
 
         Ok(())
     })
@@ -42,7 +44,7 @@ pub unsafe extern "C" fn mts_register_data_origin(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_get_data_origin(
     origin: mts_data_origin_t,
     buffer: *mut c_char,
@@ -52,6 +54,10 @@ pub unsafe extern "C" fn mts_get_data_origin(
         check_pointers_non_null!(buffer);
 
         let origin = crate::get_data_origin(origin);
-        return copy_str_to_c(&origin, buffer, buffer_size);
+        unsafe {
+            copy_str_to_c(&origin, buffer, buffer_size)?;
+        }
+
+        return Ok(());
     })
 }

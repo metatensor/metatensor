@@ -29,7 +29,9 @@ impl mts_labels_t {
     /// Take a raw pointer created by `into_raw` and extract the `Arc<Labels>`.
     /// The pointer is consumed by this function and no longer valid.
     pub unsafe fn from_raw(ptr: *const mts_labels_t) -> Arc<Labels> {
-        Arc::from_raw(ptr.cast())
+        unsafe {
+            Arc::from_raw(ptr.cast())
+        }
     }
 
     /// Clone the `Arc` from a raw pointer without consuming it.
@@ -37,8 +39,10 @@ impl mts_labels_t {
     /// Increments the strong reference count and returns a new `Arc<Labels>`.
     pub unsafe fn arc_clone(ptr: *const mts_labels_t) -> Arc<Labels> {
         let labels_ptr = ptr.cast::<Labels>();
-        Arc::increment_strong_count(labels_ptr);
-        return Arc::from_raw(labels_ptr);
+        unsafe {
+            Arc::increment_strong_count(labels_ptr);
+            return Arc::from_raw(labels_ptr);
+        }
     }
 }
 
@@ -68,7 +72,7 @@ impl std::ops::Deref for mts_labels_t {
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels(
     dimensions: *const *const c_char,
     dimensions_count: usize,
@@ -78,7 +82,9 @@ pub unsafe extern "C" fn mts_labels(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        let dimensions = create_labels_names_from_raw(dimensions, dimensions_count)?;
+        let dimensions = unsafe {
+            create_labels_names_from_raw(dimensions, dimensions_count)?
+        };
         let labels = Labels::new(&dimensions, array)?;
 
         let _ = &unwind_wrapper;
@@ -113,7 +119,7 @@ pub unsafe extern "C" fn mts_labels(
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_assume_unique(
     names: *const *const c_char,
     names_count: usize,
@@ -123,8 +129,12 @@ pub unsafe extern "C" fn mts_labels_assume_unique(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = catch_unwind(move || {
-        let names = create_labels_names_from_raw(names, names_count)?;
-        let labels = Labels::new_unchecked_uniqueness(&names, array)?;
+        let names = unsafe {
+            create_labels_names_from_raw(names, names_count)?
+        };
+        let labels = unsafe {
+            Labels::new_unchecked_uniqueness(&names, array)?
+        };
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(labels));
@@ -151,7 +161,7 @@ pub unsafe extern "C" fn mts_labels_assume_unique(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_dimensions(
     labels: *const mts_labels_t,
     names: *mut *const *const c_char,
@@ -159,13 +169,15 @@ pub unsafe extern "C" fn mts_labels_dimensions(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(labels, names, count);
-        let labels = &*labels;
+        unsafe {
+            let labels = &*labels;
 
-        *count = labels.size();
-        if labels.size() == 0 {
-            *names = std::ptr::null();
-        } else {
-            *names = labels.c_dimensions().as_ptr().cast();
+            *count = labels.size();
+            if labels.size() == 0 {
+                *names = std::ptr::null();
+            } else {
+                *names = labels.c_dimensions().as_ptr().cast();
+            }
         }
 
         Ok(())
@@ -184,17 +196,19 @@ pub unsafe extern "C" fn mts_labels_dimensions(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_values(
     labels: *const mts_labels_t,
     array: *mut mts_array_t,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(labels, array);
-        let labels = &*labels;
+        unsafe {
+            let labels = &*labels;
 
-        let values_array = labels.values();
-        *array = values_array.raw_copy();
+            let values_array = labels.values();
+            *array = values_array.raw_copy();
+        }
 
         Ok(())
     })
@@ -214,7 +228,7 @@ pub unsafe extern "C" fn mts_labels_values(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_values_cpu(
     labels: *const mts_labels_t,
     values: *mut *const i32,
@@ -223,12 +237,14 @@ pub unsafe extern "C" fn mts_labels_values_cpu(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(labels, values, count, size);
-        let labels = &*labels;
+        unsafe {
+            let labels = &*labels;
 
-        let values_cpu = labels.values_cpu();
-        *values = values_cpu.as_ptr();
-        *count = labels.count();
-        *size = labels.size();
+            let values_cpu = labels.values_cpu();
+            *values = values_cpu.as_ptr();
+            *count = labels.count();
+            *size = labels.size();
+        }
 
         Ok(())
     })
@@ -247,7 +263,7 @@ pub unsafe extern "C" fn mts_labels_values_cpu(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 #[allow(clippy::cast_possible_wrap)]
 pub unsafe extern "C" fn mts_labels_position(
     labels: *const mts_labels_t,
@@ -258,7 +274,7 @@ pub unsafe extern "C" fn mts_labels_position(
     catch_unwind(|| {
         check_pointers_non_null!(labels, values, result);
 
-        let labels = &*labels;
+        let labels = unsafe { &*labels };
         if values_count != labels.size() {
             return Err(Error::InvalidParameter(format!(
                 "expected label of size {} in mts_labels_position, got size {}",
@@ -267,8 +283,14 @@ pub unsafe extern "C" fn mts_labels_position(
         }
 
         assert!(values_count != 0);
-        let label = std::slice::from_raw_parts(values.cast(), values_count);
-        *result = labels.position(label).map_or(-1, |p| p as i64);
+        let entry = unsafe {
+            std::slice::from_raw_parts(values.cast(), values_count)
+        };
+        let position = labels.position(entry).map_or(-1, |p| p as i64);
+
+        unsafe {
+            *result = position;
+        }
 
         Ok(())
     })
@@ -293,7 +315,7 @@ unsafe fn create_labels_names_from_raw(
 
     let mut names = Vec::with_capacity(names_count);
     for i in 0..names_count {
-        let name = CStr::from_ptr(*(names_ptr.add(i)));
+        let name = unsafe { CStr::from_ptr(*(names_ptr.add(i))) };
         let name = name.to_str().expect("invalid UTF-8 in label name");
         if !crate::labels::is_valid_label_dimension(name) {
             return Err(Error::InvalidParameter(format!(
@@ -320,7 +342,7 @@ unsafe fn create_labels_names_from_raw(
 /// @returns A pointer to the newly allocated (cloned) labels, or a `NULL`
 ///          pointer in case of error. In case of error, you can use
 ///          `mts_last_error()` to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_clone(
     labels: *const mts_labels_t,
 ) -> *const mts_labels_t {
@@ -330,7 +352,7 @@ pub unsafe extern "C" fn mts_labels_clone(
     let status = catch_unwind(move || {
         check_pointers_non_null!(labels);
 
-        let arc = mts_labels_t::arc_clone(labels);
+        let arc = unsafe { mts_labels_t::arc_clone(labels) };
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(arc);
@@ -354,8 +376,11 @@ unsafe fn labels_set_common<'a>(
     second_mapping: *mut i64,
     second_mapping_count: usize,
 ) -> Result<(&'a mut [i64], &'a mut [i64]), Error> {
-    let first_count = (*first).count();
-    let second_count = (*second).count();
+    debug_assert!(!first.is_null());
+    debug_assert!(!second.is_null());
+
+    let first_count = unsafe { (*first).count() };
+    let second_count = unsafe { (*second).count() };
 
     let first_mapping = if first_mapping.is_null() {
         &mut []
@@ -368,7 +393,9 @@ unsafe fn labels_set_common<'a>(
                 first_count,
             )));
         }
-        std::slice::from_raw_parts_mut(first_mapping, first_mapping_count)
+        unsafe {
+            std::slice::from_raw_parts_mut(first_mapping, first_mapping_count)
+        }
     };
 
     let second_mapping = if second_mapping.is_null() {
@@ -382,7 +409,9 @@ unsafe fn labels_set_common<'a>(
                 second_count,
             )));
         }
-        std::slice::from_raw_parts_mut(second_mapping, second_mapping_count)
+        unsafe {
+            std::slice::from_raw_parts_mut(second_mapping, second_mapping_count)
+        }
     };
 
     return Ok((first_mapping, second_mapping));
@@ -413,7 +442,7 @@ unsafe fn labels_set_common<'a>(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_union(
     first: *const mts_labels_t,
     second: *const mts_labels_t,
@@ -427,17 +456,19 @@ pub unsafe extern "C" fn mts_labels_union(
     catch_unwind(|| {
         check_pointers_non_null!(first, second);
 
-        let (first_mapping, second_mapping) = labels_set_common(
-            first,
-            second,
-            first_mapping,
-            first_mapping_count,
-            second_mapping,
-            second_mapping_count
-        )?;
+        let (first_mapping, second_mapping) = unsafe {
+            labels_set_common(
+                first,
+                second,
+                first_mapping,
+                first_mapping_count,
+                second_mapping,
+                second_mapping_count
+            )?
+        };
 
-        let first_labels: &Labels = &*first;
-        let second_labels: &Labels = &*second;
+        let first_labels: &Labels = unsafe { &*first };
+        let second_labels: &Labels = unsafe { &*second };
 
         let result_rust = first_labels.union(
             second_labels,
@@ -446,7 +477,10 @@ pub unsafe extern "C" fn mts_labels_union(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+
+        unsafe {
+            *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+        }
 
         Ok(())
     })
@@ -479,7 +513,7 @@ pub unsafe extern "C" fn mts_labels_union(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_intersection(
     first: *const mts_labels_t,
     second: *const mts_labels_t,
@@ -493,17 +527,19 @@ pub unsafe extern "C" fn mts_labels_intersection(
     catch_unwind(|| {
         check_pointers_non_null!(first, second);
 
-        let (first_mapping, second_mapping) = labels_set_common(
-            first,
-            second,
-            first_mapping,
-            first_mapping_count,
-            second_mapping,
-            second_mapping_count
-        )?;
+        let (first_mapping, second_mapping) = unsafe {
+            labels_set_common(
+                first,
+                second,
+                first_mapping,
+                first_mapping_count,
+                second_mapping,
+                second_mapping_count
+            )?
+        };
 
-        let first_labels: &Labels = &*first;
-        let second_labels: &Labels = &*second;
+        let first_labels: &Labels = unsafe { &*first };
+        let second_labels: &Labels = unsafe { &*second };
 
         let result_rust = first_labels.intersection(
             second_labels,
@@ -512,7 +548,9 @@ pub unsafe extern "C" fn mts_labels_intersection(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+        unsafe {
+            *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+        }
 
         Ok(())
     })
@@ -539,7 +577,7 @@ pub unsafe extern "C" fn mts_labels_intersection(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_difference(
     first: *const mts_labels_t,
     second: *const mts_labels_t,
@@ -551,17 +589,19 @@ pub unsafe extern "C" fn mts_labels_difference(
     catch_unwind(|| {
         check_pointers_non_null!(first, second);
 
-        let (first_mapping, _) = labels_set_common(
-            first,
-            second,
-            first_mapping,
-            first_mapping_count,
-            std::ptr::null_mut(),
-            0
-        )?;
+        let (first_mapping, _) = unsafe {
+            labels_set_common(
+                first,
+                second,
+                first_mapping,
+                first_mapping_count,
+                std::ptr::null_mut(),
+                0
+            )?
+        };
 
-        let first_labels: &Labels = &*first;
-        let second_labels: &Labels = &*second;
+        let first_labels: &Labels = unsafe { &*first };
+        let second_labels: &Labels = unsafe { &*second };
 
         let result_rust = first_labels.difference(
             second_labels,
@@ -569,7 +609,9 @@ pub unsafe extern "C" fn mts_labels_difference(
         )?;
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+        unsafe {
+            *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(result_rust));
+        }
 
         Ok(())
     })
@@ -595,7 +637,7 @@ pub unsafe extern "C" fn mts_labels_difference(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_select(
     labels: *const mts_labels_t,
     selection: *const mts_labels_t,
@@ -605,21 +647,29 @@ pub unsafe extern "C" fn mts_labels_select(
     catch_unwind(|| {
         check_pointers_non_null!(labels, selection, selected, selected_count);
 
-        let labels_ref: &Labels = &*labels;
-        let selection_ref: &Labels = &*selection;
+        let labels_ref: &Labels = unsafe { &*labels };
+        let selection_ref: &Labels = unsafe { &*selection };
 
-        if *selected_count != labels_ref.count() {
+        let initial_count = unsafe { *selected_count };
+
+        if initial_count != labels_ref.count() {
             return Err(Error::InvalidParameter(format!(
                 "`selected_count` ({}) must match the number of elements \
                 in `labels` ({}) but doesn't",
-                *selected_count,
+                initial_count,
                 labels_ref.count(),
             )));
         }
 
-        let selected = std::slice::from_raw_parts_mut(selected, *selected_count);
+        let selected = unsafe {
+            std::slice::from_raw_parts_mut(selected, initial_count)
+        };
 
-        *selected_count = labels_ref.select(selection_ref, selected)?;
+        let selected = labels_ref.select(selection_ref, selected)?;
+
+        unsafe {
+            *selected_count = selected;
+        }
 
         Ok(())
     })
@@ -632,13 +682,15 @@ pub unsafe extern "C" fn mts_labels_select(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_labels_free(
     labels: *const mts_labels_t,
 ) -> mts_status_t {
     catch_unwind(|| {
         if !labels.is_null() {
-            std::mem::drop(mts_labels_t::from_raw(labels));
+            unsafe {
+                std::mem::drop(mts_labels_t::from_raw(labels));
+            }
         }
 
         Ok(())

@@ -47,7 +47,7 @@ impl mts_block_t {
     /// extract the TensorMap. The pointer is consumed by this function and no
     /// longer valid.
     pub unsafe fn from_boxed_raw(block: *mut mts_block_t) -> TensorBlock {
-        return Box::from_raw(block).0;
+        return unsafe { Box::from_raw(block).0 };
     }
 }
 
@@ -72,7 +72,7 @@ impl mts_block_t {
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block(
     data: mts_array_t,
     samples: *const mts_labels_t,
@@ -85,19 +85,19 @@ pub unsafe extern "C" fn mts_block(
     let status = catch_unwind(move || {
         check_pointers_non_null!(samples, properties);
 
-        let samples = mts_labels_t::arc_clone(samples);
+        let samples = unsafe { mts_labels_t::arc_clone(samples) };
 
         let mut rust_components = Vec::new();
         if components_count != 0 {
             check_pointers_non_null!(components);
             for i in 0..components_count {
-                let component = *components.add(i);
+                let component = unsafe { *components.add(i) };
                 check_pointers_non_null!(component);
-                rust_components.push(mts_labels_t::arc_clone(component));
+                rust_components.push(unsafe { mts_labels_t::arc_clone(component) });
             }
         }
 
-        let properties = mts_labels_t::arc_clone(properties);
+        let properties = unsafe { mts_labels_t::arc_clone(properties) };
 
         let block = TensorBlock::new(data, samples, rust_components, properties)?;
 
@@ -126,13 +126,15 @@ pub unsafe extern "C" fn mts_block(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_free(
     block: *mut mts_block_t,
 ) -> mts_status_t {
     catch_unwind(|| {
         if !block.is_null() {
-            std::mem::drop(mts_block_t::from_boxed_raw(block));
+            unsafe {
+                std::mem::drop(mts_block_t::from_boxed_raw(block));
+            }
         }
 
         Ok(())
@@ -149,7 +151,7 @@ pub unsafe extern "C" fn mts_block_free(
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_copy(
     block: *const mts_block_t,
 ) -> *mut mts_block_t {
@@ -157,7 +159,9 @@ pub unsafe extern "C" fn mts_block_copy(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         check_pointers_non_null!(block);
-        let new_block = (*block).try_clone()?;
+
+        let block = unsafe { &(*block) };
+        let new_block = block.try_clone()?;
         let boxed = Box::new(mts_block_t(new_block));
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -186,7 +190,7 @@ pub unsafe extern "C" fn mts_block_copy(
 /// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_labels(
     block: *const mts_block_t,
     axis: usize,
@@ -197,7 +201,7 @@ pub unsafe extern "C" fn mts_block_labels(
     let status = catch_unwind(move || {
         check_pointers_non_null!(block);
 
-        let block = &(*block);
+        let block = unsafe { &(*block) };
         let n_components = block.components.len();
 
         let rust_labels = if axis == 0 {
@@ -244,7 +248,7 @@ pub unsafe extern "C" fn mts_block_labels(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full error
 ///          message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_gradient(
     block: *mut mts_block_t,
     parameter: *const c_char,
@@ -252,14 +256,16 @@ pub unsafe extern "C" fn mts_block_gradient(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, parameter);
-        let parameter = CStr::from_ptr(parameter).to_str().unwrap();
+        unsafe {
+            let parameter = CStr::from_ptr(parameter).to_str().unwrap();
 
-        let gradient_rust = (*block).gradient_mut(parameter).ok_or_else(|| {
-            Error::InvalidParameter(format!(
-                "can not find gradients with respect to '{}' in this block", parameter
-            ))
-        })?;
-        (*gradient) = std::ptr::from_mut(gradient_rust).cast();
+            let gradient_rust = (*block).gradient_mut(parameter).ok_or_else(|| {
+                Error::InvalidParameter(format!(
+                    "can not find gradients with respect to '{}' in this block", parameter
+                ))
+            })?;
+            (*gradient) = std::ptr::from_mut(gradient_rust).cast();
+        }
 
         Ok(())
     })
@@ -275,14 +281,16 @@ pub unsafe extern "C" fn mts_block_gradient(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_data(
     block: *mut mts_block_t,
     data: *mut mts_array_t,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, data);
-        *data = (&(*block)).values.raw_copy();
+        unsafe {
+            *data = (&(*block)).values.raw_copy();
+        }
         Ok(())
     })
 }
@@ -310,7 +318,7 @@ pub unsafe extern "C" fn mts_block_data(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_add_gradient(
     block: *mut mts_block_t,
     parameter: *const c_char,
@@ -319,12 +327,13 @@ pub unsafe extern "C" fn mts_block_add_gradient(
     catch_unwind(|| {
         check_pointers_non_null!(block, parameter);
         // TODO: add a check that the block is not already part of a tensor map?
-        let parameter = CStr::from_ptr(parameter).to_str().unwrap();
 
-        // move the gradient out of the pointer
-        let gradient = Box::from_raw(gradient).into_block();
-
-        (*block).add_gradient(parameter, gradient)?;
+        unsafe {
+            let parameter = CStr::from_ptr(parameter).to_str().unwrap();
+            // move the gradient out of the pointer
+            let gradient = Box::from_raw(gradient).into_block();
+            (*block).add_gradient(parameter, gradient)?;
+        }
         Ok(())
     })
 }
@@ -340,7 +349,7 @@ pub unsafe extern "C" fn mts_block_add_gradient(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_gradients_list(
     block: *const mts_block_t,
     parameters: *mut *const *const c_char,
@@ -349,14 +358,16 @@ pub unsafe extern "C" fn mts_block_gradients_list(
     catch_unwind(|| {
         check_pointers_non_null!(block, parameters, parameters_count);
 
-        let list = (*block).gradient_parameters_c();
-        (*parameters_count) = list.len();
+        unsafe {
+            let list = (*block).gradient_parameters_c();
+            (*parameters_count) = list.len();
 
-        (*parameters) = if list.is_empty() {
-            std::ptr::null()
-        } else {
-            list.as_ptr().cast()
-        };
+            (*parameters) = if list.is_empty() {
+                std::ptr::null()
+            } else {
+                list.as_ptr().cast()
+            };
+        }
         Ok(())
     })
 }
@@ -370,15 +381,17 @@ pub unsafe extern "C" fn mts_block_gradients_list(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_device(
     block: *const mts_block_t,
     device: *mut DLDevice,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, device);
-        let block = &(*block);
-        *device = block.values.device()?;
+        unsafe {
+            let block = &(*block);
+            *device = block.values.device()?;
+        }
         Ok(())
     })
 }
@@ -392,15 +405,17 @@ pub unsafe extern "C" fn mts_block_device(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_block_dtype(
     block: *const mts_block_t,
     dtype: *mut DLDataType,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(block, dtype);
-        let block = &(*block);
-        *dtype = block.values.dtype()?;
+        unsafe {
+            let block = &(*block);
+            *dtype = block.values.dtype()?;
+        }
         Ok(())
     })
 }

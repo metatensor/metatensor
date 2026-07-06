@@ -3,13 +3,14 @@ use std::sync::Arc;
 use std::hash::BuildHasherDefault;
 use std::ffi::CStr;
 use std::ffi::CString;
-use crate::utils::ConstCString;
+
 use hashbrown::HashSet;
 
 type FastHasher = BuildHasherDefault<ahash::AHasher>;
 
 use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
 
+use crate::utils::ConstCString;
 use crate::data::mts_array_t;
 use crate::{TensorMap, Error};
 
@@ -32,7 +33,7 @@ impl mts_tensormap_t {
     /// extract the TensorMap. The pointer is consumed by this function and no
     /// longer valid.
     pub unsafe fn from_boxed_raw(tensor: *mut mts_tensormap_t) -> TensorMap {
-        return Box::from_raw(tensor).0;
+        unsafe { Box::from_raw(tensor).0 }
     }
 }
 
@@ -69,7 +70,7 @@ impl std::ops::DerefMut for mts_tensormap_t {
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap(
     keys: *const mts_labels_t,
     blocks: *mut *mut mts_block_t,
@@ -85,7 +86,9 @@ pub unsafe extern "C" fn mts_tensormap(
         if blocks_count != 0 {
             check_pointers_non_null!(blocks);
 
-            let blocks_slice = std::slice::from_raw_parts_mut(blocks, blocks_count);
+            let blocks_slice = unsafe {
+                std::slice::from_raw_parts_mut(blocks, blocks_count)
+            };
             // check for uniqueness of the pointers: we don't want to move out
             // the same value twice
             if blocks_count > 1 {
@@ -104,13 +107,13 @@ pub unsafe extern "C" fn mts_tensormap(
 
             for block_ptr in blocks_slice {
                 // move out of the blocks pointers
-                let block = Box::from_raw(*block_ptr).into_block();
+                let block = unsafe { mts_block_t::from_boxed_raw(*block_ptr) };
                 *block_ptr = std::ptr::null_mut();
                 blocks_vec.push(block);
             }
         }
 
-        let keys = mts_labels_t::arc_clone(keys);
+        let keys = unsafe { mts_labels_t::arc_clone(keys) };
         let tensor = TensorMap::new(keys, blocks_vec)?;
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -138,11 +141,13 @@ pub unsafe extern "C" fn mts_tensormap(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts_status_t {
     catch_unwind(|| {
         if !tensor.is_null() {
-            std::mem::drop(mts_tensormap_t::from_boxed_raw(tensor));
+            unsafe {
+                std::mem::drop(mts_tensormap_t::from_boxed_raw(tensor));
+            }
         }
 
         Ok(())
@@ -159,7 +164,7 @@ pub unsafe extern "C" fn mts_tensormap_free(tensor: *mut mts_tensormap_t) -> mts
 /// @returns A pointer to the newly allocated tensor, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_copy(
     tensor: *const mts_tensormap_t,
 ) -> *mut mts_tensormap_t {
@@ -167,13 +172,12 @@ pub unsafe extern "C" fn mts_tensormap_copy(
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor);
-        let new_tensor = (*tensor).try_clone()?;
-        let boxed = Box::new(mts_tensormap_t(new_tensor));
+        let new_tensor = unsafe { (*tensor).try_clone()? };
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
         let _ = &unwind_wrapper;
-        *(unwind_wrapper.0) = Box::into_raw(boxed);
+        *(unwind_wrapper.0) = mts_tensormap_t::into_boxed_raw(new_tensor);
         Ok(())
     });
 
@@ -195,7 +199,7 @@ pub unsafe extern "C" fn mts_tensormap_copy(
 /// @returns A pointer to the newly allocated labels containing the keys, or a
 ///          `NULL` pointer in case of error. In case of error, you can use
 ///          `mts_last_error()` to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_keys(
     tensor: *const mts_tensormap_t,
 ) -> *const mts_labels_t {
@@ -204,9 +208,10 @@ pub unsafe extern "C" fn mts_tensormap_keys(
 
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor);
+        let tensor = unsafe { &*tensor };
 
         let _ = &unwind_wrapper;
-        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::clone((*tensor).keys()));
+        *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::clone(tensor.keys()));
         Ok(())
     });
 
@@ -232,7 +237,7 @@ pub unsafe extern "C" fn mts_tensormap_keys(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_block_by_id(
     tensor: *mut mts_tensormap_t,
     block: *mut *mut mts_block_t,
@@ -241,10 +246,10 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
     catch_unwind(|| {
         check_pointers_non_null!(tensor, block);
 
-        let blocks = (*tensor).blocks_mut();
+        let blocks = unsafe { (*tensor).blocks_mut() };
         match blocks.get_mut(index) {
-            Some(b) => {
-                (*block) = std::ptr::from_mut(b).cast();
+            Some(b) => unsafe {
+                *block = std::ptr::from_mut(b).cast();
             }
             None => {
                 return Err(Error::InvalidParameter(format!(
@@ -300,7 +305,7 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     tensor: *const mts_tensormap_t,
     keys_to_move: *const mts_labels_t,
@@ -313,9 +318,12 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
+        let keys_to_move = unsafe {
+            mts_labels_t::arc_clone(keys_to_move)
+        };
 
-        let moved = (*tensor).keys_to_properties(&keys_to_move, &fill_value, sort_samples)?;
+        let tensor = unsafe { &*tensor };
+        let moved = tensor.keys_to_properties(&keys_to_move, &fill_value, sort_samples)?;
 
         std::mem::drop(fill_value);
 
@@ -345,7 +353,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_properties(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_components_to_properties(
     tensor: *const mts_tensormap_t,
     dimensions: *const *const c_char,
@@ -357,15 +365,22 @@ pub unsafe extern "C" fn mts_tensormap_components_to_properties(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor, dimensions);
 
+        let dimensions = unsafe {
+            std::slice::from_raw_parts(dimensions, dimensions_count)
+        };
+
         assert!(dimensions_count != 0);
         let mut rust_dimensions = Vec::new();
-        for &dimension in std::slice::from_raw_parts(dimensions, dimensions_count) {
+        for &dimension in dimensions {
             check_pointers_non_null!(dimension);
-            let dimension = CStr::from_ptr(dimension).to_str().expect("invalid utf8");
+            let dimension = unsafe {
+                CStr::from_ptr(dimension).to_str().expect("invalid utf8")
+            };
             rust_dimensions.push(dimension);
         }
 
-        let moved = (*tensor).components_to_properties(&rust_dimensions)?;
+        let tensor = unsafe { &*tensor };
+        let moved = tensor.components_to_properties(&rust_dimensions)?;
 
         // force the closure to capture the full unwind_wrapper, not just
         // unwind_wrapper.0
@@ -411,7 +426,7 @@ pub unsafe extern "C" fn mts_tensormap_components_to_properties(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     tensor: *const mts_tensormap_t,
     keys_to_move: *const mts_labels_t,
@@ -424,9 +439,12 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
     let status = catch_unwind(move || {
         check_pointers_non_null!(tensor, keys_to_move);
 
-        let keys_to_move = mts_labels_t::arc_clone(keys_to_move);
+        let keys_to_move = unsafe {
+            mts_labels_t::arc_clone(keys_to_move)
+        };
 
-        let moved = (*tensor).keys_to_samples(&keys_to_move, &fill_value, sort_samples)?;
+        let tensor = unsafe { &*tensor };
+        let moved = tensor.keys_to_samples(&keys_to_move, &fill_value, sort_samples)?;
 
         std::mem::drop(fill_value);
 
@@ -452,7 +470,7 @@ pub unsafe extern "C" fn mts_tensormap_keys_to_samples(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_set_info(
     tensor: *mut mts_tensormap_t,
     key: *const c_char,
@@ -460,14 +478,16 @@ pub unsafe extern "C" fn mts_tensormap_set_info(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(tensor, key, value);
+        unsafe {
+            let key = CStr::from_ptr(key).to_str()
+                .map_err(|e| Error::InvalidParameter(format!("Invalid UTF-8 in key: {}", e)))?;
 
-        let key = CStr::from_ptr(key).to_str()
-            .map_err(|e| Error::InvalidParameter(format!("Invalid UTF-8 in key: {}", e)))?;
+            let value = CString::new(CStr::from_ptr(value).to_bytes())
+                .map_err(|e| Error::InvalidParameter(format!("Invalid C string in value: {}", e)))?;
 
-        let value = CString::new(CStr::from_ptr(value).to_bytes())
-            .map_err(|e| Error::InvalidParameter(format!("Invalid C string in value: {}", e)))?;
+            (*tensor).add_info(key, ConstCString::new(value));
+        }
 
-        (*tensor).add_info(key, ConstCString::new(value));
         Ok(())
     })
 }
@@ -483,7 +503,7 @@ pub unsafe extern "C" fn mts_tensormap_set_info(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_get_info(
     tensor: *const mts_tensormap_t,
     key: *const c_char,
@@ -491,14 +511,15 @@ pub unsafe extern "C" fn mts_tensormap_get_info(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(tensor, key, value);
+        unsafe {
+            let key_str = CStr::from_ptr(key).to_str()
+                .map_err(|e| Error::InvalidParameter(format!("Invalid UTF-8 in key: {}", e)))?;
 
-        let key_str = CStr::from_ptr(key).to_str()
-            .map_err(|e| Error::InvalidParameter(format!("Invalid UTF-8 in key: {}", e)))?;
-
-        if let Some(val) = (*tensor).get_info(key_str) {
-            *value = val.as_c_str().as_ptr();
-        } else {
-            *value = std::ptr::null();
+            if let Some(val) = (*tensor).get_info(key_str) {
+                *value = val.as_c_str().as_ptr();
+            } else {
+                *value = std::ptr::null();
+            }
         }
 
         Ok(())
@@ -514,7 +535,7 @@ pub unsafe extern "C" fn mts_tensormap_get_info(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_info_keys(
     tensor: *const mts_tensormap_t,
     keys: *mut *const *const c_char,
@@ -522,15 +543,17 @@ pub unsafe extern "C" fn mts_tensormap_info_keys(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(tensor, keys, keys_count);
+        unsafe {
+            let list = (*tensor).info_keys_c();
+            (*keys_count) = list.len();
 
-        let list = (*tensor).info_keys_c();
-        (*keys_count) = list.len();
+            (*keys) = if list.is_empty() {
+                std::ptr::null()
+            } else {
+                list.as_ptr().cast()
+            };
+        }
 
-        (*keys) = if list.is_empty() {
-            std::ptr::null()
-        } else {
-            list.as_ptr().cast()
-        };
         Ok(())
     })
 }
@@ -546,19 +569,24 @@ pub unsafe extern "C" fn mts_tensormap_info_keys(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_device(
     tensor: *const mts_tensormap_t,
     device: *mut DLDevice,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(tensor, device);
-        let tensor = &(*tensor);
+        let tensor = unsafe { &(*tensor) };
         let blocks = tensor.blocks();
-        if blocks.is_empty() {
-            *device = DLDevice::cpu();
+
+        let values_device = if blocks.is_empty() {
+            DLDevice::cpu()
         } else {
-            *device = blocks[0].values.device()?;
+            blocks[0].values.device()?
+        };
+
+        unsafe {
+            *device = values_device;
         }
         Ok(())
     })
@@ -575,19 +603,24 @@ pub unsafe extern "C" fn mts_tensormap_device(
 /// @returns The status code of this operation. If the status is not
 ///          `MTS_SUCCESS`, you can use `mts_last_error()` to get the full
 ///          error message.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_tensormap_dtype(
     tensor: *const mts_tensormap_t,
     dtype: *mut DLDataType,
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(tensor, dtype);
-        let tensor = &(*tensor);
+        let tensor = unsafe { &(*tensor) };
         let blocks = tensor.blocks();
-        if blocks.is_empty() {
-            *dtype = DLDataType { code: DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+
+        let values_dtype = if blocks.is_empty() {
+            DLDataType { code: DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 }
         } else {
-            *dtype = blocks[0].values.dtype()?;
+            blocks[0].values.dtype()?
+        };
+
+        unsafe {
+            *dtype = values_dtype;
         }
         Ok(())
     })

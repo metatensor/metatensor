@@ -766,42 +766,55 @@ mod tests {
         }
 
         unsafe extern "C" fn origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArray".into());
+            unsafe {
+                *origin = register_data_origin("rust.TestArray".into());
+            }
 
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn other_origin(_: *const c_void, origin: *mut mts_data_origin_t) -> mts_status_t {
-            *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
-
+            unsafe {
+                *origin = register_data_origin("rust.TestArrayOtherOrigin".into());
+            }
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn device_cpu(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
-            *device = DLDevice::cpu();
+            unsafe {
+                *device = DLDevice::cpu();
+            }
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn device_ext(_: *const c_void, device: *mut DLDevice) -> mts_status_t {
-            *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLExtDev, device_id: 0 };
+            unsafe {
+                *device = DLDevice { device_type: dlpk::sys::DLDeviceType::kDLExtDev, device_id: 0 };
+            }
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn dtype_f64(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
-            *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+            unsafe {
+                *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 64, lanes: 1 };
+            }
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn dtype_f32(_: *const c_void, dtype: *mut DLDataType) -> mts_status_t {
-            *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 32, lanes: 1 };
+            unsafe {
+                *dtype = DLDataType { code: dlpk::sys::DLDataTypeCode::kDLFloat, bits: 32, lanes: 1 };
+            }
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn shape(ptr: *const c_void, shape: *mut *const usize, shape_count: *mut usize) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
 
-            *shape = (*ptr).shape.as_ptr();
-            *shape_count = (*ptr).shape.len();
+            unsafe {
+                *shape = (*ptr).shape.as_ptr();
+                *shape_count = (*ptr).shape.len();
+            }
 
             return mts_status_t::MTS_SUCCESS;
         }
@@ -809,11 +822,13 @@ mod tests {
         unsafe extern "C" fn reshape(ptr: *mut c_void, shape_ptr: *const usize, shape_count: usize) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
 
-            let shape = &mut (*ptr).shape;
-            shape.clear();
+            unsafe {
+                let shape = &mut (*ptr).shape;
+                shape.clear();
 
-            for i in 0..shape_count {
-                shape.push(shape_ptr.add(i).read());
+                for i in 0..shape_count {
+                    shape.push(shape_ptr.add(i).read());
+                }
             }
 
             return mts_status_t::MTS_SUCCESS;
@@ -822,16 +837,19 @@ mod tests {
         unsafe extern "C" fn swap_axes(ptr: *mut c_void, axis_1: usize, axis_2: usize) -> mts_status_t {
             let ptr = ptr.cast::<TestArray>();
 
-            let shape = &mut (*ptr).shape;
-            shape.swap(axis_1, axis_2);
+            unsafe {
+                let shape = &mut (*ptr).shape;
+                shape.swap(axis_1, axis_2);
+            }
 
             return mts_status_t::MTS_SUCCESS;
         }
 
         unsafe extern "C" fn destroy(ptr: *mut c_void) {
             let ptr = ptr.cast::<TestArray>();
-            let boxed = Box::from_raw(ptr);
-            std::mem::drop(boxed);
+            unsafe {
+                std::mem::drop(Box::from_raw(ptr));
+            }
         }
     }
 

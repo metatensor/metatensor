@@ -176,7 +176,7 @@ macro_rules! check_pointers_non_null {
 /// @param data if not NULL, this will be set to the custom data of the last error
 ///
 /// @returns The status code of this operation.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_last_error(
     message: *mut *const c_char,
     origin: *mut *const c_char,
@@ -185,14 +185,16 @@ pub unsafe extern "C" fn mts_last_error(
     let status = std::panic::catch_unwind(|| {
         LAST_ERROR.with(|last_error| {
             let last_error = last_error.borrow();
-            if !message.is_null() {
-                *message = last_error.message.as_ptr();
-            }
-            if !origin.is_null() {
-                *origin = last_error.origin.as_ptr();
-            }
-            if !data.is_null() {
-                *data = last_error.custom_data;
+            unsafe {
+                if !message.is_null() {
+                    *message = last_error.message.as_ptr();
+                }
+                if !origin.is_null() {
+                    *origin = last_error.origin.as_ptr();
+                }
+                if !data.is_null() {
+                    *data = last_error.custom_data;
+                }
             }
         });
     });
@@ -229,7 +231,7 @@ pub unsafe extern "C" fn mts_last_error(
 /// @param data_deleter deleter for the custom data, this function will be
 ///        called with `data` as argument when the last error is replaced by
 ///        another one.
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub unsafe extern "C" fn mts_set_last_error(
     message: *const c_char,
     origin: *const c_char,
@@ -240,13 +242,13 @@ pub unsafe extern "C" fn mts_set_last_error(
         let message = if message.is_null() {
             CString::new("<no message provided>").expect("invalid C string")
         } else {
-            CString::from(CStr::from_ptr(message))
+            CString::from(unsafe { CStr::from_ptr(message) })
         };
 
         let origin = if origin.is_null() {
             CString::new("<no origin provided>").expect("invalid C string")
         } else {
-            CString::from(CStr::from_ptr(origin))
+            CString::from(unsafe { CStr::from_ptr(origin) })
         };
 
         LAST_ERROR.with(|last_error| {

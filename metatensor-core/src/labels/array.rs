@@ -67,15 +67,13 @@ pub(super) fn load_values_from_array(array: &mts_array_t, size: usize) -> Result
     // Fast path for arrays we created ourselves: if the array's origin matches
     // the one we registered for labels values, we can skip the DLPack
     // round-trip and just return the existing data directly.
-    if let Some(&origin) = LABELS_ORIGIN.get() {
-        if array.origin()? == origin {
+    if let Some(&origin) = LABELS_ORIGIN.get() && array.origin()? == origin {
             let array = unsafe {
                 array.ptr.cast::<LabelsValuesArray>().as_ref().expect("pointer should not be NULL")
             };
 
             return Ok(Arc::clone(&array.values));
         }
-    }
 
     let shape = array.shape()?;
     let count = shape[0];
@@ -157,7 +155,9 @@ unsafe extern "C" fn labels_array_origin(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(array, origin);
-        *origin = *LABELS_ORIGIN.get_or_init(|| register_data_origin("metatensor.Labels".into()));
+        unsafe {
+            *origin = *LABELS_ORIGIN.get_or_init(|| register_data_origin("metatensor.Labels".into()));
+        }
         Ok(())
     })
 }
@@ -168,7 +168,9 @@ unsafe extern "C" fn labels_array_device(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(array, device);
-        *device = DLDevice::cpu();
+        unsafe {
+            *device = DLDevice::cpu();
+        }
         Ok(())
     })
 }
@@ -180,23 +182,23 @@ unsafe extern "C" fn labels_array_dtype(
     catch_unwind(|| {
         check_pointers_non_null!(array, dtype);
         // Labels values are always i32
-        *dtype = DLDataType {
-            code: DLDataTypeCode::kDLInt,
-            bits: 32,
-            lanes: 1,
-        };
+        unsafe {
+            *dtype = DLDataType{ code: DLDataTypeCode::kDLInt, bits: 32, lanes: 1 };
+        }
         Ok(())
     })
 }
 
 unsafe extern "C" fn labels_dlpack_deleter(tensor: *mut DLManagedTensorVersioned) {
     let _ = catch_unwind(|| {
-        if !tensor.is_null() {
-            let ctx = (*tensor).manager_ctx.cast::<LabelsValuesArray>();
-            if !ctx.is_null() {
-                let _ = Arc::from_raw(ctx);
+        unsafe {
+            if !tensor.is_null() {
+                let ctx = (*tensor).manager_ctx.cast::<LabelsValuesArray>();
+                if !ctx.is_null() {
+                    std::mem::drop(Arc::from_raw(ctx));
+                }
+                std::mem::drop(Box::from_raw(tensor));
             }
-            let _ = Box::from_raw(tensor);
         }
 
         Ok(())
@@ -241,8 +243,10 @@ unsafe extern "C" fn labels_array_as_dlpack(
         }
 
         let array = array.cast::<LabelsValuesArray>();
-        Arc::increment_strong_count(array);
-        let array = Arc::from_raw(array);
+        let array = unsafe {
+            Arc::increment_strong_count(array);
+            Arc::from_raw(array)
+        };
 
         // Point directly at the LabelsValuesArray's existing data (zero-copy).
         let data_ptr = if array.values.is_empty() {
@@ -273,7 +277,9 @@ unsafe extern "C" fn labels_array_as_dlpack(
             dl_tensor,
         });
 
-        *dl_managed_tensor = Box::into_raw(managed);
+        unsafe {
+            *dl_managed_tensor = Box::into_raw(managed);
+        }
 
         Ok(())
     })
@@ -292,7 +298,7 @@ unsafe extern "C" fn labels_array_from_dlpack(
         let dl_tensor = std::ptr::NonNull::new(dl_managed_tensor)
             .ok_or_else(|| Error::InvalidParameter("dl_managed_tensor pointer is null".into()))?;
 
-        let dl_tensor = DLPackTensor::from_raw(dl_tensor);
+        let dl_tensor = unsafe { DLPackTensor::from_raw(dl_tensor) };
 
         let version = dl_tensor.version();
         let current_dl_version = DLPackVersion::current();
@@ -352,11 +358,13 @@ unsafe extern "C" fn labels_array_from_dlpack(
             }
         }
 
-        *new_array = create_array_from_vec(
-            Arc::from(values.into_boxed_slice()),
-            shape[0] as usize,
-            shape[1] as usize
-        );
+        unsafe {
+            *new_array = create_array_from_vec(
+                Arc::from(values.into_boxed_slice()),
+                shape[0] as usize,
+                shape[1] as usize
+            );
+        }
 
         Ok(())
     })
@@ -370,9 +378,11 @@ unsafe extern "C" fn labels_array_shape(
 ) -> mts_status_t {
     catch_unwind(|| {
         check_pointers_non_null!(array, shape, shape_count);
-        let array = &*array.cast::<LabelsValuesArray>();
-        *shape = array.shape.as_ptr();
-        *shape_count = 2;
+        unsafe {
+            let array = &*array.cast::<LabelsValuesArray>();
+            *shape = array.shape.as_ptr();
+            *shape_count = 2;
+        }
         Ok(())
     })
 }
@@ -392,24 +402,28 @@ unsafe extern "C" fn labels_array_copy(
         }
 
         let array = array.cast::<LabelsValuesArray>();
-        Arc::increment_strong_count(array);
-        let array = Arc::from_raw(array);
-
-        *new_array = mts_array_t {
-            ptr: Arc::into_raw(array).cast_mut().cast(),
-            origin: Some(labels_array_origin),
-            device: Some(labels_array_device),
-            dtype: Some(labels_array_dtype),
-            as_dlpack: Some(labels_array_as_dlpack),
-            from_dlpack: Some(labels_array_from_dlpack),
-            shape: Some(labels_array_shape),
-            reshape: Some(labels_array_reshape),
-            swap_axes: Some(labels_array_swap_axes),
-            create: Some(labels_array_create),
-            copy: Some(labels_array_copy),
-            destroy: Some(labels_array_destroy),
-            move_data: Some(labels_array_move_data),
+        let array = unsafe {
+            Arc::increment_strong_count(array);
+            Arc::from_raw(array)
         };
+
+        unsafe {
+            *new_array = mts_array_t {
+                ptr: Arc::into_raw(array).cast_mut().cast(),
+                origin: Some(labels_array_origin),
+                device: Some(labels_array_device),
+                dtype: Some(labels_array_dtype),
+                as_dlpack: Some(labels_array_as_dlpack),
+                from_dlpack: Some(labels_array_from_dlpack),
+                shape: Some(labels_array_shape),
+                reshape: Some(labels_array_reshape),
+                swap_axes: Some(labels_array_swap_axes),
+                create: Some(labels_array_create),
+                copy: Some(labels_array_copy),
+                destroy: Some(labels_array_destroy),
+                move_data: Some(labels_array_move_data),
+            };
+        }
 
         Ok(())
     })
@@ -418,7 +432,9 @@ unsafe extern "C" fn labels_array_copy(
 unsafe extern "C" fn labels_array_destroy(array: *mut c_void) {
     let _ = catch_unwind(|| {
         if !array.is_null() {
-            let _ = Arc::from_raw(array.cast::<LabelsValuesArray>());
+            unsafe {
+                std::mem::drop(Arc::from_raw(array.cast::<LabelsValuesArray>()));
+            }
         }
 
         Ok(())

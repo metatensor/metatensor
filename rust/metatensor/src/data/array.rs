@@ -173,7 +173,9 @@ unsafe extern "C" fn rust_array_origin(
 ) -> mts_status_t {
     crate::errors::catch_unwind(|| {
         check_pointers!(array, origin);
-        *origin = *RUST_DATA_ORIGIN;
+        unsafe {
+            *origin = *RUST_DATA_ORIGIN;
+        }
 
         Ok(())
     })
@@ -187,7 +189,9 @@ unsafe extern "C" fn rust_array_device(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, device);
         let array = array.cast::<RustArray>();
-        *device = (*array).impl_.device();
+        unsafe {
+            *device = (*array).impl_.device();
+        }
 
         Ok(())
     })
@@ -201,7 +205,9 @@ unsafe extern "C" fn rust_array_dtype(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, dtype);
         let array = array.cast::<RustArray>();
-        *dtype = (*array).impl_.dtype();
+        unsafe {
+            *dtype = (*array).impl_.dtype();
+        }
 
         Ok(())
     })
@@ -216,10 +222,12 @@ unsafe extern "C" fn rust_array_shape(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, shape, shape_count);
         let array = array.cast::<RustArray>();
-        let rust_shape = &(*array).shape;
+        unsafe {
+            let rust_shape = &(*array).shape;
 
-        *shape = rust_shape.as_ptr();
-        *shape_count = rust_shape.len();
+            *shape = rust_shape.as_ptr();
+            *shape_count = rust_shape.len();
+        }
 
         Ok(())
     })
@@ -240,11 +248,13 @@ unsafe extern "C" fn rust_array_reshape(
             &[]
         } else {
             check_pointers!(shape);
-            std::slice::from_raw_parts(shape, shape_count)
+            unsafe { std::slice::from_raw_parts(shape, shape_count) }
         };
 
-        (*array).impl_.reshape(shape);
-        (*array).shape = shape.to_vec();
+        unsafe {
+            (*array).impl_.reshape(shape);
+            (*array).shape = shape.to_vec();
+        }
 
         Ok(())
     })
@@ -260,8 +270,10 @@ unsafe extern "C" fn rust_array_swap_axes(
     crate::errors::catch_unwind(|| {
         check_pointers!(array);
         let array = array.cast::<RustArray>();
-        (*array).impl_.swap_axes(axis_1, axis_2);
-        (*array).shape.swap(axis_1, axis_2);
+        unsafe {
+            (*array).impl_.swap_axes(axis_1, axis_2);
+            (*array).shape.swap(axis_1, axis_2);
+        }
 
         Ok(())
     })
@@ -284,13 +296,15 @@ unsafe extern "C" fn rust_array_create(
             &[]
         } else {
             check_pointers!(shape);
-            std::slice::from_raw_parts(shape, shape_count)
+            unsafe { std::slice::from_raw_parts(shape, shape_count) }
         };
 
-        let new_array = (*array).impl_.create(shape, MtsArray::from_raw(fill_value));
-        let new_array = MtsArray::from(new_array);
+        unsafe {
+            let new_array = (*array).impl_.create(shape, MtsArray::from_raw(fill_value));
+            let new_array = MtsArray::from(new_array);
 
-        *array_storage = new_array.into_raw();
+            *array_storage = new_array.into_raw();
+        }
 
         Ok(())
     })
@@ -306,9 +320,11 @@ unsafe extern "C" fn rust_array_copy(
         check_pointers!(array, new_array);
         let array = array.cast::<RustArray>();
 
-        let copy = (*array).impl_.copy(device);
-        let copy = MtsArray::from(copy);
-        *new_array = copy.into_raw();
+        unsafe {
+            let copy = (*array).impl_.copy(device);
+            let copy = MtsArray::from(copy);
+            *new_array = copy.into_raw();
+        }
 
         Ok(())
     })
@@ -320,8 +336,9 @@ unsafe extern "C" fn rust_array_destroy(
 ) {
     if !array.is_null() {
         let array = array.cast::<RustArray>();
-        let boxed = Box::from_raw(array);
-        std::mem::drop(boxed);
+        unsafe {
+            std::mem::drop(Box::from_raw(array));
+        }
     }
 }
 
@@ -342,10 +359,12 @@ unsafe extern "C" fn rust_array_move_data(
             &[]
         } else {
             check_pointers!(movements);
-            std::slice::from_raw_parts(movements, movements_count)
+            unsafe { std::slice::from_raw_parts(movements, movements_count) }
         };
 
-        (*output).impl_.move_data(&*(*input).impl_, movements);
+        unsafe {
+            (*output).impl_.move_data(&*(*input).impl_, movements);
+        }
 
         Ok(())
     })
@@ -362,10 +381,12 @@ unsafe extern "C" fn rust_array_as_dlpack(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, dl_tensor);
         let array = array.cast::<RustArray>();
-        let stream_opt = stream.as_ref().copied();
-        let tensor = (*array).impl_.as_dlpack(device, stream_opt, max_version)?;
+        unsafe {
+            let stream_opt = stream.as_ref().copied();
+            let tensor = (*array).impl_.as_dlpack(device, stream_opt, max_version)?;
 
-        *dl_tensor = tensor.into_raw().as_ptr();
+            *dl_tensor = tensor.into_raw().as_ptr();
+        }
         Ok(())
     })
 }
@@ -379,11 +400,11 @@ unsafe extern "C" fn rust_array_from_dlpack(
     crate::errors::catch_unwind(|| {
         check_pointers!(array, dl_tensor, new_array);
         let array = array.cast::<RustArray>();
-        let dl_tensor = DLPackTensor::from_ptr(dl_tensor);
-
-        let new_rust_array = (*array).impl_.from_dlpack(dl_tensor)?;
-
-        *new_array = MtsArray::from(new_rust_array).into_raw();
+        unsafe {
+            let dl_tensor = DLPackTensor::from_ptr(dl_tensor);
+            let new_rust_array = (*array).impl_.from_dlpack(dl_tensor)?;
+            *new_array = MtsArray::from(new_rust_array).into_raw();
+        }
 
         Ok(())
     })

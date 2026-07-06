@@ -26,7 +26,7 @@ unsafe extern "C" fn realloc_vec(user_data: *mut c_void, _ptr: *mut u8, new_size
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
     let status = crate::errors::catch_unwind(move || {
-        let vector = &mut *user_data.cast::<Vec<u8>>();
+        let vector = unsafe { &mut *user_data.cast::<Vec<u8>>() };
         vector.resize(new_size, 0);
 
         // force the closure to capture the full unwind_wrapper, not just
@@ -70,7 +70,9 @@ pub unsafe extern "C" fn create_ndarray(shape: *const usize, shape_count: usize,
         return crate::errors::store_last_error(error);
     }
 
-    let shape = std::slice::from_raw_parts(shape, shape_count);
+    let shape = unsafe {
+        std::slice::from_raw_parts(shape, shape_count)
+    };
 
     let new_array = match (dtype.code, dtype.bits) {
         (DLDataTypeCode::kDLFloat, 32) => create_typed_array!(shape, c_array, f32),
@@ -99,7 +101,9 @@ pub unsafe extern "C" fn create_ndarray(shape: *const usize, shape_count: usize,
         }
     };
 
-    *array = new_array.into_raw();
+    unsafe {
+        *array = new_array.into_raw();
+    }
 
     return MTS_SUCCESS;
 }

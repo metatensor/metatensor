@@ -18,11 +18,9 @@ pub fn looks_like_labels_data(mut data: PathOrBuffer) -> bool {
     match data {
         PathOrBuffer::Path(path) => {
             let path = std::path::Path::new(path);
-            if let Some(extension) = path.extension() {
-                if extension.eq_ignore_ascii_case("npy") {
+            if let Some(extension) = path.extension() && extension.eq_ignore_ascii_case("npy") {
                     return true;
                 }
-            }
 
             match std::fs::File::open(path) {
                 Ok(file) => {

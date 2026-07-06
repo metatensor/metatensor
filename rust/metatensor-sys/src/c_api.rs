@@ -18,7 +18,7 @@ use dlpk::sys::*;
     all(not(feature = "static"), target_os = "windows"),
     link(name = "metatensor.dll", kind = "dylib")
 )]
-extern "C" {}
+unsafe extern "C" {}
 
 pub const MTS_SUCCESS: mts_status_t = 0;
 pub const MTS_INVALID_PARAMETER_ERROR: mts_status_t = 1;

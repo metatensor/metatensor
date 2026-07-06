@@ -6,7 +6,9 @@ fn main() {
 
     // setting DESTDIR when building with make will cause the install to be in a
     // different directory than the expected one ($OUT_DIR/lib)
-    std::env::remove_var("DESTDIR");
+    unsafe {
+        std::env::remove_var("DESTDIR");
+    }
 
     let mut cargo_toml = metatensor_core.clone();
     cargo_toml.push("Cargo.toml");
