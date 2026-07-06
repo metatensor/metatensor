@@ -11,7 +11,7 @@ type FastHasher = BuildHasherDefault<ahash::AHasher>;
 use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice};
 
 use crate::data::mts_array_t;
-use crate::{TensorMap, TensorBlock, Error};
+use crate::{TensorMap, Error};
 
 use super::labels::mts_labels_t;
 use super::blocks::mts_block_t;
@@ -244,7 +244,7 @@ pub unsafe extern "C" fn mts_tensormap_block_by_id(
         let blocks = (*tensor).blocks_mut();
         match blocks.get_mut(index) {
             Some(b) => {
-                (*block) = (b as *mut TensorBlock).cast();
+                (*block) = std::ptr::from_mut(b).cast();
             }
             None => {
                 return Err(Error::InvalidParameter(format!(

@@ -444,7 +444,7 @@ impl mts_array_t {
         let mut dl_managed_tensor: *mut DLManagedTensorVersioned = std::ptr::null_mut();
 
         let stream_c = match stream {
-            Some(s) => &s as *const i64,
+            Some(s) => std::ptr::from_ref(&s),
             None => std::ptr::null(),
         };
         let status = unsafe {

@@ -5,13 +5,13 @@
 #
 # Sets:
 #   CARGO_EXE                   - path to the chosen cargo binary
-#   CARGO_VERSION               - parsed version string (e.g. 1.74.0)
+#   CARGO_VERSION               - parsed version string (e.g. 1.96.1)
 #   RUST_HOST_TARGET            - host target triple (e.g. x86_64-unknown-linux-gnu)
 #   RUST_HOST_ARCH              - host CPU architecture (e.g. x86_64)
 #   CACHED_LAST_CARGO_VERSION   - cache variable for change detection
 #   CARGO_VERSION_CHANGED       - true if the version differs from the last run
 
-set(REQUIRED_RUST_VERSION "1.74.0")
+set(REQUIRED_RUST_VERSION "1.88.0")
 
 # ---------------------------------------------------------------------------
 # Helper: run cargo --version --verbose, extract version & host target

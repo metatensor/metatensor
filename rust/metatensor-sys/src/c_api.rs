@@ -53,46 +53,21 @@ pub struct mts_data_movement_t {
     pub properties_start_out: usize,
     pub properties_length: usize,
 }
-#[test]
-fn bindgen_test_layout_mts_data_movement_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mts_data_movement_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<mts_data_movement_t>(),
-        40usize,
-        "Size of mts_data_movement_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<mts_data_movement_t>(),
-        8usize,
-        "Alignment of mts_data_movement_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sample_in) as usize - ptr as usize },
-        0usize,
-        "Offset of field: mts_data_movement_t::sample_in"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).sample_out) as usize - ptr as usize },
-        8usize,
-        "Offset of field: mts_data_movement_t::sample_out"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_in) as usize - ptr as usize },
-        16usize,
-        "Offset of field: mts_data_movement_t::properties_start_in"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).properties_start_out) as usize - ptr as usize },
-        24usize,
-        "Offset of field: mts_data_movement_t::properties_start_out"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).properties_length) as usize - ptr as usize },
-        32usize,
-        "Offset of field: mts_data_movement_t::properties_length"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of mts_data_movement_t"][::std::mem::size_of::<mts_data_movement_t>() - 40usize];
+    ["Alignment of mts_data_movement_t"][::std::mem::align_of::<mts_data_movement_t>() - 8usize];
+    ["Offset of field: mts_data_movement_t::sample_in"]
+        [::std::mem::offset_of!(mts_data_movement_t, sample_in) - 0usize];
+    ["Offset of field: mts_data_movement_t::sample_out"]
+        [::std::mem::offset_of!(mts_data_movement_t, sample_out) - 8usize];
+    ["Offset of field: mts_data_movement_t::properties_start_in"]
+        [::std::mem::offset_of!(mts_data_movement_t, properties_start_in) - 16usize];
+    ["Offset of field: mts_data_movement_t::properties_start_out"]
+        [::std::mem::offset_of!(mts_data_movement_t, properties_start_out) - 24usize];
+    ["Offset of field: mts_data_movement_t::properties_length"]
+        [::std::mem::offset_of!(mts_data_movement_t, properties_length) - 32usize];
+};
 #[repr(C)]
 #[derive(Debug, Copy, Clone)]
 pub struct mts_array_t {
@@ -178,86 +153,30 @@ pub struct mts_array_t {
         ) -> mts_status_t,
     >,
 }
-#[test]
-fn bindgen_test_layout_mts_array_t() {
-    const UNINIT: ::std::mem::MaybeUninit<mts_array_t> = ::std::mem::MaybeUninit::uninit();
-    let ptr = UNINIT.as_ptr();
-    assert_eq!(
-        ::std::mem::size_of::<mts_array_t>(),
-        104usize,
-        "Size of mts_array_t"
-    );
-    assert_eq!(
-        ::std::mem::align_of::<mts_array_t>(),
-        8usize,
-        "Alignment of mts_array_t"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).ptr) as usize - ptr as usize },
-        0usize,
-        "Offset of field: mts_array_t::ptr"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).destroy) as usize - ptr as usize },
-        8usize,
-        "Offset of field: mts_array_t::destroy"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).origin) as usize - ptr as usize },
-        16usize,
-        "Offset of field: mts_array_t::origin"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).device) as usize - ptr as usize },
-        24usize,
-        "Offset of field: mts_array_t::device"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).dtype) as usize - ptr as usize },
-        32usize,
-        "Offset of field: mts_array_t::dtype"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).as_dlpack) as usize - ptr as usize },
-        40usize,
-        "Offset of field: mts_array_t::as_dlpack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).from_dlpack) as usize - ptr as usize },
-        48usize,
-        "Offset of field: mts_array_t::from_dlpack"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).shape) as usize - ptr as usize },
-        56usize,
-        "Offset of field: mts_array_t::shape"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).reshape) as usize - ptr as usize },
-        64usize,
-        "Offset of field: mts_array_t::reshape"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).swap_axes) as usize - ptr as usize },
-        72usize,
-        "Offset of field: mts_array_t::swap_axes"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).create) as usize - ptr as usize },
-        80usize,
-        "Offset of field: mts_array_t::create"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).copy) as usize - ptr as usize },
-        88usize,
-        "Offset of field: mts_array_t::copy"
-    );
-    assert_eq!(
-        unsafe { ::std::ptr::addr_of!((*ptr).move_data) as usize - ptr as usize },
-        96usize,
-        "Offset of field: mts_array_t::move_data"
-    );
-}
+#[allow(clippy::unnecessary_operation, clippy::identity_op)]
+const _: () = {
+    ["Size of mts_array_t"][::std::mem::size_of::<mts_array_t>() - 104usize];
+    ["Alignment of mts_array_t"][::std::mem::align_of::<mts_array_t>() - 8usize];
+    ["Offset of field: mts_array_t::ptr"][::std::mem::offset_of!(mts_array_t, ptr) - 0usize];
+    ["Offset of field: mts_array_t::destroy"]
+        [::std::mem::offset_of!(mts_array_t, destroy) - 8usize];
+    ["Offset of field: mts_array_t::origin"][::std::mem::offset_of!(mts_array_t, origin) - 16usize];
+    ["Offset of field: mts_array_t::device"][::std::mem::offset_of!(mts_array_t, device) - 24usize];
+    ["Offset of field: mts_array_t::dtype"][::std::mem::offset_of!(mts_array_t, dtype) - 32usize];
+    ["Offset of field: mts_array_t::as_dlpack"]
+        [::std::mem::offset_of!(mts_array_t, as_dlpack) - 40usize];
+    ["Offset of field: mts_array_t::from_dlpack"]
+        [::std::mem::offset_of!(mts_array_t, from_dlpack) - 48usize];
+    ["Offset of field: mts_array_t::shape"][::std::mem::offset_of!(mts_array_t, shape) - 56usize];
+    ["Offset of field: mts_array_t::reshape"]
+        [::std::mem::offset_of!(mts_array_t, reshape) - 64usize];
+    ["Offset of field: mts_array_t::swap_axes"]
+        [::std::mem::offset_of!(mts_array_t, swap_axes) - 72usize];
+    ["Offset of field: mts_array_t::create"][::std::mem::offset_of!(mts_array_t, create) - 80usize];
+    ["Offset of field: mts_array_t::copy"][::std::mem::offset_of!(mts_array_t, copy) - 88usize];
+    ["Offset of field: mts_array_t::move_data"]
+        [::std::mem::offset_of!(mts_array_t, move_data) - 96usize];
+};
 pub type mts_realloc_buffer_t = ::std::option::Option<
     unsafe extern "C" fn(
         user_data: *mut ::std::os::raw::c_void,
@@ -273,7 +192,7 @@ pub type mts_create_array_callback_t = ::std::option::Option<
         array: *mut mts_array_t,
     ) -> mts_status_t,
 >;
-extern "C" {
+unsafe extern "C" {
     pub fn mts_disable_panic_printing();
     pub fn mts_version() -> *const ::std::os::raw::c_char;
     #[must_use]
