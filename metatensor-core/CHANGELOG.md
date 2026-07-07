@@ -17,6 +17,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.3) - 2026-07-07
+
 ### Changed
 
 - The code now requires a Rust compiler version of at least 1.88.0 to build.
