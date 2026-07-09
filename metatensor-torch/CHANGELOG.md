@@ -14,10 +14,17 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Changed
 
-- Added support for PyTorch v2.13
-
 ### Removed
 -->
+
+## Unreleased
+
+### metatensor-torch Python
+
+#### Added
+
+- Added support for PyTorch v2.13
+
 
 ## [Version 0.10.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.0) - 2026-06-24
 
