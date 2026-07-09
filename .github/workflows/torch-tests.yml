@@ -19,7 +19,7 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            torch-version: "2.12"
+            torch-version: "2.13"
             python-version: "3.14"
             cargo-test-flags: --release
             do-valgrind: true
@@ -32,12 +32,12 @@ jobs:
             cargo-test-flags: ""
 
           - os: macos-15
-            torch-version: "2.12"
+            torch-version: "2.13"
             python-version: "3.14"
             cargo-test-flags: --release
 
           - os: windows-2022
-            torch-version: "2.12"
+            torch-version: "2.13"
             python-version: "3.14"
             cargo-test-flags: --release
     steps:
