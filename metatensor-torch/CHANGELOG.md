@@ -17,7 +17,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
-## Unreleased
 
 ### metatensor-torch Python
 
