@@ -20,6 +20,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Changed
 
 - `SimpleDataArray` in C++ now supports `bool` data type
+- `EmptyDataArray` in C++ now has a template parameter for the data type,
+  defaulting to `double`.
 
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.3) - 2026-07-07
 
