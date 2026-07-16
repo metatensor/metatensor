@@ -141,6 +141,10 @@ class ModuleMap(Module):
         It got completely lost because we cannot know in general what the output is.
         You can add in the initialization of the ModuleMap a TensorMap that contains
         the intended output Labels.
+
+    See :ref:`learn-tutorial-nn-using-modulemap` for a tutorial on building custom
+    architectures with ``ModuleMap``, and :ref:`learn-tutorial-nn-custom-module`
+    for the differences between ``ModuleMap`` and :py:class:`Module`.
     """
 
     def __init__(
@@ -158,8 +162,8 @@ class ModuleMap(Module):
                 f"{len(in_keys) != len(modules)} [len(in_keys) != len(modules)]"
             )
 
-        self._in_keys: Labels = in_keys
-        self._out_properties = out_properties
+        self.register_buffer("_in_keys", in_keys)
+        self.register_buffer("_out_properties", out_properties)
 
     @classmethod
     def from_module(

@@ -1,7 +1,33 @@
+from typing import List
+
 import numpy as np
 import torch
 
 from .._backend import Labels, TensorBlock, TensorMap, isinstance_metatensor
+
+
+class Buffer:
+    """
+    Wrapper for metatensor data, similar to :py:class:`torch.nn.Buffer` but for
+    metatensor types (Labels, TensorBlock, TensorMap) and (possibly nested)
+    dict/list/tuple containers of metatensor types.
+
+    When assigned to a :py:class:`Module` attribute in ``__init__``, the value
+    is automatically registered via :py:meth:`Module.register_buffer` and will
+    be properly handled by ``.to()`` and ``state_dict()``.
+
+    See :ref:`learn-tutorial-nn-custom-module` for a tutorial covering this
+    class.
+
+    :param value: the metatensor value to wrap
+    :param persistent: whether the buffer is part of the module's
+        ``state_dict``, passed through to
+        :py:meth:`Module.register_buffer`
+    """
+
+    def __init__(self, value, persistent=True):
+        self.data = value
+        self.persistent = persistent
 
 
 class Module(torch.nn.Module):
@@ -14,12 +40,14 @@ class Module(torch.nn.Module):
     ``.to()``, ``.cuda()``, ``.float()`` and other related functions. We also handle the
     corresponding data in ``state_dict()`` and ``load_state_dict()``.
 
-    We support storing these class either directly as attributes (``self.name = ...``),
-    or inside arbitrarily nested dict, list, or tuple (``self.name = {"dict": [...]}``).
+    Members containing metatensor data should be registered via
+    ``self.register_buffer(name, value)``. This supports plain metatensor values as well
+    as arbitrarily nested dict, list, or tuple of metatensor values.
 
     Below is an example creating a custom linear model, that stores the output
-    ``properties`` as an attribute. The corresponding labels will automatically be moved
-    on device at the same time as the module.
+    ``properties`` as a registered buffer. The corresponding labels will automatically
+    be moved on device at the same time as the module, and will be included in the state
+    dict.
 
     >>> import torch
     >>> from typing import List
@@ -27,10 +55,11 @@ class Module(torch.nn.Module):
     >>> from metatensor.torch import Labels, TensorMap, TensorBlock
     >>>
     >>> class CustomLinear(nn.Module):
-    ...     def __init__(self, in_features, out_features):
+    ...     def __init__(self, in_features: int, out_features: int):
     ...         super().__init__()
-    ...         self.properties = Labels(
-    ...             ["out_features"], torch.arange(out_features).reshape(-1, 1)
+    ...         self.register_buffer(
+    ...             "properties",
+    ...             Labels("out_features", torch.arange(out_features).reshape(-1, 1)),
     ...         )
     ...         self.linear = torch.nn.Linear(in_features, out_features)
     ...
@@ -39,24 +68,86 @@ class Module(torch.nn.Module):
     ...         for block in tensor:
     ...             new_values = self.linear(block.values)
     ...             new_block = TensorBlock(
-    ...                 values,
+    ...                 new_values,
     ...                 block.samples,
     ...                 block.components,
     ...                 self.properties,
     ...             )
-    ...             blocks.append(new_block)
-    ...         return TensorBlock(tensor.keys, blocks)
+    ...         blocks.append(new_block)
+    ...         return TensorMap(tensor.keys, blocks)
+
+    See :ref:`learn-tutorial-nn-custom-module` for a tutorial covering this
+    class, including how it differs from :py:class:`ModuleMap`.
     """
+
+    _mts_buffer_names: List[str]
+    _mts_non_persistent_buffers: List[str]
 
     def __init__(self):
         """"""
         super().__init__()
+        self._mts_buffer_names = []
+        self._mts_non_persistent_buffers = []
         self.register_buffer("_mts_helper", torch.zeros(0))
+
+    def __setattr__(self, name, value):
+        if isinstance(value, Buffer):
+            self.register_buffer(name, value.data, persistent=value.persistent)
+        else:
+            super().__setattr__(name, value)
+
+    def register_buffer(self, name, value, persistent=True):
+        """
+        Register a buffer containing metatensor data on this module, or register a
+        regular PyTorch tensor buffer.
+
+        If ``value`` is a :py:class:`torch.Tensor`, this is the same as
+        :py:meth:`torch.nn.Module.register_buffer`.
+
+        If ``value`` is one of the metatensor types (Labels, TensorBlock, TensorMap) or
+        a (possibly nested) dict/list/tuple containing metatensor types, it will be
+        stored on the module and properly handled by ``.to()`` and ``state_dict()``.
+
+        :param name: name of the buffer
+        :param value: value to register
+        :param persistent: whether the buffer is part of the module's ``state_dict``. If
+            this is ``False``, the buffer will still be moved to the correct
+            device/dtype when calling ``.to()``.
+        """
+        if isinstance(value, Buffer):
+            value = value.data
+
+        if isinstance(value, torch.Tensor):
+            super().register_buffer(name, value, persistent=persistent)
+            return
+
+        if value is not None and not _contains_metatensor(value):
+            # Allow None (optional placeholder) and empty containers
+            # (runtime-configurable), but reject other non-metatensor types
+            if isinstance(value, (dict, list, tuple)) and len(value) == 0:
+                pass
+            else:
+                raise TypeError(
+                    f"register_buffer expects a torch.Tensor, None, or a value "
+                    f"containing metatensor types (Labels, TensorBlock, TensorMap), "
+                    f"got {type(value).__name__}"
+                )
+
+        if name in self._mts_buffer_names:
+            raise KeyError(f"buffer '{name}' is already registered")
+
+        self._mts_buffer_names.append(name)
+        if not persistent:
+            self._mts_non_persistent_buffers.append(name)
+
+        self.__setattr__(name, value)
 
     def get_extra_state(self):
         extra = {}
-        for name, value in self.__dict__.items():
-            serialized_value, needs_storing = _serialize_metatensor(value)
+        for name in self._mts_buffer_names:
+            if name in self._mts_non_persistent_buffers:
+                continue
+            serialized_value, needs_storing = _serialize_metatensor(getattr(self, name))
             if needs_storing:
                 extra[name] = serialized_value
         return extra
@@ -77,12 +168,31 @@ class Module(torch.nn.Module):
         device = self._mts_helper.device
         dtype = self._mts_helper.dtype
 
-        for name, value in self.__dict__.items():
+        for name in self._mts_buffer_names:
+            value = getattr(self, name)
             value, changed = _metatensor_data_to(value, dtype=dtype, device=device)
             if changed:
-                self.__dict__[name] = value
+                self.__setattr__(name, value)
 
         return result
+
+
+def _contains_metatensor(value):
+    """
+    Check if ``value`` is a metatensor type (Labels, TensorBlock, TensorMap) or
+    recursively contains one inside dict, list, or tuple.
+    """
+    if (
+        isinstance_metatensor(value, "Labels")
+        or isinstance_metatensor(value, "TensorBlock")
+        or isinstance_metatensor(value, "TensorMap")
+    ):
+        return True
+    elif isinstance(value, dict):
+        return any(_contains_metatensor(v) for v in value.values())
+    elif isinstance(value, (list, tuple)):
+        return any(_contains_metatensor(v) for v in value)
+    return False
 
 
 # WARNING: this is duplicated in metatensor.torch._module, make sure to change both

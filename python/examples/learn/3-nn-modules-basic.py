@@ -229,3 +229,7 @@ training_loop(mlp_mts, loss_fn_mts, feature_tensormap, target_tensormap)
 # <learn-tutorial-indexed-dataset-dataloader>` tutorials, metatensor-learn provides a
 # powerful framework for building and training machine learning models based on the
 # TensorMap data format.
+#
+# If you need to define your own modules that store metatensor data (Labels,
+# TensorBlock, TensorMap) as buffers, see the tutorial on :ref:`custom modules
+# <learn-tutorial-nn-custom-module>`.

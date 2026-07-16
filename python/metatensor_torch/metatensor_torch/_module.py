@@ -1,3 +1,4 @@
+import warnings
 from typing import Union
 
 import torch
@@ -102,28 +103,40 @@ def _metatensor_data_to(value, dtype, device):
 
 
 def _apply_metatensor(module):
-    if "_mts_helper" in module._buffers:
-        device = module._mts_helper.device
-        dtype = module._mts_helper.dtype
+    if "_mts_helper" not in module._buffers:
+        return
 
-        if isinstance(module, torch.jit.RecursiveScriptModule):
-            # Get the list of attributes for this module.
-            #
-            # Unfortunately `named_attributes` is not available to Python, so we need to
-            # parse the list from a string.
+    device = module._mts_helper.device
+    dtype = module._mts_helper.dtype
+
+    if isinstance(module, torch.jit.RecursiveScriptModule):
+        # Determine which attributes to process
+        if module._c.hasattr("_mts_buffer_names"):
+            names = list(module._c.getattr("_mts_buffer_names"))
+        else:
+            # Fallback: parse all attributes from the string representation
+            # (backward compatibility with modules that don't use register_buffer)
+            warnings.warn(
+                "module does not have '_mts_buffer_names'; "
+                "falling back to processing all attributes. "
+                "This is deprecated and will be removed in a future version, update "
+                "your version of metatensor-learn and use `register_buffer` explicitly "
+                "to remove this warning.",
+                stacklevel=2,
+            )
             attributes = module._c.dump_to_str(code=False, attrs=True, params=False)
-            attributes = _parse_rsm_attributes(attributes)
+            names = _parse_rsm_attributes(attributes)
 
-            # Update the attributes and re-add them to the module with
-            # `_register_attribute` (which does an update when the attribute already
-            # exists.)
-            for name in attributes:
-                value = module._c.getattr(name)
+        # Update the attributes and re-add them to the module with
+        # `_register_attribute` (which does an update when the attribute already
+        # exists.)
+        for name in names:
+            value = module._c.getattr(name)
 
-                value, changed = _metatensor_data_to(value, dtype=dtype, device=device)
-                if changed:
-                    typ = _get_torch_type(value)
-                    module._c._register_attribute(name, typ, value)
+            value, changed = _metatensor_data_to(value, dtype=dtype, device=device)
+            if changed:
+                typ = _get_torch_type(value)
+                module._c._register_attribute(name, typ, value)
 
 
 def _get_torch_type(value):

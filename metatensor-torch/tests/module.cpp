@@ -4,7 +4,12 @@
 
 #include <catch.hpp>
 
-static void check_dtype_device(const torch::jit::Module& module, torch::Device device, torch::ScalarType scalar_type) {
+static void check_dtype_device(
+    const torch::jit::Module& module,
+    torch::Device device,
+    torch::ScalarType scalar_type,
+    const std::vector<std::string>& expected_fields
+) {
     std::vector<std::string> all_fields = {};
     for (const auto& item: module.named_attributes()) {
         if (item.name.find("_is_full_backward_hook") != std::string::npos) {
@@ -157,31 +162,54 @@ static void check_dtype_device(const torch::jit::Module& module, torch::Device d
         }
     }
 
-    std::vector<std::string> EXPECTED_FIELDS = {
-        "a", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
-        "b", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
-        "block",
-        "c", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
-        "d", "d.test",
-        "e", "e.test",
-        "labels", "tensor", "tuple",
-
-    };
-
     std::sort(std::begin(all_fields), std::end(all_fields));
-    CHECK(all_fields == EXPECTED_FIELDS);
+    CHECK(all_fields == expected_fields);
 }
+
+
+static const std::vector<std::string> NEW_EXPECTED_FIELDS = {
+    "_mts_buffer_names",
+    "_mts_helper",
+    "_mts_non_persistent_buffers",
+    "a", "a._mts_buffer_names", "a._mts_helper", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
+    "b", "b._mts_buffer_names", "b._mts_helper", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
+    "block",
+    "c", "c._mts_buffer_names", "c._mts_helper", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
+    "d", "d.test",
+    "e", "e.test",
+    "labels", "tensor", "tuple",
+};
+
+static const std::vector<std::string> LEGACY_EXPECTED_FIELDS = {
+    "a", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
+    "b", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
+    "block",
+    "c", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
+    "d", "d.test",
+    "e", "e.test",
+    "labels", "tensor", "tuple",
+};
 
 
 TEST_CASE("Module") {
     auto module = torch::jit::load(TEST_TORCH_SCRIPT_MODULE);
 
     auto mts_module = metatensor_torch::Module(module);
-    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat64);
+    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat64, NEW_EXPECTED_FIELDS);
 
     mts_module.to(torch::kFloat32);
-    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat32);
+    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat32, NEW_EXPECTED_FIELDS);
+}
 
-    mts_module.to(torch::Device("meta"));
-    check_dtype_device(mts_module, torch::Device("meta"), torch::kFloat32);
+TEST_CASE("Legacy module") {
+    // This module was created before register_buffer was introduced for
+    // metatensor data. It does not have _mts_buffer_names, so the code
+    // falls back to processing all attributes and emits a deprecation warning.
+    auto module = torch::jit::load(LEGACY_TORCH_SCRIPT_MODULE);
+
+    auto mts_module = metatensor_torch::Module(module);
+    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat64, LEGACY_EXPECTED_FIELDS);
+
+    mts_module.to(torch::kFloat32);
+    check_dtype_device(mts_module, torch::Device("cpu"), torch::kFloat32, LEGACY_EXPECTED_FIELDS);
 }

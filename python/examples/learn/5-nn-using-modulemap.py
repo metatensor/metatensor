@@ -329,3 +329,8 @@ training_loop(model, loss_fn_mts, feature_tensormap, target_tensormap)
 # convenience layers seen in the tutorial :ref:`nn modules basic
 # <learn-tutorial-nn-modules-basic>`, and sparse-data operations from
 # ``metatensor-operations``, complex architectures can be built with ease.
+#
+# If you need to store metatensor data (``Labels``, ``TensorBlock``, ``TensorMap``)
+# directly on your own modules, see the tutorial on :ref:`custom modules
+# <learn-tutorial-nn-custom-module>`, which also explains the differences between
+# ``Module`` and ``ModuleMap``.
