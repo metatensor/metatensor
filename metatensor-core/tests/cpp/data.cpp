@@ -531,3 +531,203 @@ TEST_CASE("Array equality with non-contiguous strides") {
     CHECK(non_contiguous_dlpack == contiguous_dlpack);
     CHECK(contiguous_dlpack == non_contiguous_dlpack);
 }
+
+
+struct BoolDLPackContext {
+    std::vector<int64_t> shape;
+    std::shared_ptr<std::vector<uint8_t>> data;
+};
+
+static void bool_dlpack_deleter(DLManagedTensorVersioned* self) {
+    if (self != nullptr) {
+        delete static_cast<BoolDLPackContext*>(self->manager_ctx);
+        delete self;
+    }
+}
+
+/// Build a contiguous DLPack tensor with `kDLBool` dtype from a vector of
+/// 0/1 bytes. The caller owns the returned managed tensor.
+static DLManagedTensorVersioned* make_bool_dlpack(
+    std::shared_ptr<std::vector<uint8_t>> data,
+    std::vector<int64_t> shape
+) {
+    auto* managed = new DLManagedTensorVersioned();
+    auto* context = new BoolDLPackContext();
+
+    context->shape = std::move(shape);
+    context->data = std::move(data);
+
+    managed->version = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    managed->manager_ctx = context;
+    managed->deleter = bool_dlpack_deleter;
+    managed->flags = 0;
+
+    managed->dl_tensor.data = context->data->data();
+    managed->dl_tensor.device = {kDLCPU, 0};
+    managed->dl_tensor.ndim = static_cast<int32_t>(context->shape.size());
+    managed->dl_tensor.dtype = {kDLBool, 8, 1};
+    managed->dl_tensor.shape = context->shape.data();
+    managed->dl_tensor.strides = nullptr;
+    managed->dl_tensor.byte_offset = 0;
+
+    return managed;
+}
+
+
+TEST_CASE("default_create_array with bool dtype") {
+    auto dtype = metatensor::details::dtype_of<bool>();
+    CHECK(dtype.code == kDLBool);
+    CHECK(dtype.bits == 8);
+    CHECK(dtype.lanes == 1);
+
+    std::vector<uintptr_t> shape = {2, 3};
+
+    mts_array_t raw_array = {};
+    auto status = metatensor::details::default_create_array(
+        shape.data(), shape.size(), dtype, &raw_array
+    );
+    CHECK(status == MTS_SUCCESS);
+
+    auto array = MtsArray(raw_array);
+
+    CHECK(array.shape() == shape);
+
+    auto dt = array.dtype();
+    CHECK(dt.code == kDLBool);
+    CHECK(dt.bits == 8);
+    CHECK(dt.lanes == 1);
+
+    // The newly created array should be zero-initialised
+    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    auto dlpack = DLPackArray<bool>(array.as_dlpack({kDLCPU, 0}, nullptr, version));
+
+    CHECK(dlpack.shape() == std::vector<size_t>{2, 3});
+    for (size_t i = 0; i < 6; i++) {
+        CHECK(dlpack.data()[i] == false);
+    }
+}
+
+
+TEST_CASE("SimpleDataArray<bool>") {
+    SECTION("from_dlpack() with bool") {
+        auto raw_data = std::make_shared<std::vector<uint8_t>>(
+            std::vector<uint8_t>{1, 0, 0, 1, 0, 1}
+        );
+        auto* dl_managed = make_bool_dlpack(raw_data, {2, 3});
+
+        // Use a SimpleDataArray<double> as the "source" array (its from_dlpack
+        // is the static dispatcher that handles all dtypes)
+        auto source = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({1}));
+        auto source_array = DataArrayBase::to_mts_array(std::move(source));
+
+        auto new_array = source_array.from_dlpack(dl_managed);
+
+        auto* base = static_cast<DataArrayBase*>(new_array.as_mts_array_t().ptr);
+        REQUIRE(dynamic_cast<SimpleDataArray<bool>*>(base) != nullptr);
+
+        CHECK(new_array.shape() == std::vector<uintptr_t>{2, 3});
+
+        auto dt = new_array.dtype();
+        CHECK(dt.code == kDLBool);
+        CHECK(dt.bits == 8);
+        CHECK(dt.lanes == 1);
+
+        // Verify the data round-trips through DLPack
+        auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        auto dlpack = DLPackArray<bool>(new_array.as_dlpack({kDLCPU, 0}, nullptr, version));
+
+        CHECK(dlpack.shape() == std::vector<size_t>{2, 3});
+        CHECK(dlpack.data()[0] == true);
+        CHECK(dlpack.data()[1] == false);
+        CHECK(dlpack.data()[2] == false);
+        CHECK(dlpack.data()[3] == true);
+        CHECK(dlpack.data()[4] == false);
+        CHECK(dlpack.data()[5] == true);
+    }
+
+    SECTION("round-trip through DLPack") {
+        // Start from a bool DLPack tensor, import via from_dlpack, export back
+        // via as_dlpack, and verify dtype + values are preserved.
+        auto raw_data = std::make_shared<std::vector<uint8_t>>(
+            std::vector<uint8_t>{0, 1, 1, 0, 1, 0, 0, 1}
+        );
+        auto* dl_managed = make_bool_dlpack(raw_data, {2, 4});
+
+        auto source = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({1}));
+        auto source_array = DataArrayBase::to_mts_array(std::move(source));
+
+        auto bool_array = source_array.from_dlpack(dl_managed);
+
+        // Export back to DLPack
+        auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        auto* re_exported = bool_array.as_dlpack({kDLCPU, 0}, nullptr, version);
+
+        CHECK(re_exported->dl_tensor.dtype.code == kDLBool);
+        CHECK(re_exported->dl_tensor.dtype.bits == 8);
+        CHECK(re_exported->dl_tensor.dtype.lanes == 1);
+
+        // Verify data is preserved
+        const auto* ptr = static_cast<const uint8_t*>(re_exported->dl_tensor.data);
+        CHECK(ptr[0] == 0);
+        CHECK(ptr[1] == 1);
+        CHECK(ptr[2] == 1);
+        CHECK(ptr[3] == 0);
+        CHECK(ptr[4] == 1);
+        CHECK(ptr[5] == 0);
+        CHECK(ptr[6] == 0);
+        CHECK(ptr[7] == 1);
+
+        re_exported->deleter(re_exported);
+    }
+}
+
+TEST_CASE("DLPackArray<bool>") {
+    SECTION("construction and access") {
+        auto raw_data = std::make_shared<std::vector<uint8_t>>(
+            std::vector<uint8_t>{1, 0, 1, 1}
+        );
+        auto* dl_managed = make_bool_dlpack(raw_data, {2, 2});
+
+        auto arr = DLPackArray<bool>(dl_managed);
+
+        CHECK(arr.shape() == std::vector<size_t>{2, 2});
+
+        auto dt = arr.dtype();
+        CHECK(dt.code == kDLBool);
+        CHECK(dt.bits == 8);
+        CHECK(dt.lanes == 1);
+
+        CHECK(arr(0, 0) == true);
+        CHECK(arr(0, 1) == false);
+        CHECK(arr(1, 0) == true);
+        CHECK(arr(1, 1) == true);
+
+        CHECK(arr.data()[0] == true);
+        CHECK(arr.data()[1] == false);
+        CHECK(arr.data()[2] == true);
+        CHECK(arr.data()[3] == true);
+    }
+
+    SECTION("dtype mismatch with uint8") {
+        // A kDLBool DLPack tensor must NOT be accepted by DLPackArray<uint8_t>
+        auto raw_data = std::make_shared<std::vector<uint8_t>>(
+            std::vector<uint8_t>{1, 0, 1, 1}
+        );
+        auto* bool_managed = make_bool_dlpack(raw_data, {2, 2});
+
+        CHECK_THROWS_WITH(
+            DLPackArray<uint8_t>(bool_managed),
+            Catch::Matchers::Contains("dtype mismatch")
+        );
+
+        // A kDLUInt DLPack tensor must NOT be accepted by DLPackArray<bool>
+        auto uint8_data = SimpleDataArray<uint8_t>({2, 2});
+        auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+        auto* uint8_managed = uint8_data.as_dlpack({kDLCPU, 0}, nullptr, version);
+
+        CHECK_THROWS_WITH(
+            DLPackArray<bool>(uint8_managed),
+            Catch::Matchers::Contains("dtype mismatch")
+        );
+    }
+}
