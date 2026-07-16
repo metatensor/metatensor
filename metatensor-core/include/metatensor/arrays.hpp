@@ -17,6 +17,8 @@
 #include "./errors.hpp"
 
 namespace metatensor {
+    class DataArrayBase;
+
 namespace details {
     /// Compute the product of all values in the `shape` vector
     template<typename Shape>
@@ -108,6 +110,12 @@ namespace details {
         uintptr_t shape_count,
         DLDataType dtype,
         mts_array_t* array
+    );
+
+    /// Create an `EmptyDataArray` matching the given runtime `dtype`.
+    std::unique_ptr<DataArrayBase> create_empty_array(
+        std::vector<uintptr_t> shape,
+        DLDataType dtype
     );
 
     /**
@@ -1858,11 +1866,12 @@ bool operator!=(const NDArray<T>& lhs, const SimpleDataArray<T>& rhs) {
 ///
 /// This class only tracks its shape, and can be used when only the metadata
 /// of a `TensorBlock` is important, leaving the data unspecified.
+template <typename T = double, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 class EmptyDataArray: public metatensor::DataArrayBase {
 public:
     /// Create an `EmptyDataArray` with the given `shape`
     EmptyDataArray(std::vector<uintptr_t> shape):
-        shape_(std::move(shape)) {}
+         shape_(std::move(shape)) {}
 
     ~EmptyDataArray() override = default;
 
@@ -1886,8 +1895,7 @@ public:
     }
 
     DLDataType dtype() const override {
-        // EmptyDataArray defaults to f64 for consistency with default_create_array
-        return details::dtype_of<double>();
+        return details::dtype_of<T>();
     }
 
     [[noreturn]]
@@ -1926,7 +1934,7 @@ public:
         std::vector<uintptr_t> shape,
         MtsArray /*fill_value*/
     ) const override {
-        return std::unique_ptr<DataArrayBase>(new EmptyDataArray(std::move(shape)));
+        return std::unique_ptr<DataArrayBase>(new EmptyDataArray<T>(std::move(shape)));
     }
 
     [[noreturn]]
@@ -1937,6 +1945,51 @@ public:
 private:
     std::vector<uintptr_t> shape_;
 };
+
+/// Create an `EmptyDataArray` with the given `shape` and runtime `dtype`.
+///
+/// This dispatches on `dtype` to instantiate `EmptyDataArray<T>` with the
+/// matching C++ type `T`.
+inline std::unique_ptr<DataArrayBase> details::create_empty_array(
+    std::vector<uintptr_t> shape,
+    DLDataType dtype
+) {
+    if (dtype.lanes != 1) {
+        throw metatensor::Error(
+            "unsupported DLDataType in create_empty_array: lanes=" +
+            std::to_string(dtype.lanes) + " (expected 1)"
+        );
+    }
+
+    if (dtype.code == kDLFloat && dtype.bits == 64) {
+        return std::make_unique<EmptyDataArray<double>>(std::move(shape));
+    } else if (dtype.code == kDLFloat && dtype.bits == 32) {
+        return std::make_unique<EmptyDataArray<float>>(std::move(shape));
+    } else if (dtype.code == kDLInt && dtype.bits == 8) {
+        return std::make_unique<EmptyDataArray<int8_t>>(std::move(shape));
+    } else if (dtype.code == kDLInt && dtype.bits == 16) {
+        return std::make_unique<EmptyDataArray<int16_t>>(std::move(shape));
+    } else if (dtype.code == kDLInt && dtype.bits == 32) {
+        return std::make_unique<EmptyDataArray<int32_t>>(std::move(shape));
+    } else if (dtype.code == kDLInt && dtype.bits == 64) {
+        return std::make_unique<EmptyDataArray<int64_t>>(std::move(shape));
+    } else if (dtype.code == kDLUInt && dtype.bits == 8) {
+        return std::make_unique<EmptyDataArray<uint8_t>>(std::move(shape));
+    } else if (dtype.code == kDLUInt && dtype.bits == 16) {
+        return std::make_unique<EmptyDataArray<uint16_t>>(std::move(shape));
+    } else if (dtype.code == kDLUInt && dtype.bits == 32) {
+        return std::make_unique<EmptyDataArray<uint32_t>>(std::move(shape));
+    } else if (dtype.code == kDLUInt && dtype.bits == 64) {
+        return std::make_unique<EmptyDataArray<uint64_t>>(std::move(shape));
+    } else if (dtype.code == kDLBool && dtype.bits == 8) {
+        return std::make_unique<EmptyDataArray<bool>>(std::move(shape));
+    } else {
+        throw metatensor::Error(
+            "unsupported DLDataType in create_empty_array: code="
+            + std::to_string(dtype.code) + " bits=" + std::to_string(dtype.bits)
+        );
+    }
+}
 
 /// Default callback for data array creating in `TensorMap::load`.
 /// Dispatches on the `dtype` parameter to create the appropriate

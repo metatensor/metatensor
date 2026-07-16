@@ -121,7 +121,7 @@ public:
     /// does not contain any data.
     TensorBlock clone_metadata_only() const {
         auto block = TensorBlock(
-            std::make_unique<EmptyDataArray>(EmptyDataArray(this->values_shape())),
+            details::create_empty_array(this->values_shape(), this->dtype()),
             this->samples(),
             this->components(),
             this->properties()

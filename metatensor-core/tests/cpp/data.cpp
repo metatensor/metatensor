@@ -286,7 +286,7 @@ TEST_CASE("SimpleDataArray - device()") {
 }
 
 TEST_CASE("EmptyDataArray - device()") {
-    auto data = EmptyDataArray({2, 3});
+    auto data = EmptyDataArray<double>({2, 3});
     auto dev = data.device();
     CHECK(dev.device_type == kDLCPU);
     CHECK(dev.device_id == 0);
@@ -415,11 +415,38 @@ TEST_CASE("SimpleDataArray - dtype()") {
 }
 
 TEST_CASE("EmptyDataArray - dtype()") {
-    auto data = EmptyDataArray({2, 3});
-    auto dt = data.dtype();
-    CHECK(dt.code == kDLFloat);
-    CHECK(dt.bits == 64);
-    CHECK(dt.lanes == 1);
+    SECTION("default (double)") {
+        auto data = EmptyDataArray<double>({2, 3});
+        auto dt = data.dtype();
+        CHECK(dt.code == kDLFloat);
+        CHECK(dt.bits == 64);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("int32") {
+        auto data = EmptyDataArray<int32_t>({2, 3});
+        auto dt = data.dtype();
+        CHECK(dt.code == kDLInt);
+        CHECK(dt.bits == 32);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("bool") {
+        auto data = EmptyDataArray<bool>({2, 3});
+        auto dt = data.dtype();
+        CHECK(dt.code == kDLBool);
+        CHECK(dt.bits == 8);
+        CHECK(dt.lanes == 1);
+    }
+
+    SECTION("via mts_array_t callback") {
+        auto data = std::make_unique<EmptyDataArray<int32_t>>(std::vector<uintptr_t>{2, 3});
+        auto array = DataArrayBase::to_mts_array(std::move(data));
+
+        CHECK(array.dtype().code == kDLInt);
+        CHECK(array.dtype().bits == 32);
+        CHECK(array.dtype().lanes == 1);
+    }
 }
 
 

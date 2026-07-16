@@ -97,7 +97,7 @@ BenchmarkResult bench_tensor_block(std::optional<size_t> n_samples, std::optiona
     return bench_function(
         [samples, properties, values = std::move(values)]() {
             auto block = metatensor::TensorBlock(
-                std::make_unique<metatensor::EmptyDataArray>(
+                std::make_unique<metatensor::EmptyDataArray<double>>(
                     std::vector<uintptr_t>{100, 100}
                 ),
                 samples,
@@ -122,7 +122,7 @@ BenchmarkResult bench_tensor_block_large(std::optional<size_t> n_samples, std::o
     return bench_function(
         [samples, components, properties]() {
             auto block = metatensor::TensorBlock(
-                std::make_unique<metatensor::EmptyDataArray>(
+                std::make_unique<metatensor::EmptyDataArray<double>>(
                     std::vector<uintptr_t>{10000, 10, 5, 10, 100}
                 ),
                 samples,
@@ -147,7 +147,7 @@ BenchmarkResult bench_tensor_map(std::optional<size_t> n_samples, std::optional<
 
         for (int32_t i = 0; i < n_blocks; i++) {
             blocks.emplace_back(
-                std::make_unique<metatensor::EmptyDataArray>(
+                std::make_unique<metatensor::EmptyDataArray<double>>(
                     std::vector<uintptr_t>{100, 100}
                 ),
                 samples,
@@ -185,7 +185,7 @@ BenchmarkResult bench_tensor_map_large(std::optional<size_t> n_samples, std::opt
 
         for (int32_t i = 0; i < n_blocks; i++) {
             blocks.emplace_back(
-                std::make_unique<metatensor::EmptyDataArray>(
+                std::make_unique<metatensor::EmptyDataArray<double>>(
                     std::vector<uintptr_t>{100, 100}
                 ),
                 samples,
