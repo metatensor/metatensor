@@ -161,6 +161,8 @@ namespace details {
         dt.bits = static_cast<uint8_t>(sizeof(T) * 8);
         if constexpr (std::is_floating_point_v<T>) {
             dt.code = kDLFloat;
+        } else if constexpr (std::is_same_v<T, bool>) {
+            dt.code = kDLBool;
         } else if constexpr (std::is_signed_v<T>) {
             dt.code = kDLInt;
         } else {
@@ -168,6 +170,19 @@ namespace details {
         }
         return dt;
     }
+
+    /// Map a C++ logical type to the storage type used to hold its data.
+    ///
+    /// `bool` is special-cased to `uint8_t` because of the stupid
+    /// `std::vector<bool>` specialization. All other types are stored directly.
+    template<typename T>
+    struct storage_type_of { using type = T; };
+
+    template<>
+    struct storage_type_of<bool> { using type = uint8_t; };
+
+    template<typename T>
+    using storage_type_t = typename storage_type_of<T>::type;
 
     /// Check whether a DLDataType matches the C++ type T.
     ///
@@ -254,8 +269,8 @@ namespace details {
     }
 
     template <typename T>
-    std::vector<T> vector_from_dlpack(const DLTensor& dl_tensor) {
-        auto expected_dtype = dtype_of<T>();
+    std::vector<storage_type_t<T>> vector_from_dlpack(const DLTensor& dl_tensor) {
+        auto expected_dtype = details::dtype_of<T>();
         if (dl_tensor.dtype.code != expected_dtype.code ||
             dl_tensor.dtype.bits != expected_dtype.bits ||
             dl_tensor.dtype.lanes != expected_dtype.lanes
@@ -265,17 +280,20 @@ namespace details {
                 "DLPack tensor has dtype (code=" + std::to_string(dl_tensor.dtype.code)
                 + ", bits=" + std::to_string(dl_tensor.dtype.bits)
                 + ", lanes=" + std::to_string(dl_tensor.dtype.lanes)
-                + ") which does not match the expected dtype (code=" + std::to_string(dtype_of<T>().code)
-                + ", bits=" + std::to_string(dtype_of<T>().bits)
-                + ", lanes=" + std::to_string(dtype_of<T>().lanes) + ")"
+                + ") which does not match the expected dtype "
+                + "(code=" + std::to_string(expected_dtype.code)
+                + ", bits=" + std::to_string(expected_dtype.bits)
+                + ", lanes=" + std::to_string(expected_dtype.lanes) + ")"
             );
         }
 
         const auto* byte_ptr = static_cast<const char*>(dl_tensor.data);
-        const auto* data_ptr = reinterpret_cast<const T*>(byte_ptr + dl_tensor.byte_offset);
+        const auto* data_ptr = reinterpret_cast<const storage_type_t<T>*>(byte_ptr + dl_tensor.byte_offset);
 
         if (dl_tensor.ndim == 0) {
-            return std::vector<T>{*static_cast<const T*>(dl_tensor.data)};
+            return std::vector<storage_type_t<T>>{
+                *static_cast<const storage_type_t<T>*>(dl_tensor.data)
+            };
         }
 
         auto* shape = dl_tensor.shape;
@@ -304,10 +322,10 @@ namespace details {
         }
         auto ndim = static_cast<size_t>(dl_tensor.ndim);
 
-        std::vector<T> data;
+        std::vector<storage_type_t<T>> data;
         if (is_contiguous) {
             // If the tensor is contiguous, we can directly use the data pointer
-            data = std::vector<T> (data_ptr, data_ptr + num_elements);
+            data = std::vector<storage_type_t<T>>(data_ptr, data_ptr + num_elements);
         } else {
             // copy elements one by one using the shape and stride information
             data.reserve(num_elements);
@@ -1358,12 +1376,16 @@ public:
 template <typename T, typename = std::enable_if_t<std::is_arithmetic_v<T>>>
 class SimpleDataArray : public metatensor::DataArrayBase {
 public:
+    /// Storage type used to hold the data. `bool` is stored as `uint8_t`
+    /// because `std::vector<bool>` does not provide a contiguous `bool*`.
+    using storage_t = details::storage_type_t<T>;
+
     /// Create a SimpleDataArray with the given `shape`, and all elements set to
     /// `value`
     SimpleDataArray(std::vector<uintptr_t> shape, T value = T{}):
         shape_(std::move(shape)),
         strides_(details::contiguous_strides(shape_)),
-        data_(std::make_shared<std::vector<T>>(details::product(shape_), value))
+        data_(std::make_shared<std::vector<storage_t>>(details::product(shape_), static_cast<storage_t>(value)))
     {
         (void)reserved_;
     }
@@ -1371,10 +1393,10 @@ public:
     /// Create a SimpleDataArray with the given `shape` and `data`.
     ///
     /// The data is interpreted as a row-major n-dimensional array.
-    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<T> data):
+    SimpleDataArray(std::vector<uintptr_t> shape, std::vector<storage_t> data):
         shape_(std::move(shape)),
         strides_(details::contiguous_strides(shape_)),
-        data_(std::make_shared<std::vector<T>>(std::move(data)))
+        data_(std::make_shared<std::vector<storage_t>>(std::move(data)))
     {
         if (data_->size() != details::product(shape_)) {
             throw Error("the shape and size of the data don't match in SimpleDataArray");
@@ -1418,7 +1440,7 @@ public:
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
-        auto new_data = std::vector<T>(details::product(shape_), T{});
+        auto new_data = std::vector<storage_t>(details::product(shape_), storage_t{});
         auto new_shape = shape_;
         std::swap(new_shape[axis_1], new_shape[axis_2]);
 
@@ -1430,7 +1452,7 @@ public:
         }
 
         shape_ = std::move(new_shape);
-        data_ = std::make_shared<std::vector<T>>(std::move(new_data));
+        data_ = std::make_shared<std::vector<storage_t>>(std::move(new_data));
     }
 
     std::unique_ptr<DataArrayBase> copy(DLDevice device) const override {
@@ -1515,13 +1537,13 @@ public:
     }
 
     /// Get a const view of the data managed by this SimpleDataArray
-    NDArray<T> view() const {
-        return NDArray<T>(data_->data(), shape_);
+    NDArray<storage_t> view() const {
+        return NDArray<storage_t>(data_->data(), shape_);
     }
 
     /// Get a mutable view of the data managed by this SimpleDataArray
-    NDArray<T> view() {
-        return NDArray<T>(data_->data(), shape_);
+    NDArray<storage_t> view() {
+        return NDArray<storage_t>(data_->data(), shape_);
     }
 
     /// Extract a reference to SimpleDataArray out of an `mts_array_t`.
@@ -1583,7 +1605,7 @@ public:
 
         using metatensor::details::DLPackContext;
         using metatensor::details::DLPackDeleter;
-        auto ctx = std::make_unique<DLPackContext<T>>();
+        auto ctx = std::make_unique<DLPackContext<storage_t>>();
         // fill shape
         ctx->shape.resize(this->shape_.size());
         std::transform(this->shape_.begin(), this->shape_.end(), ctx->shape.begin(),
@@ -1721,6 +1743,11 @@ public:
                 std::move(shape),
                 details::vector_from_dlpack<uint64_t>(dl_tensor)
             );
+        } else if (dtype.code == kDLBool && dtype.bits == 8) {
+            result = std::make_unique<SimpleDataArray<bool>>(
+                std::move(shape),
+                details::vector_from_dlpack<bool>(dl_tensor)
+            );
         } else {
             throw metatensor::Error(
                 "unsupported DLDataType in default_create_array: code="
@@ -1732,12 +1759,12 @@ public:
     }
 
     /// Get a pointer to the data managed by this SimpleDataArray
-    T* data() {
+    storage_t* data() {
         return data_->data();
     }
 
     /// Get a const pointer to the data managed by this SimpleDataArray
-    const T* data() const {
+    const storage_t* data() const {
         return data_->data();
     }
 
@@ -1754,7 +1781,7 @@ public:
 private:
     std::vector<uintptr_t> shape_;
     std::vector<int64_t> strides_;
-    std::shared_ptr<std::vector<T>> data_;
+    std::shared_ptr<std::vector<storage_t>> data_;
 
     /// reserved space for future expansion of the class without breaking
     /// ABI compatibility
@@ -1954,6 +1981,8 @@ inline mts_status_t details::default_create_array(
             cxx_array = std::make_unique<SimpleDataArray<uint32_t>>(shape);
         } else if (dtype.code == kDLUInt && dtype.bits == 64) {
             cxx_array = std::make_unique<SimpleDataArray<uint64_t>>(shape);
+        } else if (dtype.code == kDLBool && dtype.bits == 8) {
+            cxx_array = std::make_unique<SimpleDataArray<bool>>(shape);
         } else {
             throw metatensor::Error(
                 "unsupported DLDataType in default_create_array: code="

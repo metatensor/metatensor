@@ -17,6 +17,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Changed
+
+- `SimpleDataArray` in C++ now supports `bool` data type
+
 ## [Version 0.2.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.3) - 2026-07-07
 
 ### Changed
