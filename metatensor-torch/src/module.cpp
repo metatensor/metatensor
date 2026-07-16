@@ -1,3 +1,6 @@
+#include <string>
+#include <vector>
+
 #include <torch/script.h>
 
 #include "metatensor/torch/labels.hpp"
@@ -133,10 +136,34 @@ void Module::to_impl_(
     bool non_blocking
 ) {
     for (auto module: this->modules()) {
-        for (const auto& attr: module.named_attributes(/*recurse=*/false)) {
-            auto [value, changed] = ivalue_to(attr.value, device, dtype, non_blocking);
+        // Determine which attributes to process
+        std::vector<std::string> attr_names;
+
+        if (module.hasattr("_mts_buffer_names")) {
+            auto names = module.attr("_mts_buffer_names").toList();
+            for (const auto& item : names) {
+                attr_names.push_back(item.get().toStringRef());
+            }
+        } else {
+            // Fallback: process all attributes (backward compatibility with modules
+            // that don't use register_buffer)
+            TORCH_WARN_ONCE(
+                "module does not have '_mts_buffer_names'; falling back to "
+                "processing all attributes. This is deprecated and will be "
+                "removed in a future version, update your version of "
+                "metatensor-learn and use `register_buffer` explicitly "
+                "to remove this warning."
+            );
+            for (const auto& attr : module.named_attributes(false)) {
+                attr_names.push_back(attr.name);
+            }
+        }
+
+        for (const auto& name : attr_names) {
+            auto value = module.attr(name);
+            auto [updated, changed] = ivalue_to(value, device, dtype, non_blocking);
             if (changed) {
-                module.register_attribute(attr.name, attr.value.type().get(), value);
+                module.register_attribute(name, updated.type().get(), updated);
             }
         }
     }

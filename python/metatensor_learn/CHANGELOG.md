@@ -17,6 +17,17 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- `metatensor.learn.nn.Buffer` wrapper to register metatensor data as buffers
+  via attribute assignment.
+
+### Changed
+
+- Metatensor data stored inside `metatensor.learn.nn.Module` must now be
+  registered explicitly via `register_buffer` instead of being auto-detected
+  from all module attributes, matching PyTorch conventions.
+
 ## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
 
 ### Changed
