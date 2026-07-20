@@ -1,5 +1,6 @@
 module Metatensor
     module lib
+        using DLPack
         using Preferences
         using ..Metatensor
 

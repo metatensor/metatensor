@@ -7,11 +7,10 @@ import warnings
 from typing import BinaryIO, Callable, Union
 
 import numpy as np
+from ctypes_dlpack import DLDataType, DLDataTypeCode
 
 from .._block import TensorBlock
 from .._c_api import (
-    DLDataType,
-    DLDataTypeCode,
     c_uintptr_t,
     mts_array_t,
     mts_create_array_callback_t,
