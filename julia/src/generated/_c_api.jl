@@ -25,48 +25,6 @@ mts_realloc_buffer_t = Ptr{Cvoid}         # TODO: actual type
 # ===== Enum definitions
 
 
-# enum DLDeviceType
-const DLDeviceType = UInt32
-const kDLCPU = DLDeviceType(1)
-const kDLCUDA = DLDeviceType(2)
-const kDLCUDAHost = DLDeviceType(3)
-const kDLOpenCL = DLDeviceType(4)
-const kDLVulkan = DLDeviceType(7)
-const kDLMetal = DLDeviceType(8)
-const kDLVPI = DLDeviceType(9)
-const kDLROCM = DLDeviceType(10)
-const kDLROCMHost = DLDeviceType(11)
-const kDLExtDev = DLDeviceType(12)
-const kDLCUDAManaged = DLDeviceType(13)
-const kDLOneAPI = DLDeviceType(14)
-const kDLWebGPU = DLDeviceType(15)
-const kDLHexagon = DLDeviceType(16)
-const kDLMAIA = DLDeviceType(17)
-const kDLTrn = DLDeviceType(18)
-
-
-# enum DLDataTypeCode
-const DLDataTypeCode = UInt32
-const kDLInt = DLDataTypeCode(0)
-const kDLUInt = DLDataTypeCode(1)
-const kDLFloat = DLDataTypeCode(2)
-const kDLOpaqueHandle = DLDataTypeCode(3)
-const kDLBfloat = DLDataTypeCode(4)
-const kDLComplex = DLDataTypeCode(5)
-const kDLBool = DLDataTypeCode(6)
-const kDLFloat8_e3m4 = DLDataTypeCode(7)
-const kDLFloat8_e4m3 = DLDataTypeCode(8)
-const kDLFloat8_e4m3b11fnuz = DLDataTypeCode(9)
-const kDLFloat8_e4m3fn = DLDataTypeCode(10)
-const kDLFloat8_e4m3fnuz = DLDataTypeCode(11)
-const kDLFloat8_e5m2 = DLDataTypeCode(12)
-const kDLFloat8_e5m2fnuz = DLDataTypeCode(13)
-const kDLFloat8_e8m0fnu = DLDataTypeCode(14)
-const kDLFloat6_e2m3fn = DLDataTypeCode(15)
-const kDLFloat6_e3m2fn = DLDataTypeCode(16)
-const kDLFloat4_e2m1fn = DLDataTypeCode(17)
-
-
 # enum mts_status_t
 const mts_status_t = UInt32
 const MTS_SUCCESS = mts_status_t(0)
@@ -79,46 +37,6 @@ const MTS_INTERNAL_ERROR = mts_status_t(255)
 
 
 # ===== Struct definitions
-struct DLPackVersion
-    major :: UInt32
-    minor :: UInt32
-end
-
-struct DLDevice
-    device_type :: DLDeviceType
-    device_id :: Int32
-end
-
-struct DLDataType
-    code :: UInt8
-    bits :: UInt8
-    lanes :: UInt16
-end
-
-struct DLTensor
-    data :: Ptr{Cvoid}
-    device :: DLDevice
-    ndim :: Int32
-    dtype :: DLDataType
-    shape :: Ptr{Int64}
-    strides :: Ptr{Int64}
-    byte_offset :: UInt64
-end
-
-struct DLManagedTensor
-    dl_tensor :: DLTensor
-    manager_ctx :: Ptr{Cvoid}
-    deleter :: Ptr{Cvoid} #= (Ptr{DLManagedTensor}) -> Cvoid =#
-end
-
-struct DLManagedTensorVersioned
-    version :: DLPackVersion
-    manager_ctx :: Ptr{Cvoid}
-    deleter :: Ptr{Cvoid} #= (Ptr{DLManagedTensorVersioned}) -> Cvoid =#
-    flags :: UInt64
-    dl_tensor :: DLTensor
-end
-
 struct mts_block_t
 end
 
@@ -140,15 +58,15 @@ struct mts_array_t
     ptr :: Ptr{Cvoid}
     destroy :: Ptr{Cvoid} #= (Ptr{Cvoid}) -> Cvoid =#
     origin :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{mts_data_origin_t}) -> mts_status_t =#
-    device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDevice}) -> mts_status_t =#
-    dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLDataType}) -> mts_status_t =#
-    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{DLManagedTensorVersioned}}, DLDevice, Ptr{Int64}, DLPackVersion) -> mts_status_t =#
-    from_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLManagedTensorVersioned}, Ptr{mts_array_t}) -> mts_status_t =#
+    device :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLPack.DLDevice}) -> mts_status_t =#
+    dtype :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLPack.DLDataType}) -> mts_status_t =#
+    as_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{DLPack.DLManagedTensorVersioned}}, DLPack.DLDevice, Ptr{Int64}, DLPack.DLPackVersion) -> mts_status_t =#
+    from_dlpack :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{DLPack.DLManagedTensorVersioned}, Ptr{mts_array_t}) -> mts_status_t =#
     shape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Ptr{UIntptr}}, Ptr{UIntptr}) -> mts_status_t =#
     reshape :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr) -> mts_status_t =#
     swap_axes :: Ptr{Cvoid} #= (Ptr{Cvoid}, UIntptr, UIntptr) -> mts_status_t =#
     create :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{UIntptr}, UIntptr, mts_array_t, Ptr{mts_array_t}) -> mts_status_t =#
-    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, DLDevice, Ptr{mts_array_t}) -> mts_status_t =#
+    copy :: Ptr{Cvoid} #= (Ptr{Cvoid}, DLPack.DLDevice, Ptr{mts_array_t}) -> mts_status_t =#
     move_data :: Ptr{Cvoid} #= (Ptr{Cvoid}, Ptr{Cvoid}, Ptr{mts_data_movement_t}, UIntptr) -> mts_status_t =#
 end
 
@@ -363,18 +281,18 @@ function mts_block_gradients_list(block::Ptr{mts_block_t}, parameters::Ptr{Ptr{P
     )
 end
 
-function mts_block_device(block::Ptr{mts_block_t}, device::Ptr{DLDevice})
+function mts_block_device(block::Ptr{mts_block_t}, device::Ptr{DLPack.DLDevice})
     ccall((:mts_block_device, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_block_t}, Ptr{DLDevice},),
+        (Ptr{mts_block_t}, Ptr{DLPack.DLDevice},),
         block, device
     )
 end
 
-function mts_block_dtype(block::Ptr{mts_block_t}, dtype::Ptr{DLDataType})
+function mts_block_dtype(block::Ptr{mts_block_t}, dtype::Ptr{DLPack.DLDataType})
     ccall((:mts_block_dtype, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_block_t}, Ptr{DLDataType},),
+        (Ptr{mts_block_t}, Ptr{DLPack.DLDataType},),
         block, dtype
     )
 end
@@ -467,18 +385,18 @@ function mts_tensormap_info_keys(tensor::Ptr{mts_tensormap_t}, keys::Ptr{Ptr{Ptr
     )
 end
 
-function mts_tensormap_device(tensor::Ptr{mts_tensormap_t}, device::Ptr{DLDevice})
+function mts_tensormap_device(tensor::Ptr{mts_tensormap_t}, device::Ptr{DLPack.DLDevice})
     ccall((:mts_tensormap_device, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_tensormap_t}, Ptr{DLDevice},),
+        (Ptr{mts_tensormap_t}, Ptr{DLPack.DLDevice},),
         tensor, device
     )
 end
 
-function mts_tensormap_dtype(tensor::Ptr{mts_tensormap_t}, dtype::Ptr{DLDataType})
+function mts_tensormap_dtype(tensor::Ptr{mts_tensormap_t}, dtype::Ptr{DLPack.DLDataType})
     ccall((:mts_tensormap_dtype, libmetatensor), 
         mts_status_t,
-        (Ptr{mts_tensormap_t}, Ptr{DLDataType},),
+        (Ptr{mts_tensormap_t}, Ptr{DLPack.DLDataType},),
         tensor, dtype
     )
 end

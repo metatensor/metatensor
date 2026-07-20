@@ -2,12 +2,15 @@ import ctypes
 from typing import Any
 
 import numpy as np
-
-from .._c_api import (
+from ctypes_dlpack import (
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
+    DLPackArray,
     DLPackVersion,
+)
+
+from .._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_data_origin_t,
@@ -20,7 +23,6 @@ from ._array import (
     _origin_pytorch,
     _register_origin,
 )
-from ._dlpack import DLPackArray, wrap_versioned_as_unversioned
 
 
 _ADDITIONAL_ORIGINS = {}
@@ -235,13 +237,7 @@ class ExternalCudaArray:
                 pass
 
         if tensor is None:
-            try:
-                tensor = torch.from_dlpack(dlpack_array)
-            except RuntimeError:
-                # Older PyTorch (< 2.4) doesn't understand versioned
-                # DLPack capsules. Fall back to an unversioned capsule.
-                unversioned = wrap_versioned_as_unversioned(dl_managed_ptr)
-                tensor = torch.from_dlpack(DLPackArray(unversioned))
+            tensor = torch.from_dlpack(dlpack_array)
 
         # keep a reference to the parent object to prevent it from being
         # garbage-collected while the tensor is alive

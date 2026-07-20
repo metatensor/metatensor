@@ -4,14 +4,16 @@ from pickle import PickleBuffer
 from typing import Any, BinaryIO, Dict, List, Optional, Sequence, Union
 
 import numpy as np
-
-from . import _data
-from ._block import TensorBlock
-from ._c_api import (
+from ctypes_dlpack import (
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
     DLPackVersion,
+)
+
+from . import _data
+from ._block import TensorBlock
+from ._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_block_t,

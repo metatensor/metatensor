@@ -15,13 +15,16 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-import metatensor
-from metatensor import ExternalCpuArray, ExternalCudaArray
-from metatensor._c_api import (
+from ctypes_dlpack import (
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
     DLPackVersion,
+)
+
+import metatensor
+from metatensor import ExternalCpuArray, ExternalCudaArray
+from metatensor._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_data_movement_t,

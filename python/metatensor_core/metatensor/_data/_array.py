@@ -2,29 +2,23 @@ import ctypes
 from typing import NewType, Union
 
 import numpy as np
-
-from .._c_api import (
+from ctypes_dlpack import (
     DLDataType,
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
+    DLPackArray,
     DLPackVersion,
+    array_as_dlpack,
+)
+
+from .._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_data_movement_t,
     mts_data_origin_t,
 )
 from .._status import catch_exceptions, check_status
-from ._dlpack import (
-    DLPACK_NAME,
-    DLPACK_VERSIONED_NAME,
-    PYTHON_API,
-    USED_DLPACK_NAME,
-    USED_DLPACK_VERSIONED_NAME,
-    DLManagedTensor,
-    DLPackArray,
-    wrap_unversioned_as_versioned,
-)
 
 
 try:
@@ -500,106 +494,20 @@ def _mts_array_move_data(
 @catch_exceptions
 def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_version):
     """
-    Implementation of `mts_array_t.as_dlpack`.
+    Implementation of ``mts_array_t.as_dlpack``.
 
-    This function calls the array's __dlpack__ method, gets the PyCapsule,
-    extracts the raw pointer, and transfers
-    ownership to the C-API caller.
-
-    When the PyCapsule contains a `dltensor_versioned`, we just need to rename
-    the capsule to `used_dltensor_versioned` after giving the data to the C API.
-
-    When the PyCapsule contains a deprecated `dltensor`, we re-wrap the data
-    inside `DLManagedTensorVersioned`.
+    This function calls the array's __dlpack__ method, gets the PyCapsule, extracts the
+    raw pointer, and transfers ownership to the C-API caller.
     """
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
-    array = wrapper.array
 
-    dl_device = (device.device_type.value, device.device_id)
-    stream = stream.contents if stream else None
-    max_version = (max_version.major, max_version.minor)
-
-    capsule = None
-
-    try:
-        # Try requesting versioned DLPack
-        capsule = array.__dlpack__(
-            stream=stream, max_version=max_version, dl_device=dl_device
-        )
-    except Exception as _:
-        # Fallback to legacy signatures. Each fallback drops one parameter.
-        try:
-            capsule = array.__dlpack__(stream=stream, dl_device=dl_device)
-        except Exception:
-            try:
-                capsule = array.__dlpack__(dl_device=dl_device)
-            except Exception:
-                capsule = array.__dlpack__()
-
-    capsule_name = PYTHON_API.PyCapsule_GetName(capsule)
-
-    # Versioned Capsule
-    if capsule_name == DLPACK_VERSIONED_NAME:
-        pointer = PYTHON_API.PyCapsule_GetPointer(capsule, DLPACK_VERSIONED_NAME)
-        if not pointer:
-            raise
-
-        versioned_ptr = ctypes.cast(pointer, ctypes.POINTER(DLManagedTensorVersioned))
-        actual_device = versioned_ptr.contents.dl_tensor.device
-        if (
-            actual_device.device_type != device.device_type
-            or actual_device.device_id != device.device_id
-        ):
-            raise ValueError(
-                f"DLPack device mismatch: expected type={device.device_type} "
-                f"id={device.device_id}, got type={actual_device.device_type} "
-                f"id={actual_device.device_id}"
-            )
-
-        status = PYTHON_API.PyCapsule_SetName(capsule, USED_DLPACK_VERSIONED_NAME)
-        if status != 0:
-            raise
-
-        dl_managed_tensor_ptr_ptr[0] = versioned_ptr
-        return
-
-    # Legacy Capsule
-    if capsule_name == DLPACK_NAME:
-        pointer = PYTHON_API.PyCapsule_GetPointer(capsule, DLPACK_NAME)
-        if not pointer:
-            raise
-
-        unversioned_ptr = ctypes.cast(pointer, ctypes.POINTER(DLManagedTensor))
-
-        actual_device = unversioned_ptr.contents.dl_tensor.device
-        if (
-            actual_device.device_type != device.device_type
-            or actual_device.device_id != device.device_id
-        ):
-            raise ValueError(
-                f"DLPack device mismatch: expected type {device.device_type}"
-                f" id {device.device_id}, "
-                f"got type {actual_device.device_type}"
-                f" id {actual_device.device_id}"
-            )
-
-        # We must do this to ensure that the deletion of the PyCapsule does not run the
-        # deleter and cause double-free issues. Instead we call legacy deleter
-        # explicitly as part of the versioned tensor's deleter.
-        status = PYTHON_API.PyCapsule_SetName(capsule, USED_DLPACK_NAME)
-        if status != 0:
-            raise
-
-        # Wrap it
-        versioned_ptr = wrap_unversioned_as_versioned(unversioned_ptr)
-        dl_managed_tensor_ptr_ptr[0] = versioned_ptr
-        return
-
-    raise ValueError(
-        "Unexpected DLPack capsule name:"
-        f" '{capsule_name.decode() if capsule_name else 'NULL'}'. "
-        f"Expected '{DLPACK_VERSIONED_NAME.decode()}' or '{DLPACK_NAME.decode()}'"
+    stream = None if not stream else stream.contents
+    versioned_ptr = array_as_dlpack(
+        wrapper.array, dl_device=device, stream=stream, max_version=max_version
     )
+
+    dl_managed_tensor_ptr_ptr[0] = versioned_ptr
+    return
 
 
 @catch_exceptions

@@ -1,13 +1,15 @@
 name = "Metatensor"
 uuid = "afba2530-6023-4bf7-b247-2c594027d0bd"
-authors = ["Guillaume Fraux <guillaume.fraux@epfl.ch>"]
 version = "0.1.0"
+authors = ["Guillaume Fraux <guillaume.fraux@epfl.ch>"]
 
 [deps]
+DLPack = "53c2dc0f-f7d5-43fd-8906-6c0220547083"
 Metatensor_jll = "0a60894c-bde1-5a72-bbe5-9f45bee4e041"
 Preferences = "21216c6a-2e73-6563-6e65-726566657250"
 
 [compat]
+DLPack = "0.3.1"
 Metatensor_jll = ">=0.2.0,<0.3"
 julia = "1.6"
 

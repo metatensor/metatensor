@@ -12,41 +12,43 @@ import ctypes
 import platform
 from ctypes import CFUNCTYPE, POINTER
 
+from ctypes_dlpack import DLDataType, DLDevice, DLManagedTensorVersioned, DLPackVersion
 
-class EnumType(type(ctypes.c_int32)):
-    def __new__(metacls, name, bases, dict):
-        if "_members_" not in dict:
-            _members_ = {}
-            for key, value in dict.items():
+
+class _EnumType(type(ctypes.c_int32)):
+    def __new__(metacls, name, bases, namespace):
+        if "_members_" not in namespace:
+            members = {}
+            for key, value in namespace.items():
                 if not key.startswith("_"):
-                    _members_[key] = value
-
-            dict["_members_"] = _members_
+                    members[key] = value
+            namespace["_members_"] = members
         else:
-            _members_ = dict["_members_"]
+            members = namespace["_members_"]
 
-        dict["_reverse_map_"] = {v: k for k, v in _members_.items()}
-        cls = type(ctypes.c_int32).__new__(metacls, name, bases, dict)
-        for key, value in cls._members_.items():
-            globals()[key] = value
-        return cls
+        namespace["_reverse_map_"] = {v: k for k, v in members.items()}
+        return type(ctypes.c_int32).__new__(metacls, name, bases, namespace)
 
     def __repr__(self):
-        return "<Enum %s>" % self.__name__
+        return f"<Enum {self.__name__}>"
 
 
-class Enum(ctypes.c_int32, metaclass=EnumType):
+class _Enum(ctypes.c_int32, metaclass=_EnumType):
     _members_ = {}
 
     def __repr__(self):
-        value_str = self._reverse_map_.get(self.value, str(self.value))
-        return f"{self.__class__.__name__}.{value_str}"
+        value_name = self._reverse_map_.get(self.value, str(self.value))
+        return f"{self.__class__.__name__}.{value_name}"
 
     def __eq__(self, other):
         if isinstance(other, int):
             return self.value == other
+        if type(self) is type(other):
+            return self.value == other.value
+        return NotImplemented
 
-        return type(self) is type(other) and self.value == other.value
+    def __hash__(self):
+        return hash(self.value)
 
 
 arch = platform.architecture()[0]
@@ -57,47 +59,7 @@ elif arch == "64bit":
 
 
 
-class DLDeviceType(Enum):
-    kDLCPU = 1
-    kDLCUDA = 2
-    kDLCUDAHost = 3
-    kDLOpenCL = 4
-    kDLVulkan = 7
-    kDLMetal = 8
-    kDLVPI = 9
-    kDLROCM = 10
-    kDLROCMHost = 11
-    kDLExtDev = 12
-    kDLCUDAManaged = 13
-    kDLOneAPI = 14
-    kDLWebGPU = 15
-    kDLHexagon = 16
-    kDLMAIA = 17
-    kDLTrn = 18
-
-
-class DLDataTypeCode(Enum):
-    kDLInt = 0
-    kDLUInt = 1
-    kDLFloat = 2
-    kDLOpaqueHandle = 3
-    kDLBfloat = 4
-    kDLComplex = 5
-    kDLBool = 6
-    kDLFloat8_e3m4 = 7
-    kDLFloat8_e4m3 = 8
-    kDLFloat8_e4m3b11fnuz = 9
-    kDLFloat8_e4m3fn = 10
-    kDLFloat8_e4m3fnuz = 11
-    kDLFloat8_e5m2 = 12
-    kDLFloat8_e5m2fnuz = 13
-    kDLFloat8_e8m0fnu = 14
-    kDLFloat6_e2m3fn = 15
-    kDLFloat6_e3m2fn = 16
-    kDLFloat4_e2m1fn = 17
-
-
-class mts_status_t(Enum):
+class mts_status_t(_Enum):
     MTS_SUCCESS = 0
     MTS_INVALID_PARAMETER_ERROR = 1
     MTS_IO_ERROR = 2
@@ -105,30 +67,6 @@ class mts_status_t(Enum):
     MTS_BUFFER_SIZE_ERROR = 4
     MTS_CALLBACK_ERROR = 254
     MTS_INTERNAL_ERROR = 255
-
-
-class DLPackVersion(ctypes.Structure):
-    pass
-
-
-class DLDevice(ctypes.Structure):
-    pass
-
-
-class DLDataType(ctypes.Structure):
-    pass
-
-
-class DLTensor(ctypes.Structure):
-    pass
-
-
-class DLManagedTensor(ctypes.Structure):
-    pass
-
-
-class DLManagedTensorVersioned(ctypes.Structure):
-    pass
 
 
 class mts_block_t(ctypes.Structure):
@@ -151,55 +89,10 @@ class mts_array_t(ctypes.Structure):
     pass
 
 
-DLPackManagedTensorAllocator = CFUNCTYPE(ctypes.c_int, POINTER(DLTensor), POINTER(POINTER(DLManagedTensorVersioned)), ctypes.c_void_p, CFUNCTYPE(None, ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p))
-DLPackManagedTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(POINTER(DLManagedTensorVersioned)))
-DLPackDLTensorFromPyObjectNoSync = CFUNCTYPE(ctypes.c_int, ctypes.c_void_p, POINTER(DLTensor))
-DLPackCurrentWorkStream = CFUNCTYPE(ctypes.c_int, DLDeviceType, ctypes.c_int32, POINTER(POINTER(None)))
-DLPackManagedTensorToPyObjectNoSync = CFUNCTYPE(ctypes.c_int, POINTER(DLManagedTensorVersioned), POINTER(POINTER(None)))
 mts_data_origin_t = ctypes.c_uint64
 mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
 
-
-DLPackVersion._fields_ = [
-    ("major", ctypes.c_uint32),
-    ("minor", ctypes.c_uint32),
-]
-
-DLDevice._fields_ = [
-    ("device_type", DLDeviceType),
-    ("device_id", ctypes.c_int32),
-]
-
-DLDataType._fields_ = [
-    ("code", ctypes.c_uint8),
-    ("bits", ctypes.c_uint8),
-    ("lanes", ctypes.c_uint16),
-]
-
-DLTensor._fields_ = [
-    ("data", ctypes.c_void_p),
-    ("device", DLDevice),
-    ("ndim", ctypes.c_int32),
-    ("dtype", DLDataType),
-    ("shape", POINTER(ctypes.c_int64)),
-    ("strides", POINTER(ctypes.c_int64)),
-    ("byte_offset", ctypes.c_uint64),
-]
-
-DLManagedTensor._fields_ = [
-    ("dl_tensor", DLTensor),
-    ("manager_ctx", ctypes.c_void_p),
-    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensor))),
-]
-
-DLManagedTensorVersioned._fields_ = [
-    ("version", DLPackVersion),
-    ("manager_ctx", ctypes.c_void_p),
-    ("deleter", CFUNCTYPE(None, POINTER(DLManagedTensorVersioned))),
-    ("flags", ctypes.c_uint64),
-    ("dl_tensor", DLTensor),
-]
 
 mts_data_movement_t._fields_ = [
     ("sample_in", c_uintptr_t),

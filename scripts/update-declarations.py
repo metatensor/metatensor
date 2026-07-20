@@ -62,7 +62,7 @@ class Enum:
 
 
 class AstVisitor(c_ast.NodeVisitor):
-    def __init__(self):
+    def __init__(self, *, include_dlpack=True):
         self.functions = []
         self.enums = []
         self.structs = []
@@ -93,8 +93,8 @@ class AstVisitor(c_ast.NodeVisitor):
             raise RuntimeError(f"Unknown declaration type for {node_name}")
 
     def visit_Typedef(self, node):
-        # Extract metatensor and dlpack stuff only
-        if not (node.name.startswith("mts_") or node.name.startswith("DL")):
+        # Extract metatensor stuff only
+        if not node.name.startswith("mts_"):
             return
 
         if isinstance(node.type.type, c_ast.Enum):
@@ -249,41 +249,43 @@ import ctypes
 import platform
 from ctypes import CFUNCTYPE, POINTER
 
+from ctypes_dlpack import DLDataType, DLDevice, DLManagedTensorVersioned, DLPackVersion
 
-class EnumType(type(ctypes.c_int32)):
-    def __new__(metacls, name, bases, dict):
-        if "_members_" not in dict:
-            _members_ = {}
-            for key, value in dict.items():
+
+class _EnumType(type(ctypes.c_int32)):
+    def __new__(metacls, name, bases, namespace):
+        if "_members_" not in namespace:
+            members = {}
+            for key, value in namespace.items():
                 if not key.startswith("_"):
-                    _members_[key] = value
-
-            dict["_members_"] = _members_
+                    members[key] = value
+            namespace["_members_"] = members
         else:
-            _members_ = dict["_members_"]
+            members = namespace["_members_"]
 
-        dict["_reverse_map_"] = {v: k for k, v in _members_.items()}
-        cls = type(ctypes.c_int32).__new__(metacls, name, bases, dict)
-        for key, value in cls._members_.items():
-            globals()[key] = value
-        return cls
+        namespace["_reverse_map_"] = {v: k for k, v in members.items()}
+        return type(ctypes.c_int32).__new__(metacls, name, bases, namespace)
 
     def __repr__(self):
-        return "<Enum %s>" % self.__name__
+        return f"<Enum {self.__name__}>"
 
 
-class Enum(ctypes.c_int32, metaclass=EnumType):
+class _Enum(ctypes.c_int32, metaclass=_EnumType):
     _members_ = {}
 
     def __repr__(self):
-        value_str = self._reverse_map_.get(self.value, str(self.value))
-        return f"{self.__class__.__name__}.{value_str}"
+        value_name = self._reverse_map_.get(self.value, str(self.value))
+        return f"{self.__class__.__name__}.{value_name}"
 
     def __eq__(self, other):
         if isinstance(other, int):
             return self.value == other
+        if type(self) is type(other):
+            return self.value == other.value
+        return NotImplemented
 
-        return type(self) is type(other) and self.value == other.value
+    def __hash__(self):
+        return hash(self.value)
 
 
 arch = platform.architecture()[0]
@@ -297,7 +299,7 @@ elif arch == "64bit":
 
         # Enums
         for enum in data.enums:
-            f.write(f"\n\nclass {enum.name}(Enum):\n")
+            f.write(f"\n\nclass {enum.name}(_Enum):\n")
             for name, value in enum.values.items():
                 f.write(f"    {name} = {value}\n")
 
@@ -359,9 +361,11 @@ CTYPES_TO_JULIA = {
 
 
 def _jl_type_name(name):
-    if name.startswith("mts_") or name.startswith("DL"):
+    if name.startswith("mts_"):
         return name
-    if name in CTYPES_TO_JULIA:
+    elif name.startswith("DL"):
+        return f"DLPack.{name}"
+    elif name in CTYPES_TO_JULIA:
         return CTYPES_TO_JULIA[name]
     else:
         return "C" + name
