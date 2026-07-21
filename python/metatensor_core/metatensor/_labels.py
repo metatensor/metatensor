@@ -5,11 +5,10 @@ from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
+from ctypes_dlpack import DLDataType, DLDataTypeCode
 
 from . import _data
 from ._c_api import (
-    DLDataType,
-    DLDataTypeCode,
     c_uintptr_t,
     mts_array_t,
     mts_labels_t,

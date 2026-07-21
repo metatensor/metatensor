@@ -34,7 +34,7 @@ def check_pointer(pointer):
 
 def _delete_exception(exception):
     # decrement the reference count of the exception
-    exception_ptr = ctypes.cast(exception, ctypes.py_object).value
+    exception_ptr = ctypes.cast(exception, ctypes.py_object)
     ctypes.pythonapi.Py_DecRef(exception_ptr)
 
 
