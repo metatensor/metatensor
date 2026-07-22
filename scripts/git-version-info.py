@@ -174,7 +174,14 @@ def git_hash_all_code():
 
             git_env = os.environ.copy()
             git_env["GIT_INDEX_FILE"] = tmp.name
-            run_subprocess(["git", "add", "--all"], env=git_env, cwd=worktree)
+            # `core.safecrlf=false` since we are only staging files to compute a hash,
+            # and never write them back to the working tree: the end-of-line warnings
+            # git would emit here (on Windows) are only noise.
+            run_subprocess(
+                ["git", "-c", "core.safecrlf=false", "add", "--all"],
+                env=git_env,
+                cwd=worktree,
+            )
 
             output = run_subprocess(["git", "write-tree"], env=git_env, cwd=worktree)
             short_hash = output.stdout[:7]
