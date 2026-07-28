@@ -49,7 +49,8 @@ where
 
     fn copy(&self, device: DLDevice) -> Box<dyn Array> {
         assert_eq!(device, DLDevice::cpu(), "Rust ndarray data can only be copied to CPU device");
-        return Box::new(self.clone());
+        let data = self.read().expect("array lock is poisoned");
+        return Box::new(Arc::new(RwLock::new(data.clone())));
     }
 
     fn shape(&self) -> Vec<usize> {
