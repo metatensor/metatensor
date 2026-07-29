@@ -719,14 +719,17 @@ class TensorMap:
 
         result = f"TensorMap with {len(self)} {block_word}\n"
 
-        # use the same column formatting as Labels printing
         from metatensor._labels import _print_string_center
 
         names = self.keys.names
         values = self.keys.values
 
-        # +2 to use at least one space on each side of the name
-        widths = [len(n) + 2 for n in names]
+        n_dimensions = max(1, len(names))
+        if len(names) == 0:
+            names = [""]
+
+        # +2 to use at least one space on each side of the value
+        widths = [0] * n_dimensions
 
         key_strings = []
         for i in range(n_blocks_to_print):
@@ -735,33 +738,29 @@ class TensorMap:
                 widths[j] = max(widths[j], len(s) + 2)
             key_strings.append(entry_strings)
 
-        n_dimensions = len(names)
         indent = "    "
+        block_indent = "      "
 
-        # header
         output = io.StringIO()
-        output.write(indent)
-        for i in range(n_dimensions):
-            last = i == n_dimensions - 1
-            _print_string_center(output, names[i], widths[i], last)
-        output.write("\n")
+
+        # keys header line
+        header_key = "[" + ", ".join(self.keys.names) + "]"
+        output.write(f"{indent}keys: {header_key}\n")
+        output.write(f"{indent}blocks:\n")
 
         # each key row
         for i, strings in enumerate(key_strings):
-            output.write(indent)
+            output.write(block_indent)
             for j in range(n_dimensions):
-                # use last=False so all columns get full padding, keeping
-                # the => arrows aligned across rows with different value widths
                 _print_string_center(output, strings[j], widths[j], False)
             shape = tuple(int(v) for v in self.block_by_id(i).values.shape)
-            output.write(f"=> TensorBlock with shape {shape}")
-            output.write("\n")
+            output.write(f"  => TensorBlock with shape {shape}\n")
 
         if n_blocks_to_print < len(self):
-            output.write(indent[:-1])
+            output.write(block_indent)
             for j in range(n_dimensions):
                 _print_string_center(output, "", widths[j], False)
-            output.write("...\n")
+            output.write(" ...\n")
 
         result += output.getvalue().rstrip("\n")
         return result

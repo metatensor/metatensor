@@ -113,9 +113,10 @@ class ModuleMap(Module):
         >>> out = module_map(tensor)
         >>> out
         TensorMap with 2 blocks
-             key
-              0  => TensorBlock with shape (2, 1)
-              1  => TensorBlock with shape (2, 1)
+            keys: [key]
+            blocks:
+               0   => TensorBlock with shape (2, 1)
+               1   => TensorBlock with shape (2, 1)
         >>> out[0].values
         tensor([[ 7.],
                 [14.]], grad_fn=<MmBackward0>)

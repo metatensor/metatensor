@@ -57,8 +57,9 @@ def insert_dimension(
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 block
-         foo
-          0  => TensorBlock with shape (2, 2)
+        keys: [foo]
+        blocks:
+           0   => TensorBlock with shape (2, 2)
     >>> mts.insert_dimension(
     ...     tensor,
     ...     axis="keys",
@@ -67,8 +68,9 @@ def insert_dimension(
     ...     values=np.array([1]),
     ... )
     TensorMap with 1 block
-         bar  foo
-          1    0  => TensorBlock with shape (2, 2)
+        keys: [bar, foo]
+        blocks:
+           1  0   => TensorBlock with shape (2, 2)
     """
     _check_axis(axis)
 
@@ -163,8 +165,9 @@ def append_dimension(
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 block
-         foo
-          0  => TensorBlock with shape (2, 2)
+        keys: [foo]
+        blocks:
+           0   => TensorBlock with shape (2, 2)
     >>> mts.append_dimension(
     ...     tensor,
     ...     axis="keys",
@@ -172,8 +175,9 @@ def append_dimension(
     ...     values=np.array([1]),
     ... )
     TensorMap with 1 block
-         foo  bar
-          0    1  => TensorBlock with shape (2, 2)
+        keys: [foo, bar]
+        blocks:
+           0  1   => TensorBlock with shape (2, 2)
     """
     if axis == "keys":
         index = len(tensor.keys.names)
@@ -223,15 +227,17 @@ def permute_dimensions(
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 block
-         foo  bar  baz
-         42   10    3  => TensorBlock with shape (2, 2)
+        keys: [foo, bar, baz]
+        blocks:
+           42  10  3   => TensorBlock with shape (2, 2)
 
     Move the last (second) dimension to the first position.
 
     >>> mts.permute_dimensions(tensor, axis="keys", dimensions_indexes=[2, 0, 1])
     TensorMap with 1 block
-         baz  foo  bar
-          3   42   10  => TensorBlock with shape (2, 2)
+        keys: [baz, foo, bar]
+        blocks:
+           3  42  10   => TensorBlock with shape (2, 2)
     """
     _check_axis(axis)
 
@@ -303,12 +309,14 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 block
-         key  extra
-          0     0   => TensorBlock with shape (2, 2)
+        keys: [key, extra]
+        blocks:
+           0  0   => TensorBlock with shape (2, 2)
     >>> mts.remove_dimension(tensor, axis="keys", name="extra")
     TensorMap with 1 block
-         key
-          0  => TensorBlock with shape (2, 2)
+        keys: [key]
+        blocks:
+           0   => TensorBlock with shape (2, 2)
 
     Removing a dimension can only be performed if the resulting :py:class:`Labels` will
     contain unique entries.
@@ -319,9 +327,10 @@ def remove_dimension(tensor: TensorMap, axis: str, name: str) -> TensorMap:
     >>> tensor = TensorMap(keys=keys, blocks=[block.copy(), block.copy()])
     >>> tensor
     TensorMap with 2 blocks
-         key  extra
-          0     0   => TensorBlock with shape (2, 2)
-          0     1   => TensorBlock with shape (2, 2)
+        keys: [key, extra]
+        blocks:
+           0  0   => TensorBlock with shape (2, 2)
+           0  1   => TensorBlock with shape (2, 2)
     >>> try:
     ...     mts.remove_dimension(tensor, axis="keys", name="extra")
     ... except MetatensorError as e:
@@ -392,12 +401,14 @@ def rename_dimension(tensor: TensorMap, axis: str, old: str, new: str) -> Tensor
     >>> tensor = TensorMap(keys=keys, blocks=[block])
     >>> tensor
     TensorMap with 1 block
-         foo
-          0  => TensorBlock with shape (2, 2)
+        keys: [foo]
+        blocks:
+           0   => TensorBlock with shape (2, 2)
     >>> mts.rename_dimension(tensor, axis="keys", old="foo", new="bar")
     TensorMap with 1 block
-         bar
-          0  => TensorBlock with shape (2, 2)
+        keys: [bar]
+        blocks:
+           0   => TensorBlock with shape (2, 2)
 
     """
     _check_axis(axis)
