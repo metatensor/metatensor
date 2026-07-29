@@ -189,6 +189,37 @@ def test_gradients():
     assert gradients[0][0] == "g"
 
 
+def test_gradient_of_gradient():
+    block = TensorBlock(
+        values=torch.rand(12, 4),
+        samples=Labels(["s"], torch.arange(12).reshape(-1, 1)),
+        components=[],
+        properties=Labels("p", torch.arange(4).reshape(-1, 1)),
+    )
+
+    grad = TensorBlock(
+        values=torch.rand(12, 4),
+        samples=Labels("sample", torch.arange(12).reshape(-1, 1)),
+        components=[],
+        properties=Labels("p", torch.arange(4).reshape(-1, 1)),
+    )
+
+    grad.add_gradient(
+        parameter="grad_2",
+        gradient=TensorBlock(
+            values=torch.rand(12, 4),
+            samples=Labels("sample", torch.arange(12).reshape(-1, 1)),
+            components=[],
+            properties=Labels("p", torch.arange(4).reshape(-1, 1)),
+        ),
+    )
+
+    block.add_gradient(parameter="grad_1", gradient=grad)
+
+    assert block.gradients_list() == ["grad_1"]
+    assert block.gradient("grad_1").gradients_list() == ["grad_2"]
+
+
 def test_values_setter():
     block = TensorBlock(
         values=torch.tensor([[3.0, 4.0, 9.0]]),

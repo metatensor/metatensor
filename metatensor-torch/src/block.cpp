@@ -157,17 +157,25 @@ Labels TensorBlockHolder::labels(uintptr_t axis) const {
     return torch::make_intrusive<LabelsHolder>(block_.labels(axis));
 }
 
-void TensorBlockHolder::add_gradient(const std::string& parameter, TensorBlock gradient) {
-    // we need to move the tensor block in `add_gradient`, but we can not move
-    // out of the `torch::intrusive_ptr` in `TensorBlock`. So we create a
-    // new temporary block, increasing the reference count to the values and
-    // metadata of gradient.
-    auto gradient_block = metatensor::TensorBlock(
-        std::make_unique<TorchDataArray>(gradient->values()),
-        gradient->samples()->as_metatensor(),
-        components_from_torch(gradient->components()),
-        gradient->properties()->as_metatensor()
+static metatensor::TensorBlock torch_to_metatensor_block(TensorBlock block) {
+    auto non_torch_block = metatensor::TensorBlock(
+        std::make_unique<TorchDataArray>(block->values()),
+        block->samples()->as_metatensor(),
+        components_from_torch(block->components()),
+        block->properties()->as_metatensor()
     );
+
+    for (const auto& parameter : block->gradients_list()) {
+        auto gradient = TensorBlockHolder::gradient(block, parameter);
+        non_torch_block.add_gradient(parameter, torch_to_metatensor_block(gradient));
+    }
+
+    return non_torch_block;
+}
+
+
+void TensorBlockHolder::add_gradient(const std::string& parameter, TensorBlock gradient) {
+    auto gradient_block = torch_to_metatensor_block(gradient);
 
     // device/dtype consistency is enforced by metatensor-core
     block_.add_gradient(parameter, std::move(gradient_block));
