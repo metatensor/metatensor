@@ -297,8 +297,10 @@ def tensor_map_html(
 ) -> str:
     """HTML representation for a TensorMap body (without header).
 
-    Renders a table with one row per key, where the last column contains a
-    ``<details>/<summary>`` with the block's HTML representation.
+    Renders a ``keys:`` section with the key dimension names, followed by a
+    ``blocks:`` section containing a table with one row per key. Each row has
+    the key values followed by a ``<details>/<summary>`` with the block's HTML
+    representation.
 
     :param keys_names: names of the key dimensions
     :param keys_values: 2D array of key values
@@ -329,7 +331,7 @@ def tensor_map_html(
         _row_as_ints(i) for i in range(visible_count, visible_count + hidden_show)
     ]
 
-    widths = [len(name) + 2 for name in keys_names]
+    widths = [0] * n_columns
     for i in range(min(n_rows, max_html_entries)):
         for j, value in enumerate(_row_as_ints(i)):
             widths[j] = max(widths[j], len(str(value)) + 2)
@@ -354,64 +356,70 @@ def tensor_map_html(
             + "</details></td>"
         )
 
-    def _table_html(rows, include_header: bool) -> str:
-        result = [
-            """<style>
-            .mts-tensor-map tr:hover {
-                background: transparent !important;
-            }
-            </style>""",
-            "<table class='mts-tensor-map' style='margin-top: 10px;'>",
-        ]
-        result.append(_colgroup_html())
-        if include_header:
-            result.append("<thead><tr>")
-            for name in keys_names:
-                result.append(f"<th style='{_HEADER_STYLE}'>{html.escape(name)}</th>")
-            result.append(f"<th style='{_HEADER_STYLE}'></th>")
-            result.append("</tr></thead>")
-        result.append("<tbody>")
+    result = ["<div>"]
+
+    # keys header
+    result.append('<div style="margin-top: 4px;">')
+    keys_str = "[" + ", ".join(keys_names) + "]"
+    result.append(f"<div><strong>keys:</strong> {html.escape(keys_str)}</div>")
+    result.append("</div>")
+
+    # blocks section
+    result.append('<div style="margin-top: 4px;">')
+    result.append("<div><strong>blocks:</strong></div>")
+    result.append(
+        "<style>.mts-tensor-map tr:hover { background: transparent !important;}</style>"
+    )
+
+    def _table_html(rows) -> str:
+        table = ["<table class='mts-tensor-map' style='margin-top: 4px;'>"]
+        table.append(_colgroup_html())
+        table.append("<tbody>")
         for i, row in enumerate(rows):
-            result.append("<tr>")
+            table.append("<tr>")
             for value in row:
-                result.append(f"<td style='text-align: center;'>{value}</td>")
-            result.append(_block_cell(blocks[i]))
-            result.append("</tr>")
-        result.append("</tbody>")
-        result.append("</table>")
-        return "".join(result)
+                table.append(f"<td style='text-align: center;'>{value}</td>")
+            table.append(_block_cell(blocks[i]))
+            table.append("</tr>")
+        table.append("</tbody>")
+        table.append("</table>")
+        return "".join(table)
 
     if hidden_total == 0:
-        return _table_html(visible_rows, include_header=True)
+        result.append(_table_html(visible_rows))
+    else:
+        result.append(_table_html(visible_rows))
+        if hidden_show == 0:
+            result.append(f"<div>... and {hidden_total} more</div>")
+        else:
+            result.append(
+                f"<details><summary>Show {hidden_total} more entries</summary>"
+            )
+            result.append("<table class='mts-tensor-map'>")
+            result.append(_colgroup_html())
+            result.append("<tbody>")
+            for i, row in enumerate(hidden_rows):
+                result.append("<tr>")
+                for value in row:
+                    result.append(f"<td style='text-align: center;'>{value}</td>")
+                result.append(_block_cell(blocks[visible_count + i]))
+                result.append("</tr>")
+            result.append("</tbody>")
+            result.append("</table>")
 
-    result = [_table_html(visible_rows, include_header=True)]
-    if hidden_show == 0:
-        result.append(f"<div>... and {hidden_total} more</div>")
-        return "".join(result)
+            if remaining_entries > 0:
+                result.append("<tbody>")
+                result.append("<tr>")
+                result.append(
+                    f'<td colspan="{n_columns}"'
+                    " style='text-align: left;'>"
+                    f"... and {remaining_entries} more</td>"
+                )
+                result.append("</tr>")
+                result.append("</tbody>")
 
-    result.append(f"<details><summary>Show {hidden_total} more entries</summary>")
-    result.append("<table class='mts-tensor-map'>")
-    result.append(_colgroup_html())
-    result.append("<tbody>")
-    for i, row in enumerate(hidden_rows):
-        result.append("<tr>")
-        for value in row:
-            result.append(f"<td style='text-align: center;'>{value}</td>")
-        result.append(_block_cell(blocks[visible_count + i]))
-        result.append("</tr>")
-    result.append("</tbody>")
-    result.append("</table>")
+            result.append("</details>")
 
-    if remaining_entries > 0:
-        result.append("<tbody>")
-        result.append("<tr>")
-        result.append(
-            f'<td colspan="{n_columns}"'
-            " style='text-align: left;'>"
-            f"... and {remaining_entries} more</td>"
-        )
-        result.append("</tr>")
-        result.append("</tbody>")
-
-    result.append("</details>")
+    result.append("</div>")
+    result.append("</div>")
     return "".join(result)
