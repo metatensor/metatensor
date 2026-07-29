@@ -75,6 +75,7 @@ jobs:
       - name: install valgrind
         if: matrix.do-valgrind
         run: |
+          sudo apt-get update
           sudo apt-get install -y valgrind
 
       - name: Setup sccache
