@@ -334,7 +334,8 @@ def sort(
     ... )
     >>> mts.sort(tensor, axes="keys")
     TensorMap with 2 blocks
-         types
+        keys: [types]
+        blocks:
            0   => TensorBlock with shape (3, 3)
            1   => TensorBlock with shape (1, 3)
     """
