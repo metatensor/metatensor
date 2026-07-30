@@ -13,7 +13,7 @@ ROOT = pathlib.Path(__file__).parent.resolve()
 METATENSOR_CORE = (ROOT / ".." / "metatensor_core").resolve()
 METATENSOR_OPERATIONS = (ROOT / ".." / "metatensor_operations").resolve()
 
-METATENSOR_LEARN_VERSION = "0.5.0"
+METATENSOR_LEARN_VERSION = "0.5.1"
 
 
 class bdist_egg_disabled(bdist_egg):
