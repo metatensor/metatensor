@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.4) - 2026-07-30
+
+### Added
+
+- All Python types now have a `_repr_html_` method, to display a rich HTML
+  representation in Jupyter notebooks and other environments that support it.
+
 ### Changed
 
 - `SimpleDataArray` in C++ now supports `bool` data type

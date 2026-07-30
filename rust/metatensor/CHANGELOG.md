@@ -16,6 +16,13 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.5.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.5.1) - 2026-07-30
+
+### Fixed
+
+- Actually make a copy of the data in the implementation of `Array::copy` for
+  `Arc<RwLock<ndarray::ArrayD<T>>>`.
+
 ## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.5.0) - 2026-07-07
 
 ### Changed

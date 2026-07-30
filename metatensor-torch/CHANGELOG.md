@@ -16,6 +16,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.10.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.2) - 2026-07-30
+
+### Added
+
+- The custom TorchScript classes now render using rich HTML representation in
+  Jupyter notebooks.
+
+### Changed:
+
+- `metatensor_torch::Module` now supports the new format used by
+  metatensor-learn v0.5.1
+
 ## [Version 0.10.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.1) - 2026-07-09
 
 ### metatensor-torch Python
