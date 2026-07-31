@@ -26,7 +26,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Changed:
 
 - `metatensor_torch::Module` now supports the new format used by
-  metatensor-learn v0.5.1
+  metatensor-learn v0.6
 
 ## [Version 0.10.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.1) - 2026-07-09
 
