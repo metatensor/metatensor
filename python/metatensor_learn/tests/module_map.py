@@ -8,6 +8,7 @@ torch = pytest.importorskip("torch")
 from metatensor.learn.nn import ModuleMap  # noqa: E402
 
 from . import _tests_utils  # noqa: E402
+from ._tests_utils import check_labels_state_dict  # noqa: E402
 
 
 @pytest.fixture
@@ -111,6 +112,59 @@ def test_to_device(tensor):
         assert module.in_keys.device.type == device
         for label in module.out_properties:
             assert label.device.type == device
+
+
+def test_state_dict_structure():
+    """
+    Checks the exact structure (keys + metatensor tags) of ``ModuleMap.state_dict()``
+    to guard against regressions in registered parameters, buffers, and metatensor
+    extra state.
+    """
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"], values=torch.tensor([[0, 1], [1, 1]])
+    )
+    out_props = [
+        Labels(["p"], torch.tensor([[0], [1]])),
+        Labels(["p"], torch.tensor([[0], [1]])),
+    ]
+
+    # --- with out_properties, mixed bias ---
+    module = ModuleMap(
+        keys,
+        [torch.nn.Linear(3, 2, bias=True), torch.nn.Linear(3, 2, bias=False)],
+        out_properties=out_props,
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_list.0.bias",
+        "module_list.0.weight",
+        "module_list.1.weight",
+        "_extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == {"_in_keys", "_out_properties"}
+    check_labels_state_dict(state_dict["_extra_state"]["_in_keys"])
+    out_properties = state_dict["_extra_state"]["_out_properties"]
+    assert isinstance(out_properties, list)
+    assert len(out_properties) == 2
+    for entry in out_properties:
+        check_labels_state_dict(entry)
+
+    # --- without out_properties ---
+    module = ModuleMap(
+        keys,
+        [torch.nn.Linear(3, 2, bias=True), torch.nn.Linear(3, 2, bias=False)],
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_list.0.bias",
+        "module_list.0.weight",
+        "module_list.1.weight",
+        "_extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["_extra_state"]["_in_keys"])
 
 
 def test_to_dtype(tensor):
