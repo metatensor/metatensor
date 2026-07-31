@@ -17,7 +17,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-## [Version 0.5.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.1) - 2025-07-30
+## [Version 0.6.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.6.0) - 2025-07-31
 
 ### Added
 
