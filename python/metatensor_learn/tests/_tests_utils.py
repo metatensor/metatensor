@@ -239,6 +239,22 @@ def indexed_dataset_mixed_mem_disk(sample_indices):
     )
 
 
+def check_labels_state_dict(entry):
+    """
+    Check that a serialized :py:class:`metatensor.Labels` entry in ``_extra_state`` has
+    the expected structure: a 3-tuple of ``("metatensor.Labels", data: bytes,
+    device_marker: Tensor)``.
+
+    :param entry: the value stored under a sub-key of ``_extra_state``
+    """
+    assert isinstance(entry, tuple), f"expected tuple, got {type(entry).__name__}"
+    assert len(entry) == 3, f"expected 3-tuple, got {len(entry)}"
+    assert entry[0] == "metatensor.Labels"
+    assert isinstance(entry[1], bytes)
+    assert isinstance(entry[2], torch.Tensor)
+    assert len(entry[2]) == 0
+
+
 def can_use_mps_backend():
     return (
         # Github Actions M1 runners don't have a GPU accessible

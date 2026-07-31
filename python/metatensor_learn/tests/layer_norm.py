@@ -9,10 +9,11 @@ from metatensor import Labels
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn import InvariantLayerNorm  # noqa: E402
+from metatensor.learn.nn import InvariantLayerNorm, LayerNorm  # noqa: E402
 from metatensor.learn.nn._layer_norm import _LayerNorm  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
+from ._tests_utils import check_labels_state_dict  # noqa: E402
 
 
 DATA_ROOT = os.path.join(
@@ -106,3 +107,85 @@ def test_layer_norm_independent_samples():
     for i in range(tensor.shape[0]):
         norm_i = layer_norm_module(tensor[i : i + 1])
         assert torch.allclose(norm[i], norm_i, atol=1e-10, rtol=1e-10)
+
+
+def test_state_dict_structure():
+    """
+    Checks the exact structure (keys + metatensor tags) of ``LayerNorm`` and
+    ``InvariantLayerNorm`` state_dicts to guard against regressions.
+    """
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"],
+        values=np.array([[0, 1], [1, 1]]),
+    )
+    invariant_keys = Labels(["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1))
+
+    # --- LayerNorm with elementwise_affine=True, bias=True ---
+    module = LayerNorm(
+        in_keys=keys, in_features=[3, 3], elementwise_affine=True, bias=True
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0._mts_helper",
+        "module_map.module_list.0.bias",
+        "module_map.module_list.0.weight",
+        "module_map.module_list.1._mts_helper",
+        "module_map.module_list.1.bias",
+        "module_map.module_list.1.weight",
+        "_extra_state",
+        "module_map._extra_state",
+        "module_map.module_list.0._extra_state",
+        "module_map.module_list.1._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    assert set(state_dict["module_map.module_list.0._extra_state"].keys()) == set()
+    assert set(state_dict["module_map.module_list.1._extra_state"].keys()) == set()
+
+    # --- LayerNorm with elementwise_affine=False, bias=False ---
+    module = LayerNorm(
+        in_keys=keys, in_features=[3, 3], elementwise_affine=False, bias=False
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0._mts_helper",
+        "module_map.module_list.1._mts_helper",
+        "_extra_state",
+        "module_map._extra_state",
+        "module_map.module_list.0._extra_state",
+        "module_map.module_list.1._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    assert set(state_dict["module_map.module_list.0._extra_state"].keys()) == set()
+    assert set(state_dict["module_map.module_list.1._extra_state"].keys()) == set()
+
+    # --- InvariantLayerNorm: _LayerNorm on key 0, Identity on key 1 ---
+    module = InvariantLayerNorm(
+        in_keys=keys,
+        in_features=[3],
+        invariant_keys=invariant_keys,
+        elementwise_affine=True,
+        bias=True,
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0._mts_helper",
+        "module_map.module_list.0.bias",
+        "module_map.module_list.0.weight",
+        "_extra_state",
+        "module_map._extra_state",
+        "module_map.module_list.0._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    assert set(state_dict["module_map.module_list.0._extra_state"].keys()) == set()

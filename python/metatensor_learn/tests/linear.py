@@ -9,10 +9,13 @@ from metatensor import Labels, TensorBlock, TensorMap
 
 torch = pytest.importorskip("torch")
 
-from metatensor.learn.nn import EquivariantLinear  # noqa: E402
+from metatensor.learn.nn import EquivariantLinear, Linear  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
-from ._tests_utils import random_single_block_no_components_tensor_map  # noqa: E402
+from ._tests_utils import (  # noqa: E402
+    check_labels_state_dict,
+    random_single_block_no_components_tensor_map,
+)
 
 
 DATA_ROOT = os.path.join(
@@ -132,3 +135,100 @@ def test_default_invariant_keys(equivariant_tensor):
     fRx = f(Rx)  # f(R . x)
 
     assert mts.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_state_dict_structure():
+    """
+    Checks the exact structure (keys + metatensor tags) of ``Linear`` and
+    ``EquivariantLinear`` state_dicts to guard against regressions.
+    """
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"],
+        values=np.array([[0, 1], [1, 1]]),
+    )
+    invariant_keys = Labels(["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1))
+
+    # --- Linear with bias=True ---
+    module = Linear(in_keys=keys, in_features=[3, 3], out_features=2, bias=True)
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0.bias",
+        "module_map.module_list.0.weight",
+        "module_map.module_list.1.bias",
+        "module_map.module_list.1.weight",
+        "_extra_state",
+        "module_map._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+
+    # --- Linear with bias=False ---
+    module = Linear(in_keys=keys, in_features=[3, 3], out_features=2, bias=False)
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0.weight",
+        "module_map.module_list.1.weight",
+        "_extra_state",
+        "module_map._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+
+    # --- Linear with out_properties ---
+    out_props = [
+        Labels(["p"], np.array([[0], [1]])),
+        Labels(["p"], np.array([[0], [1]])),
+    ]
+    module = Linear(
+        in_keys=keys, in_features=[3, 3], out_features=2, out_properties=out_props
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0.bias",
+        "module_map.module_list.0.weight",
+        "module_map.module_list.1.bias",
+        "module_map.module_list.1.weight",
+        "_extra_state",
+        "module_map._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {
+        "_in_keys",
+        "_out_properties",
+    }
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    out_properties = state_dict["module_map._extra_state"]["_out_properties"]
+    assert isinstance(out_properties, list)
+    assert len(out_properties) == 2
+    for entry in out_properties:
+        check_labels_state_dict(entry)
+
+    # --- EquivariantLinear: bias only on invariant (key 0) ---
+    module = EquivariantLinear(
+        in_keys=keys,
+        in_features=[3, 3],
+        out_features=2,
+        invariant_keys=invariant_keys,
+        bias=True,
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0.bias",
+        "module_map.module_list.0.weight",
+        "module_map.module_list.1.weight",
+        "_extra_state",
+        "module_map._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])

@@ -12,6 +12,7 @@ torch = pytest.importorskip("torch")
 from metatensor.learn.nn import EquivariantTransformation  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
+from ._tests_utils import check_labels_state_dict  # noqa: E402
 
 
 DATA_ROOT = os.path.join(
@@ -85,3 +86,71 @@ def test_equivariance(tensor, wigner_d_real):
     fRx = f(Rx)  # f(R . x)
 
     assert mts.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_state_dict_structure():
+    """
+    Checks the exact structure (keys + metatensor tags) of
+    ``EquivariantTransformation`` state_dict to guard against regressions.
+    """
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"],
+        values=np.array([[0, 1], [1, 1]]),
+    )
+    invariant_keys = Labels(["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1))
+    out_props = [
+        Labels(["p"], np.array([[0], [1]])),
+        Labels(["p"], np.array([[0], [1]])),
+    ]
+
+    # --- with out_properties ---
+    module = EquivariantTransformation(
+        modules=[torch.nn.Tanh(), torch.nn.Tanh()],
+        in_keys=keys,
+        in_features=[3, 3],
+        out_properties=out_props,
+        invariant_keys=invariant_keys,
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.1._mts_helper",
+        "_extra_state",
+        "module_map._extra_state",
+        "module_map.module_list.1._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {
+        "_in_keys",
+        "_out_properties",
+    }
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    out_properties = state_dict["module_map._extra_state"]["_out_properties"]
+    assert isinstance(out_properties, list)
+    assert len(out_properties) == 2
+    for entry in out_properties:
+        check_labels_state_dict(entry)
+    assert set(state_dict["module_map.module_list.1._extra_state"].keys()) == set()
+
+    # --- without out_properties ---
+    module = EquivariantTransformation(
+        modules=[torch.nn.Tanh(), torch.nn.Tanh()],
+        in_keys=keys,
+        in_features=[3, 3],
+        out_features=[3, 3],
+        invariant_keys=invariant_keys,
+    )
+    state_dict = module.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.1._mts_helper",
+        "_extra_state",
+        "module_map._extra_state",
+        "module_map.module_list.1._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
+    assert set(state_dict["module_map.module_list.1._extra_state"].keys()) == set()

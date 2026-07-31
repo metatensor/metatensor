@@ -12,6 +12,7 @@ torch = pytest.importorskip("torch")
 from metatensor.learn import nn as nn  # noqa: E402
 
 from ._rotation_utils import WignerDReal  # noqa: E402
+from ._tests_utils import check_labels_state_dict  # noqa: E402
 
 
 DATA_ROOT = os.path.join(
@@ -134,3 +135,39 @@ def test_sequential_equi_mlp(tensor, wigner_d_real):
     Rfx = wigner_d_real.transform_tensormap_o3(prediction)
 
     assert mts.allclose(fRx, Rfx, atol=1e-10, rtol=1e-10)
+
+
+def test_state_dict_structure():
+    """
+    Checks the exact structure (keys + metatensor tags) of ``Sequential``
+    state_dict to guard against regressions.
+    """
+    keys = Labels(
+        names=["o3_lambda", "o3_sigma"],
+        values=np.array([[0, 1], [1, 1]]),
+    )
+
+    model = nn.Sequential(
+        keys,
+        nn.Linear(in_keys=keys, in_features=[3, 3], out_features=2, bias=True),
+        nn.Tanh(in_keys=keys),
+        nn.Linear(in_keys=keys, in_features=[2, 2], out_features=1, bias=True),
+    )
+    state_dict = model.state_dict()
+    assert set(state_dict.keys()) == {
+        "_mts_helper",
+        "module_map._mts_helper",
+        "module_map.module_list.0.0.bias",
+        "module_map.module_list.0.0.weight",
+        "module_map.module_list.0.2.bias",
+        "module_map.module_list.0.2.weight",
+        "module_map.module_list.1.0.bias",
+        "module_map.module_list.1.0.weight",
+        "module_map.module_list.1.2.bias",
+        "module_map.module_list.1.2.weight",
+        "_extra_state",
+        "module_map._extra_state",
+    }
+    assert set(state_dict["_extra_state"].keys()) == set()
+    assert set(state_dict["module_map._extra_state"].keys()) == {"_in_keys"}
+    check_labels_state_dict(state_dict["module_map._extra_state"]["_in_keys"])
