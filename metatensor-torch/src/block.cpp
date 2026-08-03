@@ -300,9 +300,21 @@ TensorBlock TensorBlockHolder::load_buffer(torch::Tensor buffer) {
         );
     }
 
+    if (buffer.device().type() != torch::kCPU) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a tensor on CPU, not on " + buffer.device().str()
+        );
+    }
+
     if (buffer.sizes().size() != 1) {
         C10_THROW_ERROR(ValueError,
             "`buffer` must be a 1-dimensional tensor"
+        );
+    }
+
+    if (!buffer.is_contiguous()) {
+        C10_THROW_ERROR(ValueError,
+            "`buffer` must be a contiguous tensor"
         );
     }
 
