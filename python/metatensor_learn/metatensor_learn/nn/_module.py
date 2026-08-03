@@ -309,11 +309,7 @@ def _serialize_metatensor(value):
         )
         serialized = (
             "metatensor.TensorBlock",
-            # until we have https://github.com/metatensor/metatensor/issues/775,
-            # move everything to CPU/float64
-            _buffer_to_picklable(
-                value.to(device="cpu").to(dtype=torch.float64).save_buffer()
-            ),
+            _buffer_to_picklable(value.save_buffer()),
             _empty_tensor_like(value.values),
         )
         return serialized, True
@@ -330,10 +326,7 @@ def _serialize_metatensor(value):
 
         serialized = (
             "metatensor.TensorMap",
-            # same as above
-            _buffer_to_picklable(
-                value.to(device="cpu").to(dtype=torch.float64).save_buffer()
-            ),
+            _buffer_to_picklable(value.save_buffer()),
             empty_tensor,
         )
         return serialized, True
