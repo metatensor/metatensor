@@ -210,12 +210,15 @@ def _metatensor_data_to(value, dtype, device):
         return value.to(device=device, dtype=dtype), True
     elif isinstance(value, dict):
         if len(value) == 0:
-            return value, True
+            return value, False
 
         updated = {}
         all_changed = True
         some_changed = False
         for name, dict_value in value.items():
+            if isinstance(dict_value, (dict, list, tuple)) and len(dict_value) == 0:
+                updated[name] = dict_value
+                continue
             updated_value, changed = _metatensor_data_to(dict_value, dtype, device)
             all_changed = all_changed and changed
             some_changed = some_changed or changed
@@ -232,12 +235,15 @@ def _metatensor_data_to(value, dtype, device):
 
     elif isinstance(value, list):
         if len(value) == 0:
-            return value, True
+            return value, False
 
         updated = []
         all_changed = True
         some_changed = False
         for list_value in value:
+            if isinstance(list_value, (dict, list, tuple)) and len(list_value) == 0:
+                updated.append(list_value)
+                continue
             updated_value, changed = _metatensor_data_to(list_value, dtype, device)
             all_changed = all_changed and changed
             some_changed = some_changed or changed
@@ -254,7 +260,7 @@ def _metatensor_data_to(value, dtype, device):
 
     elif isinstance(value, tuple):
         if len(value) == 0:
-            return value, True
+            return value, False
 
         updated = []
         some_changed = False

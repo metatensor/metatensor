@@ -39,12 +39,16 @@ def _create_tensor(key_name):
 
 class LabelsModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[Labels]]]]
+    empty_dict: Dict[str, Labels]
+    empty_list: List[Labels]
+    unused_dict: Dict[str, Labels]
+    unused_list: List[Labels]
 
     def __init__(self, name):
         super().__init__()
         values = torch.arange(2).reshape(-1, 1)
         labels_value = Labels([name], values)
-        container_value = {"labels": Labels([name], values)}
+        dict_value = {"labels": Labels([name], values)}
         list_value = [Labels([name], values)]
         tuple_value = tuple([Labels([name], values)])
         nested_value = {
@@ -56,9 +60,18 @@ class LabelsModule(nn.Module):
         self.register_buffer("labels", labels_value)
         self.register_buffer("nested", nested_value)
         # registered via Buffer wrapper
-        self.dict = nn.Buffer(container_value)
+        self.dict = nn.Buffer(dict_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)
+
+        # empty containers
+        self.empty_dict = nn.Buffer({})
+        self.empty_list = nn.Buffer([])
+
+        # data not used in forward, but they should work
+        self.unused_dict = nn.Buffer({})
+        self.unused_list = nn.Buffer([])
+        self.unused_tuple = nn.Buffer(())
 
         # unregistered — should NOT be tracked
         self.unregistered_labels = Labels([name], values)
@@ -77,17 +90,27 @@ class LabelsModule(nn.Module):
             return self.nested["dict"][42][0][0]
         elif x == 5:
             return self.unregistered_labels
+        elif x == 6:
+            return self.unregistered_list[0]
+        elif x == 7:
+            return self.empty_dict["labels"]
+        elif x == 8:
+            return self.empty_list[0]
         else:
             return self.labels
 
 
 class BlockModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorBlock]]]]
+    empty_dict: Dict[str, TensorBlock]
+    empty_list: List[TensorBlock]
+    unused_dict: Dict[str, TensorBlock]
+    unused_list: List[TensorBlock]
 
     def __init__(self, name):
         super().__init__()
         block_value = _create_block(name)
-        container_value = {"block": _create_block(name)}
+        dict_value = {"block": _create_block(name)}
         list_value = [_create_block(name)]
         tuple_value = tuple([_create_block(name)])
         nested_value = {
@@ -99,9 +122,18 @@ class BlockModule(nn.Module):
         self.register_buffer("block", block_value)
         self.register_buffer("nested", nested_value)
         # registered via Buffer wrapper
-        self.dict = nn.Buffer(container_value)
+        self.dict = nn.Buffer(dict_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)
+
+        # empty containers
+        self.empty_dict = nn.Buffer({})
+        self.empty_list = nn.Buffer([])
+
+        # data not used in forward, but they should work
+        self.unused_dict = nn.Buffer({})
+        self.unused_list = nn.Buffer([])
+        self.unused_tuple = nn.Buffer(())
 
         # unregistered — should NOT be tracked
         self.unregistered_block = _create_block(name)
@@ -120,17 +152,27 @@ class BlockModule(nn.Module):
             return self.nested["dict"][42][0][0]
         elif x == 5:
             return self.unregistered_block
+        elif x == 6:
+            return self.unregistered_list[0]
+        elif x == 7:
+            return self.empty_dict["block"]
+        elif x == 8:
+            return self.empty_list[0]
         else:
             return self.block
 
 
 class TensorModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorMap]]]]
+    empty_dict: Dict[str, TensorMap]
+    empty_list: List[TensorMap]
+    unused_dict: Dict[str, TensorMap]
+    unused_list: List[TensorMap]
 
     def __init__(self, name):
         super().__init__()
         tensor_value = _create_tensor(name)
-        container_value = {"tensor": _create_tensor(name)}
+        dict_value = {"tensor": _create_tensor(name)}
         list_value = [_create_tensor(name)]
         tuple_value = tuple([_create_tensor(name)])
         nested_value = {
@@ -142,9 +184,18 @@ class TensorModule(nn.Module):
         self.register_buffer("tensor", tensor_value)
         self.register_buffer("nested", nested_value)
         # registered via Buffer wrapper
-        self.dict = nn.Buffer(container_value)
+        self.dict = nn.Buffer(dict_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)
+
+        # empty containers
+        self.empty_dict = nn.Buffer({})
+        self.empty_list = nn.Buffer([])
+
+        # data not used in forward, but they should work
+        self.unused_dict = nn.Buffer({})
+        self.unused_list = nn.Buffer([])
+        self.unused_tuple = nn.Buffer(())
 
         # unregistered — should NOT be tracked
         self.unregistered_tensor = _create_tensor(name)
@@ -163,6 +214,12 @@ class TensorModule(nn.Module):
             return self.nested["dict"][42][0][0]
         elif x == 5:
             return self.unregistered_tensor
+        elif x == 6:
+            return self.unregistered_list[0]
+        elif x == 7:
+            return self.empty_dict["tensor"]
+        elif x == 8:
+            return self.empty_list[0]
         else:
             return self.tensor
 
@@ -335,6 +392,12 @@ def test_state_dict_labels():
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
     check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
+    # empty and unused containers are registered, so they appear in _extra_state
+    assert "empty_dict" in state_dict["_extra_state"]
+    assert "empty_list" in state_dict["_extra_state"]
+    assert "unused_dict" in state_dict["_extra_state"]
+    assert "unused_list" in state_dict["_extra_state"]
+    assert "unused_tuple" in state_dict["_extra_state"]
     # unregistered data does NOT appear in _extra_state
     assert "unregistered_labels" not in state_dict["_extra_state"]
     assert "unregistered_list" not in state_dict["_extra_state"]
@@ -366,6 +429,11 @@ def test_state_dict_labels():
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
+    assert "empty_dict" in state_dict["sub_module._extra_state"]
+    assert "empty_list" in state_dict["sub_module._extra_state"]
+    assert "unused_dict" in state_dict["sub_module._extra_state"]
+    assert "unused_list" in state_dict["sub_module._extra_state"]
+    assert "unused_tuple" in state_dict["sub_module._extra_state"]
     assert "unregistered_labels" not in state_dict["sub_module._extra_state"]
     assert "unregistered_list" not in state_dict["sub_module._extra_state"]
 
@@ -404,6 +472,11 @@ def test_state_dict_block():
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
     check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
+    assert "empty_dict" in state_dict["_extra_state"]
+    assert "empty_list" in state_dict["_extra_state"]
+    assert "unused_dict" in state_dict["_extra_state"]
+    assert "unused_list" in state_dict["_extra_state"]
+    assert "unused_tuple" in state_dict["_extra_state"]
     assert "unregistered_block" not in state_dict["_extra_state"]
     assert "unregistered_list" not in state_dict["_extra_state"]
 
@@ -434,6 +507,11 @@ def test_state_dict_block():
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
+    assert "empty_dict" in state_dict["sub_module._extra_state"]
+    assert "empty_list" in state_dict["sub_module._extra_state"]
+    assert "unused_dict" in state_dict["sub_module._extra_state"]
+    assert "unused_list" in state_dict["sub_module._extra_state"]
+    assert "unused_tuple" in state_dict["sub_module._extra_state"]
 
     module = Recursive("something")
     assert module.sub_module.block.samples.names == ["something"]
@@ -551,6 +629,11 @@ def test_state_dict_tensor():
     check_state_dict(state_dict["_extra_state"]["list"][0])
     check_state_dict(state_dict["_extra_state"]["tuple"][0])
     check_state_dict(state_dict["_extra_state"]["nested"]["dict"][42][0][0])
+    assert "empty_dict" in state_dict["_extra_state"]
+    assert "empty_list" in state_dict["_extra_state"]
+    assert "unused_dict" in state_dict["_extra_state"]
+    assert "unused_list" in state_dict["_extra_state"]
+    assert "unused_tuple" in state_dict["_extra_state"]
     assert "unregistered_tensor" not in state_dict["_extra_state"]
     assert "unregistered_list" not in state_dict["_extra_state"]
 
@@ -581,6 +664,11 @@ def test_state_dict_tensor():
     check_state_dict(state_dict["sub_module._extra_state"]["list"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["tuple"][0])
     check_state_dict(state_dict["sub_module._extra_state"]["nested"]["dict"][42][0][0])
+    assert "empty_dict" in state_dict["sub_module._extra_state"]
+    assert "empty_list" in state_dict["sub_module._extra_state"]
+    assert "unused_dict" in state_dict["sub_module._extra_state"]
+    assert "unused_list" in state_dict["sub_module._extra_state"]
+    assert "unused_tuple" in state_dict["sub_module._extra_state"]
 
     module = Recursive("something")
     assert module.sub_module.tensor.keys.names == ["something"]
@@ -674,6 +762,38 @@ def test_state_dict_tensorr_device_dtype(tmpdir, devices_to_test):
         assert module.list[0].device.type == device
         assert module.tuple[0].device.type == device
         assert module.nested["dict"][42][0][0].device.type == device
+
+
+def test_mixed_data():
+    """Check that registering a buffer with a mix of metatensor and non-metatensor
+    data in the same container raises an error when calling to()"""
+
+    class MixedModule(nn.Module):
+        def __init__(self):
+            super().__init__()
+            labels = Labels(["test"], torch.arange(2).reshape(-1, 1))
+            self.register_buffer("mixed", {"labels": labels, "not_metatensor": 42})
+
+    module = MixedModule()
+    message = (
+        "dicts containing both metatensor and non-metatensor data as values "
+        "are not supported"
+    )
+    with pytest.raises(ValueError, match=message):
+        module.to(dtype=torch.float32)
+
+    class MixedListModule(nn.Module):
+        def __init__(self):
+            super().__init__()
+            labels = Labels(["test"], torch.arange(2).reshape(-1, 1))
+            self.register_buffer("mixed", [labels, "not_metatensor"])
+
+    module = MixedListModule()
+    message = (
+        "lists containing both metatensor and non-metatensor data are not supported"
+    )
+    with pytest.raises(ValueError, match=message):
+        module.to(dtype=torch.float32)
 
 
 @pytest.mark.parametrize("scripted", [True, False])

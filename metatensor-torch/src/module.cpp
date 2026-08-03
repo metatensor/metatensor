@@ -24,6 +24,17 @@ bool is_custom_class(torch::IValue ivalue) {
     }
 }
 
+static bool is_empty_container(const torch::IValue& ivalue) {
+    if (ivalue.isGenericDict()) {
+        return ivalue.toGenericDict().empty();
+    } else if (ivalue.isList()) {
+        return ivalue.toList().empty();
+    } else if (ivalue.isTuple()) {
+        return ivalue.toTupleRef().elements().empty();
+    }
+    return false;
+}
+
 static std::pair<torch::IValue, bool> ivalue_to(
     torch::IValue ivalue,
     const torch::optional<at::Device>& device,
@@ -49,14 +60,19 @@ static std::pair<torch::IValue, bool> ivalue_to(
     } else if (ivalue.isGenericDict()) {
         auto dict = ivalue.toGenericDict();
         if (dict.empty()) {
-            return std::make_pair(ivalue, true);
+            return std::make_pair(ivalue, false);
         }
 
         auto updated = c10::impl::GenericDict(dict.keyType(), dict.valueType());
         auto all_changed = true;
         auto some_changed = false;
         for (const auto& item: dict) {
-            auto [updated_value, changed] = ivalue_to(item.value(), device, dtype, non_blocking);
+            auto inner = item.value();
+            if (is_empty_container(inner)) {
+                updated.insert(item.key(), inner);
+                continue;
+            }
+            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking);
             all_changed &= changed;
             some_changed |= changed;
             updated.insert(item.key(), updated_value);
@@ -73,14 +89,19 @@ static std::pair<torch::IValue, bool> ivalue_to(
     } else if (ivalue.isList()) {
         const auto& list = ivalue.toList();
         if (list.empty()) {
-            return std::make_pair(ivalue, true);
+            return std::make_pair(ivalue, false);
         }
 
         auto updated = c10::impl::GenericList(list.elementType());
         auto all_changed = true;
         auto some_changed = false;
         for (const auto& item: list) {
-            auto [updated_value, changed] = ivalue_to(item, device, dtype, non_blocking);
+            auto inner = torch::IValue(item);
+            if (is_empty_container(inner)) {
+                updated.emplace_back(inner);
+                continue;
+            }
+            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking);
             all_changed &= changed;
             some_changed |= changed;
             updated.emplace_back(std::move(updated_value));
@@ -97,7 +118,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
     } else if (ivalue.isTuple()) {
         const auto& tuple = ivalue.toTupleRef().elements();
         if (tuple.empty()) {
-            return std::make_pair(ivalue, true);
+            return std::make_pair(ivalue, false);
         }
 
         auto updated = std::vector<torch::IValue>();
