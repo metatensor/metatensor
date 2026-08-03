@@ -628,6 +628,38 @@ def test_state_dict_tensor_device_dtype(tmpdir, devices_to_test):
         assert module.nested["dict"][42][0][0].device.type == device
 
 
+def test_mixed_data():
+    """Check that registering a buffer with a mix of metatensor and non-metatensor
+    data in the same container raises an error when calling to()"""
+
+    class MixedModule(nn.Module):
+        def __init__(self):
+            super().__init__()
+            labels = Labels(["test"], torch.arange(2).reshape(-1, 1))
+            self.register_buffer("mixed", {"labels": labels, "not_metatensor": 42})
+
+    module = MixedModule()
+    message = (
+        "dicts containing both metatensor and non-metatensor data as values "
+        "are not supported"
+    )
+    with pytest.raises(ValueError, match=message):
+        module.to(dtype=torch.float32)
+
+    class MixedListModule(nn.Module):
+        def __init__(self):
+            super().__init__()
+            labels = Labels(["test"], torch.arange(2).reshape(-1, 1))
+            self.register_buffer("mixed", [labels, "not_metatensor"])
+
+    module = MixedListModule()
+    message = (
+        "lists containing both metatensor and non-metatensor data are not supported"
+    )
+    with pytest.raises(ValueError, match=message):
+        module.to(dtype=torch.float32)
+
+
 def test_non_persistent_buffer():
     # Check that metatensor buffers registered with persistent=False are excluded
     # from state_dict, but still moved by .to()
