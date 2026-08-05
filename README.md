@@ -22,9 +22,6 @@ custom block-sparse data format. If you are using metatensor from Python, we
 additionally provide a collection of mathematical, logical and other utility
 operations to make working with TensorMaps more convenient.
 
-If you use metatensor for your work, please read and cite our preprint available on
-[arXiv](http://arxiv.org/abs/2508.15704).
-
 # Documentation
 
 For details, tutorials, and examples, please have a look at our [documentation](https://docs.metatensor.org/).
@@ -42,10 +39,9 @@ issue](https://github.com/metatensor/metatensor/issues?q=is%3Aissue+is%3Aopen+la
 
 This project is
 [maintained](https://github.com/lab-cosmo/.github/blob/main/Maintainers.md) by
-[@Luthaf](https://github.com/Luthaf) and [@HaoZeke](https://github.com/HaoZeke),
-who will reply to issues and pull requests opened on this repository as soon as
-possible. You can mention them directly if you did not receive an answer after a
-couple of days.
+[@Luthaf](https://github.com/Luthaf), who will reply to issues and pull requests
+opened on this repository as soon as possible. You can mention them directly if
+you did not receive an answer after a couple of days.
 
 <!-- marker-cite -->
 
@@ -53,9 +49,8 @@ couple of days.
 
 If you found metatensor useful for your work, please cite the corresponding article:
 
-F. Bigi, J.W. Abbott, P. Loche et. al.<br>
-Metatensor and metatomic: foundational libraries for interoperable atomistic machine learning, (2026).<br>
-[https://doi.org/10.1063/5.0304911](https://doi.org/10.1063/5.0304911)
+F. Bigi, J.W. Abbott, P. Loche et. al.
+*"Metatensor and metatomic: foundational libraries for interoperable atomistic machine learning", (2026)* [https://doi.org/10.1063/5.0304911](https://doi.org/10.1063/5.0304911)
 
 ```bibtex
 @article{bigi_metatensor_2026,
@@ -73,4 +68,4 @@ Metatensor and metatomic: foundational libraries for interoperable atomistic mac
 }
 ```
 
-<!-- marker-end -->
+<!-- marker-cite-end -->
