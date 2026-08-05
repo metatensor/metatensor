@@ -16,6 +16,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.10.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.3) - 2026-08-05
+
+### Fixed
+
+- `metatensor_torch::Module` now properly handle empty containers (#1176)
+
 ## [Version 0.10.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.2) - 2026-07-30
 
 ### Added

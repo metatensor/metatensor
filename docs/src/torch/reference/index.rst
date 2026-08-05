@@ -12,6 +12,7 @@ API reference
     :tag-prefix: metatensor-torch-v
     :url-suffix: torch/reference/index.html
 
+    .. version:: 0.10.3
     .. version:: 0.10.2
     .. version:: 0.10.1
     .. version:: 0.10.0
