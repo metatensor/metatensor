@@ -16,6 +16,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Fixed
+
+- Fixed `Module::to` to handle models exported with metatensor-learn<0.6
+  with containers having both metatensor and non-metatensor data inside.
+
 ## [Version 0.10.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.3) - 2026-08-05
 
 ### Fixed

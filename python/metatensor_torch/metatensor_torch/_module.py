@@ -29,8 +29,8 @@ def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename
 
 
 # WARNING: this is duplicated in metatensor.learn.nn._module, make sure to change both
-# versions of the function at the same time
-def _metatensor_data_to(value, dtype, device):
+# versions of the function at the same time. The legacy path only exists here.
+def _metatensor_data_to(value, dtype, device, legacy=False):
     """
     Convert metatensor data to the given dtype/device, returning the new data and a
     bool to indicate if the value was modified.
@@ -52,14 +52,15 @@ def _metatensor_data_to(value, dtype, device):
             if isinstance(dict_value, (dict, list, tuple)) and len(dict_value) == 0:
                 updated[name] = dict_value
                 continue
-            updated_value, changed = _metatensor_data_to(dict_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                dict_value, dtype, device, legacy=legacy
+            )
             all_changed = all_changed and changed
             some_changed = some_changed or changed
             updated[name] = updated_value
 
         if some_changed:
-            if not all_changed:
-                # we got some unexpected type somewhere
+            if not all_changed and not legacy:
                 raise ValueError(
                     "dicts containing both metatensor and non-metatensor data as "
                     "values are not supported"
@@ -77,14 +78,15 @@ def _metatensor_data_to(value, dtype, device):
             if isinstance(list_value, (dict, list, tuple)) and len(list_value) == 0:
                 updated.append(list_value)
                 continue
-            updated_value, changed = _metatensor_data_to(list_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                list_value, dtype, device, legacy=legacy
+            )
             all_changed = all_changed and changed
             some_changed = some_changed or changed
             updated.append(updated_value)
 
         if some_changed:
-            if not all_changed:
-                # we got some unexpected type somewhere
+            if not all_changed and not legacy:
                 raise ValueError(
                     "lists containing both metatensor and non-metatensor data "
                     "are not supported"
@@ -98,7 +100,9 @@ def _metatensor_data_to(value, dtype, device):
         updated = []
         some_changed = False
         for tuple_value in value:
-            updated_value, changed = _metatensor_data_to(tuple_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                tuple_value, dtype, device, legacy=legacy
+            )
             some_changed = some_changed or changed
             updated.append(updated_value)
 
@@ -116,12 +120,17 @@ def _apply_metatensor(module):
     dtype = module._mts_helper.dtype
 
     if isinstance(module, torch.jit.RecursiveScriptModule):
-        # Determine which attributes to process
+        # Determine which attributes to process. Modules without _mts_buffer_names are
+        # exported from metatensor-learn<0.6. We allow dict/list to contain both
+        # metatensor and non-metatensor data in this case.
+        legacy = False
         if module._c.hasattr("_mts_buffer_names"):
             names = list(module._c.getattr("_mts_buffer_names"))
         else:
             # Fallback: parse all attributes from the string representation
             # (backward compatibility with modules that don't use register_buffer)
+            legacy = True
+
             warnings.warn(
                 "module does not have '_mts_buffer_names'; "
                 "falling back to processing all attributes. "
@@ -139,7 +148,9 @@ def _apply_metatensor(module):
         for name in names:
             value = module._c.getattr(name)
 
-            value, changed = _metatensor_data_to(value, dtype=dtype, device=device)
+            value, changed = _metatensor_data_to(
+                value, dtype=dtype, device=device, legacy=legacy
+            )
             if changed:
                 typ = _get_torch_type(value)
                 module._c._register_attribute(name, typ, value)

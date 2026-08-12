@@ -35,11 +35,19 @@ static bool is_empty_container(const torch::IValue& ivalue) {
     return false;
 }
 
+// Convert metatensor values in an IValue tree to the given device/dtype.
+//
+// `legacy` is true for modules exported without `_mts_buffer_names`
+// (metatensor-learn<0.6). On that path Module::to walks every attribute and can
+// hit mixed dicts/lists; convert metatensor entries and leave the rest,
+// matching tuples. This flag will be removed in the future, when we no longer
+// have to support these models.
 static std::pair<torch::IValue, bool> ivalue_to(
     torch::IValue ivalue,
     const torch::optional<at::Device>& device,
     const torch::optional<at::ScalarType>& dtype,
-    bool non_blocking
+    bool non_blocking,
+    bool legacy
 ) {
     if (is_custom_class<LabelsHolder>(ivalue)) {
         if (device.has_value()) {
@@ -72,13 +80,13 @@ static std::pair<torch::IValue, bool> ivalue_to(
                 updated.insert(item.key(), inner);
                 continue;
             }
-            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking);
+            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking, legacy);
             all_changed &= changed;
             some_changed |= changed;
             updated.insert(item.key(), updated_value);
         }
         if (some_changed) {
-            if (!all_changed) {
+            if (!all_changed && !legacy) {
                 C10_THROW_ERROR(ValueError,
                     "dict containing both metatensor and non-metatensor data "
                     "as values are not supported"
@@ -101,13 +109,13 @@ static std::pair<torch::IValue, bool> ivalue_to(
                 updated.emplace_back(inner);
                 continue;
             }
-            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking);
+            auto [updated_value, changed] = ivalue_to(inner, device, dtype, non_blocking, legacy);
             all_changed &= changed;
             some_changed |= changed;
             updated.emplace_back(std::move(updated_value));
         }
         if (some_changed) {
-            if (!all_changed) {
+            if (!all_changed && !legacy) {
                 C10_THROW_ERROR(ValueError,
                     "list containing both metatensor and non-metatensor data "
                     "are not supported"
@@ -124,7 +132,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
         auto updated = std::vector<torch::IValue>();
         auto some_changed = false;
         for (const auto& item: tuple) {
-            auto [updated_value, changed] = ivalue_to(item, device, dtype, non_blocking);
+            auto [updated_value, changed] = ivalue_to(item, device, dtype, non_blocking, legacy);
             some_changed |= changed;
             updated.emplace_back(std::move(updated_value));
         }
@@ -159,6 +167,10 @@ void Module::to_impl_(
     for (auto module: this->modules()) {
         // Determine which attributes to process
         std::vector<std::string> attr_names;
+        // Modules without _mts_buffer_names are exported from
+        // metatensor-learn<0.6. We allow dict/list to contain both metatensor
+        // and non-metatensor data in this case.
+        bool legacy = false;
 
         if (module.hasattr("_mts_buffer_names")) {
             auto names = module.attr("_mts_buffer_names").toList();
@@ -166,8 +178,9 @@ void Module::to_impl_(
                 attr_names.push_back(item.get().toStringRef());
             }
         } else {
-            // Fallback: process all attributes (backward compatibility with modules
-            // that don't use register_buffer)
+            // Fallback: process all attributes (backward compatibility with
+            // modules that don't use register_buffer yet)
+            legacy = true;
             TORCH_WARN_ONCE(
                 "module does not have '_mts_buffer_names'; falling back to "
                 "processing all attributes. This is deprecated and will be "
@@ -182,7 +195,7 @@ void Module::to_impl_(
 
         for (const auto& name : attr_names) {
             auto value = module.attr(name);
-            auto [updated, changed] = ivalue_to(value, device, dtype, non_blocking);
+            auto [updated, changed] = ivalue_to(value, device, dtype, non_blocking, legacy);
             if (changed) {
                 module.register_attribute(name, updated.type().get(), updated);
             }
