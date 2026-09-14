@@ -22,7 +22,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 #### Added
 
-- Added support for PyTorch v2.14
+- Added support for PyTorch v2.14 in PyPI wheels
 
 ## [Version 0.10.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.4) - 2026-08-13
 
