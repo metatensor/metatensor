@@ -1,8 +1,9 @@
+import ctypes
 import os
 import re
 import sys
 from collections import namedtuple
-from ctypes import cdll
+from ctypes import cdll, wintypes
 
 from ._c_api import setup_functions
 from ._data._extract import ExternalCpuArray, register_external_data_wrapper
@@ -43,8 +44,16 @@ class LibraryFinder(object):
 
     def __call__(self):
         if self._cached_dll is None:
-            path = _lib_path()
-            self._cached_dll = cdll.LoadLibrary(path)
+            # if the library is already loaded in the current process, use this one
+            # instead of loading a second, independent copy of it
+            dll = _already_loaded(_lib_name())
+            if dll is None:
+                path = _lib_path()
+                dll = cdll.LoadLibrary(path)
+            else:
+                path = "<already loaded in the current process>"
+
+            self._cached_dll = dll
             setup_functions(self._cached_dll)
 
             # initial setup, disable printing of the error in case of panic
@@ -66,6 +75,50 @@ class LibraryFinder(object):
         return self._cached_dll
 
 
+def _lib_name():
+    """Name of the metatensor shared library on the current platform"""
+    if sys.platform.startswith("darwin"):
+        return "libmetatensor.dylib"
+    elif sys.platform.startswith("linux"):
+        return "libmetatensor.so"
+    elif sys.platform.startswith("win"):
+        return "metatensor.dll"
+    else:
+        raise ImportError("Unknown platform. Please edit this file")
+
+
+def _already_loaded(name):
+    """
+    Check if the library with the given ``name`` is already loaded in the current
+    process, and return the corresponding ``CDLL`` if it is. This makes sure we share
+    the global state of the library (error buffers, registered data origins, ...) with
+    whoever loaded it first, instead of using a second, independent copy of the library.
+
+    Returns ``None`` if the library is not already loaded.
+    """
+    if sys.platform.startswith("win"):
+        kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+        kernel32.GetModuleHandleW.argtypes = [wintypes.LPCWSTR]
+
+        handle = kernel32.GetModuleHandleW(name)
+        if not handle:
+            return None
+
+        return ctypes.CDLL(name, handle=handle)
+    else:
+        # RTLD_NOLOAD gives us a handle if the library is already loaded, and fails
+        # instead of loading it otherwise.
+        RTLD_NOLOAD = getattr(os, "RTLD_NOLOAD", None)
+        if RTLD_NOLOAD is None:
+            return None
+
+        try:
+            return ctypes.CDLL(name, mode=RTLD_NOLOAD | os.RTLD_LOCAL)
+        except OSError:
+            return None
+
+
 def _lib_path():
     try:
         # check if we are using an externally-provided version of the shared library
@@ -76,17 +129,11 @@ def _lib_path():
         pass
 
     # otherwise load from the local installation
-    if sys.platform.startswith("darwin"):
-        windows = False
-        path = os.path.join(_HERE, "lib", "libmetatensor.dylib")
-    elif sys.platform.startswith("linux"):
-        windows = False
-        path = os.path.join(_HERE, "lib", "libmetatensor.so")
-    elif sys.platform.startswith("win"):
-        windows = True
-        path = os.path.join(_HERE, "bin", "metatensor.dll")
+    windows = sys.platform.startswith("win")
+    if windows:
+        path = os.path.join(_HERE, "bin", _lib_name())
     else:
-        raise ImportError("Unknown platform. Please edit this file")
+        path = os.path.join(_HERE, "lib", _lib_name())
 
     if os.path.isfile(path):
         if windows:
