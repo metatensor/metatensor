@@ -54,8 +54,9 @@ class LabelsModule(nn.Module):
         list_value = [Labels([name], values)]
         tuple_value = tuple([Labels([name], values)])
         nested_value = {
-            "dict": {42: [[Labels([name], values)], []], 50: []},
+            "dict": {42: [[Labels([name], values)], []], 50: [], 404: [[]]},
             "empty": {},
+            "tuple": {1: ((), [], {})},
         }
 
         # registered via explicit register_buffer
@@ -81,8 +82,9 @@ class BlockModule(nn.Module):
         list_value = [_create_block(name)]
         tuple_value = tuple([_create_block(name)])
         nested_value = {
-            "dict": {42: [[_create_block(name)], []], 50: []},
+            "dict": {42: [[_create_block(name)], []], 50: [], 404: [[]]},
             "empty": {},
+            "tuple": {1: ((), [], {})},
         }
 
         # registered via explicit register_buffer
@@ -108,8 +110,9 @@ class TensorModule(nn.Module):
         list_value = [_create_tensor(name)]
         tuple_value = tuple([_create_tensor(name)])
         nested_value = {
-            "dict": {42: [[_create_tensor(name)], []], 50: []},
+            "dict": {42: [[_create_tensor(name)], []], 50: [], 404: [[]]},
             "empty": {},
+            "tuple": {1: ((), [], {})},
         }
 
         # registered via explicit register_buffer
