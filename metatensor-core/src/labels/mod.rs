@@ -316,7 +316,7 @@ impl Labels {
         let dimensions = Labels::validate_dimensions(dimensions)?;
 
         if dimensions.is_empty() {
-            assert!(values.shape()?.iter().product::<usize>() == 0);
+            assert_eq!(values.shape()?.iter().product::<usize>(), 0);
             return Ok(Labels {
                 dimensions: Vec::new(),
                 values: create_array_from_vec(Arc::from([]), 0, 0),
@@ -449,7 +449,7 @@ impl Labels {
         let mut values = self.values_cpu().to_vec();
 
         if !first_mapping.is_empty() {
-            debug_assert!(first_mapping.len() == self.count());
+            debug_assert_eq!(first_mapping.len(), self.count());
             #[allow(clippy::cast_possible_wrap)]
             for i in 0..self.count() {
                 first_mapping[i] = i as i64;
@@ -519,12 +519,12 @@ impl Labels {
         };
 
         if !first_indexes.is_empty() {
-            assert!(first_indexes.len() == first.count());
+            assert_eq!(first_indexes.len(), first.count());
             first_indexes.fill(-1);
         }
 
         if !second_indexes.is_empty() {
-            assert!(second_indexes.len() == second.count());
+            assert_eq!(second_indexes.len(), second.count());
             second_indexes.fill(-1);
         }
 
@@ -587,7 +587,7 @@ impl Labels {
         }
 
         if !first_mapping.is_empty() {
-            assert!(first_mapping.len() == self.count());
+            assert_eq!(first_mapping.len(), self.count());
             first_mapping.fill(-1);
         }
 
@@ -643,7 +643,7 @@ impl Labels {
     /// This function returns the number of selected entries, i.e. the number of
     /// valid indexes in `selected`.
     pub fn select(&self, selection: &Labels, selected: &mut [u64]) -> Result<usize, Error> {
-        assert!(selected.len() == self.count());
+        assert_eq!(selected.len(), self.count());
         if !self.is_empty() && !selection.is_empty() && self.device() != selection.device() {
             return Err(Error::InvalidParameter(format!(
                 "can not select from Labels, the selection is on a different \
@@ -679,7 +679,7 @@ impl Labels {
             }
 
             if dimensions_to_match.is_empty() {
-                assert!(selection.count() == 0);
+                assert_eq!(selection.count(), 0);
                 // all labels match an empty selection
                 for (i, s) in selected.iter_mut().enumerate() {
                     *s = i as u64;
@@ -827,7 +827,7 @@ mod tests {
         ).unwrap();
 
         // `sorted` should be initialized by `from_vec`
-        assert!(labels.sorted.get() == Some(&true));
+        assert_eq!(labels.sorted.get(), Some(&true));
 
         let labels = Labels::from_vec(&["aa", "bb"],
             vec![0, 1, /**/ 1, 2, /**/ 0, 2]
