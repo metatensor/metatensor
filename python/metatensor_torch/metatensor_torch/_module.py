@@ -28,6 +28,18 @@ def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename
     return False
 
 
+def _is_empty(value):
+    """
+    Check if ``value`` is a container without any data inside, potentially nested inside
+    other empty containers (e.g. ``[[], [[]]]``).
+    """
+    if isinstance(value, (dict, list, tuple)):
+        values = value.values() if isinstance(value, dict) else value
+        return all(_is_empty(v) for v in values)
+    else:
+        return False
+
+
 # WARNING: this is duplicated in metatensor.learn.nn._module, make sure to change both
 # versions of the function at the same time. The legacy path only exists here.
 def _metatensor_data_to(value, dtype, device, legacy=False):
@@ -42,14 +54,14 @@ def _metatensor_data_to(value, dtype, device, legacy=False):
     elif isinstance_metatensor(value, "TensorMap"):
         return value.to(device=device, dtype=dtype), True
     elif isinstance(value, dict):
-        if len(value) == 0:
-            return value, True
+        if _is_empty(value):
+            return value, False
 
         updated = {}
         all_changed = True
         some_changed = False
         for name, dict_value in value.items():
-            if isinstance(dict_value, (dict, list, tuple)) and len(dict_value) == 0:
+            if _is_empty(dict_value):
                 some_changed = True
                 updated[name] = dict_value
                 continue
@@ -69,14 +81,14 @@ def _metatensor_data_to(value, dtype, device, legacy=False):
             return updated, True
 
     elif isinstance(value, list):
-        if len(value) == 0:
-            return value, True
+        if _is_empty(value):
+            return value, False
 
         updated = []
         all_changed = True
         some_changed = False
         for list_value in value:
-            if isinstance(list_value, (dict, list, tuple)) and len(list_value) == 0:
+            if _is_empty(list_value):
                 some_changed = True
                 updated.append(list_value)
                 continue
@@ -96,7 +108,7 @@ def _metatensor_data_to(value, dtype, device, legacy=False):
             return updated, True
 
     elif isinstance(value, tuple):
-        if len(value) == 0:
+        if _is_empty(value):
             return value, True
 
         updated = []
