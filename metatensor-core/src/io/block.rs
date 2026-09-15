@@ -378,7 +378,11 @@ pub(super) fn write_single_block<W: std::io::Write + std::io::Seek>(
         save_labels(archive, &block.properties)?;
     }
 
-    for (parameter, gradient) in block.gradients() {
+    // sort the gradients to make sure the same file is generated every time
+    let mut parameters = block.gradients().keys().collect::<Vec<_>>();
+    parameters.sort_unstable();
+    for parameter in parameters {
+        let gradient = block.gradients().get(parameter).expect("missing gradient");
         let prefix = format!("{}gradients/{}/", prefix, parameter);
         write_single_block(archive, &prefix, false, gradient)?;
     }

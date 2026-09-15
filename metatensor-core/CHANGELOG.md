@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Fixed
+
+- Saving a `TensorBlock` or `TensorMap` to a file is now deterministic,
+  producing the same bytes every time.
+
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.4) - 2026-07-30
 
 ### Added
