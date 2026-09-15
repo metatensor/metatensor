@@ -195,6 +195,20 @@ def _contains_metatensor(value):
     return False
 
 
+def _is_empty(value):
+    """
+    Check if ``value`` is a container without any data inside, potentially nested inside
+    other empty containers (e.g. ``[[], [[]]]``). Such containers don't tell us anything
+    about the type of the data they would contain, and are left alone by
+    ``_metatensor_data_to``.
+    """
+    if isinstance(value, (dict, list, tuple)):
+        values = value.values() if isinstance(value, dict) else value
+        return all(_is_empty(v) for v in values)
+    else:
+        return False
+
+
 # WARNING: this is duplicated in metatensor.torch._module, make sure to change both
 # versions of the function at the same time
 def _metatensor_data_to(value, dtype, device):
@@ -209,14 +223,15 @@ def _metatensor_data_to(value, dtype, device):
     elif isinstance_metatensor(value, "TensorMap"):
         return value.to(device=device, dtype=dtype), True
     elif isinstance(value, dict):
-        if len(value) == 0:
+        if _is_empty(value):
             return value, False
 
         updated = {}
         all_changed = True
         some_changed = False
         for name, dict_value in value.items():
-            if isinstance(dict_value, (dict, list, tuple)) and len(dict_value) == 0:
+            if _is_empty(dict_value):
+                some_changed = True
                 updated[name] = dict_value
                 continue
             updated_value, changed = _metatensor_data_to(dict_value, dtype, device)
@@ -234,14 +249,15 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, list):
-        if len(value) == 0:
+        if _is_empty(value):
             return value, False
 
         updated = []
         all_changed = True
         some_changed = False
         for list_value in value:
-            if isinstance(list_value, (dict, list, tuple)) and len(list_value) == 0:
+            if _is_empty(list_value):
+                some_changed = True
                 updated.append(list_value)
                 continue
             updated_value, changed = _metatensor_data_to(list_value, dtype, device)
@@ -259,7 +275,7 @@ def _metatensor_data_to(value, dtype, device):
             return updated, True
 
     elif isinstance(value, tuple):
-        if len(value) == 0:
+        if _is_empty(value):
             return value, False
 
         updated = []
@@ -332,7 +348,8 @@ def _serialize_metatensor(value):
         return serialized, True
 
     elif isinstance(value, dict):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         serialized = {}
@@ -354,7 +371,8 @@ def _serialize_metatensor(value):
             return serialized, True
 
     elif isinstance(value, list):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         serialized = []
@@ -376,7 +394,8 @@ def _serialize_metatensor(value):
             return serialized, True
 
     elif isinstance(value, tuple):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         serialized = []
@@ -459,7 +478,8 @@ def _deserialize_metatensor(value):
             raise ValueError(f"got unexpected class name: '{class_name}'")
 
     elif isinstance(value, dict):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         deserialized = {}
@@ -481,7 +501,8 @@ def _deserialize_metatensor(value):
             return deserialized, True
 
     elif isinstance(value, list):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         deserialized = []
@@ -503,7 +524,8 @@ def _deserialize_metatensor(value):
             return deserialized, True
 
     elif isinstance(value, tuple):
-        if len(value) == 0:
+        if _is_empty(value):
+            # empty containers contain no metatensor data, but are compatible with it
             return value, True
 
         deserialized = []

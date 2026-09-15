@@ -45,6 +45,7 @@ def _create_tensor(key_name):
 
 class LabelsModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[Labels]]]]
+    deeper: List[List[List[Labels]]]
 
     def __init__(self, name):
         super().__init__()
@@ -54,13 +55,15 @@ class LabelsModule(nn.Module):
         list_value = [Labels([name], values)]
         tuple_value = tuple([Labels([name], values)])
         nested_value = {
-            "dict": {42: [[Labels([name], values)], []], 50: []},
+            "dict": {42: [[Labels([name], values)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[Labels([name], values)], []], [[]], []]
 
         # registered via explicit register_buffer
         self.register_buffer("labels", labels_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         # registered via Buffer wrapper
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
@@ -73,6 +76,7 @@ class LabelsModule(nn.Module):
 
 class BlockModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorBlock]]]]
+    deeper: List[List[List[TensorBlock]]]
 
     def __init__(self, name):
         super().__init__()
@@ -81,13 +85,15 @@ class BlockModule(nn.Module):
         list_value = [_create_block(name)]
         tuple_value = tuple([_create_block(name)])
         nested_value = {
-            "dict": {42: [[_create_block(name)], []], 50: []},
+            "dict": {42: [[_create_block(name)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[_create_block(name)], []], [[]], []]
 
         # registered via explicit register_buffer
         self.register_buffer("block", block_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         # registered via Buffer wrapper
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
@@ -100,6 +106,7 @@ class BlockModule(nn.Module):
 
 class TensorModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorMap]]]]
+    deeper: List[List[List[TensorMap]]]
 
     def __init__(self, name):
         super().__init__()
@@ -108,13 +115,15 @@ class TensorModule(nn.Module):
         list_value = [_create_tensor(name)]
         tuple_value = tuple([_create_tensor(name)])
         nested_value = {
-            "dict": {42: [[_create_tensor(name)], []], 50: []},
+            "dict": {42: [[_create_tensor(name)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[_create_tensor(name)], []], [[]], []]
 
         # registered via explicit register_buffer
         self.register_buffer("tensor", tensor_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         # registered via Buffer wrapper
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
@@ -172,6 +181,7 @@ def test_to(devices_to_test):
         assert module.a.dict["labels"].device.type == device
         assert module.a.list[0].device.type == device
         assert module.a.nested["dict"][42][0][0].device.type == device
+        assert module.a.deeper[0][0][0].device.type == device
 
         assert module.b.block.device.type == device
         assert module.b.block.dtype == dtype
@@ -180,6 +190,7 @@ def test_to(devices_to_test):
         assert module.b.list[0].device.type == device
         assert module.b.list[0].dtype == dtype
         assert module.b.nested["dict"][42][0][0].device.type == device
+        assert module.b.deeper[0][0][0].device.type == device
         assert module.b.nested["dict"][42][0][0].dtype == dtype
 
         assert module.c.tensor.device.type == device
@@ -189,6 +200,7 @@ def test_to(devices_to_test):
         assert module.c.list[0].device.type == device
         assert module.c.list[0].dtype == dtype
         assert module.c.nested["dict"][42][0][0].device.type == device
+        assert module.c.deeper[0][0][0].device.type == device
         assert module.c.nested["dict"][42][0][0].dtype == dtype
 
         # unregistered: should NOT have moved (stays on cpu/float64)
