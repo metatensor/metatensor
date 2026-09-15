@@ -312,7 +312,7 @@ fn merge_blocks_along_properties(
 
             let property_range = property_range.as_ref().unwrap();
             let gradient = block.gradient(parameter).expect("missing gradient");
-            debug_assert!(*gradient.components == *new_components);
+            debug_assert_eq!(*gradient.components, *new_components);
 
             let mut movements = Vec::new();
             for (sample_i, grad_sample) in gradient.samples.to_cpu().iter().enumerate() {

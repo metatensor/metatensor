@@ -207,7 +207,7 @@ fn merge_blocks_along_samples(
 
         for (KeyAndBlock{block, ..}, samples_mapping) in blocks_to_merge.iter().zip(&samples_mappings) {
             let gradient = block.gradient(parameter).expect("missing gradient");
-            debug_assert!(*gradient.components == *new_components);
+            debug_assert_eq!(*gradient.components, *new_components);
 
             gradients_to_merge.push(&gradient.values);
 
