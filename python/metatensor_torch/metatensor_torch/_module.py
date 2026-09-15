@@ -30,7 +30,7 @@ def isinstance_metatensor(value: Union[Labels, TensorBlock, TensorMap], typename
 
 # WARNING: this is duplicated in metatensor.learn.nn._module, make sure to change both
 # versions of the function at the same time. The legacy path only exists here.
-def _metatensor_data_to(value, dtype, device):
+def _metatensor_data_to(value, dtype, device, legacy=False):
     """
     Convert metatensor data to the given dtype/device, returning the new data and a
     bool to indicate if the value was modified.
@@ -50,17 +50,18 @@ def _metatensor_data_to(value, dtype, device):
         some_changed = False
         for name, dict_value in value.items():
             if isinstance(dict_value, (dict, list, tuple)) and len(dict_value) == 0:
-                updated[name] = dict_value
                 some_changed = True
+                updated[name] = dict_value
                 continue
-            updated_value, changed = _metatensor_data_to(dict_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                dict_value, dtype, device, legacy=legacy
+            )
             all_changed = all_changed and changed
             some_changed = some_changed or changed
             updated[name] = updated_value
 
         if some_changed:
-            if not all_changed:
-                # we got some unexpected type somewhere
+            if not all_changed and not legacy:
                 raise ValueError(
                     "dicts containing both metatensor and non-metatensor data as "
                     "values are not supported"
@@ -76,17 +77,18 @@ def _metatensor_data_to(value, dtype, device):
         some_changed = False
         for list_value in value:
             if isinstance(list_value, (dict, list, tuple)) and len(list_value) == 0:
-                updated.append(list_value)
                 some_changed = True
+                updated.append(list_value)
                 continue
-            updated_value, changed = _metatensor_data_to(list_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                list_value, dtype, device, legacy=legacy
+            )
             all_changed = all_changed and changed
             some_changed = some_changed or changed
             updated.append(updated_value)
 
         if some_changed:
-            if not all_changed:
-                # we got some unexpected type somewhere
+            if not all_changed and not legacy:
                 raise ValueError(
                     "lists containing both metatensor and non-metatensor data "
                     "are not supported"
@@ -100,7 +102,9 @@ def _metatensor_data_to(value, dtype, device):
         updated = []
         some_changed = False
         for tuple_value in value:
-            updated_value, changed = _metatensor_data_to(tuple_value, dtype, device)
+            updated_value, changed = _metatensor_data_to(
+                tuple_value, dtype, device, legacy=legacy
+            )
             some_changed = some_changed or changed
             updated.append(updated_value)
 
