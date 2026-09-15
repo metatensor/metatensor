@@ -300,10 +300,11 @@ def _block_to_dict(block, prefix, is_gradient):
     if not is_gradient:
         result[f"{prefix}properties"] = _labels_to_mts(block.properties)
 
-    for parameter, gradient in block.gradients():
+    # sort the gradients to make sure the same file is generated every time
+    for parameter in sorted(block.gradients_list()):
         result.update(
             _block_to_dict(
-                gradient,
+                block.gradient(parameter),
                 f"{prefix}gradients/{parameter}/",
                 is_gradient=True,
             )
