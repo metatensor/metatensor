@@ -6,6 +6,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Fixed
+
+- `metatensor.learn.nn.Module` now properly handles nested empty containers
+
 <!-- Possible sections
 
 ### Added
