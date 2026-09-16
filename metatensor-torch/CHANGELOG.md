@@ -5,10 +5,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Fixed
-
-- `metatensor_torch::Module` now properly handles nested empty containers
-
 <!-- Possible sections for each package:
 
 ### Added
@@ -19,6 +15,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Removed
 -->
+
+## [Version 0.10.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.6) - 2026-09-16
+
+### Fixed
+
+- `metatensor_torch::Module` now properly handles nested empty containers
 
 ## [Version 0.10.5](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.5) - 2026-09-11
 
