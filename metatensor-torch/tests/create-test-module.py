@@ -25,6 +25,7 @@ def _create_tensor(key_name):
 
 class LabelsModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[Labels]]]]
+    deeper: List[List[List[Labels]]]
 
     def __init__(self, name):
         super().__init__()
@@ -34,12 +35,14 @@ class LabelsModule(nn.Module):
         list_value = [Labels([name], values)]
         tuple_value = tuple([Labels([name], values)])
         nested_value = {
-            "dict": {42: [[Labels([name], values)], []], 50: []},
+            "dict": {42: [[Labels([name], values)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[Labels([name], values)], []], [[]], []]
 
         self.register_buffer("labels", labels_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)
@@ -47,6 +50,7 @@ class LabelsModule(nn.Module):
 
 class BlockModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorBlock]]]]
+    deeper: List[List[List[TensorBlock]]]
 
     def __init__(self, name):
         super().__init__()
@@ -55,12 +59,14 @@ class BlockModule(nn.Module):
         list_value = [_create_block(name)]
         tuple_value = tuple([_create_block(name)])
         nested_value = {
-            "dict": {42: [[_create_block(name)], []], 50: []},
+            "dict": {42: [[_create_block(name)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[_create_block(name)], []], [[]], []]
 
         self.register_buffer("block", block_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)
@@ -68,6 +74,7 @@ class BlockModule(nn.Module):
 
 class TensorMapModule(nn.Module):
     nested: Dict[str, Dict[int, List[List[TensorMap]]]]
+    deeper: List[List[List[TensorMap]]]
 
     def __init__(self, name):
         super().__init__()
@@ -76,12 +83,14 @@ class TensorMapModule(nn.Module):
         list_value = [_create_tensor(name)]
         tuple_value = tuple([_create_tensor(name)])
         nested_value = {
-            "dict": {42: [[_create_tensor(name)], []], 50: []},
+            "dict": {42: [[_create_tensor(name)], []], 50: [], 404: [[]]},
             "empty": {},
         }
+        deeper_value = [[[_create_tensor(name)], []], [[]], []]
 
         self.register_buffer("tensor", tensor_value)
         self.register_buffer("nested", nested_value)
+        self.register_buffer("deeper", deeper_value)
         self.dict = nn.Buffer(container_value)
         self.list = nn.Buffer(list_value)
         self.tuple = nn.Buffer(tuple_value)

@@ -74,6 +74,19 @@ static void check_dtype_device(
             CHECK(labels->values().scalar_type() == torch::kInt32);
         }
 
+        if (item.name == "a.deeper") {
+            auto outer = item.value.toList();
+            auto middle = outer.get(0).toList();
+
+            auto labels = middle.get(0).toList().get(0).toCustomClass<metatensor_torch::LabelsHolder>();
+            CHECK(labels->device() == device);
+            CHECK(labels->values().scalar_type() == torch::kInt32);
+
+            CHECK(middle.get(1).toList().empty());
+            CHECK(outer.get(1).toList().get(0).toList().empty());
+            CHECK(outer.get(2).toList().empty());
+        }
+
         if (item.name == "a.nested") {
             auto str_dict = item.value.toGenericDict();
             auto int_dict = str_dict.at("dict").toGenericDict();
@@ -108,6 +121,19 @@ static void check_dtype_device(
             auto block = tuple[0].toCustomClass<metatensor_torch::TensorBlockHolder>();
             CHECK(block->device() == device);
             CHECK(block->scalar_type() == scalar_type);
+        }
+
+        if (item.name == "b.deeper") {
+            auto outer = item.value.toList();
+            auto middle = outer.get(0).toList();
+
+            auto block = middle.get(0).toList().get(0).toCustomClass<metatensor_torch::TensorBlockHolder>();
+            CHECK(block->device() == device);
+            CHECK(block->scalar_type() == scalar_type);
+
+            CHECK(middle.get(1).toList().empty());
+            CHECK(outer.get(1).toList().get(0).toList().empty());
+            CHECK(outer.get(2).toList().empty());
         }
 
         if (item.name == "b.nested") {
@@ -146,6 +172,19 @@ static void check_dtype_device(
             CHECK(tensor->scalar_type() == scalar_type);
         }
 
+        if (item.name == "c.deeper") {
+            auto outer = item.value.toList();
+            auto middle = outer.get(0).toList();
+
+            auto tensor = middle.get(0).toList().get(0).toCustomClass<metatensor_torch::TensorMapHolder>();
+            CHECK(tensor->device() == device);
+            CHECK(tensor->scalar_type() == scalar_type);
+
+            CHECK(middle.get(1).toList().empty());
+            CHECK(outer.get(1).toList().get(0).toList().empty());
+            CHECK(outer.get(2).toList().empty());
+        }
+
         if (item.name == "c.nested") {
             auto str_dict = item.value.toGenericDict();
             auto int_dict = str_dict.at("dict").toGenericDict();
@@ -171,10 +210,10 @@ static const std::vector<std::string> NEW_EXPECTED_FIELDS = {
     "_mts_buffer_names",
     "_mts_helper",
     "_mts_non_persistent_buffers",
-    "a", "a._mts_buffer_names", "a._mts_helper", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
-    "b", "b._mts_buffer_names", "b._mts_helper", "b.block", "b.dict", "b.list", "b.nested", "b.tuple",
+    "a", "a._mts_buffer_names", "a._mts_helper", "a.deeper", "a.dict", "a.labels", "a.list", "a.nested", "a.tuple",
+    "b", "b._mts_buffer_names", "b._mts_helper", "b.block", "b.deeper", "b.dict", "b.list", "b.nested", "b.tuple",
     "block",
-    "c", "c._mts_buffer_names", "c._mts_helper", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
+    "c", "c._mts_buffer_names", "c._mts_helper", "c.deeper", "c.dict", "c.list", "c.nested", "c.tensor", "c.tuple",
     "d", "d.test",
     "e", "e.test",
     "labels", "tensor", "tuple",

@@ -24,13 +24,31 @@ bool is_custom_class(torch::IValue ivalue) {
     }
 }
 
+// Check if `ivalue` is a container without any data inside, potentially nested
+// inside other empty containers (e.g. `[[], [[]]]`). Such containers contain no
+// metatensor data, but are compatible with any kind of data.
 static bool is_empty_container(const torch::IValue& ivalue) {
     if (ivalue.isGenericDict()) {
-        return ivalue.toGenericDict().empty();
+        for (const auto& item: ivalue.toGenericDict()) {
+            if (!is_empty_container(item.value())) {
+                return false;
+            }
+        }
+        return true;
     } else if (ivalue.isList()) {
-        return ivalue.toList().empty();
+        for (const torch::IValue& item: ivalue.toList()) {
+            if (!is_empty_container(item)) {
+                return false;
+            }
+        }
+        return true;
     } else if (ivalue.isTuple()) {
-        return ivalue.toTupleRef().elements().empty();
+        for (const auto& item: ivalue.toTupleRef().elements()) {
+            if (!is_empty_container(item)) {
+                return false;
+            }
+        }
+        return true;
     }
     return false;
 }
@@ -67,7 +85,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
         return std::make_pair(tensor, true);
     } else if (ivalue.isGenericDict()) {
         auto dict = ivalue.toGenericDict();
-        if (dict.empty()) {
+        if (is_empty_container(ivalue)) {
             return std::make_pair(ivalue, false);
         }
 
@@ -96,7 +114,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
         }
     } else if (ivalue.isList()) {
         const auto& list = ivalue.toList();
-        if (list.empty()) {
+        if (is_empty_container(ivalue)) {
             return std::make_pair(ivalue, false);
         }
 
@@ -125,7 +143,7 @@ static std::pair<torch::IValue, bool> ivalue_to(
         }
     } else if (ivalue.isTuple()) {
         const auto& tuple = ivalue.toTupleRef().elements();
-        if (tuple.empty()) {
+        if (is_empty_container(ivalue)) {
             return std::make_pair(ivalue, false);
         }
 

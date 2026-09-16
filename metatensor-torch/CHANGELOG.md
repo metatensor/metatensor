@@ -5,6 +5,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
+### Fixed
+
+- `metatensor_torch::Module` now properly handles nested empty containers
+
 <!-- Possible sections for each package:
 
 ### Added
