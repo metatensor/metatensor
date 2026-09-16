@@ -2,6 +2,9 @@ import io
 import json
 import os
 import pickle
+import subprocess
+import sys
+import zipfile
 from pathlib import Path
 
 import numpy as np
@@ -702,3 +705,86 @@ def test_save_strided(tmp_path, use_numpy):
     loaded = mts.load(file_path, use_numpy=True)
 
     np.testing.assert_array_equal(loaded.block(0).values, data)
+
+
+# This script is executed by ``test_save_is_deterministic`` in two separate
+# subprocesses, saving the exact same data in both. A separate process is required here
+# since the ordering issues we are checking for come from hash maps, which use a
+# different, randomized ordering in each process.
+_SAVE_SCRIPT = """
+import os
+import sys
+
+import numpy as np
+
+import metatensor as mts
+from metatensor import Labels, TensorBlock, TensorMap
+
+use_numpy = sys.argv[1] == "True"
+directory = sys.argv[2]
+
+
+def create_block():
+    block = TensorBlock(
+        values=np.zeros((1, 1)),
+        samples=Labels.range("s", 1),
+        components=[],
+        properties=Labels.range("p", 1),
+    )
+
+    # multiple gradients, added in a non-sorted order, are required to see any
+    # difference in the ordering
+    for parameter in ["f", "a", "c", "b", "e", "d"]:
+        block.add_gradient(
+            parameter,
+            TensorBlock(
+                values=np.zeros((1, 3, 1)),
+                samples=Labels.range("sample", 1),
+                components=[Labels.range("xyz", 3)],
+                properties=Labels.range("p", 1),
+            ),
+        )
+
+    return block
+
+
+mts.save(os.path.join(directory, "block.mts"), create_block(), use_numpy=use_numpy)
+
+tensor = TensorMap(Labels.single(), [create_block()])
+mts.save(os.path.join(directory, "tensor.mts"), tensor, use_numpy=use_numpy)
+"""
+
+
+@pytest.mark.parametrize("use_numpy", (True, False))
+def test_save_is_deterministic(tmp_path, use_numpy):
+    """Saving the same data from two processes should give exactly the same files"""
+    directories = []
+    for i in range(2):
+        directory = tmp_path / f"process-{i}"
+        directory.mkdir()
+
+        # run in `directory` to make sure the subprocess uses the installed
+        # metatensor, and not the source code in the current directory
+        subprocess.run(
+            [sys.executable, "-c", _SAVE_SCRIPT, str(use_numpy), str(directory)],
+            cwd=directory,
+            check=True,
+        )
+
+        directories.append(directory)
+
+    for name in ["block.mts", "tensor.mts"]:
+        first = (directories[0] / name).read_bytes()
+        second = (directories[1] / name).read_bytes()
+
+        assert first == second
+
+        # the gradients should be stored in a well-defined, sorted order …
+        with zipfile.ZipFile(io.BytesIO(first)) as archive:
+            parameters = []
+            for entry in archive.namelist():
+                if "gradients/" in entry and entry.endswith("/samples.npy"):
+                    parameters.append(entry.split("gradients/")[1].split("/")[0])
+
+        assert len(parameters) == 6
+        assert parameters == sorted(parameters)
