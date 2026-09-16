@@ -6,10 +6,6 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Fixed
-
-- `metatensor.learn.nn.Module` now properly handles nested empty containers
-
 <!-- Possible sections
 
 ### Added
@@ -21,13 +17,19 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
-## [Version 0.6.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.6.1) - 2025-08-05
+## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.2) - 2025-09-16
+
+### Fixed
+
+- `metatensor.learn.nn.Module` now properly handles nested empty containers
+
+## [Version 0.6.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.1) - 2025-08-05
 
 ### Fixed
 
 - `metatensor.learn.nn.Module` now properly handles empty containers (#1176)
 
-## [Version 0.6.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.6.0) - 2025-07-31
+## [Version 0.6.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.0) - 2025-07-31
 
 ### Added
 
@@ -40,7 +42,7 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   registered explicitly via `register_buffer` instead of being auto-detected
   from all module attributes, matching PyTorch conventions.
 
-## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
+## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.5.0) - 2025-05-13
 
 ### Changed
 
