@@ -221,7 +221,7 @@ class TensorMap:
         )
         hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
 
-        return header + hr + body
+        return header + "\n" + hr + "\n" + body
 
     def __getitem__(self, selection) -> TensorBlock:
         """This is equivalent to self.block(selection)"""

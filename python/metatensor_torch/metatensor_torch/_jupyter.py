@@ -33,8 +33,8 @@ def _labels_repr_html(labels: torch.ScriptObject) -> str:
         max_html_entries=200,
     )
     return (
-        "<div><strong>metatensor.torch.Labels</strong></div>"
-        + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+        "<div><strong>metatensor.torch.Labels</strong></div>\n"
+        + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>\n"
         + html
     )
 
@@ -48,8 +48,8 @@ def _labels_entry_repr_html(entry: torch.ScriptObject) -> str:
         max_html_entries=1,
     )
     return (
-        "<div><strong>metatensor.torch.LabelsEntry</strong></div>"
-        + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+        "<div><strong>metatensor.torch.LabelsEntry</strong></div>\n"
+        + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>\n"
         + html
     )
 
@@ -93,7 +93,7 @@ def _tensor_block_repr_html(block: torch.ScriptObject) -> str:
     header = f"<div><strong>{class_name}</strong>{rest}</div>"
     hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
 
-    return header + hr + body
+    return header + "\n" + hr + "\n" + body
 
 
 def _tensor_map_repr_html(tensor_map: torch.ScriptObject) -> str:
@@ -132,7 +132,7 @@ def _tensor_map_repr_html(tensor_map: torch.ScriptObject) -> str:
     )
     hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
 
-    return header + hr + body
+    return header + "\n" + hr + "\n" + body
 
 
 def _call_previous_formatter(previous, value) -> Optional[str]:

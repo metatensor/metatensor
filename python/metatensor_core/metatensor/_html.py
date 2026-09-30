@@ -61,7 +61,7 @@ def labels_html(
         for width in widths:
             result.append(f'<col style="width: {width}ch;">')
         result.append("</colgroup>")
-        return "".join(result)
+        return "\n".join(result)
 
     def _tbody_html(rows) -> str:
         result = ["<tbody>"]
@@ -71,7 +71,7 @@ def labels_html(
                 result.append(f"<td style='text-align: center;'>{value}</td>")
             result.append("</tr>")
         result.append("</tbody>")
-        return "".join(result)
+        return "\n".join(result)
 
     def _table_html(rows, include_header: bool) -> str:
         result = ["<table style='margin-top: 10px'>"]
@@ -83,7 +83,7 @@ def labels_html(
             result.append("</tr></thead>")
         result.append(_tbody_html(rows))
         result.append("</table>")
-        return "".join(result)
+        return "\n".join(result)
 
     if hidden_total == 0:
         return _table_html(visible_rows, include_header=True)
@@ -92,7 +92,7 @@ def labels_html(
     if hidden_show == 0:
         # no room for any hidden rows in the <details>, just show a message
         result.append(f"<div>... and {hidden_total} more</div>")
-        return "".join(result)
+        return "\n".join(result)
 
     result.append(f"<details><summary>Show {hidden_total} more entries</summary>")
     result.append("<table>")
@@ -113,7 +113,7 @@ def labels_html(
     result.append("</table>")
 
     result.append("</details>")
-    return "".join(result)
+    return "\n".join(result)
 
 
 def labels_html_horizontal(
@@ -147,7 +147,7 @@ def labels_html_horizontal(
                 "<td style='text-align: left;'>(empty)</td></tr>"
             )
         result.append("</tbody></table>")
-        return "".join(result)
+        return "\n".join(result)
 
     visible_count = min(default_visible_entries, n_rows)
     hidden_total = n_rows - visible_count
@@ -187,7 +187,7 @@ def labels_html_horizontal(
         )
         result.append("</details>")
 
-    return "".join(result)
+    return "\n".join(result)
 
 
 # This function is used by both the core and torch implementations, do not change it in
@@ -280,7 +280,7 @@ def block_html(block: TensorBlockData, *, module: str) -> str:
         result.append("</div>")
 
     result.append("</div>")
-    return "".join(result)
+    return "\n".join(result)
 
 
 # This function is used by both the core and torch implementations, do not change it in
@@ -341,7 +341,7 @@ def tensor_map_html(
         for width in widths:
             result.append(f'<col style="width: {width}ch;">')
         result.append("</colgroup>")
-        return "".join(result)
+        return "\n".join(result)
 
     class_name = f"{module}.TensorBlock"
 
@@ -383,7 +383,7 @@ def tensor_map_html(
             table.append("</tr>")
         table.append("</tbody>")
         table.append("</table>")
-        return "".join(table)
+        return "\n".join(table)
 
     if hidden_total == 0:
         result.append(_table_html(visible_rows))
@@ -422,4 +422,4 @@ def tensor_map_html(
 
     result.append("</div>")
     result.append("</div>")
-    return "".join(result)
+    return "\n".join(result)
