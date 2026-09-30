@@ -103,8 +103,8 @@ class LabelsEntry:
             max_html_entries=1,
         )
         return (
-            "<div><strong>metatensor.LabelsEntry</strong></div>"
-            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+            "<div><strong>metatensor.LabelsEntry</strong></div>\n"
+            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>\n"
             + html
         )
 
@@ -473,8 +473,8 @@ class Labels:
         )
 
         return (
-            "<div><strong>metatensor.Labels</strong></div>"
-            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
+            "<div><strong>metatensor.Labels</strong></div>\n"
+            + "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>\n"
             + html
         )
 

@@ -325,7 +325,7 @@ class TensorBlock:
         header = f"<div><strong>{class_name}</strong>{rest}</div>"
         hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
 
-        return header + hr + body
+        return header + "\n" + hr + "\n" + body
 
     def __eq__(self, other):
         from metatensor.operations import equal_block
