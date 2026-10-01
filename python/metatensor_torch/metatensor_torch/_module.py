@@ -187,15 +187,12 @@ def _get_torch_type(value):
         # assume that all keys/values have the same type, TorchScript would enforce it
         # anyway. Skip entries which are empty containers and use the first non-empty
         # entry to determine the type
-        key, value = next(
-            ((k, v) for k, v in value.items() if not _is_empty(v)),
-            next(iter(value.items())),
-        )
+        key, value = next(((k, v) for k, v in value.items() if not _is_empty(v)))
         return torch._C.DictType(_get_torch_type(key), _get_torch_type(value))
     elif isinstance(value, list):
         # assume that all values have the same type, TorchScript would enforce it
         # anyway. Empty containers are skipped, see the dict case above.
-        value = next((v for v in value if not _is_empty(v)), next(iter(value)))
+        value = next((v for v in value if not _is_empty(v)))
         return torch._C.ListType(_get_torch_type(value))
     elif isinstance(value, tuple):
         return torch._C.TupleType([_get_torch_type(v) for v in value])
