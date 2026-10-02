@@ -17,7 +17,7 @@ jobs:
     # Adapted from https://www.scivision.dev/github-actions-latest-llvm-clang-flang/
     strategy:
       matrix:
-        llvm-version: [20]
+        llvm-version: [23]
     env:
       CMAKE_C_COMPILER: clang-${{ matrix.llvm-version }}
       CMAKE_CXX_COMPILER: clang++-${{ matrix.llvm-version }}
