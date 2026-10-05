@@ -176,7 +176,10 @@ class TensorMap:
             return TensorMap.unsafe_from_ptr(new_ptr)
         else:
             new_blocks = [block.copy(deep=False) for block in self.blocks()]
-            return TensorMap(keys=self.keys, blocks=new_blocks)
+            copy = TensorMap(keys=self.keys, blocks=new_blocks)
+            for key, value in self.info().items():
+                copy.set_info(key, value)
+            return copy
 
     def __len__(self):
         return len(self.keys)
