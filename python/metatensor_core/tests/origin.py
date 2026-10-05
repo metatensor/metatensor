@@ -1,5 +1,3 @@
-import re
-
 import numpy as np
 import pytest
 import torch
@@ -29,9 +27,9 @@ def test_different_origins():
         properties=Labels.single(),
     )
 
-    message = re.escape(
+    message = (
         "invalid parameter: invalid tensor map: got blocks with different "
-        "origins, at least ('python.numpy') and ('python.torch') "
+        "origins, at least \\('python.numpy'\\) and \\('python.torch'\\) "
         "were detected"
     )
 

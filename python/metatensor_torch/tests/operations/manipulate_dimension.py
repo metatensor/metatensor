@@ -106,7 +106,8 @@ def test_insert_dimension_on_empty_labels():
         assert block.properties.values.shape == (1, 2)
 
     # RuntimeError from the TorchScript interpreter
-    with pytest.raises(RuntimeError, match="index 42 is out of bounds"):
+    message = "index 42 is out of bounds"
+    with pytest.raises(RuntimeError, match=message):
         mts.insert_dimension(tensor, axis="samples", name="d", index=42, values=42)
 
 

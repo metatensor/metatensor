@@ -1,6 +1,6 @@
 from typing import Union
 
-from ._add import add
+from ._add import _add_impl
 from ._backend import (
     TensorMap,
     isinstance_metatensor,
@@ -57,4 +57,4 @@ def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
 
         raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
 
-    return add(A=A, B=B)
+    return _add_impl(A=A, B=B, fname="subtract")

@@ -59,7 +59,11 @@ def test_multiple_names():
         names=["atom", "type"],
         values=np.array([[0, 6], [1, 1]]),
     )
-    with pytest.raises(ValueError, match="only one label dimension can be extracted"):
+    message = (
+        "only one label dimension can be extracted as one-hot encoding. "
+        "The `dimension` labels contains 2 names"
+    )
+    with pytest.raises(ValueError, match=message):
         mts.one_hot(original_labels, possible_labels)
 
 

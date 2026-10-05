@@ -1,5 +1,4 @@
 import os
-import re
 from typing import List, Optional, Tuple
 
 import pytest
@@ -224,13 +223,11 @@ def test_values_setter():
         properties=Labels.range("p", 3),
     )
 
-    with pytest.raises(
-        ValueError,
-        match=re.escape(
-            "Direct assignment to `values` is not possible. "
-            "Please use `block.values[:] = new_values` instead."
-        ),
-    ):
+    message = (
+        "Direct assignment to `values` is not possible. "
+        "Please use `block.values\\[:\\] = new_values` instead."
+    )
+    with pytest.raises(ValueError, match=message):
         block.values = torch.tensor([[4.0, 5.0, 6.0]])
 
     # Check that setting with slice assignment works correctly

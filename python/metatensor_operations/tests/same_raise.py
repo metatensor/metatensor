@@ -35,7 +35,8 @@ def test_different_keys(operation_str):
     keys = Labels(names="foo", values=np.array([[0]]))
     B = TensorMap(keys, [A[0].copy()])
 
-    with pytest.raises(NotEqualError, match="should have the same keys"):
+    message = f"inputs to '{operation_str}' should have the same keys"
+    with pytest.raises(NotEqualError, match=message):
         if operation_str == "join":
             operation([A, B], axis="properties")
         elif operation_str == "lstsq":
@@ -53,7 +54,8 @@ def test_different_gradients(operation_str):
     A = tensor()
     B = mts.remove_gradients(tensor())
 
-    with pytest.raises(NotEqualError, match="should have the same gradient parameters"):
+    message = f"inputs to '{operation_str}' should have the same gradient parameters"
+    with pytest.raises(NotEqualError, match=message):
         if operation_str == "lstsq":
             operation(A, B, rcond=1)
         else:
@@ -82,5 +84,9 @@ def test_different_blocks(operation_str):
     A = TensorMap(keys, [block_1])
     B = TensorMap(keys, [block_2])
 
-    with pytest.raises(NotEqualError, match="should have the same properties"):
+    message = (
+        f"inputs to '{operation_str}' should have the same properties, "
+        "but they are not the same or not in the same order"
+    )
+    with pytest.raises(NotEqualError, match=message):
         operation(A, B)

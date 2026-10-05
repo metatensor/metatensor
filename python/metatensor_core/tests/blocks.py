@@ -1,5 +1,4 @@
 import copy
-import re
 
 import numpy as np
 import pytest
@@ -439,9 +438,9 @@ def test_different_origin():
     )
     gradient = gradient.to(arrays="torch")
 
-    message = re.escape(
+    message = (
         "invalid parameter: the gradient data has a different origin "
-        "('python.torch') than the value data ('python.numpy')"
+        "\\('python.torch'\\) than the value data \\('python.numpy'\\)"
     )
     with pytest.raises(MetatensorError, match=message):
         block.add_gradient("g", gradient)
@@ -563,13 +562,11 @@ def test_values_setter():
         properties=Labels.range("p", 3),
     )
 
-    with pytest.raises(
-        AttributeError,
-        match=re.escape(
-            "Direct assignment to `values` is not possible. "
-            "Please use block.values[:] = new_values instead."
-        ),
-    ):
+    message = (
+        "Direct assignment to `values` is not possible. "
+        "Please use block.values\\[:\\] = new_values instead."
+    )
+    with pytest.raises(AttributeError, match=message):
         block.values = np.array([[4, 5, 6]])
 
     # Check that setting with slice assignment works correctly
@@ -616,7 +613,7 @@ def test_ownership_transfer(block):
         "this block has been released or moved inside a TensorBlock "
         "or TensorMap and can no longer be used"
     )
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         block.as_mts_block_t()
 
     recovered = TensorBlock.unsafe_from_ptr(raw)
@@ -628,7 +625,7 @@ def test_ownership_transfer(block):
         "this block has been released or moved inside a TensorBlock "
         "or TensorMap and can no longer be used"
     )
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         recovered.as_mts_block_t()
 
     TensorBlock.unsafe_from_ptr(raw)
@@ -647,7 +644,7 @@ def test_unsafe_view(block):
         "can not release this TensorBlock, it is a view inside another TensorBlock "
         "or a TensorMap"
     )
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         view.release()
 
     # original block should still be usable after creating a view

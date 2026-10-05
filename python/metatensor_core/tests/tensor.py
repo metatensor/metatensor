@@ -1,5 +1,4 @@
 import copy
-import re
 import sys
 
 import numpy as np
@@ -107,6 +106,7 @@ def test_constructor_errors():
 def test_deep_copy():
     # Do not use a fixture here because we want exactly one reference in the copy test.
     tensor = _tests_utils.tensor()
+    tensor.set_info("creator", "unit test")
     # Using TensorMap.copy
     clone = tensor.copy()
     block_1_values_id = id(tensor.block(0).values)
@@ -124,6 +124,8 @@ def test_deep_copy():
     assert id(clone.block(0).values) != block_1_values_id
     assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
 
+    assert clone.info() == {"creator": "unit test"}
+
     # Using copy.deepcopy
     other_clone = copy.deepcopy(clone)
     block_1_values_id = id(clone.block(0).values)
@@ -132,11 +134,13 @@ def test_deep_copy():
 
     assert id(other_clone.block(0).values) != block_1_values_id
     assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
+    assert other_clone.info() == {"creator": "unit test"}
 
 
 def test_shallow_copy():
     # Do not use a fixture here because we want exactly on reference in the copy test.
     tensor = _tests_utils.tensor()
+    tensor.set_info("creator", "unit test")
     # Using TensorMap.copy
     clone = tensor.copy(deep=False)
     block_1_values_id = id(tensor.block(0).values)
@@ -155,6 +159,8 @@ def test_shallow_copy():
     assert id(clone.block(0).values) == block_1_values_id
     assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
 
+    assert clone.info() == {"creator": "unit test"}
+
     # Using copy.copy
     other_clone = copy.copy(clone)
 
@@ -162,6 +168,7 @@ def test_shallow_copy():
 
     assert id(other_clone.block(0).values) == block_1_values_id
     assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
+    assert other_clone.info() == {"creator": "unit test"}
 
 
 def test_keys(tensor):
@@ -697,9 +704,9 @@ def test_different_origin():
         properties=Labels.range("p", 2),
     )
 
-    message = re.escape(
+    message = (
         "invalid parameter: invalid tensor map: got blocks with different "
-        "origins, at least ('python.numpy') and ('python.torch') "
+        "origins, at least \\('python.numpy'\\) and \\('python.torch'\\) "
         "were detected"
     )
     with pytest.raises(MetatensorError, match=message):
@@ -875,14 +882,14 @@ def test_ownership_transfer(tensor):
     raw = tensor.release()
 
     message = "this TensorMap has been released and can no longer be used"
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         tensor.as_mts_tensormap_t()
 
     recovered = TensorMap.unsafe_from_ptr(raw)
     assert recovered.keys == keys
 
     raw = recovered.release()
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         recovered.as_mts_tensormap_t()
 
     TensorMap.unsafe_from_ptr(raw)
@@ -897,7 +904,7 @@ def test_block_view_ownership(tensor):
         "can not release this TensorBlock, it is a view inside another TensorBlock "
         "or a TensorMap"
     )
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         block.release()
 
     block.samples
@@ -924,5 +931,5 @@ def test_unsafe_view(tensor):
         "can not release this TensorMap, it is already a view inside "
         "another TensorMap or TensorBlock"
     )
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         view.release()

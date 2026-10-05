@@ -46,41 +46,36 @@ def components_tensor():
     return components_tensor
 
 
-def test_wrong_axis(tensor):
-    """Test error with unknown `axis` keyword."""
-    with pytest.raises(ValueError, match="values for the `axis` parameter"):
+def test_errors(tensor):
+    message = (
+        "Only `'properties'` or `'samples'` are valid values for the `axis` parameter."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.join([tensor, tensor, tensor], axis="foo")
 
-
-def test_wrong_type(tensor):
-    """Test if a wrong type (e.g., TensorMap) is provided."""
-    with pytest.raises(TypeError, match="list or a tuple"):
+    message = "`tensors` must be a list or a tuple, not <class 'metatensor.TensorMap'>"
+    with pytest.raises(TypeError, match=message):
         mts.join(tensor, axis="properties")
 
-
-def test_wrong_different_keys(tensor):
-    """Test if a wrong type (e.g., TensorMap) is provided."""
     match = "'foo' is not a valid option for `different_keys`"
     with pytest.raises(ValueError, match=match):
         mts.join([tensor, tensor], axis="properties", different_keys="foo")
 
+    message = "provide at least one `TensorMap` for joining"
+    with pytest.raises(ValueError, match=message):
+        mts.join([], axis="properties")
 
-@pytest.mark.parametrize("tensor", ([], ()))
-def test_no_tensormaps(tensor):
-    """Test if an empty list or tuple is provided."""
-    with pytest.raises(ValueError, match="provide at least one"):
-        mts.join(tensor, axis="properties")
+    with pytest.raises(ValueError, match=message):
+        mts.join((), axis="properties")
 
 
 def test_single_tensormap(tensor):
-    """Test if only one TensorMap is provided."""
     joined_tensor = mts.join([tensor], axis="properties")
     assert joined_tensor is tensor
 
 
 @pytest.mark.parametrize("axis", ["samples", "properties"])
 def test_join_components(components_tensor, axis):
-    """Test join for tensors with components."""
     mts.join([components_tensor, components_tensor], axis=axis, add_dimension="tensor")
 
 

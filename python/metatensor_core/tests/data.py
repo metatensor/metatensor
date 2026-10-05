@@ -443,7 +443,8 @@ def test_external_cuda_array_requires_torch(monkeypatch):
     monkeypatch.setattr(builtins, "__import__", mock_import)
 
     dummy_mts_array = mts_array_t()  # won't be used — error raised first
-    with pytest.raises(ImportError, match="ExternalCudaArray requires PyTorch"):
+    message = "ExternalCudaArray requires PyTorch; install it with `pip install torch`"
+    with pytest.raises(ImportError, match=message):
         ExternalCudaArray(dummy_mts_array, parent=None)
 
 
@@ -553,7 +554,8 @@ def test_error_capture():
     mts_array = metatensor._data.create_mts_array(np.array([1, 2, 3]))
     mts_array.origin = ERROR_ORIGIN
 
-    with pytest.raises(CustomError, match="This is a test error from Python callback"):
+    message = "This is a test error from Python callback"
+    with pytest.raises(CustomError, match=message):
         _ = metatensor._data.data_origin(mts_array)
 
     free_mts_array(mts_array)
