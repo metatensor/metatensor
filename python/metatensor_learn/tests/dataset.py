@@ -2,8 +2,6 @@
 Module for testing the Dataset class in :py:module:`dataset`.
 """
 
-import re
-
 import numpy as np
 import pytest
 
@@ -229,10 +227,10 @@ def test_dataset_inconsistent_lengths():
     the appropriate error.
     """
     message = (
-        "Number of samples inconsistent between argument 'size' (5) "
-        "and data fields: ([10])"
+        "Number of samples inconsistent between argument 'size' \\(5\\) "
+        "and data fields: \\(\\[10\\]\\)"
     )
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         Dataset(
             a=lambda x: f"path/to/{x}",
             c=lambda y: f"path/to/{y}",
@@ -240,8 +238,8 @@ def test_dataset_inconsistent_lengths():
             size=5,
         )
 
-    message = "Number of samples inconsistent between data fields: [10, 9]"
-    with pytest.raises(ValueError, match=re.escape(message)):
+    message = "Number of samples inconsistent between data fields: \\[10, 9\\]"
+    with pytest.raises(ValueError, match=message):
         Dataset(x=list(range(10)), y=list(range(9)))
 
 
@@ -251,10 +249,10 @@ def test_indexed_dataset_inconsistent_lengths():
     the appropriate error.
     """
     message = (
-        "Number of samples inconsistent between argument 'sample_id' (9) "
-        "and data fields: ([9, 10])"
+        "Number of samples inconsistent between argument 'sample_id' \\(9\\) "
+        "and data fields: \\(\\[9, 10\\]\\)"
     )
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         IndexedDataset(
             a=lambda x: f"path/to/{x}",
             c=lambda y: f"path/to/{y}",

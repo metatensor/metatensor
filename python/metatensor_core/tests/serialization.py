@@ -193,12 +193,10 @@ def test_save_warning_errors(tmpdir, tensor):
     # does not have .mts ending and causes warning
     tmpfile = "serialize-test"
 
-    with pytest.warns() as record:
+    message = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
+    with pytest.warns(UserWarning, match=message):
         with tmpdir.as_cwd():
             mts.save(tmpfile, tensor)
-
-    expected = f"adding '.mts' extension, the file will be saved at '{tmpfile}.mts'"
-    assert str(record[0].message) == expected
 
     tmpfile = "serialize-test.mts"
 

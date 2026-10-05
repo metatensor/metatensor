@@ -444,10 +444,12 @@ def test_dimensions_manipulation():
     assert new_label.names == ["bar", "foo"]
     assert torch.all(new_label.values == torch.tensor([[10, 42]]))
 
-    with pytest.raises(ValueError, match="`values` must be a 1D tensor"):
+    message = "`values` must be a 1D tensor"
+    with pytest.raises(ValueError, match=message):
         label.insert(0, name="bar", values=torch.tensor([[10]]))
 
-    with pytest.raises(IndexError, match="index 42 is out of bounds"):
+    message = "index 42 is out of bounds"
+    with pytest.raises(IndexError, match=message):
         label.insert(42, name="bar", values=torch.tensor([42]))
 
     # Labels.append
@@ -459,18 +461,15 @@ def test_dimensions_manipulation():
     removed_label = new_label.remove(name="bar")
     assert removed_label == label
 
-    with pytest.raises(
-        ValueError, match="'baz' not found in the dimensions of these Labels"
-    ):
+    message = "'baz' not found in the dimensions of these Labels"
+    with pytest.raises(ValueError, match=message):
         new_label.remove(name="baz")
 
     # Labels.rename
     new_label = label.rename("foo", "bar")
     assert new_label.names == ["bar"]
 
-    with pytest.raises(
-        ValueError, match="'baz' not found in the dimensions of these Labels"
-    ):
+    with pytest.raises(ValueError, match=message):
         new_label.rename("baz", "foo")
 
     # Labels.permute

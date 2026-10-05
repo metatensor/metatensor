@@ -1,5 +1,3 @@
-import re
-
 import numpy as np
 import pytest
 
@@ -99,7 +97,8 @@ def test_not_writeable():
         values=np.array([[0, 0]]),
     )
 
-    with pytest.raises(ValueError, match="assignment destination is read-only"):
+    message = "assignment destination is read-only"
+    with pytest.raises(ValueError, match=message):
         labels.values[0][0] = 4
 
 
@@ -137,13 +136,16 @@ def test_dimensions_manipulation():
     assert new_label.names == ["bar", "foo"]
     np.testing.assert_equal(new_label.values, np.array([[10, 42]]))
 
-    with pytest.raises(ValueError, match="`values` must be a numpy ndarray"):
+    message = "`values` must be a numpy ndarray"
+    with pytest.raises(ValueError, match=message):
         label.insert(0, name="bar", values=[10])
 
-    with pytest.raises(ValueError, match="`values` must be a 1D array"):
+    message = "`values` must be a 1D array"
+    with pytest.raises(ValueError, match=message):
         label.insert(0, name="bar", values=np.array([[10]]))
 
-    with pytest.raises(IndexError, match="index 42 is out of bounds"):
+    message = "index 42 is out of bounds for axis 1 with size 1"
+    with pytest.raises(IndexError, match=message):
         label.insert(42, name="bar", values=np.array([42]))
 
     # Labels.append
@@ -155,18 +157,15 @@ def test_dimensions_manipulation():
     removed_label = new_label.remove(name="bar")
     assert removed_label == label
 
-    with pytest.raises(
-        ValueError, match="'baz' not found in the dimensions of these Labels"
-    ):
+    message = "'baz' not found in the dimensions of these Labels"
+    with pytest.raises(ValueError, match=message):
         new_label.remove(name="baz")
 
     # Labels.rename
     new_label = label.rename("foo", "bar")
     assert new_label.names == ["bar"]
 
-    with pytest.raises(
-        ValueError, match="'baz' not found in the dimensions of these Labels"
-    ):
+    with pytest.raises(ValueError, match=message):
         new_label.rename("baz", "foo")
 
     # Labels.permute
@@ -447,7 +446,7 @@ def test_ownership_transfer():
 
     raw = labels.release()
     message = "can not access these Labels, they have been released"
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         labels.as_mts_labels_t()
 
     recovered = Labels.unsafe_from_ptr(raw)
@@ -456,7 +455,7 @@ def test_ownership_transfer():
     )
 
     raw = recovered.release()
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         recovered.as_mts_labels_t()
 
     Labels.unsafe_from_ptr(raw)

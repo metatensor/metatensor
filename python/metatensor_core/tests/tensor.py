@@ -1,5 +1,4 @@
 import copy
-import re
 import sys
 
 import numpy as np
@@ -697,9 +696,9 @@ def test_different_origin():
         properties=Labels.range("p", 2),
     )
 
-    message = re.escape(
+    message = (
         "invalid parameter: invalid tensor map: got blocks with different "
-        "origins, at least ('python.numpy') and ('python.torch') "
+        "origins, at least \\('python.numpy'\\) and \\('python.torch'\\) "
         "were detected"
     )
     with pytest.raises(MetatensorError, match=message):
@@ -875,14 +874,14 @@ def test_ownership_transfer(tensor):
     raw = tensor.release()
 
     message = "this TensorMap has been released and can no longer be used"
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         tensor.as_mts_tensormap_t()
 
     recovered = TensorMap.unsafe_from_ptr(raw)
     assert recovered.keys == keys
 
     raw = recovered.release()
-    with pytest.raises(ValueError, match=re.escape(message)):
+    with pytest.raises(ValueError, match=message):
         recovered.as_mts_tensormap_t()
 
     TensorMap.unsafe_from_ptr(raw)
@@ -897,7 +896,7 @@ def test_block_view_ownership(tensor):
         "can not release this TensorBlock, it is a view inside another TensorBlock "
         "or a TensorMap"
     )
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         block.release()
 
     block.samples
@@ -924,5 +923,5 @@ def test_unsafe_view(tensor):
         "can not release this TensorMap, it is already a view inside "
         "another TensorMap or TensorBlock"
     )
-    with pytest.raises(RuntimeError, match=re.escape(message)):
+    with pytest.raises(RuntimeError, match=message):
         view.release()

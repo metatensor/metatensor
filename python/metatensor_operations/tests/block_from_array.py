@@ -15,7 +15,11 @@ except ImportError:
 @pytest.mark.parametrize("n_axes", [0, 1])
 def test_too_few_axes(n_axes):
     """Test block_from_array when too few axes are provided."""
-    with pytest.raises(ValueError, match="at least"):
+    message = (
+        "the array provided to `block_from_array` must have at least two "
+        f"dimensions. Too few provided: {n_axes}"
+    )
+    with pytest.raises(ValueError, match=message):
         mts.block_from_array(np.zeros((4,) * n_axes))
 
 
@@ -75,7 +79,12 @@ def test_with_label_names(sample_names, component_names, property_names):
     if component_names is not None and (
         len(sample_names) != 1 or len(property_names) != 1
     ):
-        with pytest.raises(ValueError, match=".*does not have enough dimensions.*"):
+        message = (
+            "the array provided to `block_from_array` with shape \\(3, 2, 1, 2, 3\\) "
+            "does not have enough dimensions to match the given sample, "
+            "component, and property names"
+        )
+        with pytest.raises(ValueError, match=message):
             block = mts.block_from_array(
                 array,
                 sample_names=sample_names,

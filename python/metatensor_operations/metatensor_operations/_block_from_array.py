@@ -98,8 +98,8 @@ def block_from_array(
     n_dimensions = len(shape)
     if n_dimensions < 2:
         raise ValueError(
-            f"the array provided to `block_from_array` \
-            must have at least two dimensions. Too few provided: {n_dimensions}"
+            "the array provided to `block_from_array` must have at least two "
+            f"dimensions. Too few provided: {n_dimensions}"
         )
 
     # constructs the default label names and counts
