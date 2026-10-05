@@ -580,11 +580,14 @@ def test_deep_copy():
         properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
     )
     tensor = TensorMap(keys=Labels.range("keys", 1), blocks=[block])
+    tensor.set_info("creator", "unit test")
 
     assert values.data_ptr() == tensor.block().values.data_ptr()
 
     clone = tensor.copy()
     del tensor
+
+    assert clone.info() == {"creator": "unit test"}
 
     assert values.data_ptr() != clone.block().values.data_ptr()
 
@@ -598,11 +601,14 @@ def test_shallow_copy():
         properties=Labels(names=["p"], values=torch.tensor([[1], [0]])),
     )
     tensor = TensorMap(keys=Labels.range("keys", 1), blocks=[block])
+    tensor.set_info("creator", "unit test")
 
     assert values.data_ptr() == tensor.block().values.data_ptr()
 
     clone = tensor.copy(deep=False)
     del tensor
+
+    assert clone.info() == {"creator": "unit test"}
 
     assert values.data_ptr() == clone.block().values.data_ptr()
 

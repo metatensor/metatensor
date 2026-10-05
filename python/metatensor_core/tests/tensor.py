@@ -106,6 +106,7 @@ def test_constructor_errors():
 def test_deep_copy():
     # Do not use a fixture here because we want exactly one reference in the copy test.
     tensor = _tests_utils.tensor()
+    tensor.set_info("creator", "unit test")
     # Using TensorMap.copy
     clone = tensor.copy()
     block_1_values_id = id(tensor.block(0).values)
@@ -123,6 +124,8 @@ def test_deep_copy():
     assert id(clone.block(0).values) != block_1_values_id
     assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
 
+    assert clone.info() == {"creator": "unit test"}
+
     # Using copy.deepcopy
     other_clone = copy.deepcopy(clone)
     block_1_values_id = id(clone.block(0).values)
@@ -131,11 +134,13 @@ def test_deep_copy():
 
     assert id(other_clone.block(0).values) != block_1_values_id
     assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
+    assert other_clone.info() == {"creator": "unit test"}
 
 
 def test_shallow_copy():
     # Do not use a fixture here because we want exactly on reference in the copy test.
     tensor = _tests_utils.tensor()
+    tensor.set_info("creator", "unit test")
     # Using TensorMap.copy
     clone = tensor.copy(deep=False)
     block_1_values_id = id(tensor.block(0).values)
@@ -154,6 +159,8 @@ def test_shallow_copy():
     assert id(clone.block(0).values) == block_1_values_id
     assert_equal(clone.block(0).values, np.full((3, 1, 1), 1.0))
 
+    assert clone.info() == {"creator": "unit test"}
+
     # Using copy.copy
     other_clone = copy.copy(clone)
 
@@ -161,6 +168,7 @@ def test_shallow_copy():
 
     assert id(other_clone.block(0).values) == block_1_values_id
     assert_equal(other_clone.block(0).values, np.full((3, 1, 1), 1.0))
+    assert other_clone.info() == {"creator": "unit test"}
 
 
 def test_keys(tensor):

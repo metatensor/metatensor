@@ -171,6 +171,29 @@ TEST_CASE("TensorMap") {
         );
     }
 
+    SECTION("copy") {
+        auto tensor = test_tensor_map();
+        tensor->set_info("creator", "metatensor-torch test");
+        auto values = TensorMapHolder::block_by_id(tensor, 0)->values();
+
+        auto deep_copy = tensor->copy(/*deep=*/true);
+        auto deep_values = TensorMapHolder::block_by_id(deep_copy, 0)->values();
+        CHECK(deep_values.data_ptr() != values.data_ptr());
+        CHECK(torch::equal(deep_values, values));
+
+        auto deep_info = deep_copy->info();
+        CHECK(deep_info.size() == 1);
+        CHECK(deep_info.at("creator") == "metatensor-torch test");
+
+        auto shallow_copy = tensor->copy(/*deep=*/false);
+        auto shallow_values = TensorMapHolder::block_by_id(shallow_copy, 0)->values();
+        CHECK(shallow_values.data_ptr() == values.data_ptr());
+
+        auto shallow_info = shallow_copy->info();
+        CHECK(shallow_info.size() == 1);
+        CHECK(shallow_info.at("creator") == "metatensor-torch test");
+    }
+
     SECTION("info") {
         auto tensor = test_tensor_map();
         tensor->set_info("creator", "metatensor-torch test");

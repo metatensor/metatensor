@@ -65,7 +65,13 @@ TensorMap TensorMapHolder::copy(bool deep) {
             auto torch_block = TensorBlockHolder(std::move(block), /*parent=*/torch::IValue());
             blocks.push_back(torch_block.copy(/*deep=*/false));
         }
-        return torch::make_intrusive<TensorMapHolder>(this->keys(), std::move(blocks));
+        auto copy = torch::make_intrusive<TensorMapHolder>(this->keys(), std::move(blocks));
+
+        for (const auto& entry: this->info()) {
+            copy->set_info(entry.key(), entry.value());
+        }
+
+        return copy;
     }
 }
 
