@@ -139,7 +139,8 @@ def test_self_equal_grad():
     with pytest.raises(NotEqualError, match=message):
         mts.equal_raise(tensor_1, tensor_1_e6)
 
-    with pytest.raises(NotEqualError, match="values are not equal"):
+    message = "values are not equal"
+    with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(tensor_1.block(0), tensor_1_e6.block(0))
 
 
@@ -205,7 +206,8 @@ def test_self_equal_exceptions():
     with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_1, block_3)
 
-    with pytest.raises(NotEqualError, match="values shapes are different"):
+    message = "values shapes are different"
+    with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_1, block_4)
 
     message = (
@@ -261,7 +263,8 @@ def test_self_equal_exceptions():
     with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_7, block_8)
 
-    with pytest.raises(NotEqualError, match="values are not equal"):
+    message = "values are not equal"
+    with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_8, block_9)
 
 
@@ -324,7 +327,8 @@ def test_self_equal_exceptions_gradient():
         ),
     )
 
-    with pytest.raises(NotEqualError, match="gradient 'g' values are not equal"):
+    message = "gradient 'g' values are not equal"
+    with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_1, block_3)
 
     block_4 = TensorBlock(
@@ -410,5 +414,6 @@ def test_self_equal_exceptions_gradient():
     )
     assert not mts.equal_block(block_6, block_7)
 
-    with pytest.raises(NotEqualError, match="gradient 'g' values are not equal"):
+    message = "gradient 'g' values are not equal"
+    with pytest.raises(NotEqualError, match=message):
         mts.equal_block_raise(block_6, block_7)

@@ -85,7 +85,10 @@ def test_append_properties(tensor):
 
 
 def test_append_unknown_axis(tensor):
-    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+    message = (
+        "'foo' is not a valid axis. Choose from 'keys', 'samples' or 'properties'."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.append_dimension(tensor, axis="foo", name="foo", values=10)
 
 
@@ -143,7 +146,11 @@ def test_insert_properties(tensor):
 
 
 def test_insert_unknown_axis(tensor):
-    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+    message = (
+        "'foo' is not a valid axis. Choose from 'keys', 'samples', "
+        "'components', or 'properties'."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.insert_dimension(tensor, axis="foo", index=0, name="foo", values=10)
 
 
@@ -198,7 +205,11 @@ def test_permute_properties(tensor):
 
 
 def test_permute_unknown_axis(tensor):
-    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+    message = (
+        "'foo' is not a valid axis. Choose from 'keys', 'samples', "
+        "'components', or 'properties'."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.permute_dimensions(tensor, axis="foo", dimensions_indexes=[1])
 
 
@@ -262,7 +273,11 @@ def test_rename_components(tensor_with_components_and_gradients):
 
 
 def test_rename_unknown_axis(tensor):
-    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+    message = (
+        "'foo' is not a valid axis. Choose from 'keys', 'samples', "
+        "'components', or 'properties'."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.rename_dimension(tensor, axis="foo", old="foo", new="foo")
 
 
@@ -294,7 +309,11 @@ def test_remove_properties(tensor_extra):
 
 
 def test_remove_unknown_axis(tensor):
-    with pytest.raises(ValueError, match="'foo' is not a valid axis."):
+    message = (
+        "'foo' is not a valid axis. Choose from 'keys', 'samples', "
+        "'components', or 'properties'."
+    )
+    with pytest.raises(ValueError, match=message):
         mts.remove_dimension(tensor, axis="foo", name="foo")
 
 

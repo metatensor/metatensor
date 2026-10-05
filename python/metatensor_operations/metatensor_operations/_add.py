@@ -76,6 +76,50 @@ def _add_block_block(block_1: TensorBlock, block_2: TensorBlock) -> TensorBlock:
     return result_block
 
 
+def _add_impl(A: TensorMap, B: Union[int, float, TensorMap], fname: str) -> TensorMap:
+    """Iplementation `add`, also used for `subtract` (by calling `add` with `-B`)."""
+
+    if not torch_jit_is_scripting():
+        if not isinstance_metatensor(A, "TensorMap"):
+            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
+    blocks: List[TensorBlock] = []
+    if torch_jit_is_scripting():
+        is_tensor_map = isinstance(B, TensorMap)
+    else:
+        is_tensor_map = isinstance_metatensor(B, "TensorMap")
+
+    if isinstance(B, (float, int)):
+        B = float(B)
+        for block_A in A.blocks():
+            blocks.append(_add_block_constant(block=block_A, constant=B))
+
+    elif is_tensor_map:
+        check_same_keys_raise(A, B, fname=fname)
+        for key, block_A in A.items():
+            block_B = B[key]
+            check_blocks_raise(
+                block_A,
+                block_B,
+                fname=fname,
+            )
+            check_same_gradients_raise(
+                block_A,
+                block_B,
+                fname=fname,
+            )
+            blocks.append(_add_block_block(block_1=block_A, block_2=block_B))
+    else:
+        if torch_jit_is_scripting():
+            extra = ""
+        else:
+            extra = f", not {type(B)}"
+
+        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
+
+    return TensorMap(A.keys, blocks)
+
+
 @torch_jit_script
 def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
     r"""Return a new :class:`TensorMap` with the values being the sum of
@@ -102,43 +146,4 @@ def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
-
-    if not torch_jit_is_scripting():
-        if not isinstance_metatensor(A, "TensorMap"):
-            raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
-
-    blocks: List[TensorBlock] = []
-    if torch_jit_is_scripting():
-        is_tensor_map = isinstance(B, TensorMap)
-    else:
-        is_tensor_map = isinstance_metatensor(B, "TensorMap")
-
-    if isinstance(B, (float, int)):
-        B = float(B)
-        for block_A in A.blocks():
-            blocks.append(_add_block_constant(block=block_A, constant=B))
-
-    elif is_tensor_map:
-        check_same_keys_raise(A, B, "add")
-        for key, block_A in A.items():
-            block_B = B[key]
-            check_blocks_raise(
-                block_A,
-                block_B,
-                fname="add",
-            )
-            check_same_gradients_raise(
-                block_A,
-                block_B,
-                fname="add",
-            )
-            blocks.append(_add_block_block(block_1=block_A, block_2=block_B))
-    else:
-        if torch_jit_is_scripting():
-            extra = ""
-        else:
-            extra = f", not {type(B)}"
-
-        raise TypeError("`B` must be a metatensor TensorMap or a scalar value" + extra)
-
-    return TensorMap(A.keys, blocks)
+    return _add_impl(A, B, "add")
