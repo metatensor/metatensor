@@ -21,6 +21,16 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.10.7](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.7) - 2026-10-06
+
+### Fixed
+
+- `TensorMap.copy(deep=False)` now copies the `info` of the original TensorMap
+  to the new one.
+- More fixes to `metatensor_torch::Module` for nested containers with the first
+  entry being empty.
+
+
 ## [Version 0.10.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.6) - 2026-09-16
 
 ### Fixed
