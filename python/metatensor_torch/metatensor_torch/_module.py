@@ -109,7 +109,7 @@ def _metatensor_data_to(value, dtype, device, legacy=False):
 
     elif isinstance(value, tuple):
         if _is_empty(value):
-            return value, True
+            return value, False
 
         updated = []
         some_changed = False
@@ -185,13 +185,14 @@ def _get_torch_type(value):
         return torch._C.TensorType.get()
     elif isinstance(value, dict):
         # assume that all keys/values have the same type, TorchScript would enforce it
-        # anyway
-        key, value = next(iter(value.items()))
+        # anyway. Skip entries which are empty containers and use the first non-empty
+        # entry to determine the type
+        key, value = next(((k, v) for k, v in value.items() if not _is_empty(v)))
         return torch._C.DictType(_get_torch_type(key), _get_torch_type(value))
     elif isinstance(value, list):
         # assume that all values have the same type, TorchScript would enforce it
-        # anyway
-        value = next(iter(value))
+        # anyway. Empty containers are skipped, see the dict case above.
+        value = next((v for v in value if not _is_empty(v)))
         return torch._C.ListType(_get_torch_type(value))
     elif isinstance(value, tuple):
         return torch._C.TupleType([_get_torch_type(v) for v in value])
