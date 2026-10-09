@@ -369,6 +369,45 @@ def test_to(scripted, devices_to_test):
             module.cuda()
             check_device_dtype(module.sub_module, device, dtype_to_int(torch.float32))
 
+    # make sure everything works when the module does not register any metatensor
+    # buffer, and has class annotations of it's own overriding the ones from nn.Module
+    class NoMtsModel(nn.Module):
+        some_annotation: Dict[str, torch.Tensor]
+
+        def __init__(self):
+            super().__init__()
+            self.register_buffer("torch_tensor", torch.ones(3, 4, dtype=torch.float64))
+            self.some_annotation = {}
+
+        def forward(self, x: torch.Tensor) -> torch.Tensor:
+            return self.torch_tensor * x
+
+    module = NoMtsModel()
+    if scripted:
+        module = torch.jit.script(module)
+
+    assert module.torch_tensor.device.type == "cpu"
+    assert module.torch_tensor.dtype == torch.float64
+
+    module = module.to(dtype=torch.float32)
+    assert module.torch_tensor.device.type == "cpu"
+    assert module.torch_tensor.dtype == torch.float32
+
+    for device in devices_to_test:
+        module = module.to(device=device)
+        assert module.torch_tensor.device.type == device
+        assert module.torch_tensor.dtype == torch.float32
+
+        # in-place modification also works
+        module.cpu()
+        assert module.torch_tensor.device.type == "cpu"
+        assert module.torch_tensor.dtype == torch.float32
+
+        if device == "cuda":
+            module.cuda()
+            assert module.torch_tensor.device.type == "cuda"
+            assert module.torch_tensor.dtype == torch.float32
+
 
 def test_torchscript():
     module = LabelsModule("test")
