@@ -145,6 +145,25 @@ def _apply_metatensor(module):
             # (backward compatibility with modules that don't use register_buffer)
             legacy = True
 
+            attributes = module._c.dump_to_str(code=False, attrs=True, params=False)
+            names = _parse_rsm_attributes(attributes)
+
+        # Update the attributes and re-add them to the module with
+        # `_register_attribute` (which does an update when the attribute already
+        # exists.)
+        anything_changed = False
+        for name in names:
+            value = module._c.getattr(name)
+
+            value, changed = _metatensor_data_to(
+                value, dtype=dtype, device=device, legacy=legacy
+            )
+            if changed:
+                anything_changed = True
+                typ = _get_torch_type(value)
+                module._c._register_attribute(name, typ, value)
+
+        if anything_changed and legacy:
             warnings.warn(
                 "module does not have '_mts_buffer_names'; "
                 "falling back to processing all attributes. "
@@ -153,21 +172,6 @@ def _apply_metatensor(module):
                 "to remove this warning.",
                 stacklevel=2,
             )
-            attributes = module._c.dump_to_str(code=False, attrs=True, params=False)
-            names = _parse_rsm_attributes(attributes)
-
-        # Update the attributes and re-add them to the module with
-        # `_register_attribute` (which does an update when the attribute already
-        # exists.)
-        for name in names:
-            value = module._c.getattr(name)
-
-            value, changed = _metatensor_data_to(
-                value, dtype=dtype, device=device, legacy=legacy
-            )
-            if changed:
-                typ = _get_torch_type(value)
-                module._c._register_attribute(name, typ, value)
 
 
 def _get_torch_type(value):
@@ -222,7 +226,7 @@ def _parse_rsm_attributes(string):
                 # we are done
                 return attributes
             else:
-                raise RuntimeError(f"failed to parse line in attributes: '{line}'")
+                continue
 
     raise RuntimeError(f"failed to parse attributes section in:\n{string}")
 
