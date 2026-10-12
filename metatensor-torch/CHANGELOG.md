@@ -21,6 +21,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.10.8](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.8) - 2026-10-12
+
+### Fixed
+
+- Remove false positive warnings from `metatensor_torch::Module::to`.
+
 ## [Version 0.10.7](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.7) - 2026-10-06
 
 ### Fixed
