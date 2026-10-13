@@ -1,3 +1,6 @@
+import os
+import weakref
+
 import numpy as np
 import pytest
 
@@ -9,6 +12,7 @@ try:
 except ImportError:
     HAS_TORCH = False
 
+import metatensor
 from metatensor import Labels, MetatensorError, TensorBlock
 
 from . import _tests_utils
@@ -498,3 +502,29 @@ def test_torch_backend():
     assert isinstance(values, torch.Tensor)
     assert torch.all(values == torch.tensor([[0, 0], [1, 0]]))
     assert labels.device == torch.device("cpu")
+
+
+def test_values_keepalive():
+    # the values of these labels are allocated by metatensor-core, not by Python
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "keys.mts",
+    )
+    labels = metatensor.io.load_labels(path)
+    reference = labels.values.copy()
+
+    values = labels.values
+
+    # the cached values should not create a reference cycle, so the labels are freed
+    # as soon as they are no longer used, without waiting for the garbage collector
+    labels_ref = weakref.ref(labels)
+    del labels
+    assert labels_ref() is None
+
+    # the values should still be usable after the labels are gone
+    np.testing.assert_equal(values, reference)

@@ -129,7 +129,7 @@ def save_labels(
                 stacklevel=1,
             )
         path = file.encode("utf8")
-        lib.mts_labels_save(path, labels._ptr)
+        lib.mts_labels_save(path, labels._labels)
     elif isinstance(file, pathlib.Path):
         if not file.name.endswith(".mts"):
             file = file.with_name(file.name + ".mts")
@@ -139,7 +139,7 @@ def save_labels(
                 stacklevel=1,
             )
         path = bytes(file)
-        lib.mts_labels_save(path, labels._ptr)
+        lib.mts_labels_save(path, labels._labels)
     else:
         # assume we have a file-like object
         buffer = save_labels_buffer_raw(labels)
@@ -153,7 +153,7 @@ def save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
     """
     lib = _get_library()
 
-    return save_buffer_raw(lib.mts_labels_save_buffer, labels._ptr)
+    return save_buffer_raw(lib.mts_labels_save_buffer, labels._labels)
 
 
 def labels_from_mts(data):

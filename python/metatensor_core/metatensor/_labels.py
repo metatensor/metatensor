@@ -222,16 +222,61 @@ def _labels_values_mts_array(array: Array, size: int) -> (mts_array_t, Array):
         return _data.create_mts_array(values), values
 
 
+class MtsLabels:
+    """
+    Owner of a raw ``mts_labels_t`` pointer, freeing the corresponding memory when
+    garbage-collected. Instances of this class can be passed directly to C functions
+    expecting a ``mts_labels_t`` pointer.
+
+    This is separate from :py:class:`Labels` so that arrays exported from the labels can
+    keep the memory alive without creating reference cycles
+    (``Labels -> cached values -> Labels``).
+    """
+
+    __slots__ = ["_lib", "_ptr"]
+
+    def __init__(self, ptr: ctypes.POINTER(mts_labels_t)):
+        assert ptr, "mts_labels_t pointer is null"
+        self._lib = _get_library()
+        self._ptr = ptr
+
+    @property
+    def _as_parameter_(self) -> ctypes.POINTER(mts_labels_t):
+        """pointer used when passing this object to a C function with ctypes"""
+        if not self._ptr:
+            raise RuntimeError("can not access these Labels, they have been released")
+        return self._ptr
+
+    def is_released(self) -> bool:
+        """check if the pointer has been released"""
+        return not self._ptr
+
+    def release(self) -> ctypes.POINTER(mts_labels_t):
+        """
+        Release the pointer, the memory will no longer be freed by this object after
+        this call.
+        """
+        ptr = self._as_parameter_
+        self._ptr = None
+        return ptr
+
+    def __del__(self):
+        if (
+            getattr(self, "_lib", None) is not None
+            and getattr(self, "_ptr", None) is not None
+        ):
+            self._lib.mts_labels_free(self._ptr)
+
+
 class Labels:
     """
     A set of labels carrying metadata associated with a :py:class:`TensorMap`.
 
-    The metadata can be though as a list of tuples, where each value in the
-    tuple also has an associated dimension name. In practice, the dimensions
-    ``names`` are stored separately from the ``values``, and the values are in a
-    2-dimensional array integers with the shape ``(n_entries, n_dimensions)``.
-    Each row/entry in this array is unique, and they are often (but not always)
-    sorted in lexicographic order.
+    The metadata can be though as a list of tuples, where each value in the tuple also
+    has an associated dimension name. In practice, the dimensions ``names`` are stored
+    separately from the ``values``, and the values are in a 2-dimensional array integers
+    with the shape ``(n_entries, n_dimensions)``. Each row/entry in this array is
+    unique, and they are often (but not always) sorted in lexicographic order.
 
     >>> from metatensor import Labels
     >>> import numpy as np
@@ -279,9 +324,8 @@ class Labels:
     >>> labels == labels
     True
 
-
-    Finally, it is possible to check if a value is inside (non-view) labels, and
-    get the corresponding position:
+    Finally, it is possible to check if a value is inside (non-view) labels, and get the
+    corresponding position:
 
     >>> labels.position([0, 2, 1])
     1
@@ -331,7 +375,7 @@ class Labels:
 
         check_pointer(ptr)
 
-        self._ptr = ptr
+        self._labels = MtsLabels(ptr)
         self._names = names
         self._cached_values = values
         self._cached_device = None
@@ -395,7 +439,7 @@ class Labels:
 
         obj = Labels.__new__(Labels)
         obj._lib = _get_library()
-        obj._ptr = labels
+        obj._labels = MtsLabels(labels)
 
         names_ptr = ctypes.POINTER(ctypes.c_char_p)()
         names_count = c_uintptr_t()
@@ -417,30 +461,22 @@ class Labels:
 
         This class is no longer managing the labels memory after the call, the user is
         expected to re-create Labels with :py:meth:`Labels.unsafe_from_ptr`, or pass the
-        pointer to a C function that will call `mts_labels_free`.
+        pointer to a C function that will call `mts_labels_free`. Arrays obtained from
+        :py:attr:`Labels.values` before this call are only valid as long as the released
+        pointer has not been freed.
         """
-        ptr = self.as_mts_labels_t()
-        self._ptr = None
-        return ptr
+        return self._labels.release()
 
     def as_mts_labels_t(self) -> ctypes.POINTER(mts_labels_t):
         """
         Get the underlying C pointer for these :py:class:`Labels`. This class still
-        manages the labels memory after the call. Use :py:meth:`Labels.release` to
-        take ownership of the pointerr
+        manages the labels memory after the call. Use :py:meth:`Labels.release` to take
+        ownership of the pointer
         """
-        if not self._ptr:
-            raise RuntimeError("can not access these Labels, they have been released")
-
-        return self._ptr
-
-    def __del__(self):
-        if hasattr(self, "_lib") and self._lib is not None:
-            if hasattr(self, "_ptr") and self._ptr is not None:
-                self._lib.mts_labels_free(self._ptr)
+        return self._labels._as_parameter_
 
     def __deepcopy__(self, _memodict):
-        ptr = self._lib.mts_labels_clone(self.as_mts_labels_t())
+        ptr = self._lib.mts_labels_clone(self._labels)
         check_pointer(ptr)
         return Labels.unsafe_from_ptr(ptr)
 
@@ -448,17 +484,15 @@ class Labels:
         return self.__deepcopy__({})
 
     def __str__(self) -> str:
-        if not self._ptr:
-            # The Labels have been released
-            return "Labels(<empty>)"
+        if self._labels.is_released():
+            return "Labels(<released>)"
 
         printed = self.print(4, 3)
         return f"Labels\n   {printed}"
 
     def __repr__(self) -> str:
-        if not self._ptr:
-            # The Labels have been released
-            return "Labels(<empty>)"
+        if self._labels.is_released():
+            return "Labels(<released>)"
 
         printed = self.print(-1, 3)
         return f"Labels\n   {printed}"
@@ -630,7 +664,7 @@ class Labels:
     def _raw_values(self) -> mts_array_t:
         """Get the raw ``mts_array_t`` corresponding to these Labels' values"""
         data = mts_array_t()
-        self._lib.mts_labels_values(self.as_mts_labels_t(), data)
+        self._lib.mts_labels_values(self._labels, data)
         return data
 
     @property
@@ -641,7 +675,7 @@ class Labels:
         """
         if self._cached_values is None:
             self._cached_values = _data.mts_array_to_python_array(
-                self._raw_values, self
+                self._raw_values, self._labels
             )
 
         return self._cached_values
@@ -881,7 +915,7 @@ class Labels:
             c_entry[i] = ctypes.c_int32(v)
 
         self._lib.mts_labels_position(
-            self.as_mts_labels_t(),
+            self._labels,
             c_entry,
             c_entry._length_,
             result,
@@ -915,8 +949,8 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_difference(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             None,
             0,
@@ -956,8 +990,8 @@ class Labels:
         first_mapping = np.zeros(len(self), dtype=np.int64)
 
         self._lib.mts_labels_difference(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
@@ -987,8 +1021,8 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_union(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             None,
             0,
@@ -1035,8 +1069,8 @@ class Labels:
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_union(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
@@ -1066,8 +1100,8 @@ class Labels:
         """
         output = ctypes.POINTER(mts_labels_t)()
         self._lib.mts_labels_intersection(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             None,
             0,
@@ -1113,8 +1147,8 @@ class Labels:
         second_mapping = np.zeros(len(other), dtype=np.int64)
 
         self._lib.mts_labels_intersection(
-            self.as_mts_labels_t(),
-            other.as_mts_labels_t(),
+            self._labels,
+            other._labels,
             ctypes.pointer(output),
             first_mapping.ctypes.data_as(ctypes.POINTER(ctypes.c_int64)),
             len(first_mapping),
@@ -1153,8 +1187,8 @@ class Labels:
         selected_count = c_uintptr_t(len(self))
 
         self._lib.mts_labels_select(
-            self.as_mts_labels_t(),
-            selection.as_mts_labels_t(),
+            self._labels,
+            selection._labels,
             selected.ctypes.data_as(ctypes.POINTER(ctypes.c_uint64)),
             ctypes.pointer(selected_count),
         )
@@ -1210,10 +1244,6 @@ class Labels:
             )
 
         return self.values[:, index]
-
-    # used by featomic, kept here until we update featomic to use the public API
-    def _as_mts_labels_t(self):
-        return self.as_mts_labels_t()
 
 
 def _normalize_names_type(names: Union[str, Sequence[str]]) -> List[str]:
