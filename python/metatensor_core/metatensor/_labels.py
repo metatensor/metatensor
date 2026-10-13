@@ -378,6 +378,7 @@ class Labels:
         self._labels = MtsLabels(ptr)
         self._names = names
         self._cached_values = values
+        self._cached_cpu_values = None
         self._cached_device = None
 
     @staticmethod
@@ -451,6 +452,7 @@ class Labels:
         obj._names = names
 
         obj._cached_values = None
+        obj._cached_cpu_values = None
         obj._cached_device = None
 
         return obj
@@ -501,7 +503,7 @@ class Labels:
         """HTML representation for Jupyter notebooks."""
         html = labels_html(
             self.names,
-            self.values,
+            self._cpu_values,
             default_visible_entries=7,
             max_html_entries=200,
         )
@@ -514,7 +516,7 @@ class Labels:
 
     def __len__(self) -> int:
         """number of entries in these labels"""
-        return self.values.shape[0]
+        return self._cpu_values.shape[0]
 
     def __iter__(self):
         for i in range(len(self)):
@@ -564,20 +566,10 @@ class Labels:
                 f"can only compare between Labels for equality, got {type(other)}"
             )
 
-        if self._names != other._names or self.values.shape != other.values.shape:
+        if self._names != other._names:
             return False
 
-        self_is_torch = _data.array_backend(self.values) == "torch"
-        other_is_torch = _data.array_backend(other.values) == "torch"
-
-        if self_is_torch and other_is_torch:
-            return bool(torch.all(self.values == other.values))
-        elif self_is_torch:
-            return bool(np.all(self.values.cpu().numpy() == other.values))
-        elif other_is_torch:
-            return bool(np.all(self.values == other.values.cpu().numpy()))
-        else:
-            return bool(np.all(self.values == other.values))
+        return np.array_equal(self._cpu_values, other._cpu_values)
 
     def __ne__(self, other: "Labels") -> bool:
         """
@@ -679,6 +671,34 @@ class Labels:
             )
 
         return self._cached_values
+
+    @property
+    def _cpu_values(self) -> np.ndarray:
+        """
+        Values of these Labels as a read-only numpy array on CPU. This does not copy the
+        data, and works regardless of the type and device of :py:attr:`Labels.values`.
+        """
+        if self._cached_cpu_values is not None:
+            return self._cached_cpu_values
+
+        values_ptr = ctypes.POINTER(ctypes.c_int32)()
+        count = c_uintptr_t()
+        size = c_uintptr_t()
+        self._lib.mts_labels_values_cpu(self._labels, values_ptr, count, size)
+
+        shape = (count.value, size.value)
+        if count.value * size.value == 0:
+            array = np.empty(shape, dtype=np.int32)
+        else:
+            buffer_t = ctypes.c_int32 * (count.value * size.value)
+            buffer = buffer_t.from_address(ctypes.addressof(values_ptr.contents))
+            # keep the C labels alive as long as the numpy array is alive
+            buffer._mts_owner = self._labels
+            array = np.frombuffer(buffer, dtype=np.int32).reshape(shape)
+
+        array.flags.writeable = False
+        self._cached_cpu_values = array
+        return self._cached_cpu_values
 
     def append(self, name: str, values: np.ndarray) -> "Labels":
         """Append a new dimension to the end of the :py:class:`Labels`.
@@ -1205,7 +1225,7 @@ class Labels:
         """
         return _print_labels(
             self._names,
-            self.values,
+            self._cpu_values,
             max_entries=max_entries,
             indent=indent,
         )

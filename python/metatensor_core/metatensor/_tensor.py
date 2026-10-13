@@ -202,9 +202,9 @@ class TensorMap:
 
             return TensorBlockData(
                 values_shape=tuple(block.values.shape),
-                samples=(block.samples.names, block.samples.values),
-                components=[(c.names, c.values) for c in block.components],
-                properties=(block.properties.names, block.properties.values),
+                samples=(block.samples.names, block.samples._cpu_values),
+                components=[(c.names, c._cpu_values) for c in block.components],
+                properties=(block.properties.names, block.properties._cpu_values),
                 gradients=gradients,
             )
 
@@ -212,7 +212,7 @@ class TensorMap:
 
         body = tensor_map_html(
             self.keys.names,
-            self.keys.values,
+            self.keys._cpu_values,
             blocks,
             module="metatensor",
         )
@@ -725,7 +725,7 @@ class TensorMap:
         from metatensor._labels import _print_string_center
 
         names = self.keys.names
-        values = self.keys.values
+        values = self.keys._cpu_values
 
         n_dimensions = max(1, len(names))
         if len(names) == 0:

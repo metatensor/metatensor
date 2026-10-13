@@ -519,6 +519,7 @@ def test_values_keepalive():
     reference = labels.values.copy()
 
     values = labels.values
+    cpu_values = labels._cpu_values
 
     # the cached values should not create a reference cycle, so the labels are freed
     # as soon as they are no longer used, without waiting for the garbage collector
@@ -528,3 +529,15 @@ def test_values_keepalive():
 
     # the values should still be usable after the labels are gone
     np.testing.assert_equal(values, reference)
+    np.testing.assert_equal(cpu_values, reference)
+
+
+@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
+def test_cpu_values_keepalive():
+    labels = Labels("a", torch.tensor([[0], [1], [2]], dtype=torch.int32))
+
+    # for non-numpy values, the CPU values are a view inside memory owned by
+    # metatensor-core
+    cpu_values = labels._cpu_values
+    assert isinstance(cpu_values, np.ndarray)
+    assert not cpu_values.flags.writeable

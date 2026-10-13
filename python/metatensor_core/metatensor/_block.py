@@ -303,9 +303,9 @@ class TensorBlock:
 
             return TensorBlockData(
                 values_shape=tuple(block.values.shape),
-                samples=(block.samples.names, block.samples.values),
-                components=[(c.names, c.values) for c in block.components],
-                properties=(block.properties.names, block.properties.values),
+                samples=(block.samples.names, block.samples._cpu_values),
+                components=[(c.names, c._cpu_values) for c in block.components],
+                properties=(block.properties.names, block.properties._cpu_values),
                 gradients=gradients,
             )
 
