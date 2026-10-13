@@ -14,12 +14,12 @@ from .._status import check_pointer
 from .._tensor import TensorMap
 from ._block import (
     CreateArrayCallback,
-    _block_to_dict,
-    _single_block_from_mts,
+    block_to_dict,
     create_numpy_array,
+    single_block_from_mts,
 )
-from ._labels import _labels_from_mts, _labels_to_mts
-from ._utils import _save_buffer_raw
+from ._labels import labels_from_mts, labels_to_mts
+from ._utils import save_buffer_raw
 
 
 def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> TensorMap:
@@ -134,7 +134,7 @@ def load_buffer_custom_array(
     return TensorMap.unsafe_from_ptr(ptr)
 
 
-def _save_tensor(
+def save_tensor(
     file: Union[str, pathlib.Path, BinaryIO],
     tensor: TensorMap,
     use_numpy=False,
@@ -181,28 +181,28 @@ def _save_tensor(
             lib.mts_tensormap_save(path, tensor._ptr)
         else:
             # assume we have a file-like object
-            buffer = _save_tensor_buffer_raw(tensor)
+            buffer = save_tensor_buffer_raw(tensor)
             file.write(buffer.raw)
 
 
-def _save_tensor_buffer_raw(tensor: TensorMap) -> ctypes.Array:
+def save_tensor_buffer_raw(tensor: TensorMap) -> ctypes.Array:
     """
     Save a TensorMap to an in-memory buffer, returning the data as a ctypes array of
     ``ctypes.c_char``.
     """
     lib = _get_library()
 
-    return _save_buffer_raw(lib.mts_tensormap_save_buffer, tensor._ptr)
+    return save_buffer_raw(lib.mts_tensormap_save_buffer, tensor._ptr)
 
 
 def _tensor_to_dict(tensor_map):
     result = {
-        "keys": _labels_to_mts(tensor_map.keys),
+        "keys": labels_to_mts(tensor_map.keys),
     }
 
     for block_i, block in enumerate(tensor_map.blocks()):
         prefix = f"blocks/{block_i}/"
-        result.update(_block_to_dict(block, prefix, is_gradient=False))
+        result.update(block_to_dict(block, prefix, is_gradient=False))
 
     return result
 
@@ -210,14 +210,14 @@ def _tensor_to_dict(tensor_map):
 def _tensor_from_mts(file):
     dictionary = np.load(file)
 
-    keys = _labels_from_mts(dictionary["keys"])
+    keys = labels_from_mts(dictionary["keys"])
     blocks = []
 
     for block_i in range(len(keys)):
         prefix = f"blocks/{block_i}/"
-        properties = _labels_from_mts(dictionary[f"{prefix}properties"])
+        properties = labels_from_mts(dictionary[f"{prefix}properties"])
 
-        block = _single_block_from_mts(prefix, dictionary, properties)
+        block = single_block_from_mts(prefix, dictionary, properties)
         blocks.append(block)
 
     tensor = TensorMap(keys, blocks)

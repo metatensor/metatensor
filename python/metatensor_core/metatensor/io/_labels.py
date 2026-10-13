@@ -9,7 +9,7 @@ from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
 from .._labels import Labels
 from .._status import check_pointer
-from ._utils import CreateArrayCallback, _save_buffer_raw, create_numpy_array
+from ._utils import CreateArrayCallback, create_numpy_array, save_buffer_raw
 
 
 def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
@@ -106,7 +106,7 @@ def load_labels_buffer_custom_array(
     return Labels.unsafe_from_ptr(ptr)
 
 
-def _save_labels(
+def save_labels(
     file: Union[str, pathlib.Path, BinaryIO],
     labels: Labels,
 ):
@@ -142,26 +142,26 @@ def _save_labels(
         lib.mts_labels_save(path, labels._ptr)
     else:
         # assume we have a file-like object
-        buffer = _save_labels_buffer_raw(labels)
+        buffer = save_labels_buffer_raw(labels)
         file.write(buffer.raw)
 
 
-def _save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
+def save_labels_buffer_raw(labels: Labels) -> ctypes.Array:
     """
     Save Labels to an in-memory buffer, returning the data as a ctypes array of
     ``ctypes.c_char``.
     """
     lib = _get_library()
 
-    return _save_buffer_raw(lib.mts_labels_save_buffer, labels._ptr)
+    return save_buffer_raw(lib.mts_labels_save_buffer, labels._ptr)
 
 
-def _labels_from_mts(data):
+def labels_from_mts(data):
     names = data.dtype.names
     return Labels(names=names, values=data.view(dtype=np.int32).reshape(-1, len(names)))
 
 
-def _labels_to_mts(labels):
+def labels_to_mts(labels):
     dtype = [(name, np.int32) for name in labels.names]
     values = np.asarray(labels.values)
     return values.view(dtype=dtype).reshape((values.shape[0],)).copy()

@@ -6,29 +6,29 @@ from .._block import TensorBlock
 from .._labels import Labels
 from .._tensor import TensorMap
 from ._block import (
-    _save_block,
-    _save_block_buffer_raw,
     load_block,
     load_block_buffer,
     load_block_buffer_custom_array,
     load_block_custom_array,
 )
+from ._block import save_block as _save_block
+from ._block import save_block_buffer_raw as _save_block_buffer_raw
 from ._labels import (
-    _save_labels,
-    _save_labels_buffer_raw,
     load_labels,
     load_labels_buffer,
     load_labels_buffer_custom_array,
     load_labels_custom_array,
 )
+from ._labels import save_labels as _save_labels
+from ._labels import save_labels_buffer_raw as _save_labels_buffer_raw
 from ._tensor import (
-    _save_tensor,
-    _save_tensor_buffer_raw,
     load,
     load_buffer,
     load_buffer_custom_array,
     load_custom_array,
 )
+from ._tensor import save_tensor as _save_tensor
+from ._tensor import save_tensor_buffer_raw as _save_tensor_buffer_raw
 from ._utils import create_numpy_array, create_torch_array
 
 
