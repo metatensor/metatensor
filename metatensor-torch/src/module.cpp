@@ -199,6 +199,22 @@ void Module::to_impl_(
             // Fallback: process all attributes (backward compatibility with
             // modules that don't use register_buffer yet)
             legacy = true;
+            for (const auto& attr : module.named_attributes(false)) {
+                attr_names.push_back(attr.name);
+            }
+        }
+
+        bool something_changed = false;
+        for (const auto& name : attr_names) {
+            auto value = module.attr(name);
+            auto [updated, changed] = ivalue_to(value, device, dtype, non_blocking, legacy);
+            if (changed) {
+                something_changed = true;
+                module.register_attribute(name, updated.type().get(), updated);
+            }
+        }
+
+        if (legacy && something_changed) {
             TORCH_WARN_ONCE(
                 "module does not have '_mts_buffer_names'; falling back to "
                 "processing all attributes. This is deprecated and will be "
@@ -206,17 +222,6 @@ void Module::to_impl_(
                 "metatensor-learn and use `register_buffer` explicitly "
                 "to remove this warning."
             );
-            for (const auto& attr : module.named_attributes(false)) {
-                attr_names.push_back(attr.name);
-            }
-        }
-
-        for (const auto& name : attr_names) {
-            auto value = module.attr(name);
-            auto [updated, changed] = ivalue_to(value, device, dtype, non_blocking, legacy);
-            if (changed) {
-                module.register_attribute(name, updated.type().get(), updated);
-            }
         }
     }
 }

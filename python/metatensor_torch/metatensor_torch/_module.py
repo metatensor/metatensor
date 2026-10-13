@@ -151,7 +151,7 @@ def _apply_metatensor(module):
         # Update the attributes and re-add them to the module with
         # `_register_attribute` (which does an update when the attribute already
         # exists.)
-        anything_changed = False
+        something_changed = False
         for name in names:
             value = module._c.getattr(name)
 
@@ -159,11 +159,11 @@ def _apply_metatensor(module):
                 value, dtype=dtype, device=device, legacy=legacy
             )
             if changed:
-                anything_changed = True
+                something_changed = True
                 typ = _get_torch_type(value)
                 module._c._register_attribute(name, typ, value)
 
-        if anything_changed and legacy:
+        if something_changed and legacy:
             warnings.warn(
                 "module does not have '_mts_buffer_names'; "
                 "falling back to processing all attributes. "
