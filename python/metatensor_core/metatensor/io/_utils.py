@@ -14,7 +14,7 @@ def _resize_array(array, new_size):
     return (array._type_ * new_size).from_address(ctypes.addressof(array))
 
 
-def _save_buffer_raw(mts_function, data) -> ctypes.Array:
+def save_buffer_raw(mts_function, data) -> ctypes.Array:
     def realloc(buffer, _ptr, new_size):
         try:
             # convert void* to PyObject* and dereference to get a PyObject

@@ -11,10 +11,10 @@ import numpy as np
 from .._block import TensorBlock
 from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
-from .._data._array import _is_numpy_array, _is_torch_array
+from .._data._array import is_numpy_array, is_torch_array
 from .._status import check_pointer
-from ._labels import _labels_from_mts, _labels_to_mts
-from ._utils import CreateArrayCallback, _save_buffer_raw, create_numpy_array
+from ._labels import labels_from_mts, labels_to_mts
+from ._utils import CreateArrayCallback, create_numpy_array, save_buffer_raw
 
 
 def load_block(
@@ -128,7 +128,7 @@ def load_block_buffer_custom_array(
     return TensorBlock.unsafe_from_ptr(ptr)
 
 
-def _save_block(
+def save_block(
     file: Union[str, pathlib.Path, BinaryIO],
     block: TensorBlock,
     use_numpy=False,
@@ -136,7 +136,7 @@ def _save_block(
     assert isinstance(block, TensorBlock)
 
     if use_numpy:
-        all_entries = _block_to_dict(block, prefix="", is_gradient=False)
+        all_entries = block_to_dict(block, prefix="", is_gradient=False)
         if not hasattr(file, "write"):
             # prevent numpy from adding a .npz extension by opening the file ourself
             with open(file, "wb") as fd:
@@ -168,34 +168,34 @@ def _save_block(
             lib.mts_block_save(path, block._ptr)
         else:
             # assume we have a file-like object
-            buffer = _save_block_buffer_raw(block)
+            buffer = save_block_buffer_raw(block)
             file.write(buffer.raw)
 
 
-def _save_block_buffer_raw(block: TensorBlock) -> ctypes.Array:
+def save_block_buffer_raw(block: TensorBlock) -> ctypes.Array:
     """
     Save a TensorBlock to an in-memory buffer, returning the data as a ctypes array of
     ``ctypes.c_char``.
     """
     lib = _get_library()
 
-    return _save_buffer_raw(lib.mts_block_save_buffer, block._ptr)
+    return save_buffer_raw(lib.mts_block_save_buffer, block._ptr)
 
 
-def _block_to_dict(block, prefix, is_gradient):
+def block_to_dict(block, prefix, is_gradient):
     result = {}
     result[f"{prefix}values"] = _array_to_numpy(block.values)
-    result[f"{prefix}samples"] = _labels_to_mts(block.samples)
+    result[f"{prefix}samples"] = labels_to_mts(block.samples)
     for i, component in enumerate(block.components):
-        result[f"{prefix}components/{i}"] = _labels_to_mts(component)
+        result[f"{prefix}components/{i}"] = labels_to_mts(component)
 
     if not is_gradient:
-        result[f"{prefix}properties"] = _labels_to_mts(block.properties)
+        result[f"{prefix}properties"] = labels_to_mts(block.properties)
 
     # sort the gradients to make sure the same file is generated every time
     for parameter in sorted(block.gradients_list()):
         result.update(
-            _block_to_dict(
+            block_to_dict(
                 block.gradient(parameter),
                 f"{prefix}gradients/{parameter}/",
                 is_gradient=True,
@@ -206,21 +206,21 @@ def _block_to_dict(block, prefix, is_gradient):
 
 
 def _array_to_numpy(array):
-    if _is_numpy_array(array):
+    if is_numpy_array(array):
         return array
-    elif _is_torch_array(array):
+    elif is_torch_array(array):
         return array.cpu().numpy()
     else:
         raise ValueError("unknown array type passed to `metatensor.save`")
 
 
-def _single_block_from_mts(prefix, dictionary, properties):
+def single_block_from_mts(prefix, dictionary, properties):
     values = dictionary[f"{prefix}values"]
 
-    samples = _labels_from_mts(dictionary[f"{prefix}samples"])
+    samples = labels_from_mts(dictionary[f"{prefix}samples"])
     components = []
     for i in range(len(values.shape) - 2):
-        components.append(_labels_from_mts(dictionary[f"{prefix}components/{i}"]))
+        components.append(labels_from_mts(dictionary[f"{prefix}components/{i}"]))
 
     block = TensorBlock(values, samples, components, properties)
 
@@ -233,7 +233,7 @@ def _single_block_from_mts(prefix, dictionary, properties):
             parameters.add(parameter)
 
     for parameter in parameters:
-        gradient = _single_block_from_mts(
+        gradient = single_block_from_mts(
             f"{prefix}gradients/{parameter}/",
             dictionary,
             properties,
@@ -246,5 +246,5 @@ def _single_block_from_mts(prefix, dictionary, properties):
 def _block_from_mts(file):
     dictionary = np.load(file)
 
-    properties = _labels_from_mts(dictionary["properties"])
-    return _single_block_from_mts("", dictionary, properties)
+    properties = labels_from_mts(dictionary["properties"])
+    return single_block_from_mts("", dictionary, properties)
