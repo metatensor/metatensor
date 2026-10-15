@@ -17,6 +17,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- The Python package can now read data stored in C++ `SimpleDataArray` (for
+  example blocks created by C++ simulation engines or plugins) as numpy arrays,
+  without registering the corresponding data origin manually.
+
 ## [Version 0.2.4](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.4) - 2026-07-30
 
 ### Added
