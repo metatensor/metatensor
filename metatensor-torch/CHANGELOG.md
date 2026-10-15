@@ -5,11 +5,6 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased](https://github.com/metatensor/metatensor/)
 
-### Fixed
-
-- `metatensor_torch::Module` no longer fails when a container holds an empty
-  container before any entry carrying metatensor data
-
 <!-- Possible sections for each package:
 
 ### Added
@@ -20,6 +15,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### Removed
 -->
+
+## [Version 0.10.8](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.8) - 2026-10-15
+
+### Fixed
+
+- Removed false positive warnings in `metatensor_torch::Module` when a subclass
+  had class annotations and did not register custom bufefers.
 
 ## [Version 0.10.7](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.7) - 2026-10-06
 
