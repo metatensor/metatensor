@@ -7,5 +7,6 @@ coverage:
   ignore:
     - "tests/.*"
     - "**/documentation.py"
+    - "metatensor-core/src/vendor/**"
 
 comment: false

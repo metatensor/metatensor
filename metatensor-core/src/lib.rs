@@ -8,6 +8,8 @@
 #![allow(clippy::similar_names, clippy::borrow_as_ptr, clippy::uninlined_format_args)]
 #![allow(clippy::let_underscore_untyped, clippy::manual_let_else, clippy::empty_line_after_doc_comments)]
 
+mod vendor;
+use crate::vendor::zip;
 
 mod utils;
 

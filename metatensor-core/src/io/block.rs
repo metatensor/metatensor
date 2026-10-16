@@ -3,8 +3,9 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use byteorder::{LittleEndian, BigEndian, NativeEndian, WriteBytesExt, ReadBytesExt};
-use zip::{ZipArchive, ZipWriter};
 use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice, DLPackVersion};
+
+use crate::vendor::zip::{self, ZipArchive, ZipWriter};
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
