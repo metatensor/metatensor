@@ -25,6 +25,9 @@ fn main() {
     config.includes.push("metatensor/version.h".into());
     config.includes.push("metatensor/dlpack/dlpack.h".into());
 
+    // exclude items from vendored zip crate
+    config.export.exclude.push("CompressionMethod".into());
+
     let result = cbindgen::Builder::new()
         .with_crate(crate_dir)
         .with_config(config)

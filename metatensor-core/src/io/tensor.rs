@@ -2,11 +2,10 @@ use std::io::{BufReader, Read};
 use std::sync::Arc;
 use std::ffi::CString;
 
-use zip::{ZipArchive, ZipWriter};
-
-use crate::utils::ConstCString;
 use dlpk::sys::DLDataType;
 
+use crate::vendor::zip::{self, ZipArchive, ZipWriter};
+use crate::utils::ConstCString;
 use crate::{TensorMap, Error, mts_array_t};
 
 use super::PathOrBuffer;
