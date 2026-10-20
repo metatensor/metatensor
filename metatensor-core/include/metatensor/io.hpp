@@ -206,20 +206,30 @@ namespace io {
 
     /**************************************************************************/
 
-    inline Labels load_labels(const std::string& path) {
-        const auto* ptr = mts_labels_load(path.c_str());
+    inline Labels load_labels(
+        const std::string& path,
+        mts_create_array_callback_t create_array
+    ) {
+        const auto* ptr = mts_labels_load_custom_array(path.c_str(), create_array);
         details::check_pointer(ptr);
         return Labels(ptr);
     }
 
-    inline Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count) {
-        const auto* ptr = mts_labels_load_buffer(buffer, buffer_count);
+    inline Labels load_labels_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array
+    ) {
+        const auto* ptr = mts_labels_load_buffer_custom_array(buffer, buffer_count, create_array);
         details::check_pointer(ptr);
         return Labels(ptr);
     }
 
     template <typename Buffer>
-    Labels load_labels_buffer(const Buffer& buffer) {
+    Labels load_labels_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array
+    ) {
         static_assert(
             sizeof(typename Buffer::value_type) == sizeof(uint8_t),
             "`Buffer` must be a container of uint8_t or equivalent"
@@ -227,7 +237,8 @@ namespace io {
 
         return metatensor::io::load_labels_buffer(
             reinterpret_cast<const uint8_t*>(buffer.data()),
-            buffer.size()
+            buffer.size(),
+            create_array
         );
     }
 

@@ -72,9 +72,8 @@ def load_custom_array(
 ) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given path using a custom
-    array creation callback.
-
-    This is an advanced functionality, which should not be needed by most users.
+    array creation callback. This advanced functionality should not be needed by most
+    users.
 
     This function allows to specify the kind of array to use when loading the data
     through the ``create_array`` callback. This callback should take three arguments: a
@@ -82,8 +81,8 @@ def load_custom_array(
     ``mts_array_t`` to be filled.
 
     :py:func:`metatensor.io.create_numpy_array` and
-    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
-    and torch arrays respectively.
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
+    torch arrays respectively.
 
     :param path: path of the file to load
     :param create_array: callback used to create arrays as needed
@@ -107,9 +106,8 @@ def load_buffer_custom_array(
 ) -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given buffer using a custom
-    array creation callback.
-
-    This is an advanced functionality, which should not be needed by most users.
+    array creation callback. This advanced functionality should not be needed by most
+    users.
 
     This function allows to specify the kind of array to use when loading the data
     through the ``create_array`` callback. This callback should take three arguments: a
@@ -117,8 +115,8 @@ def load_buffer_custom_array(
     ``mts_array_t`` to be filled.
 
     :py:func:`metatensor.io.create_numpy_array` and
-    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
-    and torch arrays respectively.
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
+    torch arrays respectively.
 
     :param buffer: in-memory buffer containing a saved :py:class:`TensorMap`
     :param create_array: callback used to create arrays as needed

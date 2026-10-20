@@ -16,6 +16,12 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- `metatensor::io::load_labels_custom_array()` and
+  `metatensor::io::load_labels_buffer_custom_array()` to load `Labels` values
+  with a custom array type
+
 ## [Version 0.5.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.5.1) - 2026-07-30
 
 ### Fixed
