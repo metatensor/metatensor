@@ -187,12 +187,41 @@ namespace metatensor {
 
         /**************************************************************************/
 
-        /// Load previously saved `Labels` from the given path.
-        Labels load_labels(const std::string& path);
+        /*!
+        * Load previously saved `Labels` from the given path.
+        *
+        * \verbatim embed:rst:leading-asterisk
+        *
+        * ``create_array`` will be used to create the array containing the
+        * labels values, the default version will create data using
+        * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+        * for more information.
+        *
+        * \endverbatim
+        */
+        Labels load_labels(
+            const std::string& path,
+            mts_create_array_callback_t create_array = details::default_create_array
+        );
 
-        /// Load previously saved `Labels` from the given `buffer`, containing
-        /// `buffer_count` elements.
-        Labels load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
+        /*!
+        * Load previously saved `Labels` from the given `buffer`, containing
+        * `buffer_count` elements.
+        *
+        * \verbatim embed:rst:leading-asterisk
+        *
+        * ``create_array`` will be used to create the array containing the
+        * labels values, the default version will create data using
+        * :cpp:class:`SimpleDataArray`. See :c:func:`mts_create_array_callback_t`
+        * for more information.
+        *
+        * \endverbatim
+        */
+        Labels load_labels_buffer(
+            const uint8_t* buffer,
+            size_t buffer_count,
+            mts_create_array_callback_t create_array = details::default_create_array
+        );
 
         /// Load a previously saved `Labels` from the given `buffer`.
         ///
@@ -201,6 +230,9 @@ namespace metatensor {
         /// contiguous data and an `item_type` with the same size as a `uint8_t` can
         /// work.
         template <typename Buffer>
-        Labels load_labels_buffer(const Buffer& buffer);
+        Labels load_labels_buffer(
+            const Buffer& buffer,
+            mts_create_array_callback_t create_array = details::default_create_array
+        );
     } // namespace io
 } // namespace metatensor

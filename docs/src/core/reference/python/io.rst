@@ -32,3 +32,7 @@ Serialization
 .. autofunction:: metatensor.io.create_torch_array()
 
 .. autofunction:: metatensor.io.load_labels_buffer
+
+.. autofunction:: metatensor.io.load_labels_custom_array
+
+.. autofunction:: metatensor.io.load_labels_buffer_custom_array

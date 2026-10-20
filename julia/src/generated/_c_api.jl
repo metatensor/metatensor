@@ -409,11 +409,27 @@ function mts_labels_load(path::Ptr{Cchar})
     )
 end
 
+function mts_labels_load_custom_array(path::Ptr{Cchar}, create_array::mts_create_array_callback_t)
+    ccall((:mts_labels_load_custom_array, libmetatensor), 
+        Ptr{mts_labels_t},
+        (Ptr{Cchar}, mts_create_array_callback_t,),
+        path, create_array
+    )
+end
+
 function mts_labels_load_buffer(buffer::Ptr{UInt8}, buffer_count::UIntptr)
     ccall((:mts_labels_load_buffer, libmetatensor), 
         Ptr{mts_labels_t},
         (Ptr{UInt8}, UIntptr,),
         buffer, buffer_count
+    )
+end
+
+function mts_labels_load_buffer_custom_array(buffer::Ptr{UInt8}, buffer_count::UIntptr, create_array::mts_create_array_callback_t)
+    ccall((:mts_labels_load_buffer_custom_array, libmetatensor), 
+        Ptr{mts_labels_t},
+        (Ptr{UInt8}, UIntptr, mts_create_array_callback_t,),
+        buffer, buffer_count, create_array
     )
 end
 

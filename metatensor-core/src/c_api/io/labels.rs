@@ -5,12 +5,94 @@ use std::ffi::CStr;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 
-use crate::Error;
+use dlpk::sys::{DLDataType, DLDataTypeCode};
 
-use super::{ExternalBuffer, mts_realloc_buffer_t};
+use crate::Error;
+use crate::Labels;
+use crate::labels::LabelValue;
+use crate::data::mts_array_t;
+
+use super::{ExternalBuffer, mts_realloc_buffer_t, mts_create_array_callback_t, wrap_create_array};
 
 use super::super::status::{mts_status_t, catch_unwind};
 use super::super::labels::mts_labels_t;
+
+/// Default array creation for `mts_labels_load` and `mts_labels_load_buffer`:
+/// create an array backed by an owned `Vec<LabelValue>` with the given shape,
+/// which is then filled by the loading code.
+fn default_create_labels_array(shape: &[usize], dtype: DLDataType) -> Result<mts_array_t, Error> {
+    if shape.len() != 2 || dtype.code != DLDataTypeCode::kDLInt || dtype.bits != 32 || dtype.lanes != 1 {
+        return Err(Error::InvalidParameter(format!(
+            "invalid shape or dtype for labels: shape={:?}, dtype={:?}",
+            shape, dtype
+        )));
+    }
+
+    let values = vec![0 as LabelValue; shape[0] * shape[1]];
+    return Ok(crate::labels::create_array_from_vec(
+        Arc::from(values.into_boxed_slice()),
+        shape[0],
+        shape[1],
+    ));
+}
+
+/// Load labels from a file, creating the values array with the given
+/// `create_array` closure and mapping errors to indicate whether the data
+/// actually looks like TensorMap or TensorBlock.
+fn load_labels_from_path<F>(path: &str, create_array: F) -> Result<Labels, Error>
+where F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
+{
+    let file = BufReader::new(File::open(path)?);
+
+    crate::io::load_labels(file, create_array).map_err(|err| match err {
+        Error::Serialization(message) => {
+            if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Path(path)) {
+                Error::Serialization(format!(
+                    "unable to load Labels from '{}', use `load` to load TensorMap: {}", path, message
+                ))
+            } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Path(path)) {
+                Error::Serialization(format!(
+                    "unable to load Labels from '{}', use `load_block` to load TensorBlock: {}", path, message
+                ))
+            } else {
+                Error::Serialization(format!(
+                    "unable to load Labels from '{}': {}", path, message
+                ))
+            }
+        }
+        err => err,
+    })
+}
+
+/// Load labels from an in-memory buffer, creating the values array with the
+/// given `create_array` closure and mapping errors to indicate whether the
+/// data actually looks like TensorMap or TensorBlock.
+fn load_labels_from_buffer<F>(slice: &[u8], create_array: F) -> Result<Labels, Error>
+where F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
+{
+    let cursor = std::io::Cursor::new(slice);
+
+    crate::io::load_labels(cursor, create_array).map_err(|err| match err {
+        Error::Serialization(message) => {
+            let mut cursor = std::io::Cursor::new(slice);
+
+            if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                Error::Serialization(format!(
+                    "unable to load Labels from buffer, use `load_buffer` to load TensorMap: {}", message
+                ))
+            } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
+                Error::Serialization(format!(
+                    "unable to load Labels from buffer, use `load_block_buffer` to load TensorBlock: {}", message
+                ))
+            } else {
+                Error::Serialization(format!(
+                    "unable to load Labels from buffer: {}", message
+                ))
+            }
+        }
+        err => err,
+    })
+}
 
 /// Load labels from the file at the given path.
 ///
@@ -23,9 +105,39 @@ use super::super::labels::mts_labels_t;
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
 #[unsafe(no_mangle)]
-pub unsafe extern "C" fn mts_labels_load(
+pub unsafe extern "C" fn mts_labels_load(path: *const c_char) -> *const mts_labels_t {
+    labels_load_impl(path, default_create_labels_array)
+}
+
+/// Load labels from the file at the given path.
+///
+/// The array containing the labels values will be created with the given
+/// `create_array` callback, and filled by this function with the
+/// corresponding data.
+///
+/// This function allocates memory which must be released with
+/// `mts_labels_free` when you don't need it anymore.
+///
+/// @param path path to the file as a NULL-terminated UTF-8 string
+/// @param create_array callback function that will be used to create the
+///                     array containing the labels values.
+///
+/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn mts_labels_load_custom_array(
     path: *const c_char,
+    create_array: mts_create_array_callback_t,
 ) -> *const mts_labels_t {
+    let create_array = wrap_create_array(&create_array);
+    labels_load_impl(path, move |shape, dtype| create_array(shape, dtype))
+}
+
+/// Implementation shared by `mts_labels_load` and `mts_labels_load_custom_array`.
+fn labels_load_impl<F>(path: *const c_char, create_array: F) -> *const mts_labels_t
+where F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error> + std::panic::UnwindSafe
+{
     let mut result = std::ptr::null();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
@@ -35,27 +147,8 @@ pub unsafe extern "C" fn mts_labels_load(
         let path = unsafe {
             CStr::from_ptr(path).to_str().expect("use UTF-8 for path")
         };
-        let file = BufReader::new(File::open(path)?);
 
-        let rust_labels = crate::io::load_labels(file)
-            .map_err(|err| match err {
-                Error::Serialization(message) => {
-                    if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Path(path)) {
-                        Error::Serialization(format!(
-                            "unable to load Labels from '{}', use `load` to load TensorMap: {}", path, message
-                        ))
-                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Path(path)) {
-                        Error::Serialization(format!(
-                            "unable to load Labels from '{}', use `load_block` to load TensorBlock: {}", path, message
-                        ))
-                    } else {
-                        Error::Serialization(format!(
-                            "unable to load Labels from '{}': {}", path, message
-                        ))
-                    }
-                }
-                err => return err,
-            })?;
+        let rust_labels = load_labels_from_path(path, create_array)?;
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(rust_labels));
@@ -86,6 +179,41 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
     buffer: *const u8,
     buffer_count: usize,
 ) -> *const mts_labels_t {
+    labels_load_buffer_impl(buffer, buffer_count, default_create_labels_array)
+}
+
+/// Load labels from the given in-memory buffer.
+///
+/// The array containing the labels values will be created with the given
+/// `create_array` callback, and filled by this function with the
+/// corresponding data.
+///
+/// This function allocates memory which must be released with
+/// `mts_labels_free` when you don't need it anymore.
+///
+/// @param buffer buffer containing a previously serialized `mts_labels_t`
+/// @param buffer_count number of elements in the buffer
+/// @param create_array callback function that will be used to create the
+///                     array containing the labels values.
+///
+/// @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+///          case of error. In case of error, you can use `mts_last_error()`
+///          to get the error message.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn mts_labels_load_buffer_custom_array(
+    buffer: *const u8,
+    buffer_count: usize,
+    create_array: mts_create_array_callback_t,
+) -> *const mts_labels_t {
+    let create_array = wrap_create_array(&create_array);
+    labels_load_buffer_impl(buffer, buffer_count, move |shape, dtype| create_array(shape, dtype))
+}
+
+/// Implementation shared by `mts_labels_load_buffer` and
+/// `mts_labels_load_buffer_custom_array`.
+fn labels_load_buffer_impl<F>(buffer: *const u8, buffer_count: usize, create_array: F) -> *const mts_labels_t
+where F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error> + std::panic::UnwindSafe
+{
     let mut result = std::ptr::null();
     let unwind_wrapper = std::panic::AssertUnwindSafe(&mut result);
 
@@ -95,37 +223,12 @@ pub unsafe extern "C" fn mts_labels_load_buffer(
         }
 
         check_pointers_non_null!(buffer);
+
         let slice = unsafe {
             std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
         };
-        let cursor = std::io::Cursor::new(slice);
 
-        let rust_labels = crate::io::load_labels(cursor)
-            .map_err(|err| match err {
-                Error::Serialization(message) => {
-                    // check if the buffer actually contains TensorMap and
-                    // not Labels
-                    let slice = unsafe {
-                        std::slice::from_raw_parts(buffer.cast::<u8>(), buffer_count)
-                    };
-                    let mut cursor = std::io::Cursor::new(slice);
-
-                    if crate::io::looks_like_tensormap_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
-                        Error::Serialization(format!(
-                            "unable to load Labels from buffer, use `load_buffer` to load TensorMap: {}", message
-                        ))
-                    } else if crate::io::looks_like_block_data(crate::io::PathOrBuffer::Buffer(&mut cursor)) {
-                        Error::Serialization(format!(
-                            "unable to load Labels from buffer, use `load_block_buffer` to load TensorBlock: {}", message
-                        ))
-                    } else {
-                        Error::Serialization(format!(
-                            "unable to load Labels from buffer: {}", message
-                        ))
-                    }
-                }
-                err => return err,
-            })?;
+        let rust_labels = load_labels_from_buffer(slice, create_array)?;
 
         let _ = &unwind_wrapper;
         *unwind_wrapper.0 = mts_labels_t::into_raw(Arc::new(rust_labels));
