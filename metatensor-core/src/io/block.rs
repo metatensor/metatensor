@@ -38,9 +38,9 @@ pub fn looks_like_block_data(mut data: PathOrBuffer) -> bool {
 
 /// Load the serialized tensor block from the given path.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// See the [`load`] for more information about the format used to serialize
 /// `TensorBlock`.
@@ -85,13 +85,13 @@ pub(super) fn read_single_block<R, F>(
 
     let path = format!("{}samples.npy", prefix);
     let samples_file = archive.by_name(&path).map_err(|e| (path, e))?;
-    let samples = Arc::new(load_labels(samples_file)?);
+    let samples = Arc::new(load_labels(samples_file, create_array)?);
 
     let mut components = Vec::new();
     for i in 0..(shape.len() - 2) {
         let path = format!("{}components/{}.npy", prefix, i);
         let component_file = archive.by_name(&path).map_err(|e| (path, e))?;
-        components.push(Arc::new(load_labels(component_file)?));
+        components.push(Arc::new(load_labels(component_file, create_array)?));
     }
 
     let properties = if let Some(ref properties) = properties {
@@ -99,7 +99,7 @@ pub(super) fn read_single_block<R, F>(
     } else {
         let path = format!("{}properties.npy", prefix);
         let properties_file = archive.by_name(&path).map_err(|e| (path, e))?;
-        Arc::new(load_labels(properties_file)?)
+        Arc::new(load_labels(properties_file, create_array)?)
     };
 
     let mut block = TensorBlock::new(data, samples, components, properties.clone())?;

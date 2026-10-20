@@ -1,12 +1,12 @@
 use std::io::BufReader;
-use std::sync::Arc;
 
 use byteorder::{LittleEndian, ReadBytesExt, BigEndian, WriteBytesExt, NativeEndian};
+use dlpk::sys::{DLDataType, DLDataTypeCode, DLDevice, DLPackVersion};
 
 use super::npy_header::{Header, DataType};
 use super::{check_for_extra_bytes, native_endian_prefix, Endianness, PathOrBuffer};
 
-use crate::{Error, Labels};
+use crate::{Error, Labels, mts_array_t};
 
 
 /// Check if the file/buffer in `data` looks like it could contain serialized
@@ -43,7 +43,14 @@ pub fn looks_like_labels_data(mut data: PathOrBuffer) -> bool {
 /// associating name and either "<i4" for little endian file or ">i4" for big
 /// endian file. Data is stored in exactly the same way as inside a `Labels`,
 /// i.e. a big blob of 32-bit integers.
-pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
+///
+/// The array containing the labels values will be created with the given
+/// `create_array` callback (with a 2-dimensional shape and `int32` dtype), and
+/// filled by this function with the corresponding data.
+pub fn load_labels<R, F>(mut reader: R, create_array: F) -> Result<Labels, Error>
+    where R: std::io::Read,
+          F: Fn(&[usize], DLDataType) -> Result<mts_array_t, Error>
+{
     let header = Header::from_reader(&mut reader)?;
     if header.fortran_order {
         return Err(Error::Serialization("Labels can not be loaded from fortran-order arrays".into()));
@@ -52,18 +59,35 @@ pub fn load_labels<R: std::io::Read>(mut reader: R) -> Result<Labels, Error> {
     }
     let (names, endianness) = check_type_descriptor(&header.type_descriptor)?;
 
-    let mut data = vec![0; header.shape[0] * names.len()];
-    match endianness {
-        Endianness::Little => reader.read_i32_into::<LittleEndian>(&mut data)?,
-        Endianness::Big => reader.read_i32_into::<BigEndian>(&mut data)?,
-        Endianness::Native => reader.read_i32_into::<NativeEndian>(&mut data)?,
+    let shape = [header.shape[0], names.len()];
+    let dtype = DLDataType { code: DLDataTypeCode::kDLInt, bits: 32, lanes: 1 };
+    let array = create_array(&shape, dtype)?;
+
+    if shape[0] * shape[1] != 0 {
+        let device = DLDevice::cpu();
+        let version = DLPackVersion::current();
+        let mut dl_tensor = array.as_dlpack(device, None, version)?;
+
+        let mut view: ndarray::ArrayViewMutD<i32> = dl_tensor.as_mut().try_into()
+            .map_err(|e| Error::Serialization(format!("failed to convert DLPack to ndarray mutable view: {}", e)))?;
+
+        if view.shape() != shape {
+            return Err(Error::InvalidParameter(format!(
+                "the array created by `create_array` has the wrong shape: expected {:?}, got {:?}",
+                shape, view.shape()
+            )));
+        }
+
+        for value in &mut view {
+            *value = match endianness {
+                Endianness::Little => reader.read_i32::<LittleEndian>()?,
+                Endianness::Big => reader.read_i32::<BigEndian>()?,
+                Endianness::Native => reader.read_i32::<NativeEndian>()?,
+            };
+        }
     }
 
     check_for_extra_bytes(&mut reader)?;
-
-    let array = crate::labels::create_array_from_vec(
-        Arc::from(data.into_boxed_slice()), header.shape[0], names.len()
-    );
 
     return Labels::new(&names, array);
 }

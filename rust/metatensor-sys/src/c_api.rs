@@ -177,13 +177,6 @@ const _: () = {
     ["Offset of field: mts_array_t::move_data"]
         [::std::mem::offset_of!(mts_array_t, move_data) - 96usize];
 };
-pub type mts_realloc_buffer_t = ::std::option::Option<
-    unsafe extern "C" fn(
-        user_data: *mut ::std::os::raw::c_void,
-        ptr: *mut u8,
-        new_size: usize,
-    ) -> *mut u8,
->;
 pub type mts_create_array_callback_t = ::std::option::Option<
     unsafe extern "C" fn(
         shape: *const usize,
@@ -191,6 +184,13 @@ pub type mts_create_array_callback_t = ::std::option::Option<
         dtype: DLDataType,
         array: *mut mts_array_t,
     ) -> mts_status_t,
+>;
+pub type mts_realloc_buffer_t = ::std::option::Option<
+    unsafe extern "C" fn(
+        user_data: *mut ::std::os::raw::c_void,
+        ptr: *mut u8,
+        new_size: usize,
+    ) -> *mut u8,
 >;
 unsafe extern "C" {
     pub fn mts_disable_panic_printing();
@@ -387,7 +387,16 @@ unsafe extern "C" {
         dtype: *mut DLDataType,
     ) -> mts_status_t;
     pub fn mts_labels_load(path: *const ::std::os::raw::c_char) -> *const mts_labels_t;
+    pub fn mts_labels_load_custom_array(
+        path: *const ::std::os::raw::c_char,
+        create_array: mts_create_array_callback_t,
+    ) -> *const mts_labels_t;
     pub fn mts_labels_load_buffer(buffer: *const u8, buffer_count: usize) -> *const mts_labels_t;
+    pub fn mts_labels_load_buffer_custom_array(
+        buffer: *const u8,
+        buffer_count: usize,
+        create_array: mts_create_array_callback_t,
+    ) -> *const mts_labels_t;
     #[must_use]
     pub fn mts_labels_save(
         path: *const ::std::os::raw::c_char,

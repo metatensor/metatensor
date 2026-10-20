@@ -1,25 +1,59 @@
 use std::ffi::CString;
 
+use metatensor_sys::mts_create_array_callback_t;
+
 use crate::errors::{check_status, check_ptr};
 use crate::{Labels, Error};
 
-use super::realloc_vec;
+use super::{realloc_vec, create_ndarray};
 
 /// Load previously saved `Labels` from the file at the given path.
+///
+/// The labels values are loaded as `ndarray::ArrayD` by default. If you want
+/// to load them as a custom type, use [`load_labels_custom_array`] instead.
 pub fn load_labels(path: impl AsRef<std::path::Path>) -> Result<Labels, Error> {
+    return load_labels_custom_array(path, Some(create_ndarray));
+}
+
+/// Load previously saved `Labels` from the file at the given path.
+///
+/// The array containing the labels values will be created through the
+/// `create_array` callback.
+pub fn load_labels_custom_array(path: impl AsRef<std::path::Path>, create_array: mts_create_array_callback_t) -> Result<Labels, Error> {
     let path = path.as_ref().as_os_str().to_str().expect("this path is not valid UTF8");
     let path = CString::new(path).expect("this path contains a NULL byte");
 
-    let ptr = unsafe { crate::c_api::mts_labels_load(path.as_ptr()) };
+    let ptr = unsafe {
+        crate::c_api::mts_labels_load_custom_array(
+            path.as_ptr(),
+            create_array,
+        )
+    };
     check_ptr(ptr)?;
 
     return Ok(unsafe { Labels::from_raw(ptr) });
 }
 
 /// Load previously saved `Labels` from an in-memory `buffer`.
+///
+/// The labels values are loaded as `ndarray::ArrayD` by default. If you want
+/// to load them as a custom type, use [`load_labels_buffer_custom_array`]
+/// instead.
 pub fn load_labels_buffer(buffer: &[u8]) -> Result<Labels, Error> {
+    return load_labels_buffer_custom_array(buffer, Some(create_ndarray));
+}
+
+/// Load previously saved `Labels` from an in-memory `buffer`.
+///
+/// The array containing the labels values will be created through the
+/// `create_array` callback.
+pub fn load_labels_buffer_custom_array(buffer: &[u8], create_array: mts_create_array_callback_t) -> Result<Labels, Error> {
     let ptr = unsafe {
-        crate::c_api::mts_labels_load_buffer(buffer.as_ptr(), buffer.len())
+        crate::c_api::mts_labels_load_buffer_custom_array(
+            buffer.as_ptr(),
+            buffer.len(),
+            create_array,
+        )
     };
     check_ptr(ptr)?;
 

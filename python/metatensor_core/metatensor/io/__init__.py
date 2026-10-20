@@ -8,8 +8,6 @@ from .._tensor import TensorMap
 from ._block import (
     _save_block,
     _save_block_buffer_raw,
-    create_numpy_array,
-    create_torch_array,
     load_block,
     load_block_buffer,
     load_block_buffer_custom_array,
@@ -20,6 +18,8 @@ from ._labels import (
     _save_labels_buffer_raw,
     load_labels,
     load_labels_buffer,
+    load_labels_buffer_custom_array,
+    load_labels_custom_array,
 )
 from ._tensor import (
     _save_tensor,
@@ -29,6 +29,7 @@ from ._tensor import (
     load_buffer_custom_array,
     load_custom_array,
 )
+from ._utils import create_numpy_array, create_torch_array
 
 
 __all__ = [
@@ -41,7 +42,9 @@ __all__ = [
     "load_buffer_custom_array",
     "load_buffer",
     "load_custom_array",
+    "load_labels_buffer_custom_array",
     "load_labels_buffer",
+    "load_labels_custom_array",
     "load_labels",
     "load",
 ]

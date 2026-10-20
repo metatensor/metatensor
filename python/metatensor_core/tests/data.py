@@ -16,6 +16,7 @@ except ImportError:
     HAS_TORCH = False
 
 from ctypes_dlpack import (
+    DLDataTypeCode,
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
@@ -491,7 +492,26 @@ def create_test_array(shape_ptr, shape_count, dtype, array):
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
-    data = np.zeros(shape)
+    np_dtype = None
+    if dtype.code == DLDataTypeCode.kDLFloat:
+        if dtype.bits == 32:
+            np_dtype = np.dtype("float32")
+        elif dtype.bits == 64:
+            np_dtype = np.dtype("float64")
+    elif dtype.code == DLDataTypeCode.kDLInt:
+        if dtype.bits == 8:
+            np_dtype = np.dtype("int8")
+        elif dtype.bits == 16:
+            np_dtype = np.dtype("int16")
+        elif dtype.bits == 32:
+            np_dtype = np.dtype("int32")
+        elif dtype.bits == 64:
+            np_dtype = np.dtype("int64")
+
+    if np_dtype is None:
+        raise ValueError(f"Unsupported DLPack dtype: {dtype}")
+
+    data = np.zeros(shape, dtype=np_dtype)
     mts_array = metatensor._data.create_mts_array(data)
     mts_array.origin = GET_TEST_ORIGIN
 

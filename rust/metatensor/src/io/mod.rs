@@ -17,7 +17,8 @@ pub use self::block::{load_block, load_block_buffer_custom_array, load_block_buf
 pub use self::block::{save_block, save_block_buffer};
 
 mod labels;
-pub use self::labels::{load_labels, load_labels_buffer, save_labels, save_labels_buffer};
+pub use self::labels::{load_labels, load_labels_buffer, load_labels_custom_array, load_labels_buffer_custom_array};
+pub use self::labels::{save_labels, save_labels_buffer};
 
 
 /// Implementation of realloc for `Vec<u8>`, used in `save_buffer`

@@ -7,6 +7,7 @@
 
 #include "metatensor/torch/array.hpp"
 #include "metatensor/torch/labels.hpp"
+#include "metatensor/torch/misc.hpp"
 
 #include "./utils.hpp"
 
@@ -527,7 +528,7 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::union_and_mapping
         second_mapping_vector->data(),
         second_mapping_vector->size()
     ));
-    
+
     auto device = this->device();
     auto first_mapping = torch::from_blob(
         first_mapping_vector->data(),
@@ -563,7 +564,7 @@ std::tuple<Labels, torch::Tensor, torch::Tensor> LabelsHolder::intersection_and_
         second_mapping_vector->data(),
         second_mapping_vector->size()
     ));
-    
+
     auto device = this->device();
     auto first_mapping = torch::from_blob(
         first_mapping_vector->data(),
@@ -596,7 +597,7 @@ std::tuple<Labels, torch::Tensor> LabelsHolder::difference_and_mapping(const Lab
         mapping_vector->data(),
         mapping_vector->size()
     ));
-    
+
     auto device = this->device();
     auto mapping = torch::from_blob(
         mapping_vector->data(),
@@ -797,7 +798,7 @@ std::string LabelsHolder::repr() const {
 
 Labels LabelsHolder::load(const std::string& path) {
     return torch::make_intrusive<LabelsHolder>(
-        LabelsHolder(metatensor::io::load_labels(path))
+        LabelsHolder(metatensor::io::load_labels(path, details::create_torch_array))
     );
 }
 
@@ -831,7 +832,8 @@ Labels LabelsHolder::load_buffer(torch::Tensor buffer) {
     return torch::make_intrusive<LabelsHolder>(
         LabelsHolder(metatensor::io::load_labels_buffer(
             buffer.data_ptr<uint8_t>(),
-            static_cast<size_t>(buffer.size(0))
+            static_cast<size_t>(buffer.size(0)),
+            details::create_torch_array
         ))
     );
 }
