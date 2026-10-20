@@ -14,9 +14,9 @@ use super::{mts_create_array_callback_t, wrap_create_array};
 
 /// Load a tensor block from the file at the given path.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// The memory allocated by this function should be released using
 /// `mts_block_free`.
@@ -25,9 +25,8 @@ use super::{mts_create_array_callback_t, wrap_create_array};
 /// serialize the data.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
-/// @param create_array callback function that will be used to create data
-///                     arrays inside each block
-///
+/// @param create_array callback function that will be used to create all
+///                     arrays inside the block
 /// @returns A pointer to the newly allocated block, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
@@ -83,18 +82,17 @@ pub unsafe extern "C" fn mts_block_load(
 
 /// Load a tensor block from the given in-memory buffer.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// The memory allocated by this function should be released using
 /// `mts_block_free`.
 ///
 /// @param buffer buffer containing a previously serialized `mts_block_t`
 /// @param buffer_count number of elements in the buffer
-/// @param create_array callback function that will be used to create data
-///                     arrays inside each block
-///
+/// @param create_array callback function that will be used to create all
+///                     arrays inside the block
 /// @returns A pointer to the newly allocated tensor block, or a `NULL` pointer
 ///          in case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
