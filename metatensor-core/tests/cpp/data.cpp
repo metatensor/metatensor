@@ -47,6 +47,8 @@ TEST_CASE("Data Array") {
         char buffer[64] = {0};
         auto status = mts_get_data_origin(origin, buffer, 64);
         CHECK(status == MTS_SUCCESS);
+        // the Python package registers this origin by name, to read data
+        // created from C++ (see python/metatensor_core/metatensor/_c_lib.py)
         CHECK(std::string(buffer) == "metatensor::SimpleDataArray");
     }
 

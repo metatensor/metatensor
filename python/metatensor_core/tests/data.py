@@ -537,6 +537,61 @@ def test_parent_keepalive():
     assert np.isclose(transformed, 1.1596965632269784)
 
 
+CXX_ORIGIN = metatensor._data._array._register_origin("metatensor::SimpleDataArray")
+
+
+@catch_exceptions
+def get_cxx_origin(this, origin):
+    origin[0] = CXX_ORIGIN
+
+
+GET_CXX_ORIGIN = metatensor._data._array._cast_to_ctype_functype(
+    get_cxx_origin, "origin"
+)
+
+
+@catch_exceptions
+def create_cxx_array(shape_ptr, shape_count, dtype, array):
+    # pretend this array comes from the C++ API, e.g. a block created by a C++
+    # simulation engine and given to a Python model
+    shape = [shape_ptr[i] for i in range(shape_count)]
+    mts_array = metatensor._data.create_mts_array(np.zeros(shape))
+    mts_array.origin = GET_CXX_ORIGIN
+
+    array[0] = mts_array
+
+
+def test_cxx_simple_data_array():
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "data.mts",
+    )
+    # the origin of C++ arrays is registered by default, without calling
+    # `register_external_data_wrapper` in user code
+    tensor = metatensor.io.load_custom_array(path.encode("utf8"), create_cxx_array)
+
+    block = tensor.block(0)
+    origin = metatensor._data.data_origin(block._raw_values)
+    assert metatensor._data.data_origin_name(origin) == "metatensor::SimpleDataArray"
+
+    values = block.values
+    assert isinstance(values, ExternalCpuArray)
+    assert values._parent is not None
+    reference = metatensor.load(path).block(0)
+    np.testing.assert_array_equal(values, reference.values)
+
+    for parameter, gradient in block.gradients():
+        assert isinstance(gradient.values, ExternalCpuArray), parameter
+        np.testing.assert_array_equal(
+            gradient.values, reference.gradient(parameter).values
+        )
+
+
 class CustomError(RuntimeError):
     pass
 
