@@ -351,6 +351,38 @@ class TensorBlock:
 
         The array type depends on how the block was created. Currently, numpy
         ``ndarray`` and torch ``Tensor`` are supported.
+
+        For NumPy-backed blocks, this returns shared data, not a copy. The
+        returned array keeps the owning block (and its parent TensorMap, when
+        applicable) alive. A small slice can therefore keep a much larger
+        allocation alive after the block or TensorMap variable is deleted.
+        If you only need to retain a subset, copy that subset instead. This
+        creates independent NumPy storage for the selected values. It does
+        not release the original allocation while other references or views
+        still use it.
+
+        >>> import numpy as np
+        >>> from metatensor import Labels, TensorBlock, TensorMap
+        >>> block = TensorBlock(
+        ...     values=np.arange(6.0).reshape(3, 2),
+        ...     samples=Labels("sample", np.arange(3).reshape(-1, 1)),
+        ...     components=[],
+        ...     properties=Labels("property", np.arange(2).reshape(-1, 1)),
+        ... )
+        >>> tensor = TensorMap(Labels("key", np.array([[0]])), [block])
+        >>> values = tensor.block(0).values
+        >>> view = values[:1]
+        >>> subset = view.copy()
+        >>> np.shares_memory(view, values)
+        True
+        >>> np.shares_memory(subset, values)
+        False
+        >>> values[0, 0] = 42.0
+        >>> float(view[0, 0]), float(subset[0, 0])
+        (42.0, 0.0)
+        >>> del tensor, block, values
+        >>> float(view[0, 0])  # the view still keeps its data alive
+        42.0
         """
 
         return _data.mts_array_to_python_array(self._raw_values, parent=self)
