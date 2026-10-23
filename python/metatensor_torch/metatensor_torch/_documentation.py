@@ -66,6 +66,11 @@ class LabelsEntry:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
+    @property
+    def device(self) -> torch.device:
+        """get the current device used for the values of this labels entry"""
+        raise THIS_CODE_SHOULD_NOT_RUN
+
     def print(self) -> str:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
@@ -76,7 +81,7 @@ class LabelsEntry:
         """number of dimensions in this labels entry"""
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def __getitem__(self, dimension: Union[str, int]) -> int:
+    def __getitem__(self, index: Union[str, int]) -> int:
         """get the value associated with the dimension in this entry"""
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -171,14 +176,21 @@ class Labels:
     True
     """
 
-    def __init__(self, names: StrSequence, values: torch.Tensor):
+    def __init__(
+        self,
+        names: StrSequence,
+        values: torch.Tensor,
+        assume_unique: bool = False,
+    ):
         """
-        :param names: names of the dimensions in the new labels. A single string
-                      is transformed into a list with one element, i.e.
-                      ``names="a"`` is the same as ``names=["a"]``.
-
-        :param values: values of the labels, this needs to be a 2-dimensional
-                       array of integers.
+        :param names: names of the dimensions in the new labels. A single string is
+            transformed into a list with one element, i.e. ``names="a"`` is the same as
+            ``names=["a"]``.
+        :param values: values of the labels, this needs to be a 2-dimensional array of
+            integers.
+        :param assume_unique: skip uniqueness checks inside metatensor. This should only
+            be set to ``True`` if you can ensure that label entries are already unique,
+            either by construction or because you checked.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -505,7 +517,11 @@ class Labels:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def to(self, device: Union[str, torch.device], non_blocking=False) -> "Labels":
+    def to(
+        self,
+        device: Union[str, torch.device],
+        non_blocking: bool = False,
+    ) -> "Labels":
         """
         Move the values for these Labels to the given ``device``. If ``non_blocking`` is
         ``True``, this tries to move the data asynchronously. See
@@ -628,7 +644,7 @@ class Labels:
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
-    def print(self, max_entries: int, indent: int) -> str:
+    def print(self, max_entries: int, indent: int = 0) -> str:
         """print these :py:class:`Labels` to a string
 
         :param max_entries: how many entries to print, use ``-1`` to print everything
@@ -732,20 +748,6 @@ class TensorBlock:
             data.
         :param properties: labels describing the properties (last dimension of the
             array)
-
-        .. warning::
-
-            PyTorch can execute ``static`` functions (like this one) coming from a
-            TorchScript extension, but fails when trying to save code calling this
-            function with :py:func:`torch.jit.save`, giving the following error:
-
-                Failed to downcast a Function to a GraphFunction
-
-            This issue is reported as `PyTorch#115639 <pytorch-115639>`_. In the
-            meantime, if you need to :py:func:`torch.jit.save` code containing
-            this function, you can implement it manually in a few lines.
-
-            .. _pytorch-115639: https://github.com/pytorch/pytorch/issues/115639
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1278,7 +1280,7 @@ class TensorMap:
     def keys_to_samples(
         self,
         keys_to_move: Union[StrSequence, Labels],
-        fill_value: Union[int, float, complex] = 0,
+        fill_value: Union[int, float, bool, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1306,7 +1308,7 @@ class TensorMap:
 
         :param keys_to_move: description of the keys to move
         :param fill_value: scalar value used to fill missing entries in the
-            merged blocks. Accepts any numeric type (int, float, bool).
+            merged blocks. Accepts any numeric type (int, float, bool, complex).
             Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
@@ -1317,7 +1319,7 @@ class TensorMap:
     def keys_to_properties(
         self,
         keys_to_move: Union[StrSequence, Labels],
-        fill_value: Union[int, float, complex] = 0,
+        fill_value: Union[int, float, bool, complex] = 0,
         sort_samples: bool = True,
     ) -> "TensorMap":
         """
@@ -1359,7 +1361,7 @@ class TensorMap:
 
         :param keys_to_move: description of the keys to move
         :param fill_value: scalar value used to fill missing entries in the
-            merged blocks. Accepts any numeric type (int, float, bool).
+            merged blocks. Accepts any numeric type (int, float, bool, complex).
             Defaults to 0.
         :param sort_samples: whether to sort the merged samples or keep them in
             the order in which they appear in the original blocks
