@@ -633,8 +633,11 @@ public:
      *
      * \endverbatim
      */
-    static Labels load(const std::string& path) {
-        return metatensor::io::load_labels(path);
+    static Labels load(
+        const std::string& path,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_labels(path, create_array);
     }
 
     /*!
@@ -647,8 +650,12 @@ public:
      *
      * \endverbatim
      */
-    static Labels load_buffer(const uint8_t* buffer, size_t buffer_count) {
-        return metatensor::io::load_labels_buffer(buffer, buffer_count);
+    static Labels load_buffer(
+        const uint8_t* buffer,
+        size_t buffer_count,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_labels_buffer(buffer, buffer_count, create_array);
     }
 
     /*!
@@ -662,8 +669,11 @@ public:
      * \endverbatim
      */
     template <typename Buffer>
-    static Labels load_buffer(const Buffer& buffer) {
-        return metatensor::io::load_labels_buffer<Buffer>(buffer);
+    static Labels load_buffer(
+        const Buffer& buffer,
+        mts_create_array_callback_t create_array = details::default_create_array
+    ) {
+        return metatensor::io::load_labels_buffer<Buffer>(buffer, create_array);
     }
 
     /*!
@@ -724,8 +734,8 @@ private:
         Labels(names, values.data(), values.shape()[0], assume_unique{}) {}
 
     friend Labels details::labels_from_cxx(const std::vector<std::string>& names, const int32_t* values, size_t count, bool assume_unique);
-    friend Labels io::load_labels(const std::string &path);
-    friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count);
+    friend Labels io::load_labels(const std::string &path, mts_create_array_callback_t create_array);
+    friend Labels io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count, mts_create_array_callback_t create_array);
 
     friend class metatensor_torch::LabelsHolder;
 

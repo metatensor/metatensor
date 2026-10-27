@@ -14,9 +14,9 @@ use super::{mts_create_array_callback_t, wrap_create_array};
 
 /// Load a tensor map from the file at the given path.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// The memory allocated by this function should be released using
 /// `mts_tensormap_free`.
@@ -56,9 +56,8 @@ use super::{mts_create_array_callback_t, wrap_create_array};
 /// the `info.json` file, unless empty.
 ///
 /// @param path path to the file as a NULL-terminated UTF-8 string
-/// @param create_array callback function that will be used to create data
-///                     arrays inside each block
-///
+/// @param create_array callback function that will be used to create all
+///                     arrays inside the blocks and keys
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.
@@ -114,18 +113,17 @@ pub unsafe extern "C" fn mts_tensormap_load(
 
 /// Load a tensor map from the given in-memory buffer.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// The memory allocated by this function should be released using
 /// `mts_tensormap_free`.
 ///
 /// @param buffer buffer containing a previously serialized `mts_tensormap_t`
 /// @param buffer_count number of elements in the buffer
-/// @param create_array callback function that will be used to create data
-///                     arrays inside each block
-///
+/// @param create_array callback function that will be used to create all
+///                     arrays inside the blocks and keys
 /// @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
 ///          case of error. In case of error, you can use `mts_last_error()`
 ///          to get the error message.

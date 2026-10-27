@@ -90,8 +90,8 @@ class mts_array_t(ctypes.Structure):
 
 
 mts_data_origin_t = ctypes.c_uint64
-mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 mts_create_array_callback_t = CFUNCTYPE(mts_status_t, POINTER(c_uintptr_t), c_uintptr_t, DLDataType, POINTER(mts_array_t))
+mts_realloc_buffer_t = CFUNCTYPE(ctypes.c_char_p, ctypes.c_void_p, ctypes.c_char_p, c_uintptr_t)
 
 
 mts_data_movement_t._fields_ = [
@@ -404,11 +404,24 @@ def setup_functions(lib):
     ]
     lib.mts_labels_load.restype = POINTER(mts_labels_t)
 
+    lib.mts_labels_load_custom_array.argtypes = [
+        ctypes.c_char_p,
+        mts_create_array_callback_t,
+    ]
+    lib.mts_labels_load_custom_array.restype = POINTER(mts_labels_t)
+
     lib.mts_labels_load_buffer.argtypes = [
         ctypes.c_char_p,
         c_uintptr_t,
     ]
     lib.mts_labels_load_buffer.restype = POINTER(mts_labels_t)
+
+    lib.mts_labels_load_buffer_custom_array.argtypes = [
+        ctypes.c_char_p,
+        c_uintptr_t,
+        mts_create_array_callback_t,
+    ]
+    lib.mts_labels_load_buffer_custom_array.restype = POINTER(mts_labels_t)
 
     lib.mts_labels_save.argtypes = [
         ctypes.c_char_p,

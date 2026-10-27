@@ -5,10 +5,11 @@ from typing import BinaryIO, Union
 
 import numpy as np
 
+from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
 from .._labels import Labels
 from .._status import check_pointer
-from ._utils import _save_buffer_raw
+from ._utils import CreateArrayCallback, _save_buffer_raw, create_numpy_array
 
 
 def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
@@ -20,23 +21,13 @@ def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
         mode.
     """
     if isinstance(file, (str, pathlib.Path)):
-        lib = _get_library()
-
-        if isinstance(file, str):
-            path = file.encode("utf8")
-        elif isinstance(file, pathlib.Path):
-            path = bytes(file)
-
-        ptr = lib.mts_labels_load(path)
-        check_pointer(ptr)
-        return Labels.unsafe_from_ptr(ptr)
-
+        return load_labels_custom_array(file, create_numpy_array)
     else:
         # assume we have a file-like object
         buffer = file.read()
         assert isinstance(buffer, bytes)
 
-        return load_labels_buffer(buffer)
+        return load_labels_buffer_custom_array(buffer, create_numpy_array)
 
 
 def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
@@ -45,12 +36,74 @@ def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
 
     :param buffer: in-memory buffer containing saved :py:class:`Labels`
     """
+    return load_labels_buffer_custom_array(buffer, create_numpy_array)
+
+
+def load_labels_custom_array(
+    path: Union[str, pathlib.Path],
+    create_array: "CreateArrayCallback",
+) -> Labels:
+    """
+    Load previously saved :py:class:`Labels` from the given path using a custom array
+    creation callback.
+
+    This is an advanced functionality, which should not be needed by most users.
+
+    This function allows to specify the kind of array to use when loading the labels
+    values through the ``create_array`` callback. This callback should take four
+    arguments: a pointer to the shape, the number of elements in the shape, the
+    ``DLDataType`` of the array, and a pointer to the ``mts_array_t`` to be filled.
+
+    :py:func:`metatensor.io.create_numpy_array` and
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
+    torch arrays respectively.
+
+    :param path: path of the file to load
+    :param create_array: callback used to create arrays as needed
+    """
+    lib = _get_library()
+
+    if isinstance(path, str):
+        path = path.encode("utf8")
+    elif isinstance(path, pathlib.Path):
+        path = bytes(path)
+
+    ptr = lib.mts_labels_load_custom_array(
+        path, mts_create_array_callback_t(create_array)
+    )
+    check_pointer(ptr)
+    return Labels.unsafe_from_ptr(ptr)
+
+
+def load_labels_buffer_custom_array(
+    buffer: Union[bytes, bytearray, memoryview],
+    create_array: "CreateArrayCallback",
+) -> Labels:
+    """
+    Load previously saved :py:class:`Labels` from the given buffer using a custom array
+    creation callback.
+
+    This is an advanced functionality, which should not be needed by most users.
+
+    This function allows to specify the kind of array to use when loading the labels
+    values through the ``create_array`` callback. This callback should take four
+    arguments: a pointer to the shape, the number of elements in the shape, the
+    ``DLDataType`` of the array, and a pointer to the ``mts_array_t`` to be filled.
+
+    :py:func:`metatensor.io.create_numpy_array` and
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
+    and torch arrays respectively.
+
+    :param buffer: in-memory buffer containing saved :py:class:`Labels`
+    :param create_array: callback used to create arrays as needed
+    """
     lib = _get_library()
 
     array = np.frombuffer(buffer, dtype=np.uint8)
-    ptr = lib.mts_labels_load_buffer(
+    ptr = lib.mts_labels_load_buffer_custom_array(
         array.ctypes.data_as(ctypes.c_char_p),
         array.nbytes,
+        mts_create_array_callback_t(create_array),
     )
     check_pointer(ptr)
 

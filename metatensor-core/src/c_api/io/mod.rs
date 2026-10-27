@@ -10,7 +10,7 @@ mod block;
 mod tensor;
 
 /// Function pointer to create a new `mts_array_t` when de-serializing tensor
-/// maps.
+/// maps, blocks, or labels.
 ///
 /// This function gets the `shape` of the array (the `shape` contains
 /// `shape_count` elements) and the `dtype` (a `DLDataType` describing the
@@ -55,8 +55,7 @@ fn wrap_create_array(create_array: &mts_create_array_callback_t) -> impl Fn(&[us
 }
 
 
-/// Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
-/// and `mts_labels_save_buffer`.
+/// Callback to grow in-memory buffers for the `xxx_save_buffer` functions.
 ///
 /// This function takes an existing pointer in `ptr` and a new length in
 /// `new_size`, and grow the allocation. If the pointer is `NULL`, it should

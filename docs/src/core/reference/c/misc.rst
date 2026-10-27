@@ -91,17 +91,26 @@ Labels
 
 - :c:func:`mts_labels_save`: serialize and save a ``mts_labels_t`` to a file
 - :c:func:`mts_labels_load`: load a serialized ``mts_labels_t`` from a file
+- :c:func:`mts_labels_load_custom_array`: load a serialized ``mts_labels_t``
+  from a file, using a custom array creation callback
 - :c:func:`mts_labels_save_buffer`: serialize and save a ``mts_labels_t``
   to an in-memory buffer
 - :c:func:`mts_labels_load_buffer`: load serialized ``mts_labels_t`` from
   an in-memory buffer
+- :c:func:`mts_labels_load_buffer_custom_array`: load serialized
+  ``mts_labels_t`` from an in-memory buffer, using a custom array creation
+  callback
 
 - :c:func:`mts_tensormap_load`: create the Rust-side data for the labels
 
 .. doxygenfunction:: mts_labels_load
 
+.. doxygenfunction:: mts_labels_load_custom_array
+
 .. doxygenfunction:: mts_labels_save
 
 .. doxygenfunction:: mts_labels_load_buffer
+
+.. doxygenfunction:: mts_labels_load_buffer_custom_array
 
 .. doxygenfunction:: mts_labels_save_buffer

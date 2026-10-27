@@ -353,21 +353,8 @@ typedef struct mts_array_t {
 } mts_array_t;
 
 /**
- * Function pointer to grow in-memory buffers for `mts_tensormap_save_buffer`
- * and `mts_labels_save_buffer`.
- *
- * This function takes an existing pointer in `ptr` and a new length in
- * `new_size`, and grow the allocation. If the pointer is `NULL`, it should
- * create a new allocation. If it is unable to allocate memory, it should
- * return a `NULL` pointer. This follows the API of the standard C function
- * `realloc`, with an additional parameter `user_data` that can be used to hold
- * custom data.
- */
-typedef uint8_t *(*mts_realloc_buffer_t)(void *user_data, uint8_t *ptr, uintptr_t new_size);
-
-/**
  * Function pointer to create a new `mts_array_t` when de-serializing tensor
- * maps.
+ * maps, blocks, or labels.
  *
  * This function gets the `shape` of the array (the `shape` contains
  * `shape_count` elements) and the `dtype` (a `DLDataType` describing the
@@ -386,6 +373,18 @@ typedef mts_status_t (*mts_create_array_callback_t)(const uintptr_t *shape,
                                                     uintptr_t shape_count,
                                                     DLDataType dtype,
                                                     struct mts_array_t *array);
+
+/**
+ * Callback to grow in-memory buffers for the `xxx_save_buffer` functions.
+ *
+ * This function takes an existing pointer in `ptr` and a new length in
+ * `new_size`, and grow the allocation. If the pointer is `NULL`, it should
+ * create a new allocation. If it is unable to allocate memory, it should
+ * return a `NULL` pointer. This follows the API of the standard C function
+ * `realloc`, with an additional parameter `user_data` that can be used to hold
+ * custom data.
+ */
+typedef uint8_t *(*mts_realloc_buffer_t)(void *user_data, uint8_t *ptr, uintptr_t new_size);
 
 #ifdef __cplusplus
 extern "C" {
@@ -1200,6 +1199,27 @@ mts_status_t mts_tensormap_dtype(const struct mts_tensormap_t *tensor, DLDataTyp
 const struct mts_labels_t *mts_labels_load(const char *path);
 
 /**
+ * Load labels from the file at the given path.
+ *
+ * The array containing the labels values will be created with the given
+ * `create_array` callback, and filled by this function with the
+ * corresponding data.
+ *
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param path path to the file as a NULL-terminated UTF-8 string
+ * @param create_array callback function that will be used to create the
+ *                     array containing the labels values.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+const struct mts_labels_t *mts_labels_load_custom_array(const char *path,
+                                                        mts_create_array_callback_t create_array);
+
+/**
  * Load labels from the given in-memory buffer.
  *
  * This function allocates memory which must be released with
@@ -1213,6 +1233,29 @@ const struct mts_labels_t *mts_labels_load(const char *path);
  *          to get the error message.
  */
 const struct mts_labels_t *mts_labels_load_buffer(const uint8_t *buffer, uintptr_t buffer_count);
+
+/**
+ * Load labels from the given in-memory buffer.
+ *
+ * The array containing the labels values will be created with the given
+ * `create_array` callback, and filled by this function with the
+ * corresponding data.
+ *
+ * This function allocates memory which must be released with
+ * `mts_labels_free` when you don't need it anymore.
+ *
+ * @param buffer buffer containing a previously serialized `mts_labels_t`
+ * @param buffer_count number of elements in the buffer
+ * @param create_array callback function that will be used to create the
+ *                     array containing the labels values.
+ *
+ * @returns A pointer to the newly allocated labels, or a `NULL` pointer in
+ *          case of error. In case of error, you can use `mts_last_error()`
+ *          to get the error message.
+ */
+const struct mts_labels_t *mts_labels_load_buffer_custom_array(const uint8_t *buffer,
+                                                               uintptr_t buffer_count,
+                                                               mts_create_array_callback_t create_array);
 
 /**
  * Save labels to the file at the given path.
@@ -1265,9 +1308,9 @@ mts_status_t mts_labels_save_buffer(uint8_t **buffer,
 /**
  * Load a tensor block from the file at the given path.
  *
- * Arrays for the values and gradient data will be created with the given
- * `create_array` callback, and filled by this function with the corresponding
- * data.
+ * Arrays for the values, gradient and labels data will be created with the
+ * given `create_array` callback, and filled by this function with the
+ * corresponding data.
  *
  * The memory allocated by this function should be released using
  * `mts_block_free`.
@@ -1276,9 +1319,8 @@ mts_status_t mts_labels_save_buffer(uint8_t **buffer,
  * serialize the data.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
- * @param create_array callback function that will be used to create data
- *                     arrays inside each block
- *
+ * @param create_array callback function that will be used to create all
+ *                     arrays inside the block
  * @returns A pointer to the newly allocated block, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
@@ -1288,18 +1330,17 @@ struct mts_block_t *mts_block_load(const char *path, mts_create_array_callback_t
 /**
  * Load a tensor block from the given in-memory buffer.
  *
- * Arrays for the values and gradient data will be created with the given
- * `create_array` callback, and filled by this function with the corresponding
- * data.
+ * Arrays for the values, gradient and labels data will be created with the
+ * given `create_array` callback, and filled by this function with the
+ * corresponding data.
  *
  * The memory allocated by this function should be released using
  * `mts_block_free`.
  *
  * @param buffer buffer containing a previously serialized `mts_block_t`
  * @param buffer_count number of elements in the buffer
- * @param create_array callback function that will be used to create data
- *                     arrays inside each block
- *
+ * @param create_array callback function that will be used to create all
+ *                     arrays inside the block
  * @returns A pointer to the newly allocated tensor block, or a `NULL` pointer
  *          in case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
@@ -1358,9 +1399,9 @@ mts_status_t mts_block_save_buffer(uint8_t **buffer,
 /**
  * Load a tensor map from the file at the given path.
  *
- * Arrays for the values and gradient data will be created with the given
- * `create_array` callback, and filled by this function with the corresponding
- * data.
+ * Arrays for the values, gradient and labels data will be created with the
+ * given `create_array` callback, and filled by this function with the
+ * corresponding data.
  *
  * The memory allocated by this function should be released using
  * `mts_tensormap_free`.
@@ -1400,9 +1441,8 @@ mts_status_t mts_block_save_buffer(uint8_t **buffer,
  * the `info.json` file, unless empty.
  *
  * @param path path to the file as a NULL-terminated UTF-8 string
- * @param create_array callback function that will be used to create data
- *                     arrays inside each block
- *
+ * @param create_array callback function that will be used to create all
+ *                     arrays inside the blocks and keys
  * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.
@@ -1413,18 +1453,17 @@ struct mts_tensormap_t *mts_tensormap_load(const char *path,
 /**
  * Load a tensor map from the given in-memory buffer.
  *
- * Arrays for the values and gradient data will be created with the given
- * `create_array` callback, and filled by this function with the corresponding
- * data.
+ * Arrays for the values, gradient and labels data will be created with the
+ * given `create_array` callback, and filled by this function with the
+ * corresponding data.
  *
  * The memory allocated by this function should be released using
  * `mts_tensormap_free`.
  *
  * @param buffer buffer containing a previously serialized `mts_tensormap_t`
  * @param buffer_count number of elements in the buffer
- * @param create_array callback function that will be used to create data
- *                     arrays inside each block
- *
+ * @param create_array callback function that will be used to create all
+ *                     arrays inside the blocks and keys
  * @returns A pointer to the newly allocated tensor map, or a `NULL` pointer in
  *          case of error. In case of error, you can use `mts_last_error()`
  *          to get the error message.

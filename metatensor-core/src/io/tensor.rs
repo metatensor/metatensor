@@ -43,9 +43,9 @@ pub fn looks_like_tensormap_data(mut data: PathOrBuffer) -> bool {
 
 /// Load the serialized tensor map from the given path.
 ///
-/// Arrays for the values and gradient data will be created with the given
-/// `create_array` callback, and filled by this function with the corresponding
-/// data.
+/// Arrays for the values, gradient and labels data will be created with the
+/// given `create_array` callback, and filled by this function with the
+/// corresponding data.
 ///
 /// See the C API documentation for more information on the file format.
 pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
@@ -55,7 +55,7 @@ pub fn load<R, F>(reader: R, create_array: F) -> Result<TensorMap, Error>
     let mut archive = ZipArchive::new(reader).map_err(|e| ("<root>".into(), e))?;
 
     let path = String::from("keys.npy");
-    let keys = load_labels(archive.by_name(&path).map_err(|e| (path, e))?)?;
+    let keys = load_labels(archive.by_name(&path).map_err(|e| (path, e))?, &create_array)?;
 
     let mut blocks = Vec::new();
     for block_i in 0..keys.count() {

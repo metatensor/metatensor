@@ -352,6 +352,7 @@ mod custom_array {
 
     const BLOCK_DATA_PATH: &str = "../../metatensor-core/tests/block.mts";
     const TENSOR_DATA_PATH: &str = "../../metatensor-core/tests/data.mts";
+    const LABELS_DATA_PATH: &str = "../../metatensor-core/tests/keys.mts";
 
     static CALL_COUNT: AtomicUsize = AtomicUsize::new(0);
     static CREATE_ARRAY_MUTEX: std::sync::Mutex<()> = std::sync::Mutex::new(());
@@ -438,6 +439,36 @@ mod custom_array {
 
         assert!(CALL_COUNT.load(Ordering::SeqCst) > 0);
         assert_eq!(tensor.keys().count(), 27);
+    }
+
+    #[test]
+    fn labels_load_file() {
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
+
+        let labels = metatensor::io::load_labels_custom_array(LABELS_DATA_PATH, Some(create_array)).unwrap();
+
+        assert_eq!(CALL_COUNT.load(Ordering::SeqCst), 1);
+        assert_eq!(labels.names(), ["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
+        assert_eq!(labels.count(), 27);
+        assert_eq!(labels, metatensor::io::load_labels(LABELS_DATA_PATH).unwrap());
+    }
+
+    #[test]
+    fn labels_load_buffer() {
+        let _guard = CREATE_ARRAY_MUTEX.lock().unwrap();
+        CALL_COUNT.store(0, Ordering::SeqCst);
+
+        let mut file = std::fs::File::open(LABELS_DATA_PATH).unwrap();
+        let mut buffer = Vec::new();
+        file.read_to_end(&mut buffer).unwrap();
+
+        let labels = metatensor::io::load_labels_buffer_custom_array(&buffer, Some(create_array)).unwrap();
+
+        assert_eq!(CALL_COUNT.load(Ordering::SeqCst), 1);
+        assert_eq!(labels.names(), ["o3_lambda", "o3_sigma", "center_type", "neighbor_type"]);
+        assert_eq!(labels.count(), 27);
+        assert_eq!(labels, metatensor::io::load_labels_buffer(&buffer).unwrap());
     }
 }
 

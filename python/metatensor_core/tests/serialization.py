@@ -407,6 +407,81 @@ def test_load_labels(memory_buffer, standalone_fn):
 
 
 @pytest.mark.parametrize("memory_buffer", (True, False))
+@pytest.mark.parametrize("array", ("numpy", "torch"))
+def test_load_labels_custom_array(memory_buffer, array):
+    path = os.path.join(
+        os.path.dirname(__file__),
+        "..",
+        "..",
+        "..",
+        "metatensor-core",
+        "tests",
+        "keys.mts",
+    )
+
+    if array == "numpy":
+        create_array = mts.io.create_numpy_array
+    else:
+        torch = pytest.importorskip("torch")
+        create_array = mts.io.create_torch_array
+
+    if memory_buffer:
+        with open(path, "rb") as fd:
+            buffer = fd.read()
+
+        labels = mts.io.load_labels_buffer_custom_array(buffer, create_array)
+    else:
+        labels = mts.io.load_labels_custom_array(path, create_array)
+
+    assert isinstance(labels, Labels)
+    assert labels.names == [
+        "o3_lambda",
+        "o3_sigma",
+        "center_type",
+        "neighbor_type",
+    ]
+    assert len(labels) == 27
+
+    if array == "numpy":
+        assert isinstance(labels.values, np.ndarray)
+        assert labels.values.dtype == np.int32
+    else:
+        assert isinstance(labels.values, torch.Tensor)
+        assert labels.values.dtype == torch.int32
+
+    reference = mts.load_labels(path)
+    assert labels == reference
+
+
+@pytest.mark.parametrize("array", ("numpy", "torch"))
+def test_load_custom_array_labels(array):
+    root = os.path.join(
+        os.path.dirname(__file__), "..", "..", "..", "metatensor-core", "tests"
+    )
+
+    if array == "numpy":
+        create_array = mts.io.create_numpy_array
+        array_type = np.ndarray
+    else:
+        torch = pytest.importorskip("torch")
+        create_array = mts.io.create_torch_array
+        array_type = torch.Tensor
+
+    tensor = mts.io.load_custom_array(os.path.join(root, "data.mts"), create_array)
+    assert isinstance(tensor.keys.values, array_type)
+
+    block = mts.io.load_block_custom_array(
+        os.path.join(root, "block.mts"), create_array
+    )
+    for labels in [block.samples, *block.components, block.properties]:
+        assert isinstance(labels.values, array_type)
+
+    gradient = block.gradient("positions")
+    for labels in [gradient.samples, *gradient.components]:
+        assert isinstance(labels.values, array_type)
+
+
+@pytest.mark.parametrize("memory_buffer", (True, False))
 @pytest.mark.parametrize("standalone_fn", (True, False))
 def test_save_labels(memory_buffer, standalone_fn, tmpdir, labels):
     """Check that as saved file loads fine with numpy."""
