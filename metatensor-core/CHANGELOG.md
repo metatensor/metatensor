@@ -17,6 +17,15 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- The Python API accepts `jax.Array` as `TensorBlock` values (and gradients), next
+  to NumPy arrays and torch tensors. Blocks can be converted with
+  `.to(arrays="jax")`, moved between JAX devices with `.to(device=...)`, and all
+  operations that create or move data return JAX arrays. Labels stay NumPy arrays.
+  Traced values (inside `jax.jit`, `jax.grad`, ...) are rejected, since metatensor
+  stores concrete arrays.
+
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 
 ### Fixed

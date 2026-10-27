@@ -19,6 +19,7 @@ from .._c_api import (
 from .._status import MetatensorError, check_status
 from ._array import (
     _KNOWN_ARRAY_WRAPPERS,
+    _origin_jax,
     _origin_numpy,
     _origin_pytorch,
     _register_origin,
@@ -76,7 +77,7 @@ def mts_array_was_allocated_by_python(mts_array):
 
 
 def _is_python_origin(origin):
-    return origin in [_origin_numpy(), _origin_pytorch()]
+    return origin in [_origin_numpy(), _origin_pytorch(), _origin_jax()]
 
 
 def data_origin(mts_array):
