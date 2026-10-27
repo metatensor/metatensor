@@ -22,6 +22,7 @@ from ._extract import (  # noqa: F401
     data_origin,
     data_origin_name,
     import_array_backend,
+    labels_array_backend,
     mts_array_device,
     mts_array_dtype,
     mts_array_shape,

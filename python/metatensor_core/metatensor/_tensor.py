@@ -61,9 +61,17 @@ class TensorMap:
         if not isinstance(keys, Labels):
             raise TypeError(f"`keys` must be metatensor Labels, not {type(keys)}")
 
-        self._array_backend = keys._array_backend
-
         blocks = list(blocks)
+        self._array_backend = keys._array_backend
+        if (
+            len(blocks) != 0
+            and isinstance(blocks[0], TensorBlock)
+            and _data.labels_array_backend(blocks[0]._array_backend)
+            == self._array_backend
+        ):
+            # the keys are metadata, they use numpy when the values use JAX
+            self._array_backend = blocks[0]._array_backend
+
         for block in blocks:
             if not isinstance(block, TensorBlock):
                 raise TypeError(
@@ -849,9 +857,9 @@ class TensorMap:
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
         :param Optional[str] array_backend: new backend to use for the arrays. This can
-            be either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing
-            backend); and must be given as a keyword argument
-            (``array_backend="numpy"``). This parameter was previously called
+            be either ``"numpy"``, ``"torch"``, ``"jax"`` (the labels use numpy) or
+            ``None`` (keeps the existing backend); and must be given as a keyword
+            argument (``array_backend="numpy"``). This parameter was previously called
             ``arrays``, which is still accepted but deprecated.
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorMap`
             contains ``"torch"`` arrays, the function tries to move the data

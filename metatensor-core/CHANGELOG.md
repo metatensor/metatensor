@@ -46,6 +46,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `TensorBlock.values_dlpack()` and `Labels.values_dlpack()` to access the
   values as `ctypes_dlpack.DLPackArray`, and use them with any library
   supporting DLPack.
+- The Python API accepts `jax.Array` as `TensorBlock` values (and gradients), next
+  to NumPy arrays and torch tensors, with `array_backend="jax"`. Blocks can be
+  converted with `.to(array_backend="jax")`, moved between JAX devices with
+  `.to(device=...)`, and all operations that create or move data return JAX
+  arrays. Labels stay NumPy arrays.
 
 #### Deprecated
 

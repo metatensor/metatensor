@@ -22,6 +22,7 @@ from .._c_api import (
 from .._status import MetatensorError, check_status
 from ._array import (
     _KNOWN_ARRAY_WRAPPERS,
+    _origin_jax,
     _origin_numpy,
     _origin_pytorch,
     array_device,
@@ -29,16 +30,23 @@ from ._array import (
 )
 
 
-ArrayBackend = Literal["numpy", "torch"]
+ArrayBackend = Literal["numpy", "torch", "jax"]
 """
 Array backend used to give access to data that was not allocated by Python. This can be
 one of:
 
 - ``"numpy"``: data is returned as :py:class:`numpy.ndarray`, and must live on CPU;
-- ``"torch"``: data is returned as :py:class:`torch.Tensor`.
+- ``"torch"``: data is returned as :py:class:`torch.Tensor`;
+- ``"jax"``: data is returned as :py:class:`jax.Array`. :py:class:`Labels` are metadata,
+  and use ``"numpy"`` instead.
 """
 
 _ARRAY_BACKENDS = typing.get_args(ArrayBackend)
+
+
+def labels_array_backend(array_backend: str) -> str:
+    """Array backend used by the Labels of data using ``array_backend``"""
+    return "numpy" if array_backend == "jax" else array_backend
 
 
 def check_array_backend(array_backend: str) -> str:
@@ -87,6 +95,8 @@ def mts_array_to_python_array(mts_array, parent=None, array_backend="numpy"):
     check_array_backend(array_backend)
     if array_backend == "torch":
         backend_module = import_array_backend(array_backend)
+    elif array_backend == "jax":
+        backend_module = import_array_backend(array_backend).numpy
 
     device = mts_array_device(mts_array)
     if array_backend == "numpy" and device.device_type != DLDeviceType.kDLCPU:
@@ -192,7 +202,7 @@ def mts_array_was_allocated_by_python(mts_array):
 
 
 def _is_python_origin(origin):
-    return origin in [_origin_numpy(), _origin_pytorch()]
+    return origin in [_origin_numpy(), _origin_pytorch(), _origin_jax()]
 
 
 def data_origin(mts_array):
