@@ -268,7 +268,7 @@ def test_to(devices_to_test):
             check_device_dtype(module.sub_module, device, torch.float32)
 
 
-def test_state_dict_labels(tmpdir):
+def test_state_dict_labels():
     def check_state_dict(entry):
         assert isinstance(entry, tuple)
         assert entry[0] == "metatensor.Labels"
@@ -717,3 +717,22 @@ def test_non_persistent_buffer():
     assert module.persistent_labels.names == ["test"]
     # non-persistent buffer is not restored
     assert module.non_persistent_labels.names == ["something"]
+
+
+def test_non_default_dtype_device(devices_to_test):
+    class DtypeDeviceModule(nn.Module):
+        def __init__(self, device=None, dtype=None):
+            super().__init__(device=device, dtype=dtype)
+
+    module = DtypeDeviceModule(device="cpu", dtype=torch.float32)
+    assert module._mts_helper.device.type == "cpu"
+    assert module._mts_helper.dtype == torch.float32
+
+    module = DtypeDeviceModule(dtype=torch.float64)
+    assert module._mts_helper.device.type == "cpu"
+    assert module._mts_helper.dtype == torch.float64
+
+    for device in devices_to_test:
+        module = DtypeDeviceModule(device=device, dtype=torch.float32)
+        assert module._mts_helper.device.type == device
+        assert module._mts_helper.dtype == torch.float32
