@@ -63,12 +63,14 @@ namespace details {
     }
 
     /// Get the N-dimensional index corresponding to the given linear `index`
-    /// and array `shape`
+    /// and array `shape`, assuming row-major order. This is the inverse of
+    /// `linear_index`.
     inline std::vector<size_t> cartesian_index(const std::vector<size_t>& shape, size_t index) {
         auto result = std::vector<size_t>(shape.size(), 0);
-        for (size_t i=0; i<shape.size(); i++) {
-            result[i] = index % shape[i];
-            index = index / shape[i];
+        for (size_t i=shape.size(); i>0; i--) {
+            auto dim = i - 1;
+            result[dim] = index % shape[dim];
+            index = index / shape[dim];
         }
         assert(index == 0);
         return result;
@@ -1445,9 +1447,14 @@ public:
             throw metatensor::Error("invalid shape in reshape");
         }
         shape_ = shape;
+        strides_ = details::contiguous_strides(shape_);
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+        if (axis_1 >= shape_.size() || axis_2 >= shape_.size()) {
+            throw metatensor::Error("out of bounds axis in swap_axes");
+        }
+
         auto new_data = std::vector<storage_t>(details::product(shape_), storage_t{});
         auto new_shape = shape_;
         std::swap(new_shape[axis_1], new_shape[axis_2]);
@@ -1460,6 +1467,7 @@ public:
         }
 
         shape_ = std::move(new_shape);
+        strides_ = details::contiguous_strides(shape_);
         data_ = std::make_shared<std::vector<storage_t>>(std::move(new_data));
     }
 

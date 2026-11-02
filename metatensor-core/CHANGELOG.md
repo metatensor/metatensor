@@ -27,6 +27,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
+### Fixed
+
+- Fixed a bug in `reshape` and `swap_axes` implementation in
+  `metatensor::SimpleDataArray` that would create invalid arrays through
+  `components_to_properties`.
+
 #### Changed
 
 - `metatensor::io::load_labels()`, `metatensor::io::load_labels_buffer()`,
@@ -40,6 +46,7 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `metatensor.io.load_labels_custom_array()` and
   `metatensor.io.load_labels_buffer_custom_array()` to load `Labels` values
   with a custom array type
+
 
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 
