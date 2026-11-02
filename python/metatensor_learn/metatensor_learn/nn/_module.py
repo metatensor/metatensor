@@ -83,12 +83,17 @@ class Module(torch.nn.Module):
     _mts_buffer_names: List[str]
     _mts_non_persistent_buffers: List[str]
 
-    def __init__(self):
-        """"""
+    def __init__(self, device=None, dtype=None):
+        """
+        :param device: The device all data in this module is stored on, defaults to CPU
+        :param dtype: The data type to use for floating point values, defaults to
+            torch's global default.
+        """
         super().__init__()
         self._mts_buffer_names = []
         self._mts_non_persistent_buffers = []
         self.register_buffer("_mts_helper", torch.zeros(0))
+        self.to(dtype=dtype, device=device)
 
     def __setattr__(self, name, value):
         if isinstance(value, Buffer):
