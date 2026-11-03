@@ -27,7 +27,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 
 ### metatensor-core C++
 
-### Fixed
+#### Added
+
+- `metatensor::KokkosDataArray` in the new `<metatensor/kokkos.hpp>` header,
+  an implementation of `DataArrayBase` using `Kokkos::View` to store data on
+  CPU or GPU (with the CUDA, HIP or SYCL Kokkos backends; SYCL is only
+  supported on Intel GPUs).
+
+#### Fixed
 
 - Fixed a bug in `reshape` and `swap_axes` implementation in
   `metatensor::SimpleDataArray` that would create invalid arrays through
