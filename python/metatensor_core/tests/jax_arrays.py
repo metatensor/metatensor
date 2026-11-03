@@ -158,6 +158,40 @@ def test_pytree():
     )
 
 
+def test_pytree_other_leaves():
+    t = tensor()
+    # JAX can rebuild the pytree with leaves that are not arrays of the right shape,
+    # which we can not store in a TensorMap: they are kept in a placeholder instead
+    ndims = jax.tree.map(lambda x: x.ndim, t)
+    assert jax.tree.leaves(ndims) == [3, 3, 3, 3]
+    assert jax.tree.structure(ndims) == jax.tree.structure(t)
+    assert repr(ndims) == "TensorMap(<empty>)"
+
+    factors = jax.tree.map(lambda x: 2.0, t)
+    doubled = jax.tree.map(lambda x, factor: factor * x, t, factors)
+    assert_same_tensor(doubled, jax.tree.map(lambda x: 2 * x, t))
+
+    shapes = jax.eval_shape(lambda t: t.keys_to_properties("key"), t)
+    expected = jax.tree.leaves(t.keys_to_properties("key"))
+    assert [s.shape for s in jax.tree.leaves(shapes)] == [e.shape for e in expected]
+
+
+def test_check_grads():
+    check_grads = pytest.importorskip("jax.test_util").check_grads
+
+    def loss(t):
+        merged = t.keys_to_samples("key").block()
+        return (merged.values**2).sum() + merged.gradient("g").values.sum()
+
+    # finite differences need float64
+    previous = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", True)
+    try:
+        check_grads(loss, (tensor().to(dtype=jnp.float64),), order=1, modes=["rev"])
+    finally:
+        jax.config.update("jax_enable_x64", previous)
+
+
 def test_jit():
     traces = []
 

@@ -55,7 +55,33 @@ class _StaticMetadata:
         )
 
 
+def _is_array(value):
+    from ._data._array import _is_jax_array, _is_numpy_array, _is_torch_array
+
+    return _is_numpy_array(value) or _is_torch_array(value) or _is_jax_array(value)
+
+
+def _placeholder(cls, children, metadata):
+    """
+    JAX can rebuild pytrees with leaves that are not arrays, e.g. shapes in
+    :py:func:`jax.eval_shape`, or anything returned by :py:func:`jax.tree.map`.
+    Metatensor can not store these, so we create an instance of ``cls`` without any
+    data instead, which only keeps the children and metadata to be flattened again.
+    """
+    placeholder = cls.__new__(cls)
+    placeholder._ptr = None
+    placeholder._pytree = (children, metadata)
+    return placeholder
+
+
+def _is_placeholder(value):
+    return getattr(value, "_pytree", None) is not None
+
+
 def _flatten_block(block):
+    if _is_placeholder(block):
+        return block._pytree
+
     # the gradients are blocks themselves, and are flattened recursively
     parameters = block.gradients_list()
     children = [block.values] + [block.gradient(p) for p in parameters]
@@ -72,6 +98,14 @@ def _unflatten_block(metadata, children):
     samples, properties, *components = metadata.labels
     values, *gradients = children
 
+    shape = (len(samples), *(len(c) for c in components), len(properties))
+    if (
+        not _is_array(values)
+        or tuple(values.shape) != shape
+        or any(_is_placeholder(gradient) for gradient in gradients)
+    ):
+        return _placeholder(TensorBlock, children, metadata)
+
     block = TensorBlock(values, samples, components, properties)
     for parameter, gradient in zip(metadata.extra, gradients, strict=True):
         block.add_gradient(parameter, gradient)
@@ -79,11 +113,17 @@ def _unflatten_block(metadata, children):
 
 
 def _flatten_tensor(tensor):
+    if _is_placeholder(tensor):
+        return tensor._pytree
+
     return tensor.blocks(), _StaticMetadata([tensor.keys])
 
 
 def _unflatten_tensor(metadata, blocks):
     from ._tensor import TensorMap
+
+    if any(_is_placeholder(block) for block in blocks):
+        return _placeholder(TensorMap, blocks, metadata)
 
     (keys,) = metadata.labels
     return TensorMap(keys, list(blocks))
