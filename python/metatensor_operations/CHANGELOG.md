@@ -24,6 +24,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `jax.grad`, except `equal`/`allclose` (which return Python booleans) under
   `jax.jit`. Arrays computed from metadata (indices, masks) stay NumPy arrays.
 
+### Fixed
+
+- Gradients of `var_over_properties` and `std_over_properties` for blocks with
+  components, and of `std_over_properties` in TorchScript
+
 ### Changed
 
 - Gradients of `var` and `std` reductions are computed without a Python loop

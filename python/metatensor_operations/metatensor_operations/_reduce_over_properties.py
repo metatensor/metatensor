@@ -218,66 +218,33 @@ def _reduce_over_properties_block(
                 )
 
                 values_grad_result = values_grad_result / bincount
-                sample_indices = gradient.samples.values[:, 0]
+                gradient_times_mean = gradient_values_result * _dispatch.gradient_rows(
+                    values_mean, gradient.samples.values[:, 0], gradient_values_result
+                )
                 if reduction == "var":
-                    for i, _ in enumerate(new_gradient_properties):
-                        shape = (-1,) + (1,) * (gradient_values_result.ndim - 2)
-                        gradient_values_result = _dispatch.scatter_last_dim(
-                            gradient_values_result,
-                            i,
-                            _dispatch.slice_last_dim(gradient_values_result, i)
-                            * _dispatch.slice_last_dim(values_mean, i)[
-                                sample_indices
-                            ].reshape(shape),
-                        )
                     gradient_values_result = 2 * (
-                        values_grad_result - gradient_values_result
+                        values_grad_result - gradient_times_mean
                     )
                 else:  # std
-                    for i, _ in enumerate(new_gradient_properties):
-                        shape = (-1,) + (1,) * (gradient_values_result.ndim - 2)
-                        if torch_jit_is_scripting():
-                            gradient_values_result = _dispatch.scatter_last_dim(
-                                gradient_values_result,
-                                i,
-                                _dispatch.slice_last_dim(gradient_values_result, i)
-                                * _dispatch.slice_last_dim(values_mean, i)[
-                                    sample_indices
-                                ].reshape(shape)
-                                / _dispatch.slice_last_dim(values_result, i)[
-                                    sample_indices
-                                ].reshape(shape),
-                            )
-                        else:
-                            # no need to be torchscript compatible, let's keep it simple
-                            # only numpy raise a warning for division by zero
-                            with np.errstate(divide="ignore", invalid="ignore"):
-                                gradient_values_result = _dispatch.scatter_last_dim(
-                                    gradient_values_result,
-                                    i,
-                                    (
-                                        values_grad_result[..., i]
-                                        - (
-                                            gradient_values_result[..., i]
-                                            * values_mean[..., i][
-                                                sample_indices
-                                            ].reshape(shape)
-                                        )
-                                    )
-                                    / values_result[..., i][sample_indices].reshape(
-                                        shape
-                                    ),
-                                )
-                        gradient_values_result = _dispatch.scatter_last_dim(
-                            gradient_values_result,
-                            i,
-                            _dispatch.nan_to_num(
-                                _dispatch.slice_last_dim(gradient_values_result, i),
-                                nan=0.0,
-                                posinf=0.0,
-                                neginf=0.0,
-                            ),
-                        )
+                    result = _dispatch.gradient_rows(
+                        values_result,
+                        gradient.samples.values[:, 0],
+                        gradient_values_result,
+                    )
+                    if torch_jit_is_scripting():
+                        gradient_values_result = (
+                            values_grad_result - gradient_times_mean
+                        ) / result
+                    else:
+                        # only numpy raise a warning for division by zero
+                        with np.errstate(divide="ignore", invalid="ignore"):
+                            gradient_values_result = (
+                                values_grad_result - gradient_times_mean
+                            ) / result
+
+                    gradient_values_result = _dispatch.nan_to_num(
+                        gradient_values_result, nan=0.0, posinf=0.0, neginf=0.0
+                    )
 
         # no check for the len of the gradient sample is needed because there
         # always will be at least one sample in the gradient
