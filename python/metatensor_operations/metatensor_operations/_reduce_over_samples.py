@@ -131,7 +131,7 @@ def _reduce_over_samples_block(
         block_values, shape=(new_samples.shape[0],) + other_shape
     )
 
-    _dispatch.rows_add(values_sum, block_values, index)
+    values_sum = _dispatch.rows_add(values_sum, block_values, index)
 
     # pre-declare variables that we'll need to use outside of the if block below
     values_mean = _dispatch.empty_like(values_sum, [0])
@@ -147,7 +147,7 @@ def _reduce_over_samples_block(
                 block_values, shape=(new_samples.shape[0],) + other_shape
             )
 
-            _dispatch.rows_add(
+            values_var = _dispatch.rows_add(
                 values_var, (block_values - values_mean[index]) ** 2, index
             )
             values_var = values_var / bincount
@@ -217,57 +217,57 @@ def _reduce_over_samples_block(
             gradient_values,
             shape=(new_gradient_samples.shape[0],) + other_shape,
         )
-        _dispatch.rows_add(gradient_values_result, gradient_values, index_gradient)
+        gradient_values_result = _dispatch.rows_add(
+            gradient_values_result, gradient_values, index_gradient
+        )
 
         if reduction == "mean" or reduction == "var" or reduction == "std":
             bincount = _dispatch.bincount(index_gradient)
             bincount = bincount.reshape((-1,) + (1,) * len(other_shape))
             gradient_values_result = gradient_values_result / bincount
             if reduction == "std" or reduction == "var":
-                values_times_gradient_values = _dispatch.zeros_like(gradient_values)
-
-                for i in range(gradient.samples.values.shape[0]):
-                    s = gradient.samples.entry(i)
-                    values_times_gradient_values[i] = (
-                        gradient_values[i] * block_values[int(s[0])]
+                values_times_gradient_values = (
+                    gradient_values
+                    * _dispatch.gradient_rows(
+                        block_values, gradient.samples.values[:, 0], gradient_values
                     )
+                )
 
                 values_grad_result = _dispatch.zeros_like(
                     gradient_values,
                     shape=(new_gradient_samples.shape[0],) + other_shape,
                 )
-                _dispatch.rows_add(
+                values_grad_result = _dispatch.rows_add(
                     values_grad_result, values_times_gradient_values, index_gradient
                 )
 
                 values_grad_result = values_grad_result / bincount
+                new_samples_index = new_gradient_samples[:, 0]
+                gradient_times_mean = gradient_values_result * _dispatch.gradient_rows(
+                    values_mean, new_samples_index, gradient_values_result
+                )
                 if reduction == "var":
-                    for i, s in enumerate(new_gradient_samples):
-                        gradient_values_result[i] = (
-                            gradient_values_result[i] * values_mean[int(s[0])]
-                        )
                     gradient_values_result = 2 * (
-                        values_grad_result - gradient_values_result
+                        values_grad_result - gradient_times_mean
                     )
                 else:  # std
-                    for i, s in enumerate(new_gradient_samples):
-                        sample = int(s[0])
-                        if torch_jit_is_scripting():
-                            gradient_values_result[i] = (
-                                values_grad_result[i]
-                                - (gradient_values_result[i] * values_mean[sample])
-                            ) / values_result[sample]
-                        else:
-                            # only numpy raise a warning for division by zero
-                            with np.errstate(divide="ignore", invalid="ignore"):
-                                gradient_values_result[i] = (
-                                    values_grad_result[i]
-                                    - (gradient_values_result[i] * values_mean[sample])
-                                ) / values_result[sample]
+                    result = _dispatch.gradient_rows(
+                        values_result, new_samples_index, gradient_values_result
+                    )
+                    if torch_jit_is_scripting():
+                        gradient_values_result = (
+                            values_grad_result - gradient_times_mean
+                        ) / result
+                    else:
+                        # only numpy raise a warning for division by zero
+                        with np.errstate(divide="ignore", invalid="ignore"):
+                            gradient_values_result = (
+                                values_grad_result - gradient_times_mean
+                            ) / result
 
-                        gradient_values_result[i] = _dispatch.nan_to_num(
-                            gradient_values_result[i], nan=0.0, posinf=0.0, neginf=0.0
-                        )
+                    gradient_values_result = _dispatch.nan_to_num(
+                        gradient_values_result, nan=0.0, posinf=0.0, neginf=0.0
+                    )
 
         # no check for the len of the gradient sample is needed because there
         # always will be at least one sample in the gradient
