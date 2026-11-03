@@ -51,6 +51,13 @@ not know what's inside the arrays appart from a small set of constrains:
 The actual type of an ``Array`` depends on how the :py:class:`metatensor.TensorBlock`
 was created. Currently, :py:class:`numpy.ndarray` and :py:class:`torch.Tensor` are
 supported, as well as :py:class:`jax.Array` when JAX is installed.
+
+JAX arrays can also be traced values, inside :py:func:`jax.jit`, :py:func:`jax.grad`,
+:py:func:`jax.vmap`, ...: :py:class:`metatensor.TensorBlock` and
+:py:class:`metatensor.TensorMap` are registered as JAX pytrees, with the arrays as
+leaves and the metadata as static data. Traced values have no device, metatensor
+uses the default JAX device for them. Operations that need the actual data (such as
+:py:func:`metatensor.save`) are not available for traced values.
 """
 
 
@@ -81,13 +88,51 @@ def _is_jax_array(array):
     if jax is None or not isinstance(array, jax.Array):
         return False
 
-    if isinstance(array, jax.core.Tracer):
-        raise TypeError(
-            "can not store a traced JAX value in metatensor, the arrays must be "
-            "concrete (i.e. outside of jax.jit, jax.grad, jax.vmap, ...)"
-        )
+    from .._jax import register_pytrees
 
+    register_pytrees()
     return True
+
+
+def _is_jax_tracer(array):
+    jax = sys.modules.get("jax")
+    return jax is not None and isinstance(array, jax.core.Tracer)
+
+
+def _jax_devices(array):
+    """
+    Get the devices of a JAX array. Traced values do not have a device, and we use
+    the default JAX device for them.
+    """
+    if _is_jax_tracer(array):
+        import jax
+
+        return {jax.devices()[0]}
+
+    return array.devices()
+
+
+_JAX_DLPACK_DEVICES = {}
+
+
+def _jax_dlpack_device(array):
+    """Get the DLPack ``(device_type, device_id)`` of a JAX array."""
+    if not _is_jax_tracer(array):
+        return array.__dlpack_device__()
+
+    # there is no public API to get the DLPack device of a JAX device, so we create
+    # a small array on the device instead. This must be a concrete array, even when
+    # called while tracing a function.
+    (device,) = _jax_devices(array)
+    if device not in _JAX_DLPACK_DEVICES:
+        import jax
+        import jax.numpy as jnp
+
+        with jax.ensure_compile_time_eval():
+            dlpack_device = jnp.zeros((), device=device).__dlpack_device__()
+        _JAX_DLPACK_DEVICES[device] = dlpack_device
+
+    return _JAX_DLPACK_DEVICES[device]
 
 
 def _jax_device(dl_device):
@@ -228,7 +273,7 @@ def array_device(array) -> Device:
     elif _is_torch_array(array):
         return array.device
     elif _is_jax_array(array):
-        (device,) = array.devices()
+        (device,) = _jax_devices(array)
         return device
     else:
         raise TypeError(f"unknown array type: {type(array)}")
@@ -241,7 +286,7 @@ def array_device_is_cpu(array) -> bool:
     elif _is_torch_array(array):
         return array.device.type == torch.device("cpu").type
     elif _is_jax_array(array):
-        return all(device.platform == "cpu" for device in array.devices())
+        return all(device.platform == "cpu" for device in _jax_devices(array))
     else:
         raise TypeError(f"unknown array type: {type(array)}")
 
@@ -357,8 +402,8 @@ def create_mts_array(array):
         mts_array_dtype = _MTS_ARRAY_DTYPE_PYTORCH
     elif _is_jax_array(array):
         mts_array_origin = _MTS_ARRAY_ORIGIN_JAX
-        # JAX arrays use NumPy dtypes and implement `__dlpack_device__`
-        mts_array_device = _MTS_ARRAY_DEVICE_NUMPY
+        mts_array_device = _MTS_ARRAY_DEVICE_JAX
+        # JAX arrays use NumPy dtypes
         mts_array_dtype = _MTS_ARRAY_DTYPE_NUMPY
     else:
         raise ValueError(f"unknown array type: {type(array)}")
@@ -464,7 +509,7 @@ def _mts_array_create(this, shape_ptr, shape_count, fill_value, new_array):
     elif _is_jax_array(wrapper.array):
         import jax.numpy as jnp
 
-        (device,) = wrapper.array.devices()
+        (device,) = _jax_devices(wrapper.array)
         array = jnp.full(shape, scalar, dtype=dtype, device=device)
 
     if ctypes.cast(fill_value.destroy, ctypes.c_void_p).value is not None:
@@ -506,7 +551,7 @@ def _mts_array_copy(this, device, new_array):
         import jax.numpy as jnp
 
         target = _jax_device(device)
-        if target in wrapper.array.devices():
+        if target in _jax_devices(wrapper.array):
             array = jnp.array(wrapper.array, copy=True)
         else:
             array = jax.device_put(wrapper.array, target)
@@ -622,6 +667,11 @@ def _mts_array_as_dlpack(this, dl_managed_tensor_ptr_ptr, device, stream, max_ve
     raw pointer, and transfers ownership to the C-API caller.
     """
     wrapper = _KNOWN_ARRAY_WRAPPERS[this]
+    if _is_jax_tracer(wrapper.array):
+        raise ValueError(
+            "can not access the data of a traced JAX array (inside jax.jit, jax.grad, "
+            "jax.vmap, ...), this operation is only available for concrete arrays"
+        )
 
     stream = None if not stream else stream.contents
     versioned_ptr = array_as_dlpack(
@@ -739,8 +789,16 @@ def _mts_array_device_pytorch(this, device_ptr):
             ) from e
 
 
+@catch_exceptions
+def _mts_array_device_jax(this, device_ptr):
+    array = _KNOWN_ARRAY_WRAPPERS[this].array
+    device_type, device_id = _jax_dlpack_device(array)
+    device_ptr[0] = DLDevice(device_type=device_type, device_id=device_id)
+
+
 _MTS_ARRAY_DEVICE_NUMPY = _cast_to_ctype_functype(_mts_array_device_numpy, "device")
 _MTS_ARRAY_DEVICE_PYTORCH = _cast_to_ctype_functype(_mts_array_device_pytorch, "device")
+_MTS_ARRAY_DEVICE_JAX = _cast_to_ctype_functype(_mts_array_device_jax, "device")
 
 
 # DLPack dtype type codes

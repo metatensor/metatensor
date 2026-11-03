@@ -67,17 +67,6 @@ def test_copy():
     np.testing.assert_equal(np.asarray(copy.values), np.asarray(b.values))
 
 
-def test_traced_values():
-    message = "can not store a traced JAX value in metatensor"
-
-    @jax.jit
-    def create(values):
-        return block(values, gradient=False).values
-
-    with pytest.raises(TypeError, match=message):
-        create(jnp.ones((1, 1, 1)))
-
-
 def test_change_backend():
     b = block(jnp.ones((2, 3, 2)))
     as_numpy = b.to(arrays="numpy")
@@ -135,3 +124,105 @@ def test_serialization():
     loaded = metatensor.load(buffer)
     for a, b in zip(loaded.blocks(), tensor().blocks(), strict=True):
         np.testing.assert_equal(np.asarray(a.values), np.asarray(b.values))
+
+
+def assert_same_tensor(actual, expected):
+    assert actual.keys == expected.keys
+    for a, e in zip(actual.blocks(), expected.blocks(), strict=True):
+        assert isinstance(a.values, jax.Array)
+        assert a.samples == e.samples
+        assert a.components == e.components
+        assert a.properties == e.properties
+        np.testing.assert_equal(np.asarray(a.values), np.asarray(e.values))
+        assert a.gradients_list() == e.gradients_list()
+        for parameter in e.gradients_list():
+            np.testing.assert_equal(
+                np.asarray(a.gradient(parameter).values),
+                np.asarray(e.gradient(parameter).values),
+            )
+
+
+def test_pytree():
+    t = tensor()
+    leaves, treedef = jax.tree.flatten(t)
+    # values and gradient of each block
+    assert len(leaves) == 4
+    assert all(isinstance(leaf, jax.Array) for leaf in leaves)
+    assert_same_tensor(jax.tree.unflatten(treedef, leaves), t)
+
+    doubled = jax.tree.map(lambda x: 2 * x, t)
+    np.testing.assert_equal(
+        np.asarray(doubled.block(1).gradient("g").values),
+        2 * np.asarray(t.block(1).gradient("g").values),
+    )
+
+
+def test_jit():
+    traces = []
+
+    @jax.jit
+    def keys_to_properties(t):
+        traces.append(t)
+        return t.keys_to_properties("key")
+
+    assert_same_tensor(keys_to_properties(tensor()), tensor().keys_to_properties("key"))
+
+    # metadata is static: equal metadata re-uses the compiled function, and different
+    # metadata triggers a new compilation
+    keys_to_properties(tensor())
+    assert len(traces) == 1
+    more_samples = jnp.ones((3, 3, 2))
+    keys_to_properties(
+        TensorMap(Labels.range("key", 2), [block(more_samples), block(more_samples)])
+    )
+    assert len(traces) == 2
+
+
+def test_grad():
+    def loss(values):
+        t = TensorMap(Labels.range("key", 2), [block(values), block(2 * values)])
+        merged = t.keys_to_samples("key").block()
+        return (merged.values**2).sum() + merged.gradient("g").values.sum()
+
+    values = jnp.arange(6, dtype=jnp.float32).reshape(1, 3, 2)
+    # d/dv [v^2 + (2v)^2 + 2v + 4v]
+    np.testing.assert_allclose(jax.grad(loss)(values), 10 * values + 6)
+    np.testing.assert_allclose(jax.jit(jax.grad(loss))(values), 10 * values + 6)
+
+
+def test_vjp():
+    values = jnp.arange(6, dtype=jnp.float32).reshape(1, 3, 2)
+    output, vjp = jax.vjp(
+        lambda v: TensorMap(Labels.range("key", 1), [block(v)]), values
+    )
+    assert_same_tensor(output, TensorMap(Labels.range("key", 1), [block(values)]))
+
+    cotangent = jax.tree.map(jnp.ones_like, output)
+    (gradient,) = vjp(cotangent)
+    # values and gradient (2 * values) both contribute
+    np.testing.assert_allclose(gradient, 3 * jnp.ones_like(values))
+
+
+def test_vmap():
+    values = jnp.arange(12, dtype=jnp.float32).reshape(2, 1, 3, 2)
+
+    def sum_components(v):
+        t = TensorMap(Labels.range("key", 1), [block(v)])
+        return t.components_to_properties("c").block().values
+
+    np.testing.assert_equal(
+        np.asarray(jax.vmap(sum_components)(values)),
+        np.asarray(values).reshape(2, 1, 6),
+    )
+
+
+def test_traced_data():
+    message = "can not access the data of a traced JAX array"
+
+    @jax.jit
+    def save(t):
+        metatensor.save(io.BytesIO(), t)
+        return t
+
+    with pytest.raises(ValueError, match=message):
+        save(tensor())

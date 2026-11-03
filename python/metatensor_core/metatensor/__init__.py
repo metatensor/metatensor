@@ -15,6 +15,7 @@
 # declaring dependencies on `metatensor-core`, `metatensor-operation`, and
 # `metatensor-learn`; and an optional dependency on `metatensor-torch`.
 
+import sys
 import warnings
 
 from . import utils  # noqa: F401
@@ -40,6 +41,12 @@ TensorMap.__module__ = __name__
 MetatensorError.__module__ = __name__
 ExternalCpuArray.__module__ = __name__
 ExternalCudaArray.__module__ = __name__
+
+if "jax" in sys.modules:
+    # otherwise, this is done when metatensor sees a JAX array for the first time
+    from ._jax import register_pytrees
+
+    register_pytrees()
 
 try:
     import metatensor_operations  # noqa: F401
