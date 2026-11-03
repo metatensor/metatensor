@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
@@ -70,14 +71,22 @@ def pow(A: TensorMap, B: Union[float, int]) -> TensorMap:
 
     :param A: :py:class:`TensorMap` to be elevated at the power of B.
     :param B: The power to which we want to elevate ``A``.
-               Parameter can only be a scalar or something that can be converted to a
-               scalar.
+               Parameter can only be a scalar (a number, or an array of shape
+               ``()``).
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if not torch_jit_is_scripting():
         if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
+        if _dispatch.is_scalar_array(B):
+            # e.g. a JAX scalar, which might be a traced value
+            blocks = [
+                _pow_block_constant(block, _dispatch.make_like(B, block.values))
+                for block in A.blocks()
+            ]
+            return TensorMap(A.keys, blocks)
 
         if not isinstance(B, (float, int)):
             raise TypeError(f"`B` must be a scalar value, not {type(B)}")

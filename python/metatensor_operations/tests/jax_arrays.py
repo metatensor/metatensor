@@ -204,3 +204,24 @@ def test_grad(operation):
     np.testing.assert_allclose(
         jax.jit(jax.grad(loss))(arrays)[0], jax.grad(loss)(arrays)[0]
     )
+
+
+@pytest.mark.parametrize("operation", ["add", "subtract", "multiply", "divide", "pow"])
+def test_scalar_array(operation):
+    # a JAX scalar can be a trainable parameter, traced inside jax.jit / jax.grad
+    t = mts.add(mts.abs(tensor()), 1.0)
+    function = getattr(mts, operation)
+    expected = function(t, 1.5)
+
+    t = t.to(arrays="jax")
+    assert_same(function(t, jnp.asarray(1.5)), expected)
+    assert_same(jax.jit(function)(t, jnp.asarray(1.5)), expected)
+
+    def loss(scalar):
+        result = function(t, scalar)
+        return sum(
+            jnp.sum(b.values) + jnp.sum(b.gradient("positions").values)
+            for b in result.blocks()
+        )
+
+    check_grads(loss, (jnp.asarray(1.5),), order=2, modes=["fwd", "rev"])

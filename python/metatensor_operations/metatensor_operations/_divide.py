@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
@@ -103,6 +104,14 @@ def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
         if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
+        if _dispatch.is_scalar_array(B):
+            # e.g. a JAX scalar, which might be a traced value
+            blocks = [
+                _divide_block_constant(block, _dispatch.make_like(B, block.values))
+                for block in A.blocks()
+            ]
+            return TensorMap(A.keys, blocks)
+
     r"""Return a new :class:`TensorMap` with the values being the element-wise
     division of ``A`` and ``B``.
 
@@ -122,9 +131,9 @@ def divide(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
             \nabla(A / B) =(B*\nabla A-A*\nabla B)/B^2
 
     :param A: First :py:class:`TensorMap` for the division.
-    :param B: Second instance for the division. Parameter can be a scalar
-            or a :py:class:`TensorMap`. In the latter case ``B`` must have the same
-            metadata of ``A``.
+    :param B: Second instance for the division. Parameter can be a scalar (a
+            number, or an array of shape ``()``) or a :py:class:`TensorMap`. In
+            the latter case ``B`` must have the same metadata of ``A``.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """

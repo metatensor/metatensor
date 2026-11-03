@@ -616,6 +616,13 @@ def rows_add(output_array, input_array, index):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def is_scalar_array(value) -> bool:
+    """Whether ``value`` is an array containing a single number, with shape ``()``"""
+    if isinstance(value, (np.ndarray, TorchTensor)) or _is_jax_array(value):
+        return len(value.shape) == 0
+    return False
+
+
 def gradient_rows(values, rows, gradient):
     """
     Get ``values[rows]``, with additional axes of size 1 after the first one to

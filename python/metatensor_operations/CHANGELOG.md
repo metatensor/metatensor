@@ -23,6 +23,8 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   values for them. They can be used inside `jax.jit`, and differentiated with
   `jax.grad`, except `equal`/`allclose` (which return Python booleans) under
   `jax.jit`. Arrays computed from metadata (indices, masks) stay NumPy arrays.
+- `add`, `subtract`, `multiply`, `divide` and `pow` accept arrays of shape `()`
+  (NumPy, torch or JAX, including traced values) as scalar operands
 
 ### Fixed
 
