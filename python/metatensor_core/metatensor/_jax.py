@@ -116,7 +116,8 @@ def _flatten_tensor(tensor):
     if _is_placeholder(tensor):
         return tensor._pytree
 
-    return tensor.blocks(), _StaticMetadata([tensor.keys])
+    info = tuple(sorted(tensor.info().items()))
+    return tensor.blocks(), _StaticMetadata([tensor.keys], extra=info)
 
 
 def _unflatten_tensor(metadata, blocks):
@@ -126,4 +127,7 @@ def _unflatten_tensor(metadata, blocks):
         return _placeholder(TensorMap, blocks, metadata)
 
     (keys,) = metadata.labels
-    return TensorMap(keys, list(blocks))
+    tensor = TensorMap(keys, list(blocks))
+    for key, value in metadata.extra:
+        tensor.set_info(key, value)
+    return tensor
