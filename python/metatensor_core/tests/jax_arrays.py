@@ -158,6 +158,13 @@ def test_pytree():
     )
 
 
+def test_pytree_info():
+    t = tensor()
+    t.set_info("unit", "eV")
+    assert jax.tree.map(lambda x: 2 * x, t).get_info("unit") == "eV"
+    assert jax.jit(lambda t: t)(t).info() == {"unit": "eV"}
+
+
 def test_pytree_other_leaves():
     t = tensor()
     # JAX can rebuild the pytree with leaves that are not arrays of the right shape,
