@@ -906,8 +906,11 @@ def to_arguments_parse(context, *args, **kwargs):
     dtype = kwargs.get("dtype")
     device = kwargs.get("device")
 
+    jax = sys.modules.get("jax")
     for positional in args:
-        if isinstance(positional, Device):
+        if isinstance(positional, Device) or (
+            jax is not None and isinstance(positional, jax.Device)
+        ):
             if device is None:
                 device = positional
                 continue
