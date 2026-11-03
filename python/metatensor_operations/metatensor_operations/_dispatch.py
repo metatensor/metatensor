@@ -754,16 +754,16 @@ def nan_to_num(
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def norm(array, axis=None):
+def norm(array, axis: Optional[int] = None):
     """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
     This calls the equivalent of ``np.linalg.norm(array, axis=axis)``, see this
     function for more documentation.
     """
     if isinstance(array, TorchTensor):
-        return np.linalg.norm(array, axis=axis)
-    elif isinstance(array, np.ndarray):
         return torch.linalg.norm(array, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.linalg.norm(array, axis=axis)
     elif _is_jax_array(array):
         return _jnp().linalg.norm(array, axis=axis)
     else:
