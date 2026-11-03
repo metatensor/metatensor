@@ -82,9 +82,10 @@ def test_change_backend():
 def test_change_device():
     b = block(jnp.ones((2, 3, 2)))
     for device in ("cpu", jax.devices("cpu")[0]):
-        moved = b.to(device=device)
-        assert isinstance(moved.values, jax.Array)
-        assert moved.values.devices() == {jax.devices("cpu")[0]}
+        for moved in (b.to(device=device), b.to(device)):
+            assert isinstance(moved.values, jax.Array)
+            assert moved.values.devices() == {jax.devices("cpu")[0]}
+            assert isinstance(moved.samples.values, np.ndarray)
 
 
 def test_change_dtype():
