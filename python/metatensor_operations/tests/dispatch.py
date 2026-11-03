@@ -16,6 +16,13 @@ if HAS_TORCH:
 else:
     create_array_functions = [np.array]
 
+try:
+    import jax.numpy as jnp
+
+    create_array_functions.append(jnp.array)
+except ImportError:
+    pass
+
 
 all_true_array = [True, True, True]
 all_false_array = [True, True, False]
