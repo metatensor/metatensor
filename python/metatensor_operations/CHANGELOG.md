@@ -17,6 +17,11 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- Gradients of `var` and `std` reductions are computed without a Python loop
+  over the gradient samples
+
 ## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
 
 ### Changed

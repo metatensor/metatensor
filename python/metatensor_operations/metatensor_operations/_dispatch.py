@@ -380,7 +380,7 @@ def make_contiguous(array):
 def columns_add(output_array, input_array, index):
     """
     Accumulates in ``output_array`` the columns of ``array`` by adding to the indices
-    in the order given in ``index``.
+    in the order given in ``index``, and returns ``output_array``.
 
     This is equivalent to torch's:
 
@@ -393,9 +393,11 @@ def columns_add(output_array, input_array, index):
 
         _check_all_torch_tensor([output_array, input_array, index])
         output_array.index_add_(-1, index, input_array)
+        return output_array
     elif isinstance(input_array, np.ndarray):
         _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, (..., index), input_array)
+        return output_array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -503,7 +505,7 @@ def get_device(array):
 def rows_add(output_array, input_array, index):
     """
     Accumulates in ``output_array`` the rows of ``array`` by adding to the indices
-    in the order given in ``index``.
+    in the order given in ``index``, and returns ``output_array``.
 
     This is equivalent to torch's:
 
@@ -516,11 +518,25 @@ def rows_add(output_array, input_array, index):
 
         _check_all_torch_tensor([output_array, input_array, index])
         output_array.index_add_(0, index, input_array)
+        return output_array
     elif isinstance(input_array, np.ndarray):
         _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, index, input_array)
+        return output_array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def gradient_rows(values, rows, gradient):
+    """
+    Get ``values[rows]``, with additional axes of size 1 after the first one to
+    broadcast against ``gradient``, which has more components than ``values``.
+    """
+    selected = values[rows]
+    n_extra = len(gradient.shape) - len(values.shape)
+    return selected.reshape(
+        [selected.shape[0]] + [1] * n_extra + list(selected.shape[1:])
+    )
 
 
 def int_array_like(int_list: List[int], like):
