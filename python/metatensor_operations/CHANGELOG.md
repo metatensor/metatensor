@@ -17,6 +17,13 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- All operations accept blocks with `jax.Array` values, and return `jax.Array`
+  values for them. They can be used inside `jax.jit`, and differentiated with
+  `jax.grad`, except `equal`/`allclose` (which return Python booleans) under
+  `jax.jit`. Arrays computed from metadata (indices, masks) stay NumPy arrays.
+
 ### Changed
 
 - Gradients of `var` and `std` reductions are computed without a Python loop
