@@ -246,7 +246,7 @@ impl Labels {
 
         let mut sorted = OnceCell::new();
         let (count, size) = if dimensions.is_empty() {
-            assert!(values.is_empty());
+            assert_eq!(values.len(), 0);
             (0, 0)
         } else {
             let size = dimensions.len();

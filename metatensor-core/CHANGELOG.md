@@ -17,6 +17,13 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- `metatensor::KokkosDataArray` in the new `<metatensor/kokkos.hpp>` header,
+  an implementation of `DataArrayBase` using `Kokkos::View` to store data on
+  CPU or GPU (with the CUDA, HIP or SYCL Kokkos backends; SYCL is only
+  supported on Intel GPUs).
+
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 
 ### Fixed
