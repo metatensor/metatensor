@@ -39,6 +39,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   `Labels::load()` and `Labels::load_buffer()` take an optional `create_array`
   parameter, defaulting to `details::default_create_array`
 
+- `metatensor::KokkosDataArray` in the new `<metatensor/kokkos.hpp>` header,
+  an implementation of `DataArrayBase` using `Kokkos::View` to store data on
+  CPU or GPU (with the CUDA, HIP or SYCL Kokkos backends; SYCL is only
+  supported on Intel GPUs).
+
 ### metatensor-core Python
 
 #### Added
