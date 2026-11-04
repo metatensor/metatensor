@@ -76,6 +76,32 @@ TEST_CASE("Data Array") {
     }
 }
 
+TEST_CASE("SimpleDataArray - reshape and swap_axes") {
+    auto array = SimpleDataArray<double>({2, 3}, {0.0, 1.1, 2.2, 3.3, 4.4, 5.5});
+
+    array.swap_axes(0, 1);
+    CHECK(array.shape() == std::vector<uintptr_t>{3, 2});
+    CHECK(array.strides() == std::vector<int64_t>{2, 1});
+    CHECK(array == SimpleDataArray<double>({3, 2}, {0.0, 3.3, 1.1, 4.4, 2.2, 5.5}));
+
+    array = SimpleDataArray<double>({2, 3, 2}, {0.0, 1.1, 2.2, 3.3, 4.4, 5.5, 6.6, 7.7, 8.8, 9.9, 10.10, 11.11});
+    array.swap_axes(1, 2);
+    CHECK(array.shape() == std::vector<uintptr_t>{2, 2, 3});
+    CHECK(array.strides() == std::vector<int64_t>{6, 3, 1});
+    CHECK(array == SimpleDataArray<double>({2, 2, 3}, {0.0, 2.2, 4.4, 1.1, 3.3, 5.5, 6.6, 8.8, 10.10, 7.7, 9.9, 11.11}));
+
+    array.swap_axes(0, 2);
+    CHECK(array.shape() == std::vector<uintptr_t>{3, 2, 2});
+    CHECK(array == SimpleDataArray<double>({3, 2, 2}, {0.0, 6.6, 1.1, 7.7, 2.2, 8.8, 3.3, 9.9, 4.4, 10.10, 5.5, 11.11}));
+
+    CHECK_THROWS_WITH(array.swap_axes(0, 3), "out of bounds axis in swap_axes");
+
+    array.reshape({4, 3});
+    CHECK(array.shape() == std::vector<uintptr_t>{4, 3});
+    CHECK(array.strides() == std::vector<int64_t>{3, 1});
+    CHECK(array == SimpleDataArray<double>({4, 3}, {0.0, 6.6, 1.1, 7.7, 2.2, 8.8, 3.3, 9.9, 4.4, 10.10, 5.5, 11.11}));
+}
+
 TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
     auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
     {
