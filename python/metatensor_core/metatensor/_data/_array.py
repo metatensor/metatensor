@@ -583,12 +583,14 @@ def _mts_array_move_data(
     if movements_count == 0:
         return
 
-    # mts_data_movement_t has 5 c_uintptr_t fields.
+    # mts_data_movement_t has 5 c_uintptr_t fields. The memory is owned by
+    # metatensor-core and freed after this call, so we copy it: JAX keeps index
+    # arrays by reference inside jax.jit, and only reads them later.
     assert len(mts_data_movement_t._fields_) == 5
     movements = np.ctypeslib.as_array(
         ctypes.cast(movements_ptr, ctypes.POINTER(c_uintptr_t)),
         shape=(movements_count, 5),
-    )
+    ).copy()
 
     # Check if we can use the optimized path (all moves have same property structure)
     #

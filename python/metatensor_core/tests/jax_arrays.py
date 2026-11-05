@@ -220,6 +220,40 @@ def test_jit():
     assert len(traces) == 2
 
 
+def test_jit_scattered_moves():
+    # both blocks have the same samples, so merging them with keys_to_samples
+    # interleaves their rows: the data is moved with index arrays, not slices
+    def block_with_samples(values):
+        samples = [[system, atom] for system in range(2) for atom in range(3)]
+        return TensorBlock(
+            values=values,
+            samples=Labels(["system", "atom"], np.array(samples, dtype=np.int32)),
+            components=[],
+            properties=Labels.range("p", values.shape[1]),
+        )
+
+    # with x64, JAX keeps the 64-bit indices of the moves as they are, instead of
+    # converting (and copying) them to 32-bit
+    previous = jax.config.read("jax_enable_x64")
+    jax.config.update("jax_enable_x64", True)
+    try:
+        t = TensorMap(
+            Labels.range("key", 2),
+            [
+                block_with_samples(jnp.arange(24.0).reshape(6, 4)),
+                block_with_samples(jnp.arange(24.0, 48.0).reshape(6, 4)),
+            ],
+        )
+        expected = t.keys_to_samples("key")
+        assert_same_tensor(jax.jit(lambda t: t.keys_to_samples("key"))(t), expected)
+
+        expected = t.keys_to_properties("key")
+        actual = jax.jit(lambda t: t.keys_to_properties("key"))(t)
+        assert_same_tensor(actual, expected)
+    finally:
+        jax.config.update("jax_enable_x64", previous)
+
+
 def test_grad():
     def loss(values):
         t = TensorMap(Labels.range("key", 2), [block(values), block(2 * values)])
