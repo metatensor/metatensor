@@ -185,6 +185,10 @@ class TensorMap:
         return len(self.keys)
 
     def __repr__(self) -> str:
+        if not self._ptr:
+            # The tensor map has been released
+            return "TensorMap(<empty>)"
+
         return self.print(-1)
 
     def __str__(self) -> str:

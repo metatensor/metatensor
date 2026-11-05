@@ -1,5 +1,6 @@
 from typing import List, Union
 
+from . import _dispatch
 from ._backend import (
     TensorBlock,
     TensorMap,
@@ -83,6 +84,14 @@ def _add_impl(A: TensorMap, B: Union[int, float, TensorMap], fname: str) -> Tens
         if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
 
+        if _dispatch.is_scalar_array(B):
+            # e.g. a JAX scalar, which might be a traced value
+            blocks = [
+                _add_block_constant(block, _dispatch.make_like(B, block.values))
+                for block in A.blocks()
+            ]
+            return TensorMap(A.keys, blocks)
+
     blocks: List[TensorBlock] = []
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)
@@ -140,9 +149,9 @@ def add(A: TensorMap, B: Union[int, float, TensorMap]) -> TensorMap:
             \nabla(A + B) = \nabla A + \nabla B
 
     :param A: First :py:class:`TensorMap` for the addition.
-    :param B: Second instance for the addition. Parameter can be a scalar or a
-              :py:class:`TensorMap`. In the latter case ``B`` must have the same
-              metadata of ``A``.
+    :param B: Second instance for the addition. Parameter can be a scalar (a
+              number, or an array of shape ``()``) or a :py:class:`TensorMap`. In
+              the latter case ``B`` must have the same metadata of ``A``.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """

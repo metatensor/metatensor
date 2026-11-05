@@ -1,4 +1,5 @@
 import re
+import sys
 import warnings
 from typing import List, Optional, Tuple, Union
 
@@ -35,8 +36,52 @@ except ImportError:
 
 
 UNKNOWN_ARRAY_TYPE = (
-    "unknown array type, only numpy arrays and torch tensors are supported"
+    "unknown array type, only numpy arrays, torch tensors and jax arrays are supported"
 )
+
+
+# JAX support: these functions are only called after checking for numpy arrays and
+# torch tensors, so they are never compiled by TorchScript. TorchScript still parses
+# the code in the JAX branches, which must not contain `import` statements. As in
+# metatensor-core, we only check for JAX arrays if JAX was already imported. JAX arrays
+# are immutable, so the functions modifying arrays in-place return the modified array
+# instead. Arrays created from metadata (indices, masks, ...) stay numpy arrays, like
+# Labels.
+
+
+def _is_jax_array(array) -> bool:
+    jax = sys.modules.get("jax")
+    return jax is not None and isinstance(array, jax.Array)
+
+
+def _jnp():
+    import jax.numpy
+
+    return jax.numpy
+
+
+def _jax_stop_gradient(array):
+    import jax
+
+    return jax.lax.stop_gradient(array)
+
+
+def _jax_device(array):
+    import jax
+
+    if isinstance(array, jax.core.Tracer):
+        # traced values do not have a device, metatensor-core uses the default one
+        return jax.devices()[0]
+    (device,) = array.devices()
+    return device
+
+
+def _check_all_jax_array(arrays):
+    for array in arrays:
+        if not _is_jax_array(array):
+            raise TypeError(
+                f"expected argument to be a jax.Array, but got {type(array)}"
+            )
 
 
 def _check_all_torch_tensor(arrays: List[TorchTensor]):
@@ -65,6 +110,8 @@ def sum(array, axis: Optional[int] = None):
         return torch.sum(array, dim=axis)
     elif isinstance(array, np.ndarray):
         return np.sum(array, axis=axis).astype(array.dtype)
+    elif _is_jax_array(array):
+        return _jnp().sum(array, axis=axis).astype(array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -79,6 +126,8 @@ def abs(array):
         return torch.abs(array)
     elif isinstance(array, np.ndarray):
         return np.abs(array).astype(array.dtype)
+    elif _is_jax_array(array):
+        return _jnp().abs(array).astype(array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -98,6 +147,8 @@ def all(a, axis: Optional[int] = None):
             return torch.all(a, dim=axis)
     elif isinstance(a, np.ndarray):
         return np.all(a, axis=axis)
+    elif _is_jax_array(a):
+        return _jnp().all(a, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -120,6 +171,9 @@ def allclose(
     elif isinstance(a, np.ndarray):
         _check_all_np_ndarray([b])
         return np.allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
+    elif _is_jax_array(a):
+        _check_all_jax_array([b])
+        return _jnp().allclose(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -306,6 +360,8 @@ def bincount(input, weights: Optional[TorchTensor] = None, minlength: int = 0):
         if weights is not None:
             _check_all_np_ndarray([weights])
         return np.bincount(input, weights=weights, minlength=minlength)
+    elif _is_jax_array(input):
+        return _jnp().bincount(input, weights=weights, minlength=minlength)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -318,6 +374,8 @@ def bool_array_like(bool_list: List[bool], like):
     if isinstance(like, TorchTensor):
         return torch.tensor(bool_list, dtype=torch.bool, device=like.device)
     elif isinstance(like, np.ndarray):
+        return np.array(bool_list).astype(bool)
+    elif _is_jax_array(like):
         return np.array(bool_list).astype(bool)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -336,6 +394,9 @@ def concatenate(arrays: List[TorchTensor], axis: int):
     elif isinstance(arrays[0], np.ndarray):
         _check_all_np_ndarray(arrays)
         return np.concatenate(arrays, axis)
+    elif _is_jax_array(arrays[0]):
+        _check_all_jax_array(arrays)
+        return _jnp().concatenate(arrays, axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -352,6 +413,10 @@ def is_contiguous(array):
 
     elif isinstance(array, np.ndarray):
         return array.flags["C_CONTIGUOUS"]
+
+    elif _is_jax_array(array):
+        # JAX arrays do not expose their memory layout
+        return True
 
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -373,6 +438,8 @@ def make_contiguous(array):
         if array.flags["C_CONTIGUOUS"]:
             return array
         return np.ascontiguousarray(array)
+    elif _is_jax_array(array):
+        return array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -380,7 +447,8 @@ def make_contiguous(array):
 def columns_add(output_array, input_array, index):
     """
     Accumulates in ``output_array`` the columns of ``array`` by adding to the indices
-    in the order given in ``index``.
+    in the order given in ``index``, and returns ``output_array``. This modifies
+    ``output_array`` in-place, except for (immutable) jax arrays.
 
     This is equivalent to torch's:
 
@@ -393,9 +461,14 @@ def columns_add(output_array, input_array, index):
 
         _check_all_torch_tensor([output_array, input_array, index])
         output_array.index_add_(-1, index, input_array)
+        return output_array
     elif isinstance(input_array, np.ndarray):
         _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, (..., index), input_array)
+        return output_array
+    elif _is_jax_array(input_array):
+        _check_all_jax_array([output_array])
+        return output_array.at[..., index].add(input_array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -407,6 +480,8 @@ def copy(array):
         return array.clone()
     elif isinstance(array, np.ndarray):
         return array.copy()
+    elif _is_jax_array(array):
+        return _jnp().array(array, copy=True)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -418,6 +493,8 @@ def detach(array):
     elif isinstance(array, np.ndarray):
         # nothing to do
         return array
+    elif _is_jax_array(array):
+        return _jax_stop_gradient(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -442,6 +519,10 @@ def dot(A, B):
             return A @ B.T
         else:
             return np.dot(A, B.T)
+    elif _is_jax_array(A):
+        _check_all_jax_array([B])
+        assert len(B.shape) == 2
+        return A @ B.T
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -468,6 +549,8 @@ def empty_like(array, shape: Optional[List[int]] = None, requires_grad: bool = F
         ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
         return np.empty_like(array, shape=shape, subok=False)
+    elif _is_jax_array(array):
+        return _jnp().empty_like(array, shape=shape)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -482,6 +565,8 @@ def eye_like(array, size: int):
         return torch.eye(size).to(array.dtype).to(array.device)
     elif isinstance(array, np.ndarray):
         return np.eye(size, dtype=array.dtype)
+    elif _is_jax_array(array):
+        return _jnp().eye(size, dtype=array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -496,6 +581,8 @@ def get_device(array):
         return array.device
     elif isinstance(array, np.ndarray):
         return "cpu"
+    elif _is_jax_array(array):
+        return _jax_device(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -503,7 +590,8 @@ def get_device(array):
 def rows_add(output_array, input_array, index):
     """
     Accumulates in ``output_array`` the rows of ``array`` by adding to the indices
-    in the order given in ``index``.
+    in the order given in ``index``, and returns ``output_array``. This modifies
+    ``output_array`` in-place, except for (immutable) jax arrays.
 
     This is equivalent to torch's:
 
@@ -516,11 +604,35 @@ def rows_add(output_array, input_array, index):
 
         _check_all_torch_tensor([output_array, input_array, index])
         output_array.index_add_(0, index, input_array)
+        return output_array
     elif isinstance(input_array, np.ndarray):
         _check_all_np_ndarray([output_array, input_array, index])
         np.add.at(output_array, index, input_array)
+        return output_array
+    elif _is_jax_array(input_array):
+        _check_all_jax_array([output_array])
+        return output_array.at[index].add(input_array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
+def is_scalar_array(value) -> bool:
+    """Whether ``value`` is an array containing a single number, with shape ``()``"""
+    if isinstance(value, (np.ndarray, TorchTensor)) or _is_jax_array(value):
+        return len(value.shape) == 0
+    return False
+
+
+def gradient_rows(values, rows, gradient):
+    """
+    Get ``values[rows]``, with additional axes of size 1 after the first one to
+    broadcast against ``gradient``, which has more components than ``values``.
+    """
+    selected = values[rows]
+    n_extra = len(gradient.shape) - len(values.shape)
+    return selected.reshape(
+        [selected.shape[0]] + [1] * n_extra + list(selected.shape[1:])
+    )
 
 
 def int_array_like(int_list: List[int], like):
@@ -542,6 +654,8 @@ def int_array_like(int_list: List[int], like):
         return torch.tensor(int_list, dtype=torch.int64, device=device)
     elif isinstance(like, np.ndarray):
         return np.array(int_list).astype(np.int64)
+    elif _is_jax_array(like):
+        return np.array(int_list).astype(np.int64)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -560,6 +674,8 @@ def indices_like(shape: List[int], like):
         )
         return torch.stack(indices, dim=-1).reshape(-1, len(shape))
     elif isinstance(like, np.ndarray):
+        return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)
+    elif _is_jax_array(like):
         return np.indices(shape).reshape(len(shape), -1).T.astype(np.int64)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
@@ -598,6 +714,9 @@ def lstsq(X, Y, rcond: Optional[float], driver: Optional[str] = None):
     elif isinstance(X, np.ndarray):
         _check_all_np_ndarray([Y])
         return np.linalg.lstsq(X, Y, rcond=rcond)[0]
+    elif _is_jax_array(X):
+        _check_all_jax_array([Y])
+        return _jnp().linalg.lstsq(X, Y, rcond=rcond)[0]
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -619,6 +738,8 @@ def mask(array, axis: int, mask):
         if isinstance(indices, TorchTensor):
             indices = indices.detach().cpu().numpy()
         return np.take(array, indices, axis=axis)
+    elif _is_jax_array(array):
+        return _jnp().take(array, indices, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -634,20 +755,24 @@ def nan_to_num(
         return torch.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
     elif isinstance(X, np.ndarray):
         return np.nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
+    elif _is_jax_array(X):
+        return _jnp().nan_to_num(X, nan=nan, posinf=posinf, neginf=neginf)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
-def norm(array, axis=None):
+def norm(array, axis: Optional[int] = None):
     """Compute the 2-norm (Frobenius norm for matrices) of the input array.
 
     This calls the equivalent of ``np.linalg.norm(array, axis=axis)``, see this
     function for more documentation.
     """
     if isinstance(array, TorchTensor):
-        return np.linalg.norm(array, axis=axis)
-    elif isinstance(array, np.ndarray):
         return torch.linalg.norm(array, dim=axis)
+    elif isinstance(array, np.ndarray):
+        return np.linalg.norm(array, axis=axis)
+    elif _is_jax_array(array):
+        return _jnp().linalg.norm(array, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -675,6 +800,8 @@ def ones_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
         return np.ones_like(array, shape=shape, subok=False)
+    elif _is_jax_array(array):
+        return _jnp().ones_like(array, shape=shape)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -703,6 +830,11 @@ def rand_like(array, shape: Optional[List[int]] = None, requires_grad: bool = Fa
         if shape is None:
             shape = array.shape
         return np.random.rand(*shape).astype(array.dtype)
+    elif _is_jax_array(array):
+        # JAX has no global random state, use the same values as numpy
+        if shape is None:
+            shape = array.shape
+        return _jnp().asarray(np.random.rand(*shape), dtype=array.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -725,6 +857,13 @@ def requires_grad(array, value: bool):
                 stacklevel=1,  # show the warning as coming from the operation
             )
         return array
+    elif _is_jax_array(array):
+        if value:
+            warnings.warn(
+                "`requires_grad=True` does nothing for jax arrays",
+                stacklevel=1,  # show the warning as coming from the operation
+            )
+        return array
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -742,6 +881,8 @@ def scatter_last_dim(array, index: int, value):
     elif isinstance(array, np.ndarray):
         array[..., index] = value
         return array
+    elif _is_jax_array(array):
+        return array.at[..., index].set(value)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -759,6 +900,8 @@ def sign(array):
             return array / np.abs(array)
         else:
             return np.sign(array)
+    elif _is_jax_array(array):
+        return _jnp().sign(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -771,6 +914,8 @@ def slice_last_dim(array, index: Union[int, TorchTensor]):
         return array.index_select(-1, torch.as_tensor(index))
     elif isinstance(array, np.ndarray):
         return np.take(array, index, axis=-1)
+    elif _is_jax_array(array):
+        return _jnp().take(array, index, axis=-1)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -789,6 +934,9 @@ def solve(X, Y):
     elif isinstance(X, np.ndarray):
         _check_all_np_ndarray([Y])
         return np.linalg.solve(X, Y)
+    elif _is_jax_array(X):
+        _check_all_jax_array([Y])
+        return _jnp().linalg.solve(X, Y)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -803,6 +951,8 @@ def sqrt(array):
         return torch.sqrt(array)
     elif isinstance(array, np.ndarray):
         return np.sqrt(array)
+    elif _is_jax_array(array):
+        return _jnp().sqrt(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -820,6 +970,9 @@ def stack(arrays: List[TorchTensor], axis: int):
     elif isinstance(arrays[0], np.ndarray):
         _check_all_np_ndarray(arrays)
         return np.stack(arrays, axis)
+    elif _is_jax_array(arrays[0]):
+        _check_all_jax_array(arrays)
+        return _jnp().stack(arrays, axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -843,6 +996,8 @@ def take(array, indices, axis: int):
         return torch.index_select(array, dim=axis, index=indices)
     elif isinstance(array, np.ndarray):
         return np.take(array, indices, axis=axis)
+    elif _is_jax_array(array):
+        return _jnp().take(array, indices, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -851,8 +1006,10 @@ def make_like(array, like):
     """Transform ``array`` to use the same backend/dtype/device as ``like``"""
     if isinstance(like, TorchTensor):
         return to(array, backend="torch", dtype=like.dtype, device=like.device)
-    if isinstance(like, np.ndarray):
+    elif isinstance(like, np.ndarray):
         return to(array, backend="numpy", dtype=like.dtype, device="cpu")
+    elif _is_jax_array(like):
+        return to(array, backend="jax", dtype=like.dtype)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -900,11 +1057,21 @@ def to(
 
         elif backend == "torch":
             return torch.tensor(array, dtype=dtype, device=device)
+        elif backend == "jax":
+            return _jnp().asarray(array, dtype=dtype)
+        else:
+            raise ValueError(f"Unknown backend: {backend}")
+
+    # Convert jax Array
+    elif _is_jax_array(array):
+        if backend is None or backend == "jax":
+            return array if dtype is None else array.astype(dtype)
+        elif backend == "numpy":
+            return np.asarray(array, dtype=dtype)
         else:
             raise ValueError(f"Unknown backend: {backend}")
 
     else:
-        # Only numpy and torch arrays currently supported
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
@@ -918,6 +1085,9 @@ def _index_array_checks(array):
     elif isinstance(array, np.ndarray):
         if not np.issubdtype(array.dtype, np.integer):
             raise ValueError("Index arrays must be integers")
+    elif _is_jax_array(array):
+        if not _jnp().issubdtype(array.dtype, _jnp().integer):
+            raise ValueError("Index arrays must be integers")
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -928,6 +1098,10 @@ def unique(array, axis: Optional[int] = None):
         return torch.unique(array, dim=axis)
     elif isinstance(array, np.ndarray):
         return np.unique(array, axis=axis)
+    elif _is_jax_array(array):
+        return _jnp().unique(array, axis=axis)
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
 def unique_with_inverse(array, axis: Optional[int] = None):
@@ -941,6 +1115,8 @@ def unique_with_inverse(array, axis: Optional[int] = None):
         return torch.unique(array, return_inverse=True, dim=axis)
     elif isinstance(array, np.ndarray):
         return np.unique(array, return_inverse=True, axis=axis)
+    elif _is_jax_array(array):
+        return _jnp().unique(array, return_inverse=True, axis=axis)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -954,6 +1130,8 @@ def where(array):
         return torch.where(array)
     elif isinstance(array, np.ndarray):
         return np.where(array)
+    elif _is_jax_array(array):
+        return _jnp().where(array)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
@@ -981,6 +1159,8 @@ def zeros_like(array, shape: Optional[List[int]] = None, requires_grad: bool = F
         ).requires_grad_(requires_grad)
     elif isinstance(array, np.ndarray):
         return np.zeros_like(array, shape=shape, subok=False)
+    elif _is_jax_array(array):
+        return _jnp().zeros_like(array, shape=shape)
     else:
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 

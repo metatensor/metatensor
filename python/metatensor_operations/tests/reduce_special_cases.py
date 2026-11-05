@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import pytest
 
 
 try:
@@ -348,7 +349,7 @@ def test_zeros_property_block_gradient():
     assert mts.equal_metadata(tensor_sum, tensor_std)
 
 
-def tensor_for_finite_differences(array, parameter) -> TensorMap:
+def tensor_for_finite_differences(array, parameter, components=False) -> TensorMap:
     """
     Creates a TensorMap from a set of cartesian vectors according to the function:
 
@@ -358,7 +359,9 @@ def tensor_for_finite_differences(array, parameter) -> TensorMap:
 
         \\nabla f = (3x^2, 3y^2, 3z^2)
 
-    The gradients are stored with the given ``parameter`` name.
+    The gradients are stored with the given ``parameter`` name. With
+    ``components=True``, the block has an additional component containing ``f`` and
+    ``2 f``.
     """
     n_samples = array.shape[0]
     n_properties = array.shape[-1]
@@ -366,11 +369,17 @@ def tensor_for_finite_differences(array, parameter) -> TensorMap:
 
     values = _dispatch.sum(array**3, axis=1)
     values_grad = 3 * array**2
+    if components:
+        values = np.stack([values, 2 * values], axis=1)
+        values_grad = np.stack([values_grad, 2 * values_grad], axis=2)
+        block_components = [Labels.range("c", 2)]
+    else:
+        block_components = []
 
     block = mts.TensorBlock(
         values,
         Labels.range("s", 10),
-        [],
+        block_components,
         Labels(
             ["p_1", "p_2"], np.array([[0, 0], [0, 1], [1, 0], [1, 1], [2, 0], [2, 1]])
         ),
@@ -378,9 +387,9 @@ def tensor_for_finite_differences(array, parameter) -> TensorMap:
     block.add_gradient(
         parameter=parameter,
         gradient=TensorBlock(
-            values=values_grad.reshape(n_samples, 3, n_properties),
+            values=values_grad,
             samples=Labels.range("sample", len(values)),
-            components=[Labels.range("xyz", 3)],
+            components=[Labels.range("xyz", 3)] + block_components,
             properties=block.properties,
         ),
     )
@@ -388,21 +397,22 @@ def tensor_for_finite_differences(array, parameter) -> TensorMap:
     return TensorMap(Labels.range("_", 1), [block])
 
 
-def test_finite_difference():
+@pytest.mark.parametrize("components", [False, True])
+def test_finite_difference(components):
     def sum(array):
-        tensor = tensor_for_finite_differences(array, parameter="g")
+        tensor = tensor_for_finite_differences(array, "g", components)
         return mts.sum_over_properties(tensor, "p_1")
 
     def mean(array):
-        tensor = tensor_for_finite_differences(array, parameter="g")
+        tensor = tensor_for_finite_differences(array, "g", components)
         return mts.mean_over_properties(tensor, "p_1")
 
     def var(array):
-        tensor = tensor_for_finite_differences(array, parameter="g")
+        tensor = tensor_for_finite_differences(array, "g", components)
         return mts.var_over_properties(tensor, "p_1")
 
     def std(array):
-        tensor = tensor_for_finite_differences(array, parameter="g")
+        tensor = tensor_for_finite_differences(array, "g", components)
         return mts.std_over_properties(tensor, "p_1")
 
     rng = np.random.default_rng(seed=123456)
