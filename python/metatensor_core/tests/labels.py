@@ -1,3 +1,5 @@
+import ctypes
+
 import numpy as np
 import pytest
 
@@ -9,7 +11,8 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from metatensor import Labels, MetatensorError
+from metatensor import Labels, MetatensorError, TensorBlock
+from metatensor._c_lib import _get_library
 
 
 def test_constructor():
@@ -458,6 +461,45 @@ def test_ownership_transfer():
     with pytest.raises(RuntimeError, match=message):
         recovered.as_mts_labels_t()
 
+    Labels.unsafe_from_ptr(raw)
+
+
+def test_free(monkeypatch):
+    """Labels free their memory when garbage-collected, unless released"""
+
+    def address(ptr):
+        return ctypes.cast(ptr, ctypes.c_void_p).value
+
+    lib = _get_library()
+    free = lib.mts_labels_free
+    freed = []
+
+    def record_free(ptr):
+        freed.append(address(ptr))
+        return free(ptr)
+
+    monkeypatch.setattr(lib, "mts_labels_free", record_free)
+
+    labels = Labels.range("a", 3)
+    ptr = address(labels.as_mts_labels_t())
+    del labels
+    assert freed == [ptr]
+
+    # Labels created by metatensor-core
+    block = TensorBlock(
+        np.zeros((3, 1)), Labels.range("s", 3), [], Labels.range("p", 1)
+    )
+    samples = block.samples
+    ptr = address(samples.as_mts_labels_t())
+    freed.clear()
+    del samples
+    assert freed == [ptr]
+
+    labels = Labels.range("a", 3)
+    raw = labels.release()
+    freed.clear()
+    del labels
+    assert freed == []
     Labels.unsafe_from_ptr(raw)
 
 
