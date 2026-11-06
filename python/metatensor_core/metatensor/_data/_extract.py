@@ -1,8 +1,11 @@
 import ctypes
-from typing import Any
+import importlib
+import typing
+from typing import Any, Literal
 
 import numpy as np
 from ctypes_dlpack import (
+    DLDataType,
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
@@ -21,53 +24,166 @@ from ._array import (
     _KNOWN_ARRAY_WRAPPERS,
     _origin_numpy,
     _origin_pytorch,
-    _register_origin,
+    array_device,
+    array_dtype,
 )
 
 
-_ADDITIONAL_ORIGINS = {}
+ArrayBackend = Literal["numpy", "torch"]
+"""
+Array backend used to give access to data that was not allocated by Python. This can be
+one of:
+
+- ``"numpy"``: data is returned as :py:class:`numpy.ndarray`, and must live on CPU;
+- ``"torch"``: data is returned as :py:class:`torch.Tensor`.
+"""
+
+_ARRAY_BACKENDS = typing.get_args(ArrayBackend)
+
+
+def check_array_backend(array_backend: str) -> str:
+    """Check that ``array_backend`` is one of the supported array backends"""
+    if array_backend not in _ARRAY_BACKENDS:
+        raise ValueError(
+            f"invalid array_backend '{array_backend}', expected one of "
+            + ", ".join(f"'{b}'" for b in _ARRAY_BACKENDS)
+        )
+    return array_backend
 
 
 def register_external_data_wrapper(origin, klass):
     """
-    Register a non-Python data origin and the corresponding class wrapper.
+    .. deprecated:: 0.2.7
 
-    The wrapper class constructor must take two arguments (raw ``mts_array`` and python
-    ``parent`` object) and return a subclass of either :py:class:`numpy.ndarray` or
-    :py:class:`torch.Tensor`, which keeps ``parent`` alive. The
-    :py:class:`metatensor.data.ExternalCpuArray` class should provide the right behavior
-    for data living in CPU memory, and can serve as an example for more advanced custom
-    arrays.
+        This function does nothing. Data from any non-Python origin is now accessible
+        through DLPack, use the ``array_backend`` parameter of
+        :py:meth:`TensorMap.unsafe_from_ptr`, :py:meth:`TensorBlock.unsafe_from_ptr`,
+        :py:meth:`Labels.unsafe_from_ptr` or the loading functions to choose which
+        array type to use for this data.
 
     :param origin: data origin name as a string, corresponding to the output of
         :c:func:`mts_array_t.origin`
     :param klass: wrapper class to use for this origin
     """
 
-    if not isinstance(origin, str):
-        raise ValueError(f"origin must be a string, got {type(origin)}")
 
-    global _ADDITIONAL_ORIGINS
-    _ADDITIONAL_ORIGINS[_register_origin(origin)] = klass
-
-
-def mts_array_to_python_array(mts_array, parent=None):
+def mts_array_to_python_array(mts_array, parent=None, array_backend="numpy"):
     """Convert a raw mts_array to a Python ``Array``.
 
-    Either the underlying array was allocated by Python, and the Python object
-    is directly returned; or the underlying array was not allocated by Python,
-    and additional origins are searched for a suitable Python wrapper class.
+    Either the underlying array was allocated by Python, and the Python object is
+    directly returned; or the underlying array was not allocated by Python, and the data
+    is exported through DLPack and given to the requested ``array_backend``.
+
+    :param mts_array: raw array to convert
+    :param parent: Python object owning ``mts_array``, which will be kept alive for as
+        long as the returned array is alive. This should not hold a reference to the
+        returned array, or the corresponding memory will never be released.
+    :param array_backend: array backend to use for non-Python data
     """
     origin = data_origin(mts_array)
     if _is_python_origin(origin):
         return _KNOWN_ARRAY_WRAPPERS[mts_array.ptr].array
-    elif origin in _ADDITIONAL_ORIGINS:
-        return _ADDITIONAL_ORIGINS[origin](mts_array, parent=parent)
-    else:
+
+    check_array_backend(array_backend)
+    if array_backend == "torch":
+        backend_module = import_array_backend(array_backend)
+
+    device = mts_array_device(mts_array)
+    if array_backend == "numpy" and device.device_type != DLDeviceType.kDLCPU:
         raise ValueError(
-            f"unable to handle data coming from '{data_origin_name(origin)}', "
-            "you should maybe register a new array wrapper with metatensor"
+            f"can not access data on device '{device.device_type}:{device.device_id}' "
+            "with array_backend='numpy', use array_backend='torch' instead"
         )
+
+    array = mts_array_to_dlpack(mts_array, parent=parent)
+    if array_backend == "numpy":
+        return np.from_dlpack(array)
+    else:
+        return backend_module.from_dlpack(array)
+
+
+def mts_array_to_dlpack(mts_array, parent=None, dl_device=None) -> DLPackArray:
+    """
+    Export the data in a raw mts_array through DLPack, regardless of where the data was
+    allocated.
+
+    :param mts_array: raw array to export
+    :param parent: Python object owning ``mts_array``, which will be kept alive for as
+        long as the returned array is alive. This should not hold a reference to the
+        returned array, or the corresponding memory will never be released.
+    :param dl_device: device on which the data should be exported, as a ``(device_type,
+        device_id)`` tuple following the DLPack convention. If ``None``, the data is
+        exported on the device where it currently lives.
+    """
+    if dl_device is None:
+        device = mts_array_device(mts_array)
+    else:
+        device_type, device_id = dl_device
+        device = DLDevice(device_type=device_type, device_id=device_id)
+
+    dl_managed_ptr = ctypes.POINTER(DLManagedTensorVersioned)()
+    status = mts_array.as_dlpack(
+        mts_array.ptr,
+        ctypes.byref(dl_managed_ptr),
+        device,
+        None,
+        DLPackVersion(major=1, minor=0),
+    )
+    check_status(status)
+
+    return DLPackArray(dl_managed_ptr, keepalive=parent)
+
+
+def mts_array_dtype(mts_array, array_backend=None):
+    """
+    Get the dtype of an mts_array. If ``array_backend`` is ``None``, this returns the
+    raw ``DLDataType``. Otherwise, this returns the dtype as it would be returned by
+    :py:func:`mts_array_to_python_array` with the same ``array_backend``.
+    """
+    if array_backend is None:
+        dtype = DLDataType()
+        check_status(mts_array.dtype(mts_array.ptr, ctypes.byref(dtype)))
+        return dtype
+
+    array = mts_array_to_python_array(mts_array, array_backend=array_backend)
+    return array_dtype(array)
+
+
+def mts_array_device(mts_array, array_backend=None):
+    """
+    Get the device of an mts_array. If ``array_backend`` is ``None``, this returns the
+    raw ``DLDevice``. Otherwise, this returns the device as it would be returned by
+    :py:func:`mts_array_to_python_array` with the same ``array_backend``.
+    """
+    if array_backend is None:
+        device = DLDevice()
+        check_status(mts_array.device(mts_array.ptr, ctypes.byref(device)))
+        return device
+
+    array = mts_array_to_python_array(mts_array, array_backend=array_backend)
+    return array_device(array)
+
+
+def mts_array_shape(mts_array):
+    """Get the shape of an mts_array as a tuple of integers"""
+    shape_ptr = ctypes.POINTER(c_uintptr_t)()
+    shape_count = c_uintptr_t()
+    status = mts_array.shape(
+        mts_array.ptr, ctypes.byref(shape_ptr), ctypes.byref(shape_count)
+    )
+    check_status(status)
+
+    return tuple(shape_ptr[i] for i in range(shape_count.value))
+
+
+def import_array_backend(name):
+    try:
+        return importlib.import_module(name)
+    except ImportError as e:
+        raise ImportError(
+            f"array_backend='{name}' requires the {name} package, "
+            f"install it with `pip install {name}`"
+        ) from e
 
 
 def mts_array_was_allocated_by_python(mts_array):
@@ -105,6 +221,12 @@ def data_origin_name(origin):
 
 class ExternalCpuArray(np.ndarray):
     """
+    .. deprecated:: 0.2.7
+
+        Data from non-Python origins is now returned as plain
+        :py:class:`numpy.ndarray` by default, this class is no longer used by
+        metatensor.
+
     Small wrapper class around ``np.ndarray``, adding a reference to a parent
     Python object that actually owns the memory used inside the array. This
     prevents the parent from being garbage collected while the ndarray is still
@@ -175,6 +297,11 @@ class ExternalCpuArray(np.ndarray):
 
 class ExternalCudaArray:
     """
+    .. deprecated:: 0.2.7
+
+        This class is no longer used by metatensor, use ``array_backend="torch"`` to
+        access data from non-Python origins as :py:class:`torch.Tensor`.
+
     Factory that wraps non-Python data on a CUDA device as a ``torch.Tensor`` via
     DLPack, keeping a reference to a parent Python object to prevent use-after-free.
 

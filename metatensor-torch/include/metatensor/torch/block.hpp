@@ -154,7 +154,7 @@ public:
     /// `to(dtype, device=device)`, `to(dtype, device)`, `to(device, dtype)`,
     /// etc.
     ///
-    /// `arrays` is left as a keyword argument since it is mainly here for
+    /// `array_backend` is left as a keyword argument since it is mainly here for
     /// compatibility with the pure Python backend, and only `"torch"` is
     /// supported.
     TensorBlock to_positional(
@@ -162,7 +162,7 @@ public:
         torch::IValue positional_2,
         torch::optional<torch::Dtype> dtype,
         torch::optional<torch::Device> device,
-        torch::optional<std::string> arrays,
+        torch::optional<std::string> array_backend,
         bool non_blocking = false
     ) const;
 

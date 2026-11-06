@@ -385,25 +385,25 @@ def test_different_device():
     with pytest.raises(MetatensorError, match=message):
         block = TensorBlock(
             values=torch.tensor([[3.0, 4.0]], device="meta"),
-            samples=Labels.range("s", 1),
+            samples=Labels.range("s", 1, array_backend="torch"),
             components=[],
-            properties=Labels.range("p", 2),
+            properties=Labels.range("p", 2, array_backend="torch"),
         )
 
     block = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
-        samples=Labels.range("s", 1),
+        samples=Labels.range("s", 1, array_backend="torch"),
         components=[],
-        properties=Labels.range("p", 2),
+        properties=Labels.range("p", 2, array_backend="torch"),
     )
 
     gradient = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
-        samples=Labels.range("sample", 1),
+        samples=Labels.range("sample", 1, array_backend="torch"),
         components=[],
-        properties=Labels.range("p", 2),
+        properties=Labels.range("p", 2, array_backend="torch"),
     )
-    gradient = gradient.to(arrays="torch", device="meta")
+    gradient = gradient.to(array_backend="torch", device="meta")
 
     message = (
         "invalid parameter: the gradient values are on device 'ExtDev:0' "
@@ -427,7 +427,7 @@ def test_different_origin():
         components=[],
         properties=Labels.range("p", 2),
     )
-    gradient = gradient.to(arrays="torch")
+    gradient = gradient.to(array_backend="torch")
 
     message = (
         "invalid parameter: the gradient data has a different origin "
@@ -513,7 +513,7 @@ def test_to():
     with pytest.raises(TypeError, match=message):
         _ = block.to(np.array([0]))
 
-    block = converted.to(arrays="torch")
+    block = converted.to(array_backend="torch")
 
     assert isinstance(block.values, torch.Tensor)
     assert isinstance(block.samples.values, torch.Tensor)
@@ -586,7 +586,7 @@ def test_to_torch_multiple_args():
     assert block.dtype == np.float64
     assert block.gradient("g").dtype == np.float64
 
-    block = block.to(arrays="torch", dtype=torch.float32)
+    block = block.to(array_backend="torch", dtype=torch.float32)
     assert isinstance(block.values, torch.Tensor)
     assert isinstance(block.gradient("g").values, torch.Tensor)
     assert block.values.dtype == torch.float32

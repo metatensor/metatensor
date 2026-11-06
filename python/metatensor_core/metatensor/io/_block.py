@@ -4,21 +4,30 @@ import ctypes
 import io
 import pathlib
 import warnings
-from typing import BinaryIO, Union
+from typing import BinaryIO, Optional, Union
 
 import numpy as np
 
 from .._block import TensorBlock
 from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
+from .._data import ArrayBackend
 from .._data._array import is_numpy_array, is_torch_array
 from .._status import check_pointer
 from ._labels import labels_from_mts, labels_to_mts
-from ._utils import CreateArrayCallback, create_numpy_array, save_buffer_raw
+from ._utils import (
+    CreateArrayCallback,
+    array_backend_for_create_array,
+    create_array_for_array_backend,
+    save_buffer_raw,
+)
 
 
 def load_block(
-    file: Union[str, pathlib.Path, BinaryIO], use_numpy=False
+    file: Union[str, pathlib.Path, BinaryIO],
+    use_numpy=False,
+    *,
+    array_backend: ArrayBackend = "numpy",
 ) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from the given file.
@@ -30,39 +39,57 @@ def load_block(
         able to process more dtypes than the native implementation, which is limited to
         float64, but the native implementation is usually faster than going through
         numpy.
+    :param array_backend: array backend to use for all data in the
+        :py:class:`TensorBlock`. See :ref:`python-api-array-backend` for more
+        information.
     """
     if use_numpy:
+        if array_backend != "numpy":
+            raise ValueError("`array_backend` must be 'numpy' when `use_numpy` is True")
         return _block_from_mts(file)
     else:
+        create_array = create_array_for_array_backend(array_backend)
+
         if isinstance(file, (str, pathlib.Path)):
-            return load_block_custom_array(file, create_numpy_array)
+            return load_block_custom_array(file, create_array)
         else:
             # assume we have a file-like object
             buffer = file.read()
             assert isinstance(buffer, bytes)
 
-            return load_block_buffer_custom_array(buffer, create_numpy_array)
+            return load_block_buffer_custom_array(buffer, create_array)
 
 
 def load_block_buffer(
-    buffer: Union[bytes, bytearray, memoryview], use_numpy=False
+    buffer: Union[bytes, bytearray, memoryview],
+    use_numpy=False,
+    *,
+    array_backend: ArrayBackend = "numpy",
 ) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from an in-memory buffer.
 
     :param buffer: In-memory buffer containing a serialized ``TensorBlock``
     :param use_numpy: should we use numpy or the native implementation?
+    :param array_backend: array backend to use for all data in the
+        :py:class:`TensorBlock`. See :ref:`python-api-array-backend` for more
+        information.
     """
     if use_numpy:
+        if array_backend != "numpy":
+            raise ValueError("`array_backend` must be 'numpy' when `use_numpy` is True")
+
         return _block_from_mts(io.BytesIO(buffer))
     else:
-        return load_block_buffer_custom_array(buffer, create_numpy_array)
-    pass
+        create_array = create_array_for_array_backend(array_backend)
+        return load_block_buffer_custom_array(buffer, create_array)
 
 
 def load_block_custom_array(
     path: Union[str, pathlib.Path],
     create_array: "CreateArrayCallback",
+    *,
+    array_backend: Optional[ArrayBackend] = None,
 ) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from the given path using a custom
@@ -80,6 +107,12 @@ def load_block_custom_array(
 
     :param path: path of the file to load
     :param create_array: callback used to create arrays as needed
+    :param array_backend: array backend to use for all data in the
+        :py:class:`TensorBlock`. This is required for custom ``create_array`` callbacks,
+        and guessed if the callback is one of
+        :py:func:`metatensor.io.create_numpy_array` or
+        :py:func:`metatensor.io.create_torch_array`. See :ref:`python-api-array-backend`
+        for more information.
     """
 
     lib = _get_library()
@@ -91,12 +124,16 @@ def load_block_custom_array(
 
     ptr = lib.mts_block_load(path, mts_create_array_callback_t(create_array))
     check_pointer(ptr)
-    return TensorBlock.unsafe_from_ptr(ptr)
+    return TensorBlock.unsafe_from_ptr(
+        ptr, array_backend=array_backend_for_create_array(create_array, array_backend)
+    )
 
 
 def load_block_buffer_custom_array(
     buffer: Union[bytes, bytearray, memoryview],
     create_array: "CreateArrayCallback",
+    *,
+    array_backend: Optional[ArrayBackend] = None,
 ) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from the given buffer using a custom
@@ -114,6 +151,12 @@ def load_block_buffer_custom_array(
 
     :param buffer: in-memory buffer containing a saved :py:class:`TensorBlock`
     :param create_array: callback used to create arrays as needed
+    :param array_backend: array backend to use for all data in the
+        :py:class:`TensorBlock`. This is required for custom ``create_array`` callbacks,
+        and guessed if the callback is one of
+        :py:func:`metatensor.io.create_numpy_array` or
+        :py:func:`metatensor.io.create_torch_array`. See :ref:`python-api-array-backend`
+        for more information.
     """
 
     lib = _get_library()
@@ -125,7 +168,9 @@ def load_block_buffer_custom_array(
         mts_create_array_callback_t(create_array),
     )
     check_pointer(ptr)
-    return TensorBlock.unsafe_from_ptr(ptr)
+    return TensorBlock.unsafe_from_ptr(
+        ptr, array_backend=array_backend_for_create_array(create_array, array_backend)
+    )
 
 
 def save_block(

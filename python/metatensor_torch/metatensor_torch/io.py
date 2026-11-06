@@ -23,7 +23,7 @@ else:
 # support str in TorchScript mode
 
 
-def load(file: str) -> TensorMap:
+def load(file: str, array_backend: str = "torch") -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from the given ``file``.
 
@@ -37,15 +37,20 @@ def load(file: str) -> TensorMap:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+
+    :param array_backend: array backend to use for the data. Only ``"torch"`` is
+        supported, this parameter exists for compatibility with :py:mod:`metatensor`.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load(file=file)
+        return torch.ops.metatensor.load(file=file, array_backend=array_backend)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load(file=file)
+            return torch.ops.metatensor.load(file=file, array_backend=array_backend)
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load(file=str(file.resolve()))
+            return torch.ops.metatensor.load(
+                file=str(file.resolve()), array_backend=array_backend
+            )
         else:
             # assume a file-like object
             buffer = file.read()
@@ -56,7 +61,9 @@ def load(file: str) -> TensorMap:
                 warnings.simplefilter("ignore")
                 buffer = torch.frombuffer(buffer, dtype=torch.uint8)
 
-            return torch.ops.metatensor.load_buffer(buffer=buffer)
+            return torch.ops.metatensor.load_buffer(
+                buffer=buffer, array_backend=array_backend
+            )
 
 
 # modify the annotations in a way such that the TorchScript compiler does not see these,
@@ -64,7 +71,7 @@ def load(file: str) -> TensorMap:
 load.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
-def load_block(file: str) -> TensorBlock:
+def load_block(file: str, array_backend: str = "torch") -> TensorBlock:
     """
     Load previously saved :py:class:`TensorBlock` from the given ``file``.
 
@@ -74,15 +81,22 @@ def load_block(file: str) -> TensorBlock:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+
+    :param array_backend: array backend to use for the data. Only ``"torch"`` is
+        supported, this parameter exists for compatibility with :py:mod:`metatensor`.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load_block(file=file)
+        return torch.ops.metatensor.load_block(file=file, array_backend=array_backend)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load_block(file=file)
+            return torch.ops.metatensor.load_block(
+                file=file, array_backend=array_backend
+            )
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load_block(file=str(file.resolve()))
+            return torch.ops.metatensor.load_block(
+                file=str(file.resolve()), array_backend=array_backend
+            )
         else:
             # assume a file-like object
             buffer = file.read()
@@ -93,13 +107,15 @@ def load_block(file: str) -> TensorBlock:
                 warnings.simplefilter("ignore")
                 buffer = torch.frombuffer(buffer, dtype=torch.uint8)
 
-            return torch.ops.metatensor.load_block_buffer(buffer=buffer)
+            return torch.ops.metatensor.load_block_buffer(
+                buffer=buffer, array_backend=array_backend
+            )
 
 
 load_block.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]
 
 
-def load_labels(file: str) -> Labels:
+def load_labels(file: str, array_backend: str = "torch") -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given ``file``.
 
@@ -109,15 +125,22 @@ def load_labels(file: str) -> Labels:
 
             When using this function in TorchScript mode, only ``str`` arguments are
             supported.
+
+    :param array_backend: array backend to use for the data. Only ``"torch"`` is
+        supported, this parameter exists for compatibility with :py:mod:`metatensor`.
     """
     if torch.jit.is_scripting():
         assert isinstance(file, str)
-        return torch.ops.metatensor.load_labels(file=file)
+        return torch.ops.metatensor.load_labels(file=file, array_backend=array_backend)
     else:
         if isinstance(file, str):
-            return torch.ops.metatensor.load_labels(file=file)
+            return torch.ops.metatensor.load_labels(
+                file=file, array_backend=array_backend
+            )
         elif isinstance(file, pathlib.Path):
-            return torch.ops.metatensor.load_labels(file=str(file.resolve()))
+            return torch.ops.metatensor.load_labels(
+                file=str(file.resolve()), array_backend=array_backend
+            )
         else:
             # assume a file-like object
             buffer = file.read()
@@ -128,7 +151,9 @@ def load_labels(file: str) -> Labels:
                 warnings.simplefilter("ignore")
                 buffer = torch.frombuffer(buffer, dtype=torch.uint8)
 
-            return torch.ops.metatensor.load_labels_buffer(buffer=buffer)
+            return torch.ops.metatensor.load_labels_buffer(
+                buffer=buffer, array_backend=array_backend
+            )
 
 
 load_labels.__annotations__["file"] = Union[str, pathlib.Path, BinaryIO]

@@ -1,47 +1,70 @@
 import ctypes
 import pathlib
 import warnings
-from typing import BinaryIO, Union
+from typing import BinaryIO, Optional, Union
 
 import numpy as np
 
 from .._c_api import mts_create_array_callback_t
 from .._c_lib import _get_library
+from .._data import ArrayBackend
 from .._labels import Labels
 from .._status import check_pointer
-from ._utils import CreateArrayCallback, create_numpy_array, save_buffer_raw
+from ._utils import (
+    CreateArrayCallback,
+    array_backend_for_create_array,
+    create_array_for_array_backend,
+    save_buffer_raw,
+)
 
 
-def load_labels(file: Union[str, pathlib.Path, BinaryIO]) -> Labels:
+def load_labels(
+    file: Union[str, pathlib.Path, BinaryIO],
+    *,
+    array_backend: ArrayBackend = "numpy",
+) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given file.
 
     :param file: file to load: this can be a string, a :py:class:`pathlib.Path`
         containing the path to the file to load, or a file-like object opened in binary
         mode.
+    :param array_backend: array backend to use for the values of the :py:class:`Labels`.
+        See :ref:`python-api-array-backend` for more information.
     """
+    create_array = create_array_for_array_backend(array_backend)
+
     if isinstance(file, (str, pathlib.Path)):
-        return load_labels_custom_array(file, create_numpy_array)
+        return load_labels_custom_array(file, create_array)
     else:
         # assume we have a file-like object
         buffer = file.read()
         assert isinstance(buffer, bytes)
 
-        return load_labels_buffer_custom_array(buffer, create_numpy_array)
+        return load_labels_buffer_custom_array(buffer, create_array)
 
 
-def load_labels_buffer(buffer: Union[bytes, bytearray, memoryview]) -> Labels:
+def load_labels_buffer(
+    buffer: Union[bytes, bytearray, memoryview],
+    *,
+    array_backend: ArrayBackend = "numpy",
+) -> Labels:
     """
     Load previously saved :py:class:`Labels` from an in-memory buffer.
 
     :param buffer: in-memory buffer containing saved :py:class:`Labels`
+    :param array_backend: array backend to use for the values of the :py:class:`Labels`.
+        See :ref:`python-api-array-backend` for more information.
     """
-    return load_labels_buffer_custom_array(buffer, create_numpy_array)
+    create_array = create_array_for_array_backend(array_backend)
+    return load_labels_buffer_custom_array(buffer, create_array)
 
 
 def load_labels_custom_array(
     path: Union[str, pathlib.Path],
     create_array: "CreateArrayCallback",
+    *,
+    array_backend: Optional[ArrayBackend] = None,
 ) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given path using a custom array
@@ -58,6 +81,11 @@ def load_labels_custom_array(
 
     :param path: path of the file to load
     :param create_array: callback used to create arrays as needed
+    :param array_backend: array backend to use for the values of the :py:class:`Labels`.
+        This is required for custom ``create_array`` callbacks, and guessed if the
+        callback is one of :py:func:`metatensor.io.create_numpy_array` or
+        :py:func:`metatensor.io.create_torch_array`. See :ref:`python-api-array-backend`
+        for more information.
     """
     lib = _get_library()
 
@@ -70,12 +98,16 @@ def load_labels_custom_array(
         path, mts_create_array_callback_t(create_array)
     )
     check_pointer(ptr)
-    return Labels.unsafe_from_ptr(ptr)
+    return Labels.unsafe_from_ptr(
+        ptr, array_backend=array_backend_for_create_array(create_array, array_backend)
+    )
 
 
 def load_labels_buffer_custom_array(
     buffer: Union[bytes, bytearray, memoryview],
     create_array: "CreateArrayCallback",
+    *,
+    array_backend: Optional[ArrayBackend] = None,
 ) -> Labels:
     """
     Load previously saved :py:class:`Labels` from the given buffer using a custom array
@@ -87,11 +119,16 @@ def load_labels_buffer_custom_array(
     ``DLDataType`` of the array, and a pointer to the ``mts_array_t`` to be filled.
 
     :py:func:`metatensor.io.create_numpy_array` and
-    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy
-    and torch arrays respectively.
+    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
+    torch arrays respectively.
 
     :param buffer: in-memory buffer containing saved :py:class:`Labels`
     :param create_array: callback used to create arrays as needed
+    :param array_backend: array backend to use for the values of the :py:class:`Labels`.
+        This is required for custom ``create_array`` callbacks, and guessed if the
+        callback is one of :py:func:`metatensor.io.create_numpy_array` or
+        :py:func:`metatensor.io.create_torch_array`. See :ref:`python-api-array-backend`
+        for more information.
     """
     lib = _get_library()
 
@@ -103,7 +140,9 @@ def load_labels_buffer_custom_array(
     )
     check_pointer(ptr)
 
-    return Labels.unsafe_from_ptr(ptr)
+    return Labels.unsafe_from_ptr(
+        ptr, array_backend=array_backend_for_create_array(create_array, array_backend)
+    )
 
 
 def save_labels(

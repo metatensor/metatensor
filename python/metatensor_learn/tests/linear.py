@@ -25,8 +25,10 @@ DATA_ROOT = os.path.join(
 
 @pytest.fixture
 def tensor():
-    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    tensor = tensor.to(arrays="torch")
+    tensor = mts.load(
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"),
+        array_backend="torch",
+    )
     tensor = mts.remove_gradients(tensor)
     return tensor
 
@@ -43,15 +45,10 @@ def equivariant_tensor():
         values=torch.randn(2, 1, 3, dtype=torch.float64),
         samples=Labels(
             ["system", "atom"],
-            np.array(
-                [
-                    [0, 0],
-                    [0, 1],
-                ]
-            ),
+            torch.tensor([[0, 0], [0, 1]]),
         ),
-        components=[Labels(["o3_mu"], np.array([[0]]))],
-        properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        components=[Labels(["o3_mu"], torch.tensor([[0]]))],
+        properties=Labels(["properties"], torch.tensor([[0], [1], [2]])),
     )
 
     # Define a dummy covariant TensorBlock
@@ -59,24 +56,19 @@ def equivariant_tensor():
         values=torch.randn(2, 3, 3, dtype=torch.float64),
         samples=Labels(
             ["system", "atom"],
-            np.array(
-                [
-                    [0, 0],
-                    [0, 1],
-                ]
-            ),
+            torch.tensor([[0, 0], [0, 1]]),
         ),
-        components=[Labels(["o3_mu"], np.array([[-1], [0], [1]]))],
-        properties=Labels(["properties"], np.array([[3], [4], [5]])),
+        components=[Labels(["o3_mu"], torch.tensor([[-1], [0], [1]]))],
+        properties=Labels(["properties"], torch.tensor([[3], [4], [5]])),
     )
 
     # Create a TensorMap containing the dummy TensorBlocks
     keys = Labels(
         names=["o3_lambda", "o3_sigma"],
-        values=np.array([[0, 1], [1, 1]]),
+        values=torch.tensor([[0, 1], [1, 1]]),
     )
 
-    return TensorMap(keys, [block_1, block_2]).to(arrays="torch")
+    return TensorMap(keys, [block_1, block_2])
 
 
 @pytest.mark.parametrize("bias", [True, False])

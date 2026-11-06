@@ -47,15 +47,10 @@ class EquivariantTransformation(Module):
         ...     values=torch.randn(2, 1, 3),
         ...     samples=Labels(
         ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
+        ...         torch.tensor([[0, 0], [0, 1]]),
         ...     ),
-        ...     components=[Labels(["o3_mu"], np.array([[0]]))],
-        ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        ...     components=[Labels(["o3_mu"], torch.tensor([[0]]))],
+        ...     properties=Labels(["properties"], torch.tensor([[0], [1], [2]])),
         ... )
 
         Define a dummy covariant TensorBlock
@@ -64,20 +59,15 @@ class EquivariantTransformation(Module):
         ...     values=torch.randn(2, 3, 3),
         ...     samples=Labels(
         ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
+        ...         torch.tensor([[0, 0], [0, 1]]),
         ...     ),
-        ...     components=[Labels(["o3_mu"], np.array([[-1], [0], [1]]))],
-        ...     properties=Labels(["properties"], np.array([[3], [4], [5]])),
+        ...     components=[Labels(["o3_mu"], torch.tensor([[-1], [0], [1]]))],
+        ...     properties=Labels(["properties"], torch.tensor([[3], [4], [5]])),
         ... )
 
         Create a TensorMap containing the dummy TensorBlocks
 
-        >>> keys = Labels(names=["o3_lambda"], values=np.array([[0], [1]]))
+        >>> keys = Labels(names=["o3_lambda"], values=torch.tensor([[0], [1]]))
         >>> tensor = TensorMap(keys, [block_1, block_2])
 
         Define the transformation to apply to the TensorMap
@@ -92,9 +82,7 @@ class EquivariantTransformation(Module):
         ...     tensor.keys,
         ...     in_features,
         ...     out_properties=[tensor.block(key).properties for key in tensor.keys],
-        ...     invariant_keys=Labels(
-        ...         ["o3_lambda"], np.array([0], dtype=np.int64).reshape(-1, 1)
-        ...     ),
+        ...     invariant_keys=Labels(["o3_lambda"], torch.tensor([[0]])),
         ... )
 
         The output metadata are the same as the input

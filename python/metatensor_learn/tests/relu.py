@@ -22,8 +22,10 @@ DATA_ROOT = os.path.join(
 
 @pytest.fixture
 def tensor():
-    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"))
-    tensor = tensor.to(arrays="torch")
+    tensor = mts.load(
+        os.path.join(DATA_ROOT, "qm7-spherical-expansion.mts"),
+        array_backend="torch",
+    )
     tensor = mts.remove_gradients(tensor)
     return tensor
 

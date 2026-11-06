@@ -155,9 +155,12 @@ def block_from_array(
     )
 
     device = _dispatch.get_device(array)
-    samples = samples.to(device)
-    components = [component.to(device) for component in components]
-    properties = properties.to(device)
+    backend = _dispatch.get_array_backend(array)
+    samples = samples.to(device, array_backend=backend)
+    components = [
+        component.to(device, array_backend=backend) for component in components
+    ]
+    properties = properties.to(device, array_backend=backend)
 
     # reshape the array if multiple axes of the input array are grouped as samples or
     # properties (i.e. if `len(sample_names) > 1` or `len(property_names) > 1`)

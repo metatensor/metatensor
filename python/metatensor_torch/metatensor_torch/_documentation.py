@@ -217,11 +217,15 @@ class Labels:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def single() -> "Labels":
+    def single(array_backend: str = "torch") -> "Labels":
         """
         Create :py:class:`Labels` to use when there is no relevant metadata and
         only one entry in the corresponding dimension (e.g. keys when a tensor
         map contains a single block).
+
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -240,24 +244,30 @@ class Labels:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def empty(names: StrSequence) -> "Labels":
+    def empty(names: StrSequence, array_backend: str = "torch") -> "Labels":
         """
         Create :py:class:`Labels` with given ``names`` but no values.
 
-        :param names: names of the dimensions in the new labels. A single string
-                      is transformed into a list with one element, i.e.
-                      ``names="a"`` is the same as ``names=["a"]``.
+        :param names: names of the dimensions in the new labels. A single string is
+            transformed into a list with one element, i.e. ``names="a"`` is the same as
+            ``names=["a"]``.
+        :param array_backend: array backend to use for the data. Only ``"torch"`` is
+            supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def range(name: str, end: int) -> "Labels":
+    def range(name: str, end: int, array_backend: str = "torch") -> "Labels":
         """
         Create :py:class:`Labels` with a single dimension using the given
         ``name`` and values in the ``[0, end)`` range.
 
         :param name: name of the single dimension in the new labels.
         :param end: end of the range for labels
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -331,12 +341,15 @@ class Labels:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load(file: str) -> "Labels":
+    def load(file: str, array_backend: str = "torch") -> "Labels":
         """
         Load a serialized :py:class:`Labels` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_labels`.
 
         :param file: Path of the file containing a saved :py:class:`TensorMap`
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -355,12 +368,15 @@ class Labels:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load_buffer(buffer: torch.Tensor) -> "Labels":
+    def load_buffer(buffer: torch.Tensor, array_backend: str = "torch") -> "Labels":
         """
         Load a serialized :py:class:`Labels` from an in-memory ``buffer``, this is
         equivalent to :py:func:`metatensor.torch.load_labels_buffer`.
 
         :param buffer: torch Tensor representing an in-memory buffer
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -521,11 +537,15 @@ class Labels:
         self,
         device: Union[str, torch.device],
         non_blocking: bool = False,
+        array_backend: Optional[str] = None,
     ) -> "Labels":
         """
         Move the values for these Labels to the given ``device``. If ``non_blocking`` is
         ``True``, this tries to move the data asynchronously. See
         :py:meth:`torch.Tensor.to` for more information.
+
+        The ``array_backend`` parameter exists for compatibility with
+        :py:mod:`metatensor`, and must be ``"torch"`` or ``None``.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -653,7 +673,7 @@ class Labels:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def unsafe_from_ptr(ptr: int) -> "Labels":
+    def unsafe_from_ptr(ptr: int, array_backend: str = "torch") -> "Labels":
         """
         Create a :py:class:`Labels` from a raw ``mts_labels_t`` pointer. The
         :py:class:`Labels` takes ownership of the pointer, and will release the
@@ -671,6 +691,9 @@ class Labels:
 
         :param ptr: the pointer as an integer, which will be reinterpreted as a
             ``mts_labels_t*``
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1004,32 +1027,37 @@ class TensorBlock:
         self,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
-        arrays: Optional[str] = None,
+        array_backend: Optional[str] = None,
         non_blocking: bool = False,
+        arrays: Optional[str] = None,
     ) -> "TensorBlock":
         """
         Move all the arrays in this block (values, gradients and labels) to the given
-        ``dtype``, ``device`` and ``arrays`` backend.
+        ``dtype``, ``device`` and array backend.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param Optional[str] arrays: new backend to use for the arrays. This parameter
-            is here for compatibility with the pure Python API, can only be set to
-            ``"torch"`` or ``None``, and does nothing.
+        :param Optional[str] array_backend: new backend to use for the arrays. This
+            parameter is here for compatibility with the pure Python API, can only be
+            set to ``"torch"`` or ``None``, and does nothing.
         :param bool non_blocking: If this is ``True``, the function tries to move the
             data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
+        :param Optional[str] arrays: deprecated, use ``array_backend`` instead.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load(file: str) -> "TensorBlock":
+    def load(file: str, array_backend: str = "torch") -> "TensorBlock":
         """
         Load a serialized :py:class:`TensorBlock` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load_block`.
 
         :param file: Path of the file containing a saved :py:class:`TensorBlock`
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -1048,12 +1076,17 @@ class TensorBlock:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load_buffer(buffer: torch.Tensor) -> "TensorBlock":
+    def load_buffer(
+        buffer: torch.Tensor, array_backend: str = "torch"
+    ) -> "TensorBlock":
         """
         Load a serialized :py:class:`TensorBlock` from an in-memory ``buffer``, this is
         equivalent to :py:func:`metatensor.torch.load_block_buffer`.
 
         :param buffer: torch Tensor representing an in-memory buffer
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -1089,7 +1122,7 @@ class TensorBlock:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def unsafe_from_ptr(ptr: int) -> "TensorBlock":
+    def unsafe_from_ptr(ptr: int, array_backend: str = "torch") -> "TensorBlock":
         """
         Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer. The
         :py:class:`TensorBlock` takes ownership of the pointer, and will release the
@@ -1107,11 +1140,16 @@ class TensorBlock:
 
         :param ptr: the pointer as an integer, which will be reinterpreted as a
             ``mts_block_t*``
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def unsafe_view_from_ptr(ptr: int, parent: Any) -> "TensorBlock":
+    def unsafe_view_from_ptr(
+        ptr: int, parent: Any, array_backend: str = "torch"
+    ) -> "TensorBlock":
         """
         Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer, keeping a
         reference to the ``parent`` to prevent garbage collection.
@@ -1132,6 +1170,9 @@ class TensorBlock:
         :param ptr: the pointer as an integer, which will be reinterpreted as a
             ``mts_block_t*``
         :param parent: the parent object to keep alive
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1209,12 +1250,15 @@ class TensorMap:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load(file: str) -> "TensorMap":
+    def load(file: str, array_backend: str = "torch") -> "TensorMap":
         """
         Load a serialized :py:class:`TensorMap` from the ``file``, this is
         equivalent to :py:func:`metatensor.torch.load`.
 
         :param file: Path of the file containing a saved :py:class:`TensorMap`
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -1233,12 +1277,15 @@ class TensorMap:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def load_buffer(buffer: torch.Tensor) -> "TensorMap":
+    def load_buffer(buffer: torch.Tensor, array_backend: str = "torch") -> "TensorMap":
         """
         Load a serialized :py:class:`TensorMap` from an in-memory ``buffer``, this is
         equivalent to :py:func:`metatensor.torch.load_buffer`.
 
         :param buffer: torch Tensor representing an in-memory buffer
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
 
         .. warning::
 
@@ -1498,22 +1545,24 @@ class TensorMap:
         self,
         dtype: Optional[torch.dtype] = None,
         device: Optional[torch.device] = None,
-        arrays: Optional[str] = None,
+        array_backend: Optional[str] = None,
         non_blocking: bool = False,
+        arrays: Optional[str] = None,
     ) -> "TensorMap":
         """
         Move all the data (keys and blocks) in this :py:class:`TensorMap` to the given
-        ``dtype``, ``device`` and ``arrays`` backend.
+        ``dtype``, ``device`` and array backend.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param Optional[str] arrays: new backend to use for the arrays. This parameter
-            is here for compatibility with the pure Python API, can only be set  to
-            ``"torch"`` or ``None``, and does nothing.
+        :param Optional[str] array_backend: new backend to use for the arrays. This
+            parameter is here for compatibility with the pure Python API, can only be
+            set to ``"torch"`` or ``None``, and does nothing.
         :param bool non_blocking: If this is ``True``, the function tries to move the
             data asynchronously. See :py:meth:`torch.Tensor.to` for more information.
+        :param Optional[str] arrays: deprecated, use ``array_backend`` instead.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1544,7 +1593,7 @@ class TensorMap:
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def unsafe_from_ptr(ptr: int) -> "TensorMap":
+    def unsafe_from_ptr(ptr: int, array_backend: str = "torch") -> "TensorMap":
         """
         Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer. The
         :py:class:`TensorMap` takes ownership of the pointer, and will release the
@@ -1562,11 +1611,16 @@ class TensorMap:
 
         :param ptr: the pointer as an integer, which will be reinterpreted as a
             ``mts_tensormap_t*``
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
     @staticmethod
-    def unsafe_view_from_ptr(ptr: int, parent: Any) -> "TensorMap":
+    def unsafe_view_from_ptr(
+        ptr: int, parent: Any, array_backend: str = "torch"
+    ) -> "TensorMap":
         """
         Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer, keeping a
         reference to the ``parent`` to prevent garbage collection.
@@ -1587,6 +1641,9 @@ class TensorMap:
         :param ptr: the pointer as an integer, which will be reinterpreted as a
             ``mts_tensormap_t*``
         :param parent: the parent object to keep alive
+        :param array_backend: array backend to use for the data. Only ``"torch"``
+            is supported, this parameter exists for compatibility with
+            :py:mod:`metatensor`.
         """
         raise THIS_CODE_SHOULD_NOT_RUN
 
@@ -1624,32 +1681,43 @@ def dtype_name(dtype: torch.dtype) -> str:
     raise THIS_CODE_SHOULD_NOT_RUN
 
 
-def load_buffer(buffer: torch.Tensor) -> TensorMap:
+def load_buffer(buffer: torch.Tensor, *, array_backend: str = "torch") -> TensorMap:
     """
     Load a previously saved :py:class:`TensorMap` from an in-memory buffer, stored
     inside a 1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
+    :param array_backend: array backend to use for the data. Only ``"torch"``
+        is supported, this parameter exists for compatibility with
+        :py:mod:`metatensor`.
     """
     raise THIS_CODE_SHOULD_NOT_RUN
 
 
-def load_block_buffer(buffer: torch.Tensor) -> TensorBlock:
+def load_block_buffer(
+    buffer: torch.Tensor, *, array_backend: str = "torch"
+) -> TensorBlock:
     """
     Load a previously saved :py:class:`TensorBlock` from an in-memory buffer, stored
     inside a 1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
+    :param array_backend: array backend to use for the data. Only ``"torch"``
+        is supported, this parameter exists for compatibility with
+        :py:mod:`metatensor`.
     """
     raise THIS_CODE_SHOULD_NOT_RUN
 
 
-def load_labels_buffer(buffer: torch.Tensor) -> Labels:
+def load_labels_buffer(buffer: torch.Tensor, *, array_backend: str = "torch") -> Labels:
     """
     Load a previously saved :py:class:`Labels` from an in-memory buffer, stored inside a
     1-dimensional :py:class:`torch.Tensor` of ``uint8``.
 
     :param buffer: CPU tensor of ``uint8`` representing a in-memory buffer
+    :param array_backend: array backend to use for the data. Only ``"torch"``
+        is supported, this parameter exists for compatibility with
+        :py:mod:`metatensor`.
     """
     raise THIS_CODE_SHOULD_NOT_RUN
 

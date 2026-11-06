@@ -1,11 +1,12 @@
 import ctypes
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 from ctypes_dlpack import DLDataType, DLDataTypeCode
 
 from .._c_api import c_uintptr_t, mts_array_t
-from .._data._array import create_mts_array
+from .._data import ArrayBackend, check_array_backend
+from .._data._array import create_mts_array, dlpack_dtype_to_numpy
 from .._status import catch_exceptions, save_exception
 
 
@@ -76,36 +77,6 @@ CreateArrayCallback = Callable[
 ]
 
 
-_DLPACK_TO_NUMPY = {
-    (DLDataTypeCode.kDLFloat, 16): np.float16,
-    (DLDataTypeCode.kDLFloat, 32): np.float32,
-    (DLDataTypeCode.kDLFloat, 64): np.float64,
-    (DLDataTypeCode.kDLInt, 8): np.int8,
-    (DLDataTypeCode.kDLInt, 16): np.int16,
-    (DLDataTypeCode.kDLInt, 32): np.int32,
-    (DLDataTypeCode.kDLInt, 64): np.int64,
-    (DLDataTypeCode.kDLUInt, 8): np.uint8,
-    (DLDataTypeCode.kDLUInt, 16): np.uint16,
-    (DLDataTypeCode.kDLUInt, 32): np.uint32,
-    (DLDataTypeCode.kDLUInt, 64): np.uint64,
-    (DLDataTypeCode.kDLBool, 8): np.bool_,
-    (DLDataTypeCode.kDLComplex, 64): np.complex64,
-    (DLDataTypeCode.kDLComplex, 128): np.complex128,
-}
-
-
-def _dlpack_dtype_to_numpy(dtype):
-    """Convert a DLDataType to a numpy dtype."""
-    if dtype.lanes != 1:
-        raise ValueError(f"unsupported DLDataType: lanes={dtype.lanes} (expected 1)")
-    result = _DLPACK_TO_NUMPY.get((dtype.code, dtype.bits))
-    if result is None:
-        raise ValueError(
-            f"unsupported DLDataType: code={dtype.code}, bits={dtype.bits}"
-        )
-    return result
-
-
 def _dlpack_dtype_to_torch(dtype):
     """Convert a DLDataType to a torch dtype."""
     if dtype.lanes != 1:
@@ -145,7 +116,7 @@ def create_numpy_array(shape_ptr, shape_count, dtype, array):
     for i in range(shape_count):
         shape.append(shape_ptr[i])
 
-    np_dtype = _dlpack_dtype_to_numpy(dtype)
+    np_dtype = dlpack_dtype_to_numpy(dtype)
     data = np.empty(shape, dtype=np_dtype)
     array[0] = create_mts_array(data)
 
@@ -166,3 +137,44 @@ def create_torch_array(shape_ptr, shape_count, dtype, array):
     torch_dtype = _dlpack_dtype_to_torch(dtype)
     data = torch.empty(shape, dtype=torch_dtype, device="cpu")
     array[0] = create_mts_array(data)
+
+
+def array_backend_for_create_array(
+    create_array: CreateArrayCallback,
+    array_backend: Optional[ArrayBackend],
+) -> ArrayBackend:
+    """
+    Get the array backend to use for data loaded with ``create_array``. For the
+    callbacks provided by metatensor, this is determined by the callback itself.
+    Otherwise, this is ``array_backend``, which must be given.
+    """
+    if create_array is create_numpy_array:
+        expected = "numpy"
+    elif create_array is create_torch_array:
+        expected = "torch"
+    elif array_backend is None:
+        raise ValueError(
+            "`array_backend` is required when using a custom `create_array` callback"
+        )
+    else:
+        return check_array_backend(array_backend)
+
+    if array_backend is not None and array_backend != expected:
+        raise ValueError(
+            f"array_backend='{array_backend}' is not compatible with "
+            f"create_array={create_array.__name__}, which uses '{expected}'"
+        )
+
+    return expected
+
+
+def create_array_for_array_backend(array_backend: ArrayBackend) -> CreateArrayCallback:
+    """
+    Get the appropriate array creation callback for the given array backend.
+    """
+    if array_backend == "numpy":
+        return create_numpy_array
+    elif array_backend == "torch":
+        return create_torch_array
+    else:
+        raise ValueError(f"Unknown array backend '{array_backend}'")

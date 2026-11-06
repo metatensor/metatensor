@@ -42,7 +42,8 @@ def tensor_zero_len_block():
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
 @pytest.mark.parametrize("standalone_fn", (True, False))
-def test_load(use_numpy, memory_buffer, standalone_fn):
+@pytest.mark.parametrize("array_backend", ("numpy", "torch"))
+def test_load(use_numpy, memory_buffer, standalone_fn, array_backend):
     path = os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -61,16 +62,28 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
     else:
         file = path
 
+    if array_backend == "torch":
+        torch = pytest.importorskip("torch")
+
+    if use_numpy and array_backend != "numpy":
+        return
+
     if standalone_fn:
         if memory_buffer:
-            tensor = mts.io.load_buffer(buffer, use_numpy=use_numpy)
+            tensor = mts.io.load_buffer(
+                buffer, use_numpy=use_numpy, array_backend=array_backend
+            )
         else:
-            tensor = mts.load(file, use_numpy=use_numpy)
+            tensor = mts.load(file, use_numpy=use_numpy, array_backend=array_backend)
     else:
         if memory_buffer:
-            tensor = TensorMap.load_buffer(buffer, use_numpy=use_numpy)
+            tensor = TensorMap.load_buffer(
+                buffer, use_numpy=use_numpy, array_backend=array_backend
+            )
         else:
-            tensor = TensorMap.load(file, use_numpy=use_numpy)
+            tensor = TensorMap.load(
+                file, use_numpy=use_numpy, array_backend=array_backend
+            )
 
     assert isinstance(tensor, TensorMap)
     assert tensor.keys.names == [
@@ -80,6 +93,11 @@ def test_load(use_numpy, memory_buffer, standalone_fn):
         "neighbor_type",
     ]
     assert len(tensor.keys) == 27
+
+    if array_backend == "numpy":
+        assert isinstance(tensor.keys.values, np.ndarray)
+    elif array_backend == "torch":
+        assert isinstance(tensor.keys.values, torch.Tensor)
 
     block = tensor.block(o3_lambda=2, center_type=6, neighbor_type=1)
     assert block.samples.names == ["system", "atom"]
@@ -114,12 +132,10 @@ def test_load_deflate(use_numpy):
     assert len(tensor.keys) == 17
 
 
-# using tmpdir as pytest-built-in fixture
-# https://docs.pytest.org/en/7.1.x/how-to/tmp_path.html#the-tmpdir-and-tmpdir-factory-fixtures
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
 @pytest.mark.parametrize("standalone_fn", (True, False))
-def test_save(use_numpy, memory_buffer, standalone_fn, tmpdir, tensor):
+def test_save(tmpdir, use_numpy, memory_buffer, standalone_fn, tensor):
     """Check that as saved file loads fine with numpy."""
     with tmpdir.as_cwd():
         if memory_buffer:
@@ -366,7 +382,8 @@ def _mts_labels(data):
 
 @pytest.mark.parametrize("memory_buffer", (True, False))
 @pytest.mark.parametrize("standalone_fn", (True, False))
-def test_load_labels(memory_buffer, standalone_fn):
+@pytest.mark.parametrize("array_backend", ("numpy", "torch"))
+def test_load_labels(memory_buffer, standalone_fn, array_backend):
     path = os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -385,16 +402,19 @@ def test_load_labels(memory_buffer, standalone_fn):
     else:
         file = path
 
+    if array_backend == "torch":
+        torch = pytest.importorskip("torch")
+
     if standalone_fn:
         if memory_buffer:
-            labels = mts.io.load_labels_buffer(buffer)
+            labels = mts.io.load_labels_buffer(buffer, array_backend=array_backend)
         else:
-            labels = mts.load_labels(file)
+            labels = mts.load_labels(file, array_backend=array_backend)
     else:
         if memory_buffer:
-            labels = Labels.load_buffer(buffer)
+            labels = Labels.load_buffer(buffer, array_backend=array_backend)
         else:
-            labels = Labels.load(file)
+            labels = Labels.load(file, array_backend=array_backend)
 
     assert isinstance(labels, Labels)
     assert labels.names == [
@@ -404,6 +424,11 @@ def test_load_labels(memory_buffer, standalone_fn):
         "neighbor_type",
     ]
     assert len(labels) == 27
+
+    if array_backend == "numpy":
+        assert isinstance(labels.values, np.ndarray)
+    elif array_backend == "torch":
+        assert isinstance(labels.values, torch.Tensor)
 
 
 @pytest.mark.parametrize("memory_buffer", (True, False))
@@ -575,7 +600,8 @@ def test_wrong_load_error():
 @pytest.mark.parametrize("use_numpy", (True, False))
 @pytest.mark.parametrize("memory_buffer", (True, False))
 @pytest.mark.parametrize("standalone_fn", (True, False))
-def test_load_block(use_numpy, memory_buffer, standalone_fn):
+@pytest.mark.parametrize("array_backend", ("numpy", "torch"))
+def test_load_block(use_numpy, memory_buffer, standalone_fn, array_backend):
     path = os.path.join(
         os.path.dirname(__file__),
         "..",
@@ -594,20 +620,39 @@ def test_load_block(use_numpy, memory_buffer, standalone_fn):
     else:
         file = path
 
+    if array_backend == "torch":
+        torch = pytest.importorskip("torch")
+
+    if use_numpy and array_backend != "numpy":
+        return
+
     if standalone_fn:
         if memory_buffer:
-            block = mts.io.load_block_buffer(buffer, use_numpy=use_numpy)
+            block = mts.io.load_block_buffer(
+                buffer, use_numpy=use_numpy, array_backend=array_backend
+            )
         else:
-            block = mts.load_block(file, use_numpy=use_numpy)
+            block = mts.load_block(
+                file, use_numpy=use_numpy, array_backend=array_backend
+            )
     else:
         if memory_buffer:
-            block = TensorBlock.load_buffer(buffer, use_numpy=use_numpy)
+            block = TensorBlock.load_buffer(
+                buffer, use_numpy=use_numpy, array_backend=array_backend
+            )
         else:
-            block = TensorBlock.load(file, use_numpy=use_numpy)
+            block = TensorBlock.load(
+                file, use_numpy=use_numpy, array_backend=array_backend
+            )
 
     assert isinstance(block, TensorBlock)
     assert block.samples.names == ["system", "atom"]
     assert block.values.shape == (9, 5, 3)
+
+    if array_backend == "numpy":
+        assert isinstance(block.values, np.ndarray)
+    elif array_backend == "torch":
+        assert isinstance(block.values, torch.Tensor)
 
     gradient = block.gradient("positions")
     assert gradient.samples.names == ["sample", "system", "atom"]

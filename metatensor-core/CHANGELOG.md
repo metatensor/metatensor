@@ -40,6 +40,21 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - `metatensor.io.load_labels_custom_array()` and
   `metatensor.io.load_labels_buffer_custom_array()` to load `Labels` values
   with a custom array type
+- Data allocated outside of Python is now accessed through DLPack, and can be
+  returned as numpy arrays or torch tensors, depending on the new
+  `array_backend` parameter.
+- `TensorBlock.values_dlpack()` and `Labels.values_dlpack()` to access the
+  values as `ctypes_dlpack.DLPackArray`, and use them with any library
+  supporting DLPack.
+
+#### Deprecated
+
+- `metatensor.register_external_data_wrapper`, `metatensor.ExternalCpuArray`
+  and `metatensor.ExternalCudaArray` are deprecated, and emit a warning when
+  accessed. `register_external_data_wrapper` no longer does anything, use the
+  `array_backend` parameter instead.
+- The `arrays` parameter of `Labels.to()`, `TensorBlock.to()` and
+  `TensorMap.to()` is deprecated and renamed to `array_backend`.
 
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 

@@ -5,16 +5,19 @@ from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
 import numpy as np
-from ctypes_dlpack import DLDataType, DLDataTypeCode
+from ctypes_dlpack import (
+    DLDataType,
+    DLDataTypeCode,
+)
 
-from . import _data
+from . import _data, _dispatch
 from ._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_labels_t,
 )
 from ._c_lib import _get_library
-from ._data import Array, Device
+from ._data import Array, ArrayBackend, Device
 from ._html import labels_html
 from ._status import check_pointer, check_status
 
@@ -60,6 +63,7 @@ class LabelsEntry:
             )
 
         self._values = values
+        self._cached_cpu_values = None
         self._cached_device = _data.array_device(values)
 
     @property
@@ -76,6 +80,17 @@ class LabelsEntry:
         return self._values
 
     @property
+    def _cpu_values(self) -> np.ndarray:
+        """values of this entry, as a numpy array on CPU"""
+        if self._cached_cpu_values is None:
+            if _data.array_backend(self._values) == "torch":
+                self._cached_cpu_values = self._values.cpu().numpy()
+            else:
+                self._cached_cpu_values = self._values
+
+        return self._cached_cpu_values
+
+    @property
     def device(self) -> Device:
         """
         Get the device of this labels entry.
@@ -86,7 +101,7 @@ class LabelsEntry:
         """
         print this entry as a named tuple (i.e. ``(key_1=value_1, key_2=value_2)``)
         """
-        values = [f"{n}={v}" for n, v in zip(self.names, self.values, strict=True)]
+        values = [f"{n}={v}" for n, v in zip(self.names, self._cpu_values, strict=True)]
         return f"({', '.join(values)})"
 
     def __repr__(self) -> str:
@@ -98,7 +113,7 @@ class LabelsEntry:
 
         html = labels_html(
             self._names,
-            self._values[None, :],
+            self._cpu_values[None, :],
             default_visible_entries=1,
             max_html_entries=1,
         )
@@ -110,7 +125,7 @@ class LabelsEntry:
 
     def __len__(self) -> int:
         """number of dimensions in this labels entry"""
-        return self._values.shape[0]
+        return self._cpu_values.shape[0]
 
     def __getitem__(self, dimension: Union[str, int]) -> int:
         """get the value associated with the dimension in this entry"""
@@ -142,10 +157,8 @@ class LabelsEntry:
                 f"can only compare between LabelsEntry for equality, got {type(other)}"
             )
 
-        return (
-            self._names == other._names
-            and self._values.shape == other._values.shape
-            and np.all(self._values == other._values)
+        return self._names == other._names and np.array_equal(
+            self._cpu_values, other._cpu_values
         )
 
     def __ne__(self, other: "LabelsEntry") -> bool:
@@ -154,6 +167,18 @@ class LabelsEntry:
         dimensions/names or different values)
         """
         return not self.__eq__(other)
+
+
+def _labels_array_backend(values: Array) -> str:
+    if isinstance(values, mts_array_t):
+        if _data.mts_array_was_allocated_by_python(values):
+            values = _data.mts_array_to_python_array(values)
+        else:
+            # we can not know which array type the user would prefer, default to numpy.
+            # Code creating labels from such arrays can set `_array_backend` afterward
+            return "numpy"
+
+    return _data.array_backend(values)
 
 
 def _labels_values_mts_array(array: Array, size: int) -> (mts_array_t, Array):
@@ -362,6 +387,7 @@ class Labels:
 
         names = _normalize_names_type(names)
         self._lib = _get_library()
+        array_backend = _labels_array_backend(values)
         array, values = _labels_values_mts_array(values, len(names))
 
         c_names = ctypes.ARRAY(ctypes.c_char_p, len(names))()
@@ -377,38 +403,59 @@ class Labels:
 
         self._labels = MtsLabels(ptr)
         self._names = names
+        self._array_backend = array_backend
         self._cached_values = values
         self._cached_cpu_values = None
         self._cached_device = None
 
     @staticmethod
-    def single() -> "Labels":
+    def single(*, array_backend: ArrayBackend = "numpy") -> "Labels":
         """
         Create :py:class:`Labels` to use when there is no relevant metadata and
         only one entry in the corresponding dimension (e.g. keys when a tensor
         map contains a single block).
+
+        :param array_backend: array backend to use for the values of the new labels.
         """
-        return Labels(names=["_"], values=np.zeros(shape=(1, 1), dtype=np.int32))
+        _data.check_array_backend(array_backend)
+        values = np.zeros(shape=(1, 1), dtype=np.int32)
+        values = _data.array_change_backend(values, array_backend)
+        return Labels(names=["_"], values=values, assume_unique=True)
 
     @staticmethod
-    def empty(names: Union[str, Sequence[str]]) -> "Labels":
+    def empty(
+        names: Union[str, Sequence[str]],
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ) -> "Labels":
         """
         Create :py:class:`Labels` with given ``names`` but no values.
 
         :param names: names of the dimensions in the new labels. A single string
                       is transformed into a list with one element, i.e.
                       ``names="a"`` is the same as ``names=["a"]``.
+        :param array_backend: array backend to use for the values of the new labels.
         """
-        return Labels(names=names, values=np.empty((0, len(names))))
+        names = _normalize_names_type(names)
+        _data.check_array_backend(array_backend)
+        values = np.empty((0, len(names)), dtype=np.int32)
+        values = _data.array_change_backend(values, array_backend)
+        return Labels(names=names, values=values, assume_unique=True)
 
     @staticmethod
-    def range(name: str, end: int) -> "Labels":
+    def range(
+        name: str,
+        end: int,
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ) -> "Labels":
         """
         Create :py:class:`Labels` with a single dimension using the given
         ``name`` and values in the ``[0, end)`` range.
 
         :param name: name of the single dimension in the new labels.
         :param end: end of the range for labels
+        :param array_backend: array backend to use for the values of the new labels.
 
         >>> from metatensor import Labels
         >>> labels = Labels.range("dummy", 7)
@@ -423,20 +470,30 @@ class Labels:
          [5]
          [6]]
         """
-        return Labels(
-            names=[name],
-            values=np.arange(end, dtype=np.int32).reshape(-1, 1),
-        )
+        _data.check_array_backend(array_backend)
+        values = np.arange(end, dtype=np.int32).reshape(-1, 1)
+        values = _data.array_change_backend(values, array_backend)
+        return Labels(names=[name], values=values, assume_unique=True)
 
     @staticmethod
-    def unsafe_from_ptr(labels: ctypes.POINTER(mts_labels_t)):
+    def unsafe_from_ptr(
+        labels: ctypes.POINTER(mts_labels_t),
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ):
         """
         Create Labels from a raw ``mts_labels_t`` pointer.
 
         The :py:class:`Labels` take ownership of the pointer, and will release the
         corresponding memory when garbage-collected.
+
+        :param labels: raw pointer to the labels
+        :param array_backend: array backend to use for data in these labels that was
+            not allocated by Python. Data allocated by Python is always returned as-is.
+            See :ref:`python-api-array-backend` for more information.
         """
         assert labels, "mts_labels_t pointer is null"
+        _data.check_array_backend(array_backend)
 
         obj = Labels.__new__(Labels)
         obj._lib = _get_library()
@@ -451,6 +508,7 @@ class Labels:
             names.append(names_ptr[i].decode("utf8"))
         obj._names = names
 
+        obj._array_backend = array_backend
         obj._cached_values = None
         obj._cached_cpu_values = None
         obj._cached_device = None
@@ -480,7 +538,10 @@ class Labels:
     def __deepcopy__(self, _memodict):
         ptr = self._lib.mts_labels_clone(self._labels)
         check_pointer(ptr)
-        return Labels.unsafe_from_ptr(ptr)
+        result = Labels.unsafe_from_ptr(ptr, array_backend=self._array_backend)
+        # labels are immutable, so we can share the values with the copy
+        result._cached_values = self._cached_values
+        return result
 
     def __copy__(self):
         return self.__deepcopy__({})
@@ -520,7 +581,7 @@ class Labels:
 
     def __iter__(self):
         for i in range(len(self)):
-            yield LabelsEntry(self._names, self.values[i, :])
+            yield self.entry(i)
 
     @overload
     def __getitem__(self, dimension: str) -> np.ndarray:
@@ -603,28 +664,40 @@ class Labels:
             return self._from_pickle, (buffer.raw,)
 
     @staticmethod
-    def load(file: Union[str, pathlib.Path, BinaryIO]) -> "Labels":
+    def load(
+        file: Union[str, pathlib.Path, BinaryIO],
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ) -> "Labels":
         """
         Load a serialized :py:class:`Labels` from a file, calling
         :py:func:`metatensor.load_labels`.
 
         :param file: file path or file object to load from
+        :param array_backend: array backend to use for the values. See
+            :py:func:`metatensor.load_labels_buffer` for more information.
         """
         from .io import load_labels
 
-        return load_labels(file=file)
+        return load_labels(file=file, array_backend=array_backend)
 
     @staticmethod
-    def load_buffer(buffer: Union[bytes, bytearray, memoryview]) -> "Labels":
+    def load_buffer(
+        buffer: Union[bytes, bytearray, memoryview],
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ) -> "Labels":
         """
         Load a serialized :py:class:`Labels` from a buffer, calling
         :py:func:`metatensor.io.load_labels_buffer`.
 
         :param buffer: in-memory buffer containing the data
+        :param array_backend: array backend to use for the values. See
+            :py:func:`metatensor.load_labels_buffer` for more information.
         """
         from .io import load_labels_buffer
 
-        return load_labels_buffer(buffer=buffer)
+        return load_labels_buffer(buffer=buffer, array_backend=array_backend)
 
     def save(self, file: Union[str, pathlib.Path, BinaryIO]):
         """
@@ -662,15 +735,40 @@ class Labels:
     @property
     def values(self) -> Array:
         """
-        values associated with each dimensions of the :py:class:`Labels`, stored
-        as 2-dimensional tensor of 32-bit integers
+        values associated with each dimensions of the :py:class:`Labels`, stored as
+        2-dimensional tensor of 32-bit integers.
+
+        If the values were allocated by Python, they are returned as-is. Otherwise, the
+        type of the values depends on the ``array_backend`` set when creating these
+        labels.
         """
         if self._cached_values is None:
             self._cached_values = _data.mts_array_to_python_array(
-                self._raw_values, self._labels
+                self._raw_values,
+                parent=self._labels,
+                array_backend=self._array_backend,
             )
 
         return self._cached_values
+
+    def values_dlpack(self, *, dl_device: Optional[Tuple[int, int]] = None):
+        """
+        Get the values of these :py:class:`Labels` through `DLPack`_, as a
+        :py:class:`ctypes_dlpack.DLPackArray`. This can be used to access the values
+        with any library supporting DLPack, typically with ``xxx.from_dlpack(array)``.
+
+        A :py:class:`ctypes_dlpack.DLPackArray` can only be consumed once, call this
+        function again to get a new one. The returned array keeps these labels alive.
+
+        :param dl_device: device on which the values should be exported, as a
+            ``(device_type, device_id)`` tuple following the DLPack convention. If
+            ``None``, the values are exported on the device where they currently live.
+
+        .. _DLPack: https://dmlc.github.io/dlpack/latest/
+        """
+        return _data.mts_array_to_dlpack(
+            self._raw_values, parent=self._labels, dl_device=dl_device
+        )
 
     @property
     def _cpu_values(self) -> np.ndarray:
@@ -700,11 +798,12 @@ class Labels:
         self._cached_cpu_values = array
         return self._cached_cpu_values
 
-    def append(self, name: str, values: np.ndarray) -> "Labels":
+    def append(self, name: str, values: Array) -> "Labels":
         """Append a new dimension to the end of the :py:class:`Labels`.
 
         :param name: name of the new dimension
-        :param values: 1D array of values for the new dimension
+        :param values: 1D array of values for the new dimension. This must use the
+            same array type (numpy or torch) as the values of these Labels.
 
         >>> import numpy as np
         >>> from metatensor import Labels
@@ -718,14 +817,15 @@ class Labels:
             foo  bar
             42   10
         """
-        return self.insert(index=len(self), name=name, values=values)
+        return self.insert(index=len(self.names), name=name, values=values)
 
-    def insert(self, index: int, name: str, values: np.ndarray) -> "Labels":
+    def insert(self, index: int, name: str, values: Array) -> "Labels":
         """Insert a new dimension before ``index`` in the :py:class:`Labels`.
 
         :param index: index before the new dimension is inserted
         :param name: name of the new dimension
-        :param values: 1D array of values for the new dimension
+        :param values: 1D array of values for the new dimension. This must use the
+            same array type (numpy or torch) as the values of these Labels.
 
         >>> import numpy as np
         >>> from metatensor import Labels
@@ -742,8 +842,19 @@ class Labels:
         new_names = self.names.copy()
         new_names.insert(index, name)
 
-        if not isinstance(values, np.ndarray):
-            raise ValueError("`values` must be a numpy ndarray")
+        current_values = self.values
+        backend = _data.array_backend(current_values)
+        try:
+            values_backend = _data.array_backend(values)
+        except TypeError:
+            values_backend = None
+
+        if values_backend != backend:
+            expected = "numpy ndarray" if backend == "numpy" else "torch Tensor"
+            raise TypeError(
+                f"`values` must be a {expected} to match the values of these Labels, "
+                f"got {type(values)}"
+            )
 
         if len(values.shape) != 1:
             raise ValueError("`values` must be a 1D array")
@@ -754,9 +865,15 @@ class Labels:
                 f"but the Labels contains {len(self)}"
             )
 
-        new_values = np.insert(self.values, index, values, axis=1)
+        new_values = _dispatch.insert_column(
+            current_values, index, _dispatch.column_like(values, current_values)
+        )
 
-        return Labels(names=new_names, values=new_values)
+        return Labels(
+            names=new_names,
+            values=new_values,
+            assume_unique=True,
+        )
 
     def permute(self, dimensions_indexes: List[int]) -> "Labels":
         """Permute dimensions according to ``dimensions_indexes`` in the
@@ -787,7 +904,11 @@ class Labels:
 
         names = [self.names[d] for d in dimensions_indexes]
 
-        return Labels(names=names, values=self.values[:, dimensions_indexes])
+        return Labels(
+            names=names,
+            values=self.values[:, dimensions_indexes],
+            assume_unique=True,
+        )
 
     def remove(self, name: str) -> "Labels":
         """Remove ``name`` from the dimensions of the :py:class:`Labels`.
@@ -832,7 +953,7 @@ class Labels:
         new_names.remove(name)
 
         index = self.names.index(name)
-        new_values = np.delete(self.values, index, axis=1)
+        new_values = _dispatch.remove_column(self.values, index)
 
         return Labels(names=new_names, values=new_values)
 
@@ -863,34 +984,39 @@ class Labels:
         index = names.index(old)
         names[index] = new
 
-        return Labels(names=names, values=self.values)
+        return Labels(names=names, values=self.values, assume_unique=True)
 
     def to(self, *args, **kwargs) -> "Labels":
         """
         Move the values of these Labels to the given ``dtype``, ``device`` and
-        ``arrays`` backend.
+        ``array_backend``.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param Optional[str] arrays: new backend to use for the arrays. This can be
-            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
-            and must be given as a keyword argument (``arrays="numpy"``).
+        :param Optional[str] array_backend: new backend to use for the arrays. This can
+            be either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing
+            backend); and must be given as a keyword argument
+            (``array_backend="numpy"``). This parameter was previously called
+            ``arrays``, which is still accepted but deprecated.
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorBlock`
             contains ``"torch"`` arrays, the function tries to move the data
             asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        arrays = kwargs.pop("arrays", None)
         non_blocking = kwargs.pop("non_blocking", False)
-        dtype, device = _data.to_arguments_parse("`Labels.to`", *args, **kwargs)
+        dtype, device, array_backend = _data.to_arguments_parse(
+            "`Labels.to`", *args, **kwargs
+        )
 
         if dtype is not None:
             raise ValueError("Labels values must be int32, `dtype` can not be changed")
 
+        values = self.values
+
         already_there = True
-        if arrays is not None:
-            already_there = already_there and arrays == _data.array_backend(self.values)
+        if array_backend is not None:
+            already_there = array_backend == _data.array_backend(values)
 
         if device is not None:
             already_there = already_there and str(device) == str(self.device)
@@ -900,10 +1026,9 @@ class Labels:
             return self
 
         # move the data as required
-        values = self.values
 
-        if arrays is not None:
-            values = _data.array_change_backend(values, arrays)
+        if array_backend is not None:
+            values = _data.array_change_backend(values, array_backend)
 
         if device is not None:
             values = _data.array_change_device(
@@ -918,7 +1043,12 @@ class Labels:
         Get the device of these Labels.
         """
         if self._cached_device is None:
-            self._cached_device = _data.array_device(self.values)
+            if self._cached_values is not None:
+                self._cached_device = _data.array_device(self._cached_values)
+            else:
+                self._cached_device = _data.mts_array_device(
+                    self._raw_values, array_backend=self._array_backend
+                )
 
         return self._cached_device
 
@@ -977,7 +1107,7 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output)
+        return Labels.unsafe_from_ptr(output, array_backend=self._array_backend)
 
     def difference_and_mapping(self, other: "Labels") -> Tuple["Labels", np.ndarray]:
         """
@@ -1018,7 +1148,10 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output), first_mapping
+        return (
+            Labels.unsafe_from_ptr(output, array_backend=self._array_backend),
+            first_mapping,
+        )
 
     def union(self, other: "Labels") -> "Labels":
         """
@@ -1051,7 +1184,7 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output)
+        return Labels.unsafe_from_ptr(output, array_backend=self._array_backend)
 
     def union_and_mapping(
         self, other: "Labels"
@@ -1099,7 +1232,11 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output), first_mapping, second_mapping
+        return (
+            Labels.unsafe_from_ptr(output, array_backend=self._array_backend),
+            first_mapping,
+            second_mapping,
+        )
 
     def intersection(self, other: "Labels") -> "Labels":
         """
@@ -1130,7 +1267,7 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output)
+        return Labels.unsafe_from_ptr(output, array_backend=self._array_backend)
 
     def intersection_and_mapping(
         self, other: "Labels"
@@ -1177,7 +1314,11 @@ class Labels:
         )
 
         check_pointer(output)
-        return Labels.unsafe_from_ptr(output), first_mapping, second_mapping
+        return (
+            Labels.unsafe_from_ptr(output, array_backend=self._array_backend),
+            first_mapping,
+            second_mapping,
+        )
 
     def select(self, selection: "Labels") -> np.ndarray:
         """

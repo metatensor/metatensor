@@ -19,12 +19,7 @@ import warnings
 
 from . import utils  # noqa: F401
 from ._block import TensorBlock  # noqa: F401
-from ._data import (  # noqa: F401
-    Array,
-    ExternalCpuArray,
-    ExternalCudaArray,
-    register_external_data_wrapper,
-)
+from ._data import Array  # noqa: F401
 from ._labels import Labels, LabelsEntry
 from ._status import MetatensorError
 from ._tensor import TensorMap
@@ -38,8 +33,6 @@ LabelsEntry.__module__ = __name__
 TensorBlock.__module__ = __name__
 TensorMap.__module__ = __name__
 MetatensorError.__module__ = __name__
-ExternalCpuArray.__module__ = __name__
-ExternalCudaArray.__module__ = __name__
 
 try:
     import metatensor_operations  # noqa: F401
@@ -52,6 +45,13 @@ except ImportError:
 if HAS_METATENSOR_OPERATIONS:
     from . import operations  # noqa: F401
     from .operations import *  # noqa: F401, F403
+
+
+_DEPRECATED_DATA_NAMES = [
+    "register_external_data_wrapper",
+    "ExternalCpuArray",
+    "ExternalCudaArray",
+]
 
 
 # __getattr__ is called when a module attribute can not be found. We use it to provide
@@ -72,6 +72,19 @@ def __getattr__(name):
         )
 
         return DeviceWarning
+
+    if name in _DEPRECATED_DATA_NAMES:
+        warnings.warn(
+            f"metatensor.{name} is deprecated and will be removed in a future "
+            "version: data from any origin is now accessible through DLPack, use the "
+            "`array_backend` parameter to choose which array type to use",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+
+        from . import _data
+
+        return getattr(_data, name)
 
     if HAS_METATENSOR_OPERATIONS:
         from . import operations

@@ -163,9 +163,9 @@ torch_data = torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float32)
 
 block_torch = TensorBlock(
     values=torch_data,
-    samples=Labels.range("sample", 2),
+    samples=Labels.range("sample", 2, array_backend="torch"),
     components=[],
-    properties=Labels.range("property", 2),
+    properties=Labels.range("property", 2, array_backend="torch"),
 )
 
 print("Torch block dtype:", block_torch.values.dtype)
@@ -177,11 +177,11 @@ print("Is a torch.Tensor:", isinstance(block_torch.values, torch.Tensor))
 # You can convert between numpy and torch backends using ``.to()``:
 
 # torch float32 -> numpy float32
-as_numpy = block_torch.to(arrays="numpy")
+as_numpy = block_torch.to(array_backend="numpy")
 print("Converted to numpy:", type(as_numpy.values).__name__, as_numpy.values.dtype)
 
 # numpy float16 -> torch float16
-as_torch = block_f16.to(arrays="torch")
+as_torch = block_f16.to(array_backend="torch")
 print("Converted to torch:", type(as_torch.values).__name__, as_torch.values.dtype)
 
 
@@ -199,17 +199,17 @@ if torch.cuda.is_available():
 
     block_gpu = TensorBlock(
         values=gpu_data,
-        samples=Labels.range("sample", 3),
+        samples=Labels.range("sample", 3).to("cuda", arrays_backend="torch"),
         components=[],
-        properties=Labels.range("property", 4),
+        properties=Labels.range("property", 4).to("cuda", arrays_backend="torch"),
     )
 
     print("GPU block device:", block_gpu.device)
     print("GPU block dtype: ", block_gpu.dtype)
 
     # Move to CPU and convert to numpy in one step
-    block_cpu = block_gpu.to("cpu").to(arrays="numpy")
-    print("After .to('cpu').to(arrays='numpy'):", type(block_cpu.values).__name__)
+    block_cpu = block_gpu.to("cpu", array_backend="numpy")
+    print("After .to('cpu', array_backend='numpy'):", type(block_cpu.values).__name__)
 
 else:
     print("(CUDA not available, skipping GPU example)")

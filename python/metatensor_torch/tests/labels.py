@@ -294,6 +294,13 @@ def test_to():
         assert labels.values.device.type == torch.device(device).type
         assert labels.device.type == torch.device(device).type
 
+    labels = Labels(names=("a", "b"), values=torch.tensor([[0, 0], [0, 1]]))
+    assert labels.to("cpu", array_backend="torch") == labels
+
+    message = "`array_backend` must be None or 'torch', got 'numpy' instead"
+    with pytest.raises(ValueError, match=message):
+        labels.to("cpu", array_backend="numpy")
+
 
 def test_position():
     labels = Labels(names=("a", "b"), values=torch.tensor([[0, 0], [0, 1]]))
@@ -596,7 +603,7 @@ class LabelsWrap:
         return self._c.device
 
     def to(self, device: torch.device) -> Labels:
-        return self._c.to(device)
+        return self._c.to(device, array_backend="torch")
 
     def position(self, entry: Union[List[int], LabelsEntry]) -> Optional[int]:
         return self._c.position(entry=entry)
@@ -611,13 +618,13 @@ class LabelsWrap:
         return self._c.column(dimension=dimension)
 
     def single(self) -> Labels:
-        return Labels.single()
+        return Labels.single(array_backend="torch")
 
     def empty(self, names: Union[str, List[str]]) -> Labels:
-        return Labels.empty(names)
+        return Labels.empty(names, array_backend="torch")
 
     def range_(self, name: str, end: int) -> Labels:
-        return Labels.range(name, end)
+        return Labels.range(name, end, array_backend="torch")
 
     def union(self, other: Labels) -> Labels:
         return self._c.union(other=other)

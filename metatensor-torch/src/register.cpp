@@ -81,6 +81,99 @@ static torch::Tensor save_ivalue_buffer(torch::IValue data) {
     );
 }
 
+// `array_backend` is used by metatensor-core to decide which array type to use
+// for data not allocated by Python. metatensor-torch always uses torch.Tensor,
+// and only accepts this parameter for compatibility with metatensor-core.
+static void check_array_backend(const std::string& array_backend) {
+    if (array_backend != "torch") {
+        C10_THROW_ERROR(ValueError,
+            "invalid `array_backend` '" + array_backend + "', only 'torch' is "
+            "supported by metatensor-torch"
+        );
+    }
+}
+
+// `to()` used to take an `arrays` parameter, which is now called
+// `array_backend`. This handles the deprecated parameter name.
+static torch::optional<std::string> to_array_backend(
+    const std::string& context,
+    torch::optional<std::string> array_backend,
+    torch::optional<std::string> arrays
+) {
+    if (arrays.has_value()) {
+        if (array_backend.has_value()) {
+            C10_THROW_ERROR(ValueError,
+                "can not give both `arrays` and `array_backend` in " + context
+            );
+        }
+
+        TORCH_WARN_DEPRECATION(
+            "the `arrays` parameter of " + context + " is deprecated, "
+            "please use `array_backend` instead"
+        );
+        return arrays;
+    }
+    return array_backend;
+}
+
+// Register a static method with named arguments and default values. This is
+// supported by `torch::class_::def_static` since torch 2.13, and this function
+// contains a backport of the corresponding code for older versions of torch.
+template <typename Class, typename Func>
+static void def_static(
+    torch::class_<Class>& klass,
+    std::string name,
+    Func func,
+    std::string docstring,
+    std::initializer_list<torch::arg> args
+) {
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 13)
+    klass.def_static(std::move(name), std::move(func), std::move(docstring), args);
+#else
+    // the class type is available through `getCustomClassType` instead
+    (void)klass;
+
+    const auto& class_type = c10::getCustomClassType<c10::intrusive_ptr<Class>>();
+    auto qualified_name = class_type->name()->qualifiedName() + "." + name;
+
+    auto schema = c10::inferFunctionSchemaSingleReturn<Func>(std::move(name), "");
+    const auto& old_arguments = schema.arguments();
+    TORCH_CHECK(
+        args.size() == old_arguments.size(),
+        "names must be specified for all arguments of ", qualified_name
+    );
+
+    auto arguments = std::vector<c10::Argument>();
+    arguments.reserve(old_arguments.size());
+    size_t i = 0;
+    for (const auto& arg: args) {
+        const auto& old_arg = old_arguments[i++];
+        arguments.emplace_back(
+            arg.name_,
+            old_arg.type(),
+            old_arg.real_type(),
+            old_arg.N(),
+            arg.value_
+        );
+    }
+    schema = schema.cloneWithArguments(std::move(arguments));
+
+    auto wrapped_func = [func = std::move(func)](torch::jit::Stack& stack) mutable -> void {
+        using RetType = typename c10::guts::infer_function_traits_t<Func>::return_type;
+        torch::detail::BoxedProxy<RetType, Func>()(stack, func);
+    };
+    auto method = std::make_unique<torch::jit::BuiltinOpFunction>(
+        std::move(qualified_name),
+        std::move(schema),
+        std::move(wrapped_func),
+        std::move(docstring)
+    );
+
+    class_type->addStaticMethod(method.get());
+    torch::registerCustomClassMethod(std::move(method));
+#endif
+}
+
 static void block_values_setter(TensorBlock, torch::Tensor) {
     C10_THROW_ERROR(
         ValueError,
@@ -121,7 +214,8 @@ TORCH_LIBRARY(metatensor, m) {
         .def("print", &LabelsEntryHolder::print)
         ;
 
-    m.class_<LabelsHolder>("Labels")
+    auto labels_class = m.class_<LabelsHolder>("Labels");
+    labels_class
         .def(
             torch::init([](torch::IValue names, torch::Tensor values, bool assume_unique) {
                 if (assume_unique) {
@@ -154,18 +248,8 @@ TORCH_LIBRARY(metatensor, m) {
             {torch::arg("other")}
         )
         .def("__getitem__", labels_getitem, DOCSTRING, {torch::arg("index")})
-        .def_static("single", &LabelsHolder::single)
-        .def_static("empty", &LabelsHolder::empty)
-        .def_static("range", &LabelsHolder::range)
         .def("save", &LabelsHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &LabelsHolder::save_buffer)
-        .def_static("load", &LabelsHolder::load)
-        .def_static("load_buffer", &LabelsHolder::load_buffer)
-        .def_static("unsafe_from_ptr", [](int64_t ptr) -> Labels {
-            auto* labels_ptr = reinterpret_cast<mts_labels_t*>(ptr);
-            auto labels = metatensor::Labels::unsafe_from_ptr(labels_ptr);
-            return LabelsHolder::from_metatensor(std::move(labels));
-        })
         .def("release", [](Labels self) -> int64_t {
             const auto* ptr = self->release().release();
             return reinterpret_cast<int64_t>(ptr);
@@ -183,9 +267,15 @@ TORCH_LIBRARY(metatensor, m) {
         .def("permute", &LabelsHolder::permute, DOCSTRING, {torch::arg("dimensions_indexes")})
         .def("remove", &LabelsHolder::remove, DOCSTRING, {torch::arg("name")})
         .def("rename", &LabelsHolder::rename, DOCSTRING, {torch::arg("old"), torch::arg("new")})
-        .def("to",
-            static_cast<Labels (LabelsHolder::*)(torch::IValue, bool) const>(&LabelsHolder::to),
-            DOCSTRING, {torch::arg("device"), torch::arg("non_blocking") = false}
+        .def("to", [](const Labels& self, torch::IValue device, bool non_blocking, torch::optional<std::string> array_backend) {
+                if (array_backend.value_or("torch") != "torch") {
+                    C10_THROW_ERROR(ValueError,
+                        "`array_backend` must be None or 'torch', got '" + array_backend.value() + "' instead"
+                    );
+                }
+                return self->to(std::move(device), non_blocking);
+            }, DOCSTRING,
+            {torch::arg("device"), torch::arg("non_blocking") = false, torch::arg("array_backend") = torch::nullopt}
         )
         .def_property("device", &LabelsHolder::device)
         .def("position", &LabelsHolder::position, DOCSTRING,
@@ -208,8 +298,53 @@ TORCH_LIBRARY(metatensor, m) {
             [](torch::Tensor buffer){ return metatensor_torch::load_labels_buffer(buffer); }
         );
 
+    def_static(labels_class, "single", [](const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return LabelsHolder::single();
+        }, DOCSTRING,
+        {torch::arg("array_backend") = "torch"}
+    );
 
-    m.class_<TensorBlockHolder>("TensorBlock")
+    def_static(labels_class, "empty", [](torch::IValue names, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return LabelsHolder::empty(std::move(names));
+        }, DOCSTRING,
+        {torch::arg("names"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(labels_class, "range", [](std::string name, int64_t end, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return LabelsHolder::range(std::move(name), end);
+        }, DOCSTRING,
+        {torch::arg("name"), torch::arg("end"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(labels_class, "load", [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return LabelsHolder::load(file);
+        }, DOCSTRING,
+        {torch::arg("file"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(labels_class, "load_buffer", [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return LabelsHolder::load_buffer(std::move(buffer));
+        }, DOCSTRING,
+        {torch::arg("buffer"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(labels_class, "unsafe_from_ptr", [](int64_t ptr, const std::string& array_backend) -> Labels {
+            check_array_backend(array_backend);
+            auto* labels_ptr = reinterpret_cast<mts_labels_t*>(ptr);
+            auto labels = metatensor::Labels::unsafe_from_ptr(labels_ptr);
+            return LabelsHolder::from_metatensor(std::move(labels));
+        }, DOCSTRING,
+        {torch::arg("ptr"), torch::arg("array_backend") = "torch"}
+    );
+
+
+    auto block_class = m.class_<TensorBlockHolder>("TensorBlock");
+    block_class
         .def(
             torch::init<torch::Tensor, Labels, std::vector<Labels>, Labels>(), DOCSTRING,
             {torch::arg("values"), torch::arg("samples"), torch::arg("components"), torch::arg("properties")}
@@ -237,28 +372,35 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("device", &TensorBlockHolder::device)
         .def_property("dtype", &TensorBlockHolder::scalar_type)
         .def_property("is_view", &TensorBlockHolder::is_view)
-        .def("to", &TensorBlockHolder::to_positional, DOCSTRING, {
+        .def("to", [](
+                const TensorBlock& self,
+                torch::IValue positional_1,
+                torch::IValue positional_2,
+                torch::optional<torch::Dtype> dtype,
+                torch::optional<torch::Device> device,
+                torch::optional<std::string> array_backend,
+                bool non_blocking,
+                torch::optional<std::string> arrays
+            ) {
+                return self->to_positional(
+                    std::move(positional_1),
+                    std::move(positional_2),
+                    dtype,
+                    device,
+                    to_array_backend("`TensorBlock.to`", std::move(array_backend), std::move(arrays)),
+                    non_blocking
+                );
+            }, DOCSTRING, {
             torch::arg("_0") = torch::IValue(),
             torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
-            torch::arg("arrays") = torch::nullopt,
-            torch::arg("non_blocking") = false
+            torch::arg("array_backend") = torch::nullopt,
+            torch::arg("non_blocking") = false,
+            torch::arg("arrays") = torch::nullopt
         })
         .def("save", &TensorBlockHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorBlockHolder::save_buffer)
-        .def_static("load", &TensorBlockHolder::load)
-        .def_static("load_buffer", &TensorBlockHolder::load_buffer)
-        .def_static("unsafe_from_ptr", [](int64_t ptr) -> TensorBlock {
-            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
-            auto block = metatensor::TensorBlock::unsafe_from_ptr(block_ptr);
-            return TensorBlockHolder::from_metatensor(std::move(block));
-        })
-        .def_static("unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent) -> TensorBlock {
-            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
-            auto block = metatensor::TensorBlock::unsafe_view_from_ptr(block_ptr);
-            return TensorBlockHolder::view_from_metatensor(std::move(block), std::move(parent));
-        })
         .def("release", [](TensorBlock self) -> int64_t {
             const auto* ptr = self->release().release();
             return reinterpret_cast<int64_t>(ptr);
@@ -274,7 +416,40 @@ TORCH_LIBRARY(metatensor, m) {
             [](torch::Tensor buffer){ return metatensor_torch::load_block_buffer(buffer); }
         );
 
-    m.class_<TensorMapHolder>("TensorMap")
+    def_static(block_class, "load", [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return TensorBlockHolder::load(file);
+        }, DOCSTRING,
+        {torch::arg("file"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(block_class, "load_buffer", [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return TensorBlockHolder::load_buffer(std::move(buffer));
+        }, DOCSTRING,
+        {torch::arg("buffer"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(block_class, "unsafe_from_ptr", [](int64_t ptr, const std::string& array_backend) -> TensorBlock {
+            check_array_backend(array_backend);
+            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
+            auto block = metatensor::TensorBlock::unsafe_from_ptr(block_ptr);
+            return TensorBlockHolder::from_metatensor(std::move(block));
+        }, DOCSTRING,
+        {torch::arg("ptr"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(block_class, "unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent, const std::string& array_backend) -> TensorBlock {
+            check_array_backend(array_backend);
+            auto* block_ptr = reinterpret_cast<mts_block_t*>(ptr);
+            auto block = metatensor::TensorBlock::unsafe_view_from_ptr(block_ptr);
+            return TensorBlockHolder::view_from_metatensor(std::move(block), std::move(parent));
+        }, DOCSTRING,
+        {torch::arg("ptr"), torch::arg("parent"), torch::arg("array_backend") = "torch"}
+    );
+
+    auto tensor_class = m.class_<TensorMapHolder>("TensorMap");
+    tensor_class
         .def(
             torch::init<Labels, std::vector<TensorBlock>>(), DOCSTRING,
             {torch::arg("keys"), torch::arg("blocks")}
@@ -288,18 +463,6 @@ TORCH_LIBRARY(metatensor, m) {
         .def("copy", &TensorMapHolder::copy, DOCSTRING, {torch::arg("deep") = true})
         .def("save", &TensorMapHolder::save, DOCSTRING, {torch::arg("file")})
         .def("save_buffer", &TensorMapHolder::save_buffer)
-        .def_static("load", &TensorMapHolder::load)
-        .def_static("load_buffer", &TensorMapHolder::load_buffer)
-        .def_static("unsafe_from_ptr", [](int64_t ptr) -> TensorMap {
-            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
-            auto block = metatensor::TensorMap::unsafe_from_ptr(tensor_ptr);
-            return TensorMapHolder::from_metatensor(std::move(block));
-        })
-        .def_static("unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent) -> TensorMap {
-            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
-            auto block = metatensor::TensorMap::unsafe_view_from_ptr(tensor_ptr);
-            return TensorMapHolder::view_from_metatensor(std::move(block), std::move(parent));
-        })
         .def("release", [](TensorMap self) -> int64_t {
             const auto* ptr = self->release().release();
             return reinterpret_cast<int64_t>(ptr);
@@ -344,13 +507,32 @@ TORCH_LIBRARY(metatensor, m) {
         .def_property("device", &TensorMapHolder::device)
         .def_property("dtype", &TensorMapHolder::scalar_type)
         .def_property("is_view", &TensorMapHolder::is_view)
-        .def("to", &TensorMapHolder::to_positional, DOCSTRING, {
+        .def("to", [](
+                const TensorMap& self,
+                torch::IValue positional_1,
+                torch::IValue positional_2,
+                torch::optional<torch::Dtype> dtype,
+                torch::optional<torch::Device> device,
+                torch::optional<std::string> array_backend,
+                bool non_blocking,
+                torch::optional<std::string> arrays
+            ) {
+                return self->to_positional(
+                    std::move(positional_1),
+                    std::move(positional_2),
+                    dtype,
+                    device,
+                    to_array_backend("`TensorMap.to`", std::move(array_backend), std::move(arrays)),
+                    non_blocking
+                );
+            }, DOCSTRING, {
             torch::arg("_0") = torch::IValue(),
             torch::arg("_1") = torch::IValue(),
             torch::arg("dtype") = torch::nullopt,
             torch::arg("device") = torch::nullopt,
-            torch::arg("arrays") = torch::nullopt,
-            torch::arg("non_blocking") = false
+            torch::arg("array_backend") = torch::nullopt,
+            torch::arg("non_blocking") = false,
+            torch::arg("arrays") = torch::nullopt
         })
         .def("print", &TensorMapHolder::print, DOCSTRING,
             {torch::arg("max_keys")}
@@ -362,36 +544,86 @@ TORCH_LIBRARY(metatensor, m) {
             [](torch::Tensor buffer){ return metatensor_torch::load_buffer(buffer); }
         );
 
+    def_static(tensor_class, "load", [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return TensorMapHolder::load(file);
+        }, DOCSTRING,
+        {torch::arg("file"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(tensor_class, "load_buffer", [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return TensorMapHolder::load_buffer(std::move(buffer));
+        }, DOCSTRING,
+        {torch::arg("buffer"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(tensor_class, "unsafe_from_ptr", [](int64_t ptr, const std::string& array_backend) -> TensorMap {
+            check_array_backend(array_backend);
+            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
+            auto block = metatensor::TensorMap::unsafe_from_ptr(tensor_ptr);
+            return TensorMapHolder::from_metatensor(std::move(block));
+        }, DOCSTRING,
+        {torch::arg("ptr"), torch::arg("array_backend") = "torch"}
+    );
+
+    def_static(tensor_class, "unsafe_view_from_ptr", [](int64_t ptr, torch::IValue parent, const std::string& array_backend) -> TensorMap {
+            check_array_backend(array_backend);
+            auto* tensor_ptr = reinterpret_cast<mts_tensormap_t*>(ptr);
+            auto block = metatensor::TensorMap::unsafe_view_from_ptr(tensor_ptr);
+            return TensorMapHolder::view_from_metatensor(std::move(block), std::move(parent));
+        }, DOCSTRING,
+        {torch::arg("ptr"), torch::arg("parent"), torch::arg("array_backend") = "torch"}
+    );
+
 
     // standalone functions
     m.def("version() -> str", metatensor_torch::version);
     m.def("dtype_name(ScalarType dtype) -> str", scalar_type_name);
 
     m.def(
-        "load(str file) -> __torch__.torch.classes.metatensor.TensorMap",
-        metatensor_torch::load
+        "load(str file, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.TensorMap",
+        [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load(file);
+        }
     );
     m.def(
-        "load_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorMap",
-        metatensor_torch::load_buffer
-    );
-
-    m.def(
-        "load_block(str file) -> __torch__.torch.classes.metatensor.TensorBlock",
-        metatensor_torch::load_block
-    );
-    m.def(
-        "load_block_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.TensorBlock",
-        metatensor_torch::load_block_buffer
+        "load_buffer(Tensor buffer, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.TensorMap",
+        [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load_buffer(std::move(buffer));
+        }
     );
 
     m.def(
-        "load_labels(str file) -> __torch__.torch.classes.metatensor.Labels",
-        metatensor_torch::load_labels
+        "load_block(str file, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.TensorBlock",
+        [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load_block(file);
+        }
     );
     m.def(
-        "load_labels_buffer(Tensor buffer) -> __torch__.torch.classes.metatensor.Labels",
-        metatensor_torch::load_labels_buffer
+        "load_block_buffer(Tensor buffer, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.TensorBlock",
+        [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load_block_buffer(std::move(buffer));
+        }
+    );
+
+    m.def(
+        "load_labels(str file, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.Labels",
+        [](const std::string& file, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load_labels(file);
+        }
+    );
+    m.def(
+        "load_labels_buffer(Tensor buffer, *, str array_backend=\"torch\") -> __torch__.torch.classes.metatensor.Labels",
+        [](torch::Tensor buffer, const std::string& array_backend) {
+            check_array_backend(array_backend);
+            return metatensor_torch::load_labels_buffer(std::move(buffer));
+        }
     );
 
     // manually construct the schema for "save(str file, Any data) -> ()", so we

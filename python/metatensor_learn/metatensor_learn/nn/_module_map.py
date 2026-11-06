@@ -67,15 +67,10 @@ class ModuleMap(Module):
         ...     ),
         ...     samples=Labels(
         ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
+        ...         torch.tensor([[0, 0], [0, 1]]),
         ...     ),
         ...     components=[],
-        ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        ...     properties=Labels(["properties"], torch.tensor([[0], [1], [2]])),
         ... )
         >>> block_2 = TensorBlock(
         ...     values=torch.tensor(
@@ -86,17 +81,12 @@ class ModuleMap(Module):
         ...     ),
         ...     samples=Labels(
         ...         ["system", "atom"],
-        ...         np.array(
-        ...             [
-        ...                 [0, 0],
-        ...                 [0, 1],
-        ...             ]
-        ...         ),
+        ...         torch.tensor([[0, 0], [0, 1]]),
         ...     ),
         ...     components=[],
-        ...     properties=Labels(["properties"], np.array([[3], [4], [5]])),
+        ...     properties=Labels(["properties"], torch.tensor([[3], [4], [5]])),
         ... )
-        >>> keys = Labels(names=["key"], values=np.array([[0], [1]]))
+        >>> keys = Labels(names=["key"], values=torch.tensor([[0], [1]]))
         >>> tensor = TensorMap(keys, [block_1, block_2])
 
         Create modules
@@ -196,9 +186,9 @@ class ModuleMap(Module):
         ...             [3.0, 5.0, 6.0],
         ...         ]
         ...     ),
-        ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
+        ...     samples=Labels(["system", "atom"], torch.tensor([[0, 0], [0, 1]])),
         ...     components=[],
-        ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        ...     properties=Labels(["properties"], torch.tensor([[0], [1], [2]])),
         ... )
         >>> block_2 = TensorBlock(
         ...     values=torch.tensor(
@@ -207,11 +197,11 @@ class ModuleMap(Module):
         ...             [1.0, 2.0, 8.0],
         ...         ]
         ...     ),
-        ...     samples=Labels(["system", "atom"], np.array([[0, 0], [0, 1]])),
+        ...     samples=Labels(["system", "atom"], torch.tensor([[0, 0], [0, 1]])),
         ...     components=[],
-        ...     properties=Labels(["properties"], np.array([[0], [1], [2]])),
+        ...     properties=Labels(["properties"], torch.tensor([[0], [1], [2]])),
         ... )
-        >>> keys = Labels(names=["key"], values=np.array([[0], [1]]))
+        >>> keys = Labels(names=["key"], values=torch.tensor([[0], [1]]))
         >>> tensor = TensorMap(keys, [block_1, block_2])
         >>> linear = torch.nn.Linear(3, 1, bias=False)
         >>> with torch.no_grad():
