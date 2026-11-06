@@ -243,7 +243,7 @@ def test_labels_names(tensor):
 def test_block(tensor):
     base_tensor = tensor.to(dtype=np.float32)
     for device, arrays in AVAILABLE_DEVICES:
-        tensor = base_tensor.to(device=device, arrays=arrays)
+        tensor = base_tensor.to(device=device, array_backend=arrays)
 
         def _values(block):
             values = block.values
@@ -306,7 +306,7 @@ def test_block(tensor):
 def test_blocks(tensor):
     base_tensor = tensor.to(dtype=np.float32)
     for device, arrays in AVAILABLE_DEVICES:
-        tensor = base_tensor.to(device=device, arrays=arrays)
+        tensor = base_tensor.to(device=device, array_backend=arrays)
 
         def _values(block):
             values = block.values
@@ -660,7 +660,7 @@ def test_different_device():
         "different devices: the keys are on 'CPU:0' while the blocks are on 'ExtDev:0'"
     )
     with pytest.raises(MetatensorError, match=message):
-        _ = TensorMap(Labels.range("k", 1), [block_meta.copy()])
+        _ = TensorMap(Labels.range("k", 1, array_backend="torch"), [block_meta.copy()])
 
     block_cpu = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
@@ -675,7 +675,9 @@ def test_different_device():
     )
 
     with pytest.raises(MetatensorError, match=message):
-        _ = TensorMap(Labels.range("k", 2), [block_cpu, block_meta])
+        _ = TensorMap(
+            Labels.range("k", 2, array_backend="torch"), [block_cpu, block_meta]
+        )
 
 
 def test_different_origin():
@@ -688,17 +690,17 @@ def test_different_origin():
 
     block_torch = TensorBlock(
         values=torch.tensor([[3.0, 4.0]]),
-        samples=Labels.range("s", 1),
+        samples=Labels.range("s", 1, array_backend="torch"),
         components=[],
-        properties=Labels.range("p", 2),
+        properties=Labels.range("p", 2, array_backend="torch"),
     )
 
     message = (
-        "invalid parameter: invalid tensor map: got blocks with different "
-        "origins, at least \\('python.numpy'\\) and \\('python.torch'\\) "
-        "were detected"
+        "all blocks must have the same array backend as the keys, "
+        "got 'torch' and 'numpy'"
     )
-    with pytest.raises(MetatensorError, match=message):
+
+    with pytest.raises(ValueError, match=message):
         _ = TensorMap(Labels.range("k", 2), [block_numpy.copy(), block_torch.copy()])
 
 
@@ -765,7 +767,7 @@ def test_to():
     with pytest.raises(TypeError, match=message):
         _ = tensor.to(np.array([0]))
 
-    tensor = converted.to(arrays="torch")
+    tensor = converted.to(array_backend="torch")
     assert isinstance(tensor.block(0).values, torch.Tensor)
 
     devices = ["meta", torch.device("meta")]

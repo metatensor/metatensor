@@ -21,7 +21,7 @@ def test_detach():
     tensor = mts.detach(tensor)
 
     if HAS_TORCH:
-        tensor = tensor.to(arrays="torch")
+        tensor = tensor.to(array_backend="torch")
         tensor = mts.requires_grad(tensor)
 
         for block in tensor:

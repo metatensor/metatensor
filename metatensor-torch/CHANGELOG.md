@@ -21,6 +21,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Comparing `Labels` for equality now checks values on device when both Labels
   are on the same device instead of making a copy to the host.
 
+### Deprecated
+
+- The `arrays` parameter of `TensorBlock.to()` and `TensorMap.to()` is
+  deprecated and renamed to `array_backend`.
+
 ## [Version 0.10.8](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.8) - 2026-10-15
 
 ### Fixed

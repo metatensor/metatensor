@@ -52,7 +52,7 @@ def test_reduction_all_samples():
     assert np.allclose(var_X[0].values, np.var(X[0].values, axis=0))
 
     if HAS_TORCH:
-        X = X.to(arrays="torch")
+        X = X.to(array_backend="torch")
 
         sum_X = mts.sum_over_samples(X, sample_names=["s"])
         mean_X = mts.mean_over_samples(X, sample_names=["s"])
@@ -106,7 +106,7 @@ def test_reduction_all_properties():
     assert np.allclose(var_X[0].values, np.var(X[0].values, axis=1, keepdims=True))
 
     if HAS_TORCH:
-        X = X.to(arrays="torch")
+        X = X.to(array_backend="torch")
 
         sum_X = mts.sum_over_properties(X, property_names=["p"])
         mean_X = mts.mean_over_properties(X, property_names=["p"])

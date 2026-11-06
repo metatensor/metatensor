@@ -466,7 +466,7 @@ def _deserialize_metatensor(value):
             block = block.to(
                 dtype=dtype_device_tensor.dtype,
                 device=dtype_device_tensor.device,
-                arrays="torch",
+                array_backend="torch",
             )
             return block, True
 
@@ -475,7 +475,7 @@ def _deserialize_metatensor(value):
             tensor = tensor.to(
                 dtype=dtype_device_tensor.dtype,
                 device=dtype_device_tensor.device,
-                arrays="torch",
+                array_backend="torch",
             )
             return tensor, True
 

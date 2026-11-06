@@ -113,12 +113,12 @@ TensorBlock TensorBlockHolder::to_positional(
     torch::IValue positional_2,
     torch::optional<torch::Dtype> dtype,
     torch::optional<torch::Device> device,
-    torch::optional<std::string> arrays,
+    torch::optional<std::string> array_backend,
     bool non_blocking
 ) const {
-    if (arrays.value_or("torch") != "torch") {
+    if (array_backend.value_or("torch") != "torch") {
         C10_THROW_ERROR(ValueError,
-            "`arrays` must be None or 'torch', got '" + arrays.value() + "' instead"
+            "`array_backend` must be None or 'torch', got '" + array_backend.value() + "' instead"
         );
     }
 

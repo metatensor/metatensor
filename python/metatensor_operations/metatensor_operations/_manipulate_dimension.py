@@ -77,16 +77,21 @@ def insert_dimension(
     keys = tensor.keys
 
     if isinstance(values, int):
-        values = _dispatch.int_array_like([values], keys.values)
-        label_values = values
+        int_value = values
         values_was_int = True
+        # this will be replaced below by values matching the labels we modify
+        label_values = _dispatch.int_array_like([values], keys.values)
     else:
-        label_values = values
+        int_value = 0
         values_was_int = False
+        label_values = values
 
     if axis == "keys":
         if values_was_int:
-            label_values = _concat(values, len(keys), axis=0)
+            # create the values with the same array type as the labels we modify
+            label_values = _concat(
+                _dispatch.int_array_like([int_value], keys.values), len(keys), axis=0
+            )
 
         keys = keys.insert(index=index, name=name, values=label_values)
 
@@ -97,13 +102,21 @@ def insert_dimension(
 
         if axis == "samples":
             if values_was_int:
-                label_values = _concat(values, len(samples), axis=0)
+                label_values = _concat(
+                    _dispatch.int_array_like([int_value], samples.values),
+                    len(samples),
+                    axis=0,
+                )
 
             samples = samples.insert(index=index, name=name, values=label_values)
 
         elif axis == "properties":
             if values_was_int:
-                label_values = _concat(values, len(properties), axis=0)
+                label_values = _concat(
+                    _dispatch.int_array_like([int_value], properties.values),
+                    len(properties),
+                    axis=0,
+                )
 
             properties = properties.insert(index=index, name=name, values=label_values)
 

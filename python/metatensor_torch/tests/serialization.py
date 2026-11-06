@@ -360,22 +360,22 @@ def test_pickle_labels(tmpdir, labels_path):
 
 class Serialization:
     def load(self, file: str) -> TensorMap:
-        return mts.load(file=file)
+        return mts.load(file=file, array_backend="torch")
 
     def load_buffer(self, buffer: torch.Tensor) -> TensorMap:
-        return mts.load_buffer(buffer=buffer)
+        return mts.load_buffer(buffer=buffer, array_backend="torch")
 
     def load_block(self, file: str) -> TensorBlock:
-        return mts.load_block(file=file)
+        return mts.load_block(file=file, array_backend="torch")
 
     def load_block_buffer(self, buffer: torch.Tensor) -> TensorBlock:
-        return mts.load_block_buffer(buffer=buffer)
+        return mts.load_block_buffer(buffer=buffer, array_backend="torch")
 
     def load_labels(self, file: str) -> Labels:
-        return mts.load_labels(file=file)
+        return mts.load_labels(file=file, array_backend="torch")
 
     def load_labels_buffer(self, buffer: torch.Tensor) -> Labels:
-        return mts.load_labels_buffer(buffer=buffer)
+        return mts.load_labels_buffer(buffer=buffer, array_backend="torch")
 
     def save(self, file: str, data: Union[Labels, TensorBlock, TensorMap]):
         return mts.save(file=file, data=data)

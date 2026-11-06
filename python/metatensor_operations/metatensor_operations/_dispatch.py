@@ -500,6 +500,19 @@ def get_device(array):
         raise TypeError(UNKNOWN_ARRAY_TYPE)
 
 
+def get_array_backend(array):
+    """
+    Returns the array_backend of the array.
+    """
+
+    if isinstance(array, TorchTensor):
+        return "torch"
+    elif isinstance(array, np.ndarray):
+        return "numpy"
+    else:
+        raise TypeError(UNKNOWN_ARRAY_TYPE)
+
+
 def rows_add(output_array, input_array, index):
     """
     Accumulates in ``output_array`` the rows of ``array`` by adding to the indices

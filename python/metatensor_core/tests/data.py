@@ -1,13 +1,11 @@
 import ctypes
 import gc
-import os
 import weakref
 
 import numpy as np
 import pytest
 import torch
 from ctypes_dlpack import (
-    DLDataTypeCode,
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
@@ -16,12 +14,12 @@ from ctypes_dlpack import (
 from numpy.testing import assert_equal
 
 import metatensor
-from metatensor import ExternalCpuArray, ExternalCudaArray
 from metatensor._c_api import (
     c_uintptr_t,
     mts_array_t,
     mts_data_movement_t,
 )
+from metatensor._data import ExternalCudaArray
 from metatensor._status import catch_exceptions, check_status
 
 from ._tests_utils import can_use_mps_backend
@@ -456,95 +454,6 @@ def test_external_cuda_array_cpu_path():
     np.testing.assert_array_equal(result.numpy(), arr)
 
     free_mts_array(mts_array)
-
-
-TEST_ORIGIN = metatensor._data._array._register_origin("python.test-origin")
-metatensor._data.register_external_data_wrapper(
-    "python.test-origin",
-    ExternalCpuArray,
-)
-
-
-@catch_exceptions
-def get_test_origin(this, origin):
-    origin[0] = TEST_ORIGIN
-
-
-GET_TEST_ORIGIN = metatensor._data._array._cast_to_ctype_functype(
-    get_test_origin, "origin"
-)
-
-
-@catch_exceptions
-def create_test_array(shape_ptr, shape_count, dtype, array):
-    shape = []
-    for i in range(shape_count):
-        shape.append(shape_ptr[i])
-
-    np_dtype = None
-    if dtype.code == DLDataTypeCode.kDLFloat:
-        if dtype.bits == 32:
-            np_dtype = np.dtype("float32")
-        elif dtype.bits == 64:
-            np_dtype = np.dtype("float64")
-    elif dtype.code == DLDataTypeCode.kDLInt:
-        if dtype.bits == 8:
-            np_dtype = np.dtype("int8")
-        elif dtype.bits == 16:
-            np_dtype = np.dtype("int16")
-        elif dtype.bits == 32:
-            np_dtype = np.dtype("int32")
-        elif dtype.bits == 64:
-            np_dtype = np.dtype("int64")
-
-    if np_dtype is None:
-        raise ValueError(f"Unsupported DLPack dtype: {dtype}")
-
-    data = np.zeros(shape, dtype=np_dtype)
-    mts_array = metatensor._data.create_mts_array(data)
-    mts_array.origin = GET_TEST_ORIGIN
-
-    array[0] = mts_array
-
-
-def test_parent_keepalive():
-    path = os.path.join(
-        os.path.dirname(__file__),
-        "..",
-        "..",
-        "..",
-        "metatensor-core",
-        "tests",
-        "data.mts",
-    )
-    tensor = metatensor.io.load_custom_array(path.encode("utf8"), create_test_array)
-
-    values = tensor.block(0).values
-    assert isinstance(values, ExternalCpuArray)
-    assert values._parent is not None
-
-    tensor_ref = weakref.ref(tensor)
-    del tensor
-    gc.collect()
-
-    # values should keep the tensor alive
-    assert tensor_ref() is not None
-
-    view = values[::2]
-    del values
-    gc.collect()
-
-    # view should keep the tensor alive
-    assert tensor_ref() is not None
-
-    transformed = np.sum(view)
-    del view
-    gc.collect()
-
-    # transformed should NOT keep the tensor alive
-    assert tensor_ref() is None
-
-    assert np.isclose(transformed, 1.1596965632269784)
 
 
 class CustomError(RuntimeError):

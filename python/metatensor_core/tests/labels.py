@@ -135,8 +135,11 @@ def test_dimensions_manipulation():
     assert new_label.names == ["bar", "foo"]
     np.testing.assert_equal(new_label.values, np.array([[10, 42]]))
 
-    message = "`values` must be a numpy ndarray"
-    with pytest.raises(ValueError, match=message):
+    message = (
+        "`values` must be a numpy ndarray to match the values of these Labels, "
+        "got <class 'list'>"
+    )
+    with pytest.raises(TypeError, match=message):
         label.insert(0, name="bar", values=[10])
 
     message = "`values` must be a 1D array"
@@ -532,3 +535,59 @@ def test_cpu_values_keepalive():
     cpu_values = labels._cpu_values
     assert isinstance(cpu_values, np.ndarray)
     assert not cpu_values.flags.writeable
+
+
+def test_torch_dimensions_manipulation():
+    devices = ["cpu"]
+    if torch.cuda.is_available():
+        devices.append("cuda")
+    if _tests_utils.can_use_mps_backend():
+        devices.append("mps")
+
+    for device in devices:
+        labels = Labels(
+            names=["a", "b"],
+            values=torch.tensor([[0, 1], [2, 3]], dtype=torch.int32, device=device),
+        )
+
+        # new labels keep the same array type and device as the original
+        appended = labels.append("c", torch.tensor([4, 5]))
+        assert isinstance(appended.values, torch.Tensor)
+        assert appended.values.device == labels.values.device
+        assert appended.names == ["a", "b", "c"]
+        assert torch.all(appended.values.cpu() == torch.tensor([[0, 1, 4], [2, 3, 5]]))
+
+        inserted = labels.insert(0, "c", torch.tensor([4, 5], device=device))
+        assert isinstance(inserted.values, torch.Tensor)
+        assert inserted.values.device == labels.values.device
+        assert torch.all(inserted.values.cpu() == torch.tensor([[4, 0, 1], [5, 2, 3]]))
+
+        message = (
+            "`values` must be a torch Tensor to match the values of these Labels, "
+            "got <class 'numpy.ndarray'>"
+        )
+        with pytest.raises(TypeError, match=message):
+            labels.append("c", np.array([4, 5]))
+
+        removed = labels.remove("a")
+        assert isinstance(removed.values, torch.Tensor)
+        assert removed.values.device == labels.values.device
+        assert torch.all(removed.values.cpu() == torch.tensor([[1], [3]]))
+
+        permuted = labels.permute([1, 0])
+        assert isinstance(permuted.values, torch.Tensor)
+        assert permuted.values.device == labels.values.device
+        assert permuted.names == ["b", "a"]
+        assert torch.all(permuted.values.cpu() == torch.tensor([[1, 0], [3, 2]]))
+
+
+def test_array_backend():
+    labels = metatensor.Labels.range("a", 3, array_backend="numpy")
+    assert type(labels.values) is np.ndarray
+
+    labels = metatensor.Labels.single(array_backend="torch")
+    assert isinstance(labels.values, torch.Tensor)
+
+    message = "invalid array_backend 'dlpack', expected one of 'numpy', 'torch'"
+    with pytest.raises(ValueError, match=message):
+        metatensor.Labels.empty("a", array_backend="dlpack")

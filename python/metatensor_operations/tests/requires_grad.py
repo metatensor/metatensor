@@ -11,8 +11,10 @@ DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
 def test_requires_grad():
-    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
-    tensor = tensor.to(arrays="torch")
+    tensor = mts.load(
+        os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"),
+        array_backend="torch",
+    )
 
     for block in tensor:
         assert not block.values.requires_grad

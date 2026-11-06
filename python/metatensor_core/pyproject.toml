@@ -7,7 +7,7 @@ readme = "README.rst"
 license = "BSD-3-Clause"
 description = "Python bindings for metatensor"
 
-dependencies = ["numpy", "ctypes-dlpack"]
+dependencies = ["numpy", "ctypes-dlpack >=0.1.1"]
 
 keywords = ["machine learning", "molecular modeling"]
 classifiers = [

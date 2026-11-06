@@ -343,12 +343,23 @@ def test_to():
         assert moved.gradient("g").device.type == torch.device(device).type
 
     # this should run without error
-    moved = block.to(arrays=None)
-    moved = block.to(arrays="torch")
+    moved = block.to(array_backend=None)
+    moved = block.to(array_backend="torch")
 
-    message = "`arrays` must be None or 'torch', got 'numpy' instead"
+    message = "`array_backend` must be None or 'torch', got 'numpy' instead"
     with pytest.raises(ValueError, match=message):
-        moved = block.to(arrays="numpy")
+        moved = block.to(array_backend="numpy")
+
+    message = (
+        "the `arrays` parameter of `TensorBlock.to` is deprecated, "
+        "please use `array_backend` instead"
+    )
+    with pytest.warns(DeprecationWarning, match=message):
+        moved = block.to(arrays="torch")
+
+    message = "can not give both `arrays` and `array_backend` in `TensorBlock.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = block.to(arrays="torch", array_backend="torch")
 
     # check that the code handles both positional and keyword arguments
     device = "meta"
@@ -453,9 +464,9 @@ class TensorBlockWrap:
         self,
         dtype: Optional[torch.dtype],
         device: Optional[torch.device],
-        arrays: Optional[str],
+        array_backend: Optional[str],
     ) -> TensorBlock:
-        return self._c.to(dtype=dtype, device=device, arrays=arrays)
+        return self._c.to(dtype=dtype, device=device, array_backend=array_backend)
 
     @staticmethod
     def load(file: str) -> TensorBlock:

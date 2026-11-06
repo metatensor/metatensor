@@ -21,7 +21,7 @@ from ._c_api import (
     mts_tensormap_t,
 )
 from ._c_lib import _get_library
-from ._data import Device, DType
+from ._data import ArrayBackend, Device, DType, check_array_backend
 from ._labels import Labels, LabelsEntry
 from ._status import check_pointer, check_status
 
@@ -61,12 +61,20 @@ class TensorMap:
         if not isinstance(keys, Labels):
             raise TypeError(f"`keys` must be metatensor Labels, not {type(keys)}")
 
+        self._array_backend = keys._array_backend
+
         blocks = list(blocks)
         for block in blocks:
             if not isinstance(block, TensorBlock):
                 raise TypeError(
                     "`blocks` elements must be metatensor TensorBlock, "
                     f"not {type(block)}"
+                )
+
+            if block._array_backend != self._array_backend:
+                raise ValueError(
+                    "all blocks must have the same array backend as the keys, "
+                    f"got '{block._array_backend}' and '{self._array_backend}'"
                 )
 
         self._lib = _get_library()
@@ -81,34 +89,57 @@ class TensorMap:
         check_pointer(self._ptr)
 
     @staticmethod
-    def unsafe_from_ptr(tensor: ctypes.POINTER(mts_tensormap_t)):
+    def unsafe_from_ptr(
+        tensor: ctypes.POINTER(mts_tensormap_t),
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ):
         """
         Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer.
 
-        The :py:class:`TensorMap` takes ownership of the pointer, and will
-        release the corresponding memory when garbage-collected.
+        The :py:class:`TensorMap` takes ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+
+        :param tensor: raw pointer to the tensor map
+        :param array_backend: array backend to use for data in this tensor map (keys,
+            blocks values, gradients and labels) that was not allocated by Python. Data
+            allocated by Python is always returned as-is. See
+            :ref:`python-api-array-backend` for more information.
         """
         assert tensor, "mts_tensormap_t pointer is null"
+        check_array_backend(array_backend)
+
         obj = TensorMap.__new__(TensorMap)
         obj._lib = _get_library()
         obj._ptr = tensor
         obj._parent = None
+        obj._array_backend = array_backend
         return obj
 
     @staticmethod
-    def unsafe_view_from_ptr(tensor: ctypes.POINTER(mts_tensormap_t), parent: Any):
+    def unsafe_view_from_ptr(
+        tensor: ctypes.POINTER(mts_tensormap_t),
+        parent: Any,
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ):
         """
         Create a :py:class:`TensorMap` from a raw ``mts_tensormap_t`` pointer, keeping a
         reference to the ``parent`` to prevent garbage collection.
 
         The :py:class:`TensorMap` does **not** take ownership of the pointer, and will
         not release the memory.
+
+        :param tensor: raw pointer to the tensor map
+        :param parent: owner of the tensor map, which will be kept alive
+        :param array_backend: array backend to use for data in this tensor map that
+            was not allocated by Python, see :py:meth:`TensorMap.unsafe_from_ptr`.
         """
         assert parent is not None, (
             "please use TensorMap.unsafe_from_ptr to take ownership of a pointer"
         )
 
-        obj = TensorMap.unsafe_from_ptr(tensor)
+        obj = TensorMap.unsafe_from_ptr(tensor, array_backend=array_backend)
         obj._parent = parent
         return obj
 
@@ -173,10 +204,11 @@ class TensorMap:
         if deep:
             new_ptr = self._lib.mts_tensormap_copy(self._ptr)
             check_pointer(new_ptr)
-            return TensorMap.unsafe_from_ptr(new_ptr)
+            return TensorMap.unsafe_from_ptr(new_ptr, array_backend=self._array_backend)
         else:
             new_blocks = [block.copy(deep=False) for block in self.blocks()]
             copy = TensorMap(keys=self.keys, blocks=new_blocks)
+            copy._array_backend = self._array_backend
             for key, value in self.info().items():
                 copy.set_info(key, value)
             return copy
@@ -201,7 +233,7 @@ class TensorMap:
                 gradients[parameter] = _block_data(grad)
 
             return TensorBlockData(
-                values_shape=tuple(block.values.shape),
+                values_shape=block.shape,
                 samples=(block.samples.names, block.samples._cpu_values),
                 components=[(c.names, c._cpu_values) for c in block.components],
                 properties=(block.properties.names, block.properties._cpu_values),
@@ -257,7 +289,12 @@ class TensorMap:
             return self._from_pickle, (buffer.raw,)
 
     @staticmethod
-    def load(file: Union[str, pathlib.Path, BinaryIO], use_numpy=False) -> "TensorMap":
+    def load(
+        file: Union[str, pathlib.Path, BinaryIO],
+        use_numpy=False,
+        *,
+        array_backend: ArrayBackend = "numpy",
+    ) -> "TensorMap":
         """
         Load a serialized :py:class:`TensorMap` from a file or a buffer, calling
         :py:func:`metatensor.load`.
@@ -265,15 +302,19 @@ class TensorMap:
         :param file: file path or file object to load from
         :param use_numpy: should we use the numpy loader or metatensor's. See
             :py:func:`metatensor.load` for more information.
+        :param array_backend: array backend to use for all data. See
+            :py:func:`metatensor.load` for more information.
         """
         from .io import load
 
-        return load(file=file, use_numpy=use_numpy)
+        return load(file=file, use_numpy=use_numpy, array_backend=array_backend)
 
     @staticmethod
     def load_buffer(
         buffer: Union[bytes, bytearray, memoryview],
         use_numpy=False,
+        *,
+        array_backend: ArrayBackend = "numpy",
     ) -> "TensorMap":
         """
         Load a serialized :py:class:`TensorMap` from a buffer, calling
@@ -281,11 +322,15 @@ class TensorMap:
 
         :param buffer: in-memory buffer containing the data
         :param use_numpy: should we use the numpy loader or metatensor's. See
-            :py:func:`metatensor.load` for more information.
+            :py:func:`metatensor.load_buffer` for more information.
+        :param array_backend: array backend to use for all data. See
+            :py:func:`metatensor.load_buffer` for more information.
         """
         from .io import load_buffer
 
-        return load_buffer(buffer=buffer)
+        return load_buffer(
+            buffer=buffer, use_numpy=use_numpy, array_backend=array_backend
+        )
 
     def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
         """
@@ -369,7 +414,7 @@ class TensorMap:
         """The set of keys labeling the blocks in this tensor map."""
         result = self._lib.mts_tensormap_keys(self._ptr)
         check_pointer(result)
-        return Labels.unsafe_from_ptr(result)
+        return Labels.unsafe_from_ptr(result, array_backend=self._array_backend)
 
     def block_by_id(self, index: int) -> TensorBlock:
         """
@@ -389,7 +434,9 @@ class TensorMap:
         block = ctypes.POINTER(mts_block_t)()
         self._lib.mts_tensormap_block_by_id(self._ptr, block, index)
         check_pointer(block)
-        return TensorBlock.unsafe_view_from_ptr(block, parent=self)
+        return TensorBlock.unsafe_view_from_ptr(
+            block, parent=self, array_backend=self._array_backend
+        )
 
     def blocks_by_id(self, indices: Sequence[int]) -> TensorBlock:
         """
@@ -593,7 +640,7 @@ class TensorMap:
             self._ptr, keys_to_move.as_mts_labels_t(), fill_value_array, sort_samples
         )
         check_pointer(ptr)
-        return TensorMap.unsafe_from_ptr(ptr)
+        return TensorMap.unsafe_from_ptr(ptr, array_backend=self._array_backend)
 
     def components_to_properties(
         self, dimensions: Union[str, Sequence[str]]
@@ -610,7 +657,7 @@ class TensorMap:
             self._ptr, c_dimensions, c_dimensions._length_
         )
         check_pointer(ptr)
-        return TensorMap.unsafe_from_ptr(ptr)
+        return TensorMap.unsafe_from_ptr(ptr, array_backend=self._array_backend)
 
     def keys_to_properties(
         self,
@@ -672,7 +719,7 @@ class TensorMap:
             self._ptr, keys_to_move.as_mts_labels_t(), fill_value_array, sort_samples
         )
         check_pointer(ptr)
-        return TensorMap.unsafe_from_ptr(ptr)
+        return TensorMap.unsafe_from_ptr(ptr, array_backend=self._array_backend)
 
     @property
     def sample_names(self) -> List[str]:
@@ -747,7 +794,7 @@ class TensorMap:
         output = io.StringIO()
 
         # keys header line
-        header_key = "[" + ", ".join(self.keys.names) + "]"
+        header_key = "[" + ", ".join(names) + "]"
         output.write(f"{indent}keys: {header_key}\n")
         output.write(f"{indent}blocks:\n")
 
@@ -756,7 +803,7 @@ class TensorMap:
             output.write(block_indent)
             for j in range(n_dimensions):
                 _print_string_center(output, strings[j], widths[j], False)
-            shape = tuple(int(v) for v in self.block_by_id(i).values.shape)
+            shape = self.block_by_id(i).shape
             output.write(f"  => TensorBlock with shape {shape}\n")
 
         if n_blocks_to_print < len(self):
@@ -795,22 +842,25 @@ class TensorMap:
     def to(self, *args, **kwargs) -> "TensorMap":
         """
         Move the keys and all the blocks in this :py:class:`TensorMap` to the given
-        ``dtype``, ``device`` and ``arrays`` backend.
+        ``dtype``, ``device`` and ``array_backend``.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param Optional[str] arrays: new backend to use for the arrays. This can be
-            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
-            and must be given as a keyword argument (``arrays="numpy"``).
+        :param Optional[str] array_backend: new backend to use for the arrays. This can
+            be either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing
+            backend); and must be given as a keyword argument
+            (``array_backend="numpy"``). This parameter was previously called
+            ``arrays``, which is still accepted but deprecated.
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorMap`
             contains ``"torch"`` arrays, the function tries to move the data
             asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        arrays = kwargs.pop("arrays", None)
         non_blocking = kwargs.pop("non_blocking", False)
-        dtype, device = _data.to_arguments_parse("`TensorMap.to`", *args, **kwargs)
+        dtype, device, array_backend = _data.to_arguments_parse(
+            "`TensorMap.to`", *args, **kwargs
+        )
 
         blocks = []
 
@@ -819,13 +869,15 @@ class TensorMap:
                 block.to(
                     dtype=dtype,
                     device=device,
-                    arrays=arrays,
+                    array_backend=array_backend,
                     non_blocking=non_blocking,
                 )
             )
 
         tensor = TensorMap(
-            self.keys.to(device=device, arrays=arrays, non_blocking=non_blocking),
+            self.keys.to(
+                device=device, array_backend=array_backend, non_blocking=non_blocking
+            ),
             blocks,
         )
 
@@ -894,12 +946,12 @@ def _make_fill_value_array(tensor, fill_value):
         return mts_array_t()
 
     block = tensor.block_by_id(0)
-    values = block.values
 
     # Always use numpy for the fill_value array. DLPack handles dtype/device
     # conversion when the C API passes it to the array implementation's create
     # callback, so there is no need to match the original array type here.
-    fill_value_array = np.array(fill_value, dtype=values.dtype)
+    dtype = _data.mts_array_dtype(block._raw_values)
+    fill_value_array = np.array(fill_value, dtype=_data.dlpack_dtype_to_numpy(dtype))
     return _data.create_mts_array(fill_value_array)
 
 
@@ -1011,12 +1063,17 @@ def _normalize_selection(
                 )
 
         if len(selection) == 0:
-            return Labels([], _array_like([], like))
+            labels = Labels([], _array_like([], like))
         else:
-            return Labels(
+            labels = Labels(
                 list(selection.keys()),
                 _array_like([np.int32(v) for v in selection.values()], like),
             )
+
+        # the values are created with the same array type as `like`, so they should
+        # also use the same array backend
+        labels._array_backend = like._array_backend
+        return labels
 
     elif isinstance(selection, Labels):
         return selection

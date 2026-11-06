@@ -1,9 +1,11 @@
 import ctypes
+import warnings
 from typing import NewType, Union
 
 import numpy as np
 from ctypes_dlpack import (
     DLDataType,
+    DLDataTypeCode,
     DLDevice,
     DLDeviceType,
     DLManagedTensorVersioned,
@@ -47,9 +49,12 @@ not know what's inside the arrays appart from a small set of constrains:
 - they are stored as row-major, n-dimensional arrays with at least 2 dimensions;
 - it is possible to create new arrays and move data from one array to another.
 
-The actual type of an ``Array`` depends on how the :py:class:`metatensor.TensorBlock`
-was created. Currently, :py:class:`numpy.ndarray` and :py:class:`torch.Tensor` are
-supported.
+The actual type of an ``Array`` depends on how the :py:class:`metatensor.TensorBlock` or
+:py:class:`metatensor.Labels` was created. Data created from Python can be either
+:py:class:`numpy.ndarray` or :py:class:`torch.Tensor`. Data created outside of Python is
+accessed through DLPack, and can be returned as :py:class:`numpy.ndarray`,
+:py:class:`torch.Tensor` or :py:class:`ctypes_dlpack.DLPackArray` depending on the
+``array_backend`` choice made when creating the corresponding Python object.
 """
 
 
@@ -234,6 +239,36 @@ def array_change_backend(array, backend: str):
 
     else:
         raise TypeError(f"unknown array type: {type(array)}")
+
+
+_DLPACK_TO_NUMPY = {
+    (DLDataTypeCode.kDLFloat, 16): np.float16,
+    (DLDataTypeCode.kDLFloat, 32): np.float32,
+    (DLDataTypeCode.kDLFloat, 64): np.float64,
+    (DLDataTypeCode.kDLInt, 8): np.int8,
+    (DLDataTypeCode.kDLInt, 16): np.int16,
+    (DLDataTypeCode.kDLInt, 32): np.int32,
+    (DLDataTypeCode.kDLInt, 64): np.int64,
+    (DLDataTypeCode.kDLUInt, 8): np.uint8,
+    (DLDataTypeCode.kDLUInt, 16): np.uint16,
+    (DLDataTypeCode.kDLUInt, 32): np.uint32,
+    (DLDataTypeCode.kDLUInt, 64): np.uint64,
+    (DLDataTypeCode.kDLBool, 8): np.bool_,
+    (DLDataTypeCode.kDLComplex, 64): np.complex64,
+    (DLDataTypeCode.kDLComplex, 128): np.complex128,
+}
+
+
+def dlpack_dtype_to_numpy(dtype):
+    """Convert a DLDataType to a numpy dtype."""
+    if dtype.lanes != 1:
+        raise ValueError(f"unsupported DLDataType: lanes={dtype.lanes} (expected 1)")
+    result = _DLPACK_TO_NUMPY.get((dtype.code, dtype.bits))
+    if result is None:
+        raise ValueError(
+            f"unsupported DLDataType: code={dtype.code}, bits={dtype.bits}"
+        )
+    return result
 
 
 class ArrayWrapper:
@@ -712,9 +747,27 @@ _DEFAULT_MTS_ARRAY = mts_array_t(
 
 
 def to_arguments_parse(context, *args, **kwargs):
-    """Parse arguments to the various `to()` functions"""
+    """
+    Parse arguments to the various `to()` functions, returning ``dtype``, ``device``
+    and ``array_backend``.
+    """
     dtype = kwargs.get("dtype")
     device = kwargs.get("device")
+    array_backend = kwargs.get("array_backend")
+
+    if "arrays" in kwargs:
+        if array_backend is not None:
+            raise ValueError(
+                f"can not give both `arrays` and `array_backend` in {context}"
+            )
+
+        warnings.warn(
+            f"the `arrays` parameter of {context} is deprecated, "
+            "please use `array_backend` instead",
+            DeprecationWarning,
+            stacklevel=3,
+        )
+        array_backend = kwargs["arrays"]
 
     for positional in args:
         if isinstance(positional, Device):
@@ -747,4 +800,4 @@ def to_arguments_parse(context, *args, **kwargs):
 
         raise TypeError(f"unexpected type in {context}: {type(positional)}")
 
-    return dtype, device
+    return dtype, device, array_backend

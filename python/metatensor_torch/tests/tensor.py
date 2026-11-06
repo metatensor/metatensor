@@ -544,12 +544,23 @@ def test_to(tensor):
         assert moved.device.type == torch.device(device).type
 
     # this should run without error
-    moved = tensor.to(arrays=None)
-    moved = tensor.to(arrays="torch")
+    moved = tensor.to(array_backend=None)
+    moved = tensor.to(array_backend="torch")
 
-    message = "`arrays` must be None or 'torch', got 'numpy' instead"
+    message = "`array_backend` must be None or 'torch', got 'numpy' instead"
     with pytest.raises(ValueError, match=message):
-        moved = tensor.to(arrays="numpy")
+        moved = tensor.to(array_backend="numpy")
+
+    message = (
+        "the `arrays` parameter of `TensorMap.to` is deprecated, "
+        "please use `array_backend` instead"
+    )
+    with pytest.warns(DeprecationWarning, match=message):
+        moved = tensor.to(arrays="torch")
+
+    message = "can not give both `arrays` and `array_backend` in `TensorMap.to`"
+    with pytest.raises(ValueError, match=message):
+        moved = tensor.to(arrays="torch", array_backend="torch")
 
     # check that the code handles both positional and keyword arguments
     device = "meta"
@@ -722,9 +733,9 @@ class TensorMapWrap:
         self,
         dtype: Optional[torch.dtype],
         device: Optional[torch.device],
-        arrays: Optional[str],
+        array_backend: Optional[str],
     ) -> TensorMap:
-        return self._c.to(dtype=dtype, device=device, arrays=arrays)
+        return self._c.to(dtype=dtype, device=device, array_backend=array_backend)
 
     @staticmethod
     def load(file: str) -> TensorMap:

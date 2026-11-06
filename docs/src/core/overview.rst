@@ -148,19 +148,9 @@ inside. This allows one to integrate metatensor with multiple third-party librar
 and ecosystems, for example having the data live on GPU, or using memory-mapped
 data arrays.
 
-.. admonition:: Advanced functionalities: integrating new array types with metatensor
-
-    Currently, the following array types are integrated with metatensor:
-
-    - `Numpy's ndarray`_ from Python,
-    - `PyTorch's Tensor`_ from Python and C++, including full support for
-      autograd and different devices (data living on CPU memory, GPU memory, …),
-    - `Rust's ndarray`_ from Rust, more specifically ``ndarray::ArrayD<f64>``,
-    - A very bare-bone N-dimensional array in metatensor C++ API:
-      :cpp:class:`metatensor::SimpleDataArray`
+.. admonition:: integrating new array types
 
     It is possible to integrate new array types with metatensor. Look into the
-    :py:func:`metatensor.data.register_external_data_wrapper` function in Python, the
     :c:struct:`mts_array_t` struct in C, the :cpp:class:`metatensor::DataArrayBase`
     abstract base class in C++, and the `metatensor::Array`_ trait in Rust.
 

@@ -6,7 +6,6 @@ from collections import namedtuple
 from ctypes import cdll, wintypes
 
 from ._c_api import setup_functions
-from ._data._extract import ExternalCpuArray, register_external_data_wrapper
 from ._version import __version__
 
 
@@ -67,10 +66,6 @@ class LibraryFinder(object):
                     f"wrong version for libmetatensor, we want v{__version__}, "
                     f"but we got v{version} @ '{path}'"
                 )
-
-            # Register the origin used by the Rust API as an external CPU array
-            register_external_data_wrapper("RustArray", ExternalCpuArray)
-            register_external_data_wrapper("metatensor.Labels", ExternalCpuArray)
 
         return self._cached_dll
 

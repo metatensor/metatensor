@@ -2,13 +2,14 @@ import copy
 import ctypes
 import pathlib
 from pickle import PickleBuffer
-from typing import Any, BinaryIO, Generator, List, Sequence, Tuple, Union
+from typing import Any, BinaryIO, Generator, List, Optional, Sequence, Tuple, Union
 
 from . import _data
 from ._c_api import c_uintptr_t, mts_array_t, mts_block_t, mts_labels_t
 from ._c_lib import _get_library
 from ._data import (
     Array,
+    ArrayBackend,
     Device,
     DType,
 )
@@ -79,9 +80,16 @@ class TensorBlock:
         self._lib = _get_library()
         self._parent = None
         self._gradient_parameters = []
+        self._array_backend = _data.array_backend(values)
 
         if not isinstance(samples, Labels):
             raise TypeError(f"`samples` must be metatensor Labels, not {type(samples)}")
+
+        if samples._array_backend != self._array_backend:
+            raise ValueError(
+                "the samples must have the same array backend as the values, "
+                f"got '{samples._array_backend}' and '{self._array_backend}'"
+            )
 
         components = list(components)
         for component in components:
@@ -91,9 +99,21 @@ class TensorBlock:
                     f"not {type(component)}"
                 )
 
+            if component._array_backend != self._array_backend:
+                raise ValueError(
+                    "the components must have the same array backend as the values, "
+                    f"got '{component._array_backend}' and '{self._array_backend}'"
+                )
+
         if not isinstance(properties, Labels):
             raise TypeError(
                 f"`properties` must be metatensor Labels, not {type(properties)}"
+            )
+
+        if properties._array_backend != self._array_backend:
+            raise ValueError(
+                "the properties must have the same array backend as the values, "
+                f"got '{properties._array_backend}' and '{self._array_backend}'"
             )
 
         components_array = ctypes.ARRAY(ctypes.POINTER(mts_labels_t), len(components))()
@@ -114,37 +134,58 @@ class TensorBlock:
         self._cached_device = _data.array_device(values)
 
     @staticmethod
-    def unsafe_from_ptr(block: ctypes.POINTER(mts_block_t)):
+    def unsafe_from_ptr(
+        block: ctypes.POINTER(mts_block_t),
+        array_backend: ArrayBackend = "numpy",
+    ):
         """
         Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer.
 
-        The :py:class:`TensorBlock` takes ownership of the pointer, and will
-        release the corresponding memory when garbage-collected.
+        The :py:class:`TensorBlock` takes ownership of the pointer, and will release the
+        corresponding memory when garbage-collected.
+
+        :param block: raw pointer to the block
+        :param array_backend: array backend to use for data in this block (values,
+            gradients and labels) that was not allocated by Python. Data allocated by
+            Python is always returned as-is. See :ref:`python-api-array-backend` for
+            more information.
         """
         assert block, "mts_block_t pointer is null"
+        _data.check_array_backend(array_backend)
+
         obj = TensorBlock.__new__(TensorBlock)
         obj._lib = _get_library()
         obj._gradient_parameters = []
         obj._ptr = block
+        obj._array_backend = array_backend
         obj._cached_dtype = None
         obj._cached_device = None
         obj._parent = None
         return obj
 
     @staticmethod
-    def unsafe_view_from_ptr(ptr: ctypes.POINTER(mts_block_t), parent: Any):
+    def unsafe_view_from_ptr(
+        ptr: ctypes.POINTER(mts_block_t),
+        parent: Any,
+        array_backend: ArrayBackend = "numpy",
+    ):
         """
         Create a :py:class:`TensorBlock` from a raw ``mts_block_t`` pointer, keeping a
         reference to the ``parent`` to prevent garbage collection.
 
         The :py:class:`TensorBlock` does **not** take ownership of the pointer, and will
         not release the corresponding memory.
+
+        :param ptr: raw pointer to the block
+        :param parent: owner of the block, which will be kept alive
+        :param array_backend: array backend to use for data in this block that was
+            not allocated by Python, see :py:meth:`TensorBlock.unsafe_from_ptr`.
         """
         assert parent is not None, (
-            "please use TensorBlock.unsafe_from_ptr to take ownership of a pointer"
+            "use TensorBlock.unsafe_from_ptr to take ownership of a pointer"
         )
 
-        obj = TensorBlock.unsafe_from_ptr(ptr)
+        obj = TensorBlock.unsafe_from_ptr(ptr, array_backend=array_backend)
         # keep a reference to the parent object (usually a TensorMap) to
         # prevent it from being garbage-collected & removing this block
         obj._parent = parent
@@ -208,17 +249,17 @@ class TensorBlock:
 
     def __len__(self) -> int:
         """
-        Get the length of the values stored in this block
-        (i.e. the number of samples in the block)
+        Get the length of the values stored in this block (i.e. the number of samples in
+        the block)
         """
-        return len(self.values)
+        return self.shape[0]
 
     @property
-    def shape(self):
+    def shape(self) -> Tuple[int, ...]:
         """
         Get the shape of the values  array in this block.
         """
-        return self.values.shape
+        return _data.mts_array_shape(self._raw_values)
 
     def copy(self, deep: bool = True) -> "TensorBlock":
         """
@@ -231,14 +272,19 @@ class TensorBlock:
         if deep:
             new_ptr = self._lib.mts_block_copy(self.as_mts_block_t())
             check_pointer(new_ptr)
-            return TensorBlock.unsafe_from_ptr(new_ptr)
+            return TensorBlock.unsafe_from_ptr(
+                new_ptr, array_backend=self._array_backend
+            )
         else:
+            values = self.values
+
             new_block = TensorBlock(
-                values=self.values,
+                values=values,
                 samples=self.samples,
                 components=self.components,
                 properties=self.properties,
             )
+            new_block._array_backend = self._array_backend
 
             for parameter in self.gradients_list():
                 gradient = self.gradient(parameter)
@@ -258,10 +304,10 @@ class TensorBlock:
             s = (
                 f"TensorBlock gradient for "
                 f"'{'/'.join(self._gradient_parameters)}', "
-                f"with shape {tuple(self.values.shape)}\n"
+                f"with shape {self.shape}\n"
             )
         else:
-            s = f"TensorBlock with shape {tuple(self.values.shape)}\n"
+            s = f"TensorBlock with shape {self.shape}\n"
 
         s += f"    samples: {_format_names(self.samples.names)}\n"
 
@@ -279,7 +325,7 @@ class TensorBlock:
             max_len = max(len(p) for p in gradients)
             for parameter in gradients:
                 gradient = self.gradient(parameter)
-                grad_shape = tuple(int(v) for v in gradient.values.shape)
+                grad_shape = gradient.shape
                 s += (
                     f"\n        {parameter.ljust(max_len)} "
                     f"=> TensorBlock with shape {grad_shape}"
@@ -302,7 +348,7 @@ class TensorBlock:
                 gradients[parameter] = _block_data(grad)
 
             return TensorBlockData(
-                values_shape=tuple(block.values.shape),
+                values_shape=block.shape,
                 samples=(block.samples.names, block.samples._cpu_values),
                 components=[(c.names, c._cpu_values) for c in block.components],
                 properties=(block.properties.names, block.properties._cpu_values),
@@ -316,11 +362,9 @@ class TensorBlock:
         class_name = "metatensor.TensorBlock"
         if len(self._gradient_parameters) != 0:
             gradient_for = "/".join(self._gradient_parameters)
-            rest = (
-                f" gradient for '{gradient_for}', with shape {tuple(self.values.shape)}"
-            )
+            rest = f" gradient for '{gradient_for}', with shape {self.shape}"
         else:
-            rest = f" with shape {tuple(self.values.shape)}"
+            rest = f" with shape {self.shape}"
 
         header = f"<div><strong>{class_name}</strong>{rest}</div>"
         hr = "<hr style='border: none; border-top: 1px solid #888; margin: 0;'>"
@@ -349,8 +393,11 @@ class TensorBlock:
         """
         Get the values for this block.
 
-        The array type depends on how the block was created. Currently, numpy
-        ``ndarray`` and torch ``Tensor`` are supported.
+        If the values were allocated by Python (i.e. the block was created from a numpy
+        ``ndarray`` or a torch ``Tensor``), they are returned as-is. Otherwise, the type
+        of the values depends on the ``array_backend`` given to
+        :py:meth:`TensorBlock.unsafe_from_ptr` (or the function that created this
+        block).
 
         This function returns shared data and not a copy. The returned array keeps the
         owning block (and its parent TensorMap, when applicable) alive. A small slice
@@ -382,13 +429,36 @@ class TensorBlock:
         42.0
         """
 
-        return _data.mts_array_to_python_array(self._raw_values, parent=self)
+        return _data.mts_array_to_python_array(
+            self._raw_values, parent=self, array_backend=self._array_backend
+        )
 
     @values.setter
     def values(self, new_values):
         raise AttributeError(
             "Direct assignment to `values` is not possible. "
             "Please use block.values[:] = new_values instead."
+        )
+
+    def values_dlpack(self, *, dl_device: Optional[Tuple[int, int]] = None):
+        """
+        Get the values of this block through `DLPack`_, as a
+        :py:class:`ctypes_dlpack.DLPackArray`. This can be used to access the values
+        with any library supporting DLPack, typically with ``xxx.from_dlpack(array)``,
+        regardless of where the data was allocated.
+
+        A :py:class:`ctypes_dlpack.DLPackArray` can only be consumed once, call this
+        function again to get a new one. The returned array keeps this block (and its
+        parent, when applicable) alive.
+
+        :param dl_device: device on which the values should be exported, as a
+            ``(device_type, device_id)`` tuple following the DLPack convention. If
+            ``None``, the values are exported on the device where they currently live.
+
+        .. _DLPack: https://dmlc.github.io/dlpack/latest/
+        """
+        return _data.mts_array_to_dlpack(
+            self._raw_values, parent=self, dl_device=dl_device
         )
 
     @property
@@ -409,7 +479,7 @@ class TensorBlock:
         The entries in these labels describe intermediate dimensions of the
         ``values`` array.
         """
-        n_components = len(self.values.shape) - 2
+        n_components = len(self.shape) - 2
 
         result = []
         for axis in range(n_components):
@@ -426,13 +496,13 @@ class TensorBlock:
         ``values`` array. The properties are guaranteed to be the same for
         values and gradients in the same block.
         """
-        property_axis = len(self.values.shape) - 1
+        property_axis = len(self.shape) - 1
         return self._labels(property_axis)
 
     def _labels(self, axis) -> Labels:
         result = self._lib.mts_block_labels(self.as_mts_block_t(), axis)
         check_pointer(result)
-        return Labels.unsafe_from_ptr(result)
+        return Labels.unsafe_from_ptr(result, array_backend=self._array_backend)
 
     def gradient(self, parameter: str) -> "TensorBlock":
         """
@@ -493,7 +563,9 @@ class TensorBlock:
         )
 
         check_pointer(gradient_block)
-        gradient = TensorBlock.unsafe_view_from_ptr(gradient_block, parent=self)
+        gradient = TensorBlock.unsafe_view_from_ptr(
+            gradient_block, parent=self, array_backend=self._array_backend
+        )
 
         gradient._gradient_parameters = copy.deepcopy(self._gradient_parameters)
         gradient._gradient_parameters.append(parameter)
@@ -589,7 +661,9 @@ class TensorBlock:
         :py:class:`TensorBlock`.
         """
         if self._cached_dtype is None:
-            self._cached_dtype = _data.array_dtype(self.values)
+            self._cached_dtype = _data.mts_array_dtype(
+                self._raw_values, array_backend=self._array_backend
+            )
         return self._cached_dtype
 
     @property
@@ -599,7 +673,9 @@ class TensorBlock:
         :py:class:`TensorBlock`.
         """
         if self._cached_device is None:
-            self._cached_device = _data.array_device(self.values)
+            self._cached_device = _data.mts_array_device(
+                self._raw_values, array_backend=self._array_backend
+            )
         return self._cached_device
 
     @property
@@ -612,27 +688,29 @@ class TensorBlock:
     def to(self, *args, **kwargs) -> "TensorBlock":
         """
         Move all the data in this block (labels, values, and gradients) to the given
-        ``dtype``, ``device`` and ``arrays`` backend.
+        ``dtype``, ``device`` and ``array_backend``.
 
         :param dtype: new dtype to use for all arrays. The dtype stays the same if this
             is set to ``None``.
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
-        :param Optional[str] arrays: new backend to use for the arrays. This can be
-            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
-            and must be given as a keyword argument (``arrays="numpy"``).
+        :param Optional[str] array_backend: new backend to use for the arrays. This can
+            be either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing
+            backend); and must be given as a keyword argument
+            (``array_backend="numpy"``). This parameter was previously called
+            ``arrays``, which is still accepted but deprecated.
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorBlock`
             contains ``"torch"`` arrays, the function tries to move the data
             asynchronously. See :py:meth:`torch.Tensor.to` for more information.
         """
-        arrays = kwargs.pop("arrays", None)
         non_blocking = kwargs.pop("non_blocking", False)
-        dtype, device = _data.to_arguments_parse("`TensorBlock.to`", *args, **kwargs)
+        dtype, device, array_backend = _data.to_arguments_parse(
+            "`TensorBlock.to`", *args, **kwargs
+        )
 
         values = self.values
-
-        if arrays is not None:
-            values = _data.array_change_backend(values, arrays)
+        if array_backend is not None:
+            values = _data.array_change_backend(values, array_backend)
 
         if dtype is not None:
             values = _data.array_change_dtype(values, dtype, non_blocking=non_blocking)
@@ -642,22 +720,25 @@ class TensorBlock:
                 values, device, non_blocking=non_blocking
             )
 
-        block = TensorBlock(
-            values,
-            self.samples.to(device=device, arrays=arrays, non_blocking=non_blocking),
-            [
-                c.to(device=device, arrays=arrays, non_blocking=non_blocking)
-                for c in self.components
-            ],
-            self.properties.to(device=device, arrays=arrays, non_blocking=non_blocking),
+        samples = self.samples.to(
+            device=device, array_backend=array_backend, non_blocking=non_blocking
         )
+        components = [
+            c.to(device=device, array_backend=array_backend, non_blocking=non_blocking)
+            for c in self.components
+        ]
+        properties = self.properties.to(
+            device=device, array_backend=array_backend, non_blocking=non_blocking
+        )
+
+        block = TensorBlock(values, samples, components, properties)
         for parameter, gradient in self.gradients():
             block.add_gradient(
                 parameter,
                 gradient.to(
                     dtype=dtype,
                     device=device,
-                    arrays=arrays,
+                    array_backend=array_backend,
                     non_blocking=non_blocking,
                 ),
             )
@@ -692,7 +773,10 @@ class TensorBlock:
 
     @staticmethod
     def load(
-        file: Union[str, pathlib.Path, BinaryIO], use_numpy=False
+        file: Union[str, pathlib.Path, BinaryIO],
+        use_numpy=False,
+        *,
+        array_backend: ArrayBackend = "numpy",
     ) -> "TensorBlock":
         """
         Load a serialized :py:class:`TensorBlock` from a file or a buffer, calling
@@ -700,16 +784,20 @@ class TensorBlock:
 
         :param file: file path or file object to load from
         :param use_numpy: should we use the numpy loader or metatensor's. See
-            :py:func:`metatensor.load` for more information.
+            :py:func:`metatensor.load_block` for more information.
+        :param array_backend: array backend to use for all data. See
+            :py:func:`metatensor.load_block` for more information.
         """
         from .io import load_block
 
-        return load_block(file=file, use_numpy=use_numpy)
+        return load_block(file=file, use_numpy=use_numpy, array_backend=array_backend)
 
     @staticmethod
     def load_buffer(
         buffer: Union[bytes, bytearray, memoryview],
         use_numpy=False,
+        *,
+        array_backend: ArrayBackend = "numpy",
     ) -> "TensorBlock":
         """
         Load a serialized :py:class:`TensorMap` from a buffer, calling
@@ -717,11 +805,15 @@ class TensorBlock:
 
         :param buffer: in-memory buffer containing the data
         :param use_numpy: should we use the numpy loader or metatensor's. See
-            :py:func:`metatensor.load` for more information.
+            :py:func:`metatensor.load_block_buffer` for more information.
+        :param array_backend: array backend to use for all data. See
+            :py:func:`metatensor.load_block_buffer` for more information.
         """
         from .io import load_block_buffer
 
-        return load_block_buffer(buffer=buffer)
+        return load_block_buffer(
+            buffer=buffer, use_numpy=use_numpy, array_backend=array_backend
+        )
 
     def save(self, file: Union[str, pathlib.Path, BinaryIO], use_numpy=False):
         """

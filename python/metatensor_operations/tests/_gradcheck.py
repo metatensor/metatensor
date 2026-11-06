@@ -1,7 +1,7 @@
 import numpy as np
 
 import metatensor as mts
-from metatensor import Labels, TensorBlock, TensorMap
+from metatensor import Labels, TensorMap
 from metatensor.operations import _dispatch
 
 
@@ -113,17 +113,15 @@ def tensor_with_grad_a(array, parameter) -> TensorMap:
     values_grad = 3 * array**2
 
     block = mts.block_from_array(values.reshape(n_samples, 1), sample_names=["s"])
-    block.add_gradient(
-        parameter=parameter,
-        gradient=TensorBlock(
-            values=values_grad.reshape(n_samples, 3, 1),
-            samples=Labels.range("sample", len(values)),
-            components=[Labels.range("xyz", 3)],
-            properties=block.properties,
-        ),
+    gradient = mts.block_from_array(
+        values_grad.reshape(n_samples, 3, 1),
+        sample_names=["sample"],
+        component_names=["xyz"],
     )
+    block.add_gradient(parameter=parameter, gradient=gradient)
 
-    return TensorMap(Labels.range("_", 1), [block])
+    backend = _dispatch.get_array_backend(array)
+    return TensorMap(Labels.range("_", 1, array_backend=backend), [block])
 
 
 def tensor_with_grad_b(array, parameter) -> TensorMap:
@@ -149,17 +147,15 @@ def tensor_with_grad_b(array, parameter) -> TensorMap:
     values_grad[:, 2] = 8 * _dispatch.ones_like(array, (n_samples, 1))
 
     block = mts.block_from_array(values.reshape(-1, 1), sample_names=["s"])
-    block.add_gradient(
-        parameter=parameter,
-        gradient=TensorBlock(
-            values=values_grad,
-            samples=Labels.range("sample", len(values)),
-            components=[Labels.range("xyz", 3)],
-            properties=block.properties,
-        ),
+    gradient = mts.block_from_array(
+        values_grad,
+        sample_names=["sample"],
+        component_names=["xyz"],
     )
+    block.add_gradient(parameter=parameter, gradient=gradient)
 
-    return TensorMap(Labels.range("_", 1), [block])
+    backend = _dispatch.get_array_backend(array)
+    return TensorMap(Labels.range("_", 1, array_backend=backend), [block])
 
 
 def test_basic_functions():
