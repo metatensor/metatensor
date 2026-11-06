@@ -57,6 +57,6 @@ N-dimensional arrays
 
 .. doxygenfunction:: metatensor::io::load_labels
 
-.. doxygenfunction:: metatensor::io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count)
+.. doxygenfunction:: metatensor::io::load_labels_buffer(const uint8_t* buffer, size_t buffer_count, mts_create_array_callback_t create_array)
 
-.. doxygenfunction:: metatensor::io::load_labels_buffer(const Buffer& buffer)
+.. doxygenfunction:: metatensor::io::load_labels_buffer(const Buffer& buffer, mts_create_array_callback_t create_array)

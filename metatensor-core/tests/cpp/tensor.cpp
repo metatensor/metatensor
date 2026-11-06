@@ -395,12 +395,14 @@ TEST_CASE("TensorMap serialization") {
     SECTION("loading file with custom array creation") {
         CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 0);
         auto tensor = TensorMap::load(TEST_DATA_MTS_PATH, custom_create_array);
-        // 27 blocks, one array for values, one array for gradients
-        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
+        // one array for the keys, and 27 blocks containing 8 arrays each:
+        // values, samples, one component, properties, and for the gradients:
+        // values, samples and two components
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1 + 27 * 8);
 
         CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
         tensor = metatensor::io::load(TEST_DATA_MTS_PATH, custom_create_array);
-        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 27 * 2);
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1 + 27 * 8);
     }
 
     SECTION("Load/Save with buffers") {

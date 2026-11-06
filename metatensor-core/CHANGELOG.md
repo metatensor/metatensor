@@ -17,6 +17,30 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### metatensor-core C
+
+#### Added
+
+- `mts_labels_load_custom_array()` and `mts_labels_load_buffer_custom_array()`
+  to load `Labels` with a custom array type, created through a
+  `mts_create_array_callback_t` callback
+
+### metatensor-core C++
+
+#### Changed
+
+- `metatensor::io::load_labels()`, `metatensor::io::load_labels_buffer()`,
+  `Labels::load()` and `Labels::load_buffer()` take an optional `create_array`
+  parameter, defaulting to `details::default_create_array`
+
+### metatensor-core Python
+
+#### Added
+
+- `metatensor.io.load_labels_custom_array()` and
+  `metatensor.io.load_labels_buffer_custom_array()` to load `Labels` values
+  with a custom array type
+
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 
 ### Fixed

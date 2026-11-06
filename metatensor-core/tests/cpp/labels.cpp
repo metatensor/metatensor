@@ -6,6 +6,15 @@
 #include <metatensor.hpp>
 using namespace metatensor;
 
+static mts_status_t custom_create_array(
+    const uintptr_t* shape_ptr,
+    uintptr_t shape_count,
+    DLDataType dtype,
+    mts_array_t *array
+);
+
+static int CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+
 TEST_CASE("Labels") {
     // Any change here means the ABI will break and the new version will need to
     // be a major version bump.
@@ -252,6 +261,33 @@ TEST_CASE("Serialization") {
         );
     }
 
+    SECTION("loading with custom array creation") {
+        CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+        auto labels = Labels::load(TEST_KEYS_MTS_PATH, custom_create_array);
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1);
+        check_loaded_labels(labels);
+
+        CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+        labels = metatensor::io::load_labels(TEST_KEYS_MTS_PATH, custom_create_array);
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1);
+        check_loaded_labels(labels);
+
+        std::ifstream file(TEST_KEYS_MTS_PATH, std::ios::binary);
+        std::ostringstream string_stream;
+        string_stream << file.rdbuf();
+        auto buffer = string_stream.str();
+
+        CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+        labels = Labels::load_buffer(buffer, custom_create_array);
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1);
+        check_loaded_labels(labels);
+
+        CUSTOM_CREATE_ARRAY_CALL_COUNT = 0;
+        labels = metatensor::io::load_labels_buffer(buffer, custom_create_array);
+        CHECK(CUSTOM_CREATE_ARRAY_CALL_COUNT == 1);
+        check_loaded_labels(labels);
+    }
+
     SECTION("Load/Save with buffers") {
         // read the whole file into a buffer
         std::ifstream file(TEST_KEYS_MTS_PATH, std::ios::binary);
@@ -291,4 +327,18 @@ TEST_CASE("Serialization") {
 
         std::free(raw_buffer);
     }
+}
+
+
+mts_status_t custom_create_array(const uintptr_t* shape_ptr, uintptr_t shape_count, DLDataType dtype, mts_array_t *array) {
+    CUSTOM_CREATE_ARRAY_CALL_COUNT += 1;
+
+    CHECK(shape_count == 2);
+    CHECK(shape_ptr[0] == 27);
+    CHECK(shape_ptr[1] == 4);
+    CHECK(dtype.code == kDLInt);
+    CHECK(dtype.bits == 32);
+    CHECK(dtype.lanes == 1);
+
+    return metatensor::details::default_create_array(shape_ptr, shape_count, dtype, array);
 }
