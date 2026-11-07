@@ -649,3 +649,49 @@ def test_unsafe_view(block):
 
     # original block should still be usable after creating a view
     assert block.samples == Labels(["s"], np.array([[0], [2], [4]]))
+
+
+def test_free():
+    """
+    TensorBlock free their memory when garbage-collected, unless they were released
+    or are views inside another TensorBlock or a TensorMap
+    """
+    address = _tests_utils.address
+    tensor = _tests_utils.tensor()
+
+    def new_block():
+        return TensorBlock(
+            np.zeros((3, 1)), Labels.range("s", 3), [], Labels.range("p", 1)
+        )
+
+    block = new_block()
+    ptr = address(block.as_mts_block_t())
+    with _tests_utils.record_free("mts_block_free") as freed:
+        del block
+    assert ptr in freed
+
+    # TensorBlock created by metatensor-core
+    block = tensor.block(0).copy()
+    ptr = address(block.as_mts_block_t())
+    with _tests_utils.record_free("mts_block_free") as freed:
+        del block
+    assert ptr in freed
+
+    view = tensor.block(0)
+    ptr = address(view.as_mts_block_t())
+    with _tests_utils.record_free("mts_block_free") as freed:
+        del view
+    assert ptr not in freed
+
+    gradient = tensor.block(0).gradient("g")
+    ptr = address(gradient.as_mts_block_t())
+    with _tests_utils.record_free("mts_block_free") as freed:
+        del gradient
+    assert ptr not in freed
+
+    block = new_block()
+    raw = block.release()
+    with _tests_utils.record_free("mts_block_free") as freed:
+        del block
+    assert address(raw) not in freed
+    TensorBlock.unsafe_from_ptr(raw)

@@ -9,7 +9,9 @@ try:
 except ImportError:
     HAS_TORCH = False
 
-from metatensor import Labels, MetatensorError
+from metatensor import Labels, MetatensorError, TensorBlock
+
+from . import _tests_utils
 
 
 def test_constructor():
@@ -458,6 +460,34 @@ def test_ownership_transfer():
     with pytest.raises(RuntimeError, match=message):
         recovered.as_mts_labels_t()
 
+    Labels.unsafe_from_ptr(raw)
+
+
+def test_free():
+    """Labels free their memory when garbage-collected, unless released"""
+    address = _tests_utils.address
+
+    labels = Labels.range("a", 3)
+    ptr = address(labels.as_mts_labels_t())
+    with _tests_utils.record_free("mts_labels_free") as freed:
+        del labels
+    assert ptr in freed
+
+    # Labels created by metatensor-core
+    block = TensorBlock(
+        np.zeros((3, 1)), Labels.range("s", 3), [], Labels.range("p", 1)
+    )
+    samples = block.samples
+    ptr = address(samples.as_mts_labels_t())
+    with _tests_utils.record_free("mts_labels_free") as freed:
+        del samples
+    assert ptr in freed
+
+    labels = Labels.range("a", 3)
+    raw = labels.release()
+    with _tests_utils.record_free("mts_labels_free") as freed:
+        del labels
+    assert address(raw) not in freed
     Labels.unsafe_from_ptr(raw)
 
 
