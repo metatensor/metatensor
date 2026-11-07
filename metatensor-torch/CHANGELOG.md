@@ -16,6 +16,14 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+### Changed
+
+- Comparing two `Labels` for equality now checks the number of entries,
+  dimensions and names before reading the values, and compares values stored on
+  the same device directly on this device. Comparing `Labels` on GPU now
+  requires a single synchronization with the host, instead of copying both
+  sets of values to the host.
+
 ## [Version 0.10.8](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.8) - 2026-10-15
 
 ### Fixed
