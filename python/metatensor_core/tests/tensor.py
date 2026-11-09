@@ -933,3 +933,33 @@ def test_unsafe_view(tensor):
     )
     with pytest.raises(RuntimeError, match=message):
         view.release()
+
+
+def test_free():
+    """TensorMap free their memory when garbage-collected, unless released or views"""
+
+    tensor = _tests_utils.tensor()
+    ptr = _tests_utils.address(tensor.as_mts_tensormap_t())
+    with _tests_utils.record_free("mts_tensormap_free") as freed:
+        del tensor
+    assert ptr in freed
+
+    # TensorMap created by metatensor-core
+    tensor = _tests_utils.tensor()
+    copied = tensor.copy()
+    ptr = _tests_utils.address(copied.as_mts_tensormap_t())
+    with _tests_utils.record_free("mts_tensormap_free") as freed:
+        del copied
+    assert ptr in freed
+
+    view = TensorMap.unsafe_view_from_ptr(tensor.as_mts_tensormap_t(), tensor)
+    ptr = _tests_utils.address(view.as_mts_tensormap_t())
+    with _tests_utils.record_free("mts_tensormap_free") as freed:
+        del view
+    assert ptr not in freed
+
+    raw = tensor.release()
+    with _tests_utils.record_free("mts_tensormap_free") as freed:
+        del tensor
+    assert _tests_utils.address(raw) not in freed
+    TensorMap.unsafe_from_ptr(raw)

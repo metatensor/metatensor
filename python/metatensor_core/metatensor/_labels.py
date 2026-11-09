@@ -436,7 +436,7 @@ class Labels:
 
     def __del__(self):
         if hasattr(self, "_lib") and self._lib is not None:
-            if hasattr(self, "_labels") and self._ptr is not None:
+            if hasattr(self, "_ptr") and self._ptr is not None:
                 self._lib.mts_labels_free(self._ptr)
 
     def __deepcopy__(self, _memodict):

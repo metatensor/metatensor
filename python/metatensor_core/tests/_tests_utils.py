@@ -1,10 +1,40 @@
 """Utility functions to be used across all test files"""
 
+import contextlib
+import ctypes
 import os
 
 import numpy as np
 
 from metatensor import Labels, TensorBlock, TensorMap
+from metatensor._c_lib import _get_library
+
+
+def address(ptr):
+    """Address a ctypes pointer points to, ``None`` for a null pointer"""
+    return ctypes.cast(ptr, ctypes.c_void_p).value
+
+
+@contextlib.contextmanager
+def record_free(name):
+    """
+    Record the address of every pointer passed to the ``name`` function of the
+    metatensor library (e.g. ``"mts_labels_free"``) inside the ``with`` block, and
+    restore the original function when leaving it.
+    """
+    lib = _get_library()
+    free = getattr(lib, name)
+    freed = []
+
+    def recording_free(ptr):
+        freed.append(address(ptr))
+        return free(ptr)
+
+    setattr(lib, name, recording_free)
+    try:
+        yield freed
+    finally:
+        setattr(lib, name, free)
 
 
 def tensor():

@@ -17,6 +17,11 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Fixed
+
+- `Labels` created or accessed from Python are freed again when they are
+  garbage-collected. Since version 0.2.0, their memory was never released.
+
 ## [Version 0.2.6](https://github.com/metatensor/metatensor/releases/tag/metatensor-core-v0.2.6) - 2026-10-06
 
 ### Fixed
