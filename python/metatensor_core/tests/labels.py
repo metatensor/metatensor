@@ -465,10 +465,9 @@ def test_ownership_transfer():
 
 def test_free():
     """Labels free their memory when garbage-collected, unless released"""
-    address = _tests_utils.address
 
     labels = Labels.range("a", 3)
-    ptr = address(labels.as_mts_labels_t())
+    ptr = _tests_utils.address(labels.as_mts_labels_t())
     with _tests_utils.record_free("mts_labels_free") as freed:
         del labels
     assert ptr in freed
@@ -478,7 +477,7 @@ def test_free():
         np.zeros((3, 1)), Labels.range("s", 3), [], Labels.range("p", 1)
     )
     samples = block.samples
-    ptr = address(samples.as_mts_labels_t())
+    ptr = _tests_utils.address(samples.as_mts_labels_t())
     with _tests_utils.record_free("mts_labels_free") as freed:
         del samples
     assert ptr in freed
@@ -487,7 +486,7 @@ def test_free():
     raw = labels.release()
     with _tests_utils.record_free("mts_labels_free") as freed:
         del labels
-    assert address(raw) not in freed
+    assert _tests_utils.address(raw) not in freed
     Labels.unsafe_from_ptr(raw)
 
 
