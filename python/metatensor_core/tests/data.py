@@ -5,16 +5,7 @@ import weakref
 
 import numpy as np
 import pytest
-from numpy.testing import assert_equal
-
-
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-
+import torch
 from ctypes_dlpack import (
     DLDataTypeCode,
     DLDevice,
@@ -22,6 +13,7 @@ from ctypes_dlpack import (
     DLManagedTensorVersioned,
     DLPackVersion,
 )
+from numpy.testing import assert_equal
 
 import metatensor
 from metatensor import ExternalCpuArray, ExternalCudaArray
@@ -356,17 +348,38 @@ class TestNumpyData(MtsArrayMixin):
         return [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
 
 
-if HAS_TORCH:
+class TestTorchData(MtsArrayMixin):
+    all_dtypes = [
+        torch.bool,
+        torch.float64,
+        torch.float32,
+        torch.float16,
+        # FIXME: this does not work since we unconditionally
+        # go through a numpy array in the implementation
+        # torch.bfloat16,
+        torch.int64,
+        torch.int32,
+        torch.int16,
+        torch.int8,
+        torch.uint64,
+        torch.uint32,
+        torch.uint16,
+        torch.uint8,
+        torch.complex128,
+        # FIXME: this fails with "Casting complex values to real discards the
+        # imaginary part"
+        # torch.complex64,
+        # FIXME: same as bfloat16, this does not work since we go through numpy
+        # torch.complex32,
+    ]
 
-    class TestTorchData(MtsArrayMixin):
-        all_dtypes = [
-            torch.bool,
-            torch.float64,
-            torch.float32,
-            torch.float16,
-            # FIXME: this does not work since we unconditionally
-            # go through a numpy array in the implementation
-            # torch.bfloat16,
+    def expected_origin(self):
+        return "python.torch"
+
+    def create_array(self, shape, dtype=torch.float32, device="cpu"):
+        if dtype == torch.bool:
+            return torch.ones(shape, dtype=dtype, device=device)
+        elif dtype in [
             torch.int64,
             torch.int32,
             torch.int16,
@@ -375,47 +388,24 @@ if HAS_TORCH:
             torch.uint32,
             torch.uint16,
             torch.uint8,
-            torch.complex128,
-            # FIXME: this fails with "Casting complex values to real discards the
-            # imaginary part"
-            # torch.complex64,
-            # FIXME: same as bfloat16, this does not work since we go through numpy
-            # torch.complex32,
-        ]
+        ]:
+            return torch.randint(0, 42, shape, dtype=dtype, device=device)
+        else:
+            return torch.rand(shape, dtype=dtype, device=device)
 
-        def expected_origin(self):
-            return "python.torch"
+    def to_numpy(self, array):
+        return array.cpu().numpy()
 
-        def create_array(self, shape, dtype=torch.float32, device="cpu"):
-            if dtype == torch.bool:
-                return torch.ones(shape, dtype=dtype, device=device)
-            elif dtype in [
-                torch.int64,
-                torch.int32,
-                torch.int16,
-                torch.int8,
-                torch.uint64,
-                torch.uint32,
-                torch.uint16,
-                torch.uint8,
-            ]:
-                return torch.randint(0, 42, shape, dtype=dtype, device=device)
-            else:
-                return torch.rand(shape, dtype=dtype, device=device)
+    def dtype_from_numpy(self, dtype):
+        return torch.tensor(np.array([], dtype=dtype)).dtype
 
-        def to_numpy(self, array):
-            return array.cpu().numpy()
-
-        def dtype_from_numpy(self, dtype):
-            return torch.tensor(np.array([], dtype=dtype)).dtype
-
-        def available_devices(self):
-            devices = [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
-            if HAS_TORCH and torch.cuda.is_available():
-                devices.append(("cuda", DLDevice(DLDeviceType.kDLCUDA, 0)))
-            if can_use_mps_backend():
-                devices.append(("mps", DLDevice(DLDeviceType.kDLMetal, 0)))
-            return devices
+    def available_devices(self):
+        devices = [("cpu", DLDevice(DLDeviceType.kDLCPU, 0))]
+        if torch.cuda.is_available():
+            devices.append(("cuda", DLDevice(DLDeviceType.kDLCUDA, 0)))
+        if can_use_mps_backend():
+            devices.append(("mps", DLDevice(DLDeviceType.kDLMetal, 0)))
+        return devices
 
 
 def _get_shape(mts_array, test):
@@ -449,7 +439,6 @@ def test_external_cuda_array_requires_torch(monkeypatch):
         ExternalCudaArray(dummy_mts_array, parent=None)
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires PyTorch")
 def test_external_cuda_array_cpu_path():
     """ExternalCudaArray should work with device_type=1 (CPU) for testing."""
     # Create a numpy array and wrap it as mts_array

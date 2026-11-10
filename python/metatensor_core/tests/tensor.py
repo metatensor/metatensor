@@ -3,6 +3,7 @@ import sys
 
 import numpy as np
 import pytest
+import torch
 from numpy.testing import assert_equal
 
 from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
@@ -10,22 +11,12 @@ from metatensor import Labels, MetatensorError, TensorBlock, TensorMap
 from . import _tests_utils
 
 
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
-
-
 AVAILABLE_DEVICES = [("cpu", "numpy")]
-
-if HAS_TORCH:
-    AVAILABLE_DEVICES.append(("cpu", "torch"))
-    if torch.cuda.is_available():
-        AVAILABLE_DEVICES.append(("cuda:0", "torch"))
-    if _tests_utils.can_use_mps_backend():
-        AVAILABLE_DEVICES.append(("mps", "torch"))
+AVAILABLE_DEVICES.append(("cpu", "torch"))
+if torch.cuda.is_available():
+    AVAILABLE_DEVICES.append(("cuda:0", "torch"))
+if _tests_utils.can_use_mps_backend():
+    AVAILABLE_DEVICES.append(("mps", "torch"))
 
 
 @pytest.fixture
@@ -654,7 +645,6 @@ def test_empty_tensor():
         empty_tensor.keys_to_properties("key")
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_device():
     block_meta = TensorBlock(
         values=torch.tensor([[3.0, 4.0]], device="meta"),
@@ -688,7 +678,6 @@ def test_different_device():
         _ = TensorMap(Labels.range("k", 2), [block_cpu, block_meta])
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_origin():
     block_numpy = TensorBlock(
         values=np.array([[3.0, 4.0]]),
@@ -776,24 +765,22 @@ def test_to():
     with pytest.raises(TypeError, match=message):
         _ = tensor.to(np.array([0]))
 
-    if HAS_TORCH:
-        tensor = converted.to(arrays="torch")
-        assert isinstance(tensor.block(0).values, torch.Tensor)
+    tensor = converted.to(arrays="torch")
+    assert isinstance(tensor.block(0).values, torch.Tensor)
 
-        devices = ["meta", torch.device("meta")]
-        if _tests_utils.can_use_mps_backend():
-            devices.append("mps")
-            devices.append(torch.device("mps"))
+    devices = ["meta", torch.device("meta")]
+    if _tests_utils.can_use_mps_backend():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
 
-        if torch.cuda.is_available():
-            devices.append("cuda")
-            devices.append("cuda:0")
-            devices.append(torch.device("cuda"))
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
 
-        # for device in devices:
-        #         moved = tensor.to(device=device, non_blocking=True)
-
-        #     assert moved.device.type == torch.device(device).type
+        for device in devices:
+            moved = tensor.to(device=device, non_blocking=True)
+            assert moved.device.type == torch.device(device).type
 
 
 def test_info(tensor):

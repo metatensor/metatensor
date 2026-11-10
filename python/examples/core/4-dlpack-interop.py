@@ -25,6 +25,7 @@ import pathlib
 import tempfile
 
 import numpy as np
+import torch
 
 import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
@@ -157,40 +158,31 @@ with tempfile.TemporaryDirectory() as tmp:
 # DLPack layer handles the conversion transparently -- the data is shared, not
 # copied.
 
-try:
-    import torch
+# Create a torch tensor with float32 dtype
+torch_data = torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float32)
 
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+block_torch = TensorBlock(
+    values=torch_data,
+    samples=Labels.range("sample", 2),
+    components=[],
+    properties=Labels.range("property", 2),
+)
 
-if HAS_TORCH:
-    # Create a torch tensor with float32 dtype
-    torch_data = torch.tensor([[1.0, 2.0], [3.0, 4.0]], dtype=torch.float32)
-
-    block_torch = TensorBlock(
-        values=torch_data,
-        samples=Labels.range("sample", 2),
-        components=[],
-        properties=Labels.range("property", 2),
-    )
-
-    print("Torch block dtype:", block_torch.values.dtype)
-    print("Torch block values:\n", block_torch.values)
-    print("Is a torch.Tensor:", isinstance(block_torch.values, torch.Tensor))
+print("Torch block dtype:", block_torch.values.dtype)
+print("Torch block values:\n", block_torch.values)
+print("Is a torch.Tensor:", isinstance(block_torch.values, torch.Tensor))
 
 # %%
 #
 # You can convert between numpy and torch backends using ``.to()``:
 
-if HAS_TORCH:
-    # torch float32 -> numpy float32
-    as_numpy = block_torch.to(arrays="numpy")
-    print("Converted to numpy:", type(as_numpy.values).__name__, as_numpy.values.dtype)
+# torch float32 -> numpy float32
+as_numpy = block_torch.to(arrays="numpy")
+print("Converted to numpy:", type(as_numpy.values).__name__, as_numpy.values.dtype)
 
-    # numpy float16 -> torch float16
-    as_torch = block_f16.to(arrays="torch")
-    print("Converted to torch:", type(as_torch.values).__name__, as_torch.values.dtype)
+# numpy float16 -> torch float16
+as_torch = block_f16.to(arrays="torch")
+print("Converted to torch:", type(as_torch.values).__name__, as_torch.values.dtype)
 
 
 # %%
@@ -202,7 +194,7 @@ if HAS_TORCH:
 # device information, so metatensor knows where the data lives and can handle it
 # correctly.
 
-if HAS_TORCH and torch.cuda.is_available():
+if torch.cuda.is_available():
     gpu_data = torch.randn(3, 4, dtype=torch.float32, device="cuda")
 
     block_gpu = TensorBlock(
@@ -219,10 +211,8 @@ if HAS_TORCH and torch.cuda.is_available():
     block_cpu = block_gpu.to("cpu").to(arrays="numpy")
     print("After .to('cpu').to(arrays='numpy'):", type(block_cpu.values).__name__)
 
-elif HAS_TORCH:
-    print("(CUDA not available, skipping GPU example)")
 else:
-    print("(torch not available, skipping GPU example)")
+    print("(CUDA not available, skipping GPU example)")
 
 
 # %%

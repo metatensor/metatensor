@@ -2,15 +2,8 @@ import copy
 
 import numpy as np
 import pytest
+import torch
 from numpy.testing import assert_equal
-
-
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
 
 from metatensor import Labels, MetatensorError, TensorBlock
 
@@ -384,7 +377,6 @@ def test_nested_gradients():
     assert np.all(grad_grad_values == np.array([[2.0]]))
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_device():
     message = (
         "invalid parameter: invalid block: values and samples must be "
@@ -421,7 +413,6 @@ def test_different_device():
         block.add_gradient("g", gradient)
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_different_origin():
     block = TensorBlock(
         values=np.array([[3.0, 4.0]]),
@@ -522,36 +513,35 @@ def test_to():
     with pytest.raises(TypeError, match=message):
         _ = block.to(np.array([0]))
 
-    if HAS_TORCH:
-        block = converted.to(arrays="torch")
+    block = converted.to(arrays="torch")
 
-        assert isinstance(block.values, torch.Tensor)
-        assert isinstance(block.samples.values, torch.Tensor)
-        assert isinstance(block.properties.values, torch.Tensor)
+    assert isinstance(block.values, torch.Tensor)
+    assert isinstance(block.samples.values, torch.Tensor)
+    assert isinstance(block.properties.values, torch.Tensor)
 
-        gradient = block.gradient("g")
-        assert isinstance(gradient.values, torch.Tensor)
-        assert isinstance(gradient.samples.values, torch.Tensor)
-        assert isinstance(gradient.properties.values, torch.Tensor)
+    gradient = block.gradient("g")
+    assert isinstance(gradient.values, torch.Tensor)
+    assert isinstance(gradient.samples.values, torch.Tensor)
+    assert isinstance(gradient.properties.values, torch.Tensor)
 
-        devices = ["meta", torch.device("meta")]
-        if _tests_utils.can_use_mps_backend():
-            devices.append("mps")
-            devices.append(torch.device("mps"))
+    devices = ["meta", torch.device("meta")]
+    if _tests_utils.can_use_mps_backend():
+        devices.append("mps")
+        devices.append(torch.device("mps"))
 
-        if torch.cuda.is_available():
-            devices.append("cuda")
-            devices.append("cuda:0")
-            devices.append(torch.device("cuda"))
+    if torch.cuda.is_available():
+        devices.append("cuda")
+        devices.append("cuda:0")
+        devices.append(torch.device("cuda"))
 
-        for device in devices:
-            moved = block.to(device=device, non_blocking=True)
+    for device in devices:
+        moved = block.to(device=device, non_blocking=True)
 
-            assert moved.device.type == torch.device(device).type
-            assert moved.samples.device.type == torch.device(device).type
+        assert moved.device.type == torch.device(device).type
+        assert moved.samples.device.type == torch.device(device).type
 
-            assert moved.gradient("g").device.type == torch.device(device).type
-            assert moved.gradient("g").samples.device.type == torch.device(device).type
+        assert moved.gradient("g").device.type == torch.device(device).type
+        assert moved.gradient("g").samples.device.type == torch.device(device).type
 
 
 def test_values_setter():
@@ -596,12 +586,11 @@ def test_to_torch_multiple_args():
     assert block.dtype == np.float64
     assert block.gradient("g").dtype == np.float64
 
-    if HAS_TORCH:
-        block = block.to(arrays="torch", dtype=torch.float32)
-        assert isinstance(block.values, torch.Tensor)
-        assert isinstance(block.gradient("g").values, torch.Tensor)
-        assert block.values.dtype == torch.float32
-        assert block.gradient("g").values.dtype == torch.float32
+    block = block.to(arrays="torch", dtype=torch.float32)
+    assert isinstance(block.values, torch.Tensor)
+    assert isinstance(block.gradient("g").values, torch.Tensor)
+    assert block.values.dtype == torch.float32
+    assert block.gradient("g").values.dtype == torch.float32
 
 
 def test_ownership_transfer(block):

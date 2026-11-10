@@ -3,14 +3,7 @@ import weakref
 
 import numpy as np
 import pytest
-
-
-try:
-    import torch
-
-    HAS_TORCH = True
-except ImportError:
-    HAS_TORCH = False
+import torch
 
 import metatensor
 from metatensor import Labels, MetatensorError, TensorBlock
@@ -494,7 +487,6 @@ def test_free():
     Labels.unsafe_from_ptr(raw)
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch to be run")
 def test_torch_backend():
     labels = Labels(names=["a", "b"], values=torch.tensor([[0, 0], [1, 0]]))
 
@@ -532,7 +524,6 @@ def test_values_keepalive():
     np.testing.assert_equal(cpu_values, reference)
 
 
-@pytest.mark.skipif(not HAS_TORCH, reason="requires torch")
 def test_cpu_values_keepalive():
     labels = Labels("a", torch.tensor([[0], [1], [2]], dtype=torch.int32))
 
