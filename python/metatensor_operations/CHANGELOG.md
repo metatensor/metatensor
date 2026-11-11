@@ -17,6 +17,25 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Added
+
+- All operations accept blocks with `jax.Array` values, and return `jax.Array`
+  values for them. They can be used inside `jax.jit`, and differentiated with
+  `jax.grad`, except `equal`/`allclose` (which return Python booleans) under
+  `jax.jit`. Arrays computed from metadata (indices, masks) stay NumPy arrays.
+- `add`, `subtract`, `multiply`, `divide` and `pow` accept arrays of shape `()`
+  (NumPy, torch or JAX, including traced values) as scalar operands
+
+### Fixed
+
+- Gradients of `var_over_properties` and `std_over_properties` for blocks with
+  components, and of `std_over_properties` in TorchScript
+
+### Changed
+
+- Gradients of `var` and `std` reductions are computed without a Python loop
+  over the gradient samples
+
 ## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
 
 ### Changed

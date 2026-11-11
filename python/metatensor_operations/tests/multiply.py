@@ -7,6 +7,14 @@ import metatensor as mts
 from metatensor import Labels, TensorBlock, TensorMap
 
 
+try:
+    import torch
+
+    HAS_TORCH = True
+except ImportError:
+    HAS_TORCH = False
+
+
 DATA_ROOT = os.path.join(os.path.dirname(__file__), "data")
 
 
@@ -320,6 +328,22 @@ def test_self_multiply_scalar_gradient():
         tensor_result = TensorMap(keys, [block_result])
         product_tensor = mts.multiply(tensor_1, tensor_2)
         assert mts.equal(tensor_result, product_tensor)
+
+
+@pytest.mark.parametrize("operation", ["add", "subtract", "multiply", "divide", "pow"])
+def test_scalar_array(operation):
+    # arrays with a single value and no dimensions are scalars too
+    tensor = mts.load(os.path.join(DATA_ROOT, "qm7-power-spectrum.mts"))
+    tensor = mts.add(mts.abs(tensor), 1.0)
+    function = getattr(mts, operation)
+
+    expected = function(tensor, 1.5)
+    assert mts.allclose(function(tensor, np.asarray(1.5)), expected)
+
+    if HAS_TORCH:
+        torch_tensor = tensor.to(arrays="torch")
+        result = function(torch_tensor, torch.tensor(1.5, dtype=torch.float64))
+        assert mts.allclose(result.to(arrays="numpy"), expected)
 
 
 def test_self_multiply_error():

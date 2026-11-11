@@ -1,6 +1,7 @@
 import ctypes
 import io
 import pathlib
+import sys
 from pickle import PickleBuffer
 from typing import BinaryIO, List, Optional, Sequence, Tuple, Union, overload
 
@@ -821,8 +822,9 @@ class Labels:
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
         :param Optional[str] arrays: new backend to use for the arrays. This can be
-            either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing backend);
-            and must be given as a keyword argument (``arrays="numpy"``).
+            either ``"numpy"``, ``"torch"``, ``"jax"`` (uses numpy for the labels) or
+            ``None`` (keeps the existing backend); and must be given as a keyword
+            argument (``arrays="numpy"``).
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorBlock`
             contains ``"torch"`` arrays, the function tries to move the data
             asynchronously. See :py:meth:`torch.Tensor.to` for more information.
@@ -833,6 +835,12 @@ class Labels:
 
         if dtype is not None:
             raise ValueError("Labels values must be int32, `dtype` can not be changed")
+
+        jax = sys.modules.get("jax")
+        if arrays == "jax" or (jax is not None and isinstance(device, jax.Device)):
+            # Labels are metadata: they stay as numpy arrays on CPU when the values of
+            # the blocks use JAX, whatever the device of the values
+            return self.to(arrays="numpy")
 
         already_there = True
         if arrays is not None:

@@ -17,6 +17,18 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 #### Removed
 -->
 
+### Added
+
+- The Python API accepts `jax.Array` as `TensorBlock` values (and gradients), next
+  to NumPy arrays and torch tensors. Blocks can be converted with
+  `.to(arrays="jax")`, moved between JAX devices with `.to(device=...)`, and all
+  operations that create or move data return JAX arrays. Labels stay NumPy arrays.
+- `TensorBlock` and `TensorMap` are registered as JAX pytrees, with the arrays as
+  leaves and the metadata as static data, and can store traced values. They can be
+  used inside and returned from `jax.jit`, `jax.grad`, `jax.vjp`, `jax.vmap`, ...
+  Operations that need the data itself (e.g. `metatensor.save`) are not available
+  for traced values.
+
 ### Fixed
 
 - `Labels` created or accessed from Python are freed again when they are
