@@ -237,8 +237,22 @@ private:
     uint8_t padding_[32];
 };
 
-/// Check two `LabelsHolder` for equality
+/// Check two `LabelsHolder` for equality.
 inline bool operator==(const LabelsHolder& lhs, const LabelsHolder& rhs) {
+    if (lhs.count() != rhs.count() || lhs.size() != rhs.size()) {
+        return false;
+    }
+
+    if (lhs.names() != rhs.names()) {
+        return false;
+    }
+
+    auto lhs_values = lhs.values();
+    auto rhs_values = rhs.values();
+    if (lhs_values.device() == rhs_values.device() && !lhs_values.is_meta()) {
+        return torch::equal(lhs_values, rhs_values);
+    }
+
     return lhs.as_metatensor() == rhs.as_metatensor();
 }
 
