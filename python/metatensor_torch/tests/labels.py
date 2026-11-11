@@ -248,6 +248,29 @@ def test_eq():
     assert labels_1[0] != labels_4[0]
     assert labels_1[1] == labels_3[1]
 
+    # different number of entries or dimensions
+    labels_5 = Labels(names=("a", "b"), values=torch.tensor([[0, 0]]))
+    labels_6 = Labels(names=("a",), values=torch.tensor([[0], [1]]))
+    assert labels_1 != labels_5
+    assert labels_1 != labels_6
+    assert Labels.empty(["a", "b"]) == Labels.empty(["a", "b"])
+    assert Labels.empty(["a", "b"]) != Labels.empty(["a", "c"])
+
+
+@pytest.mark.parametrize("device", AVAILABLE_DEVICES)
+def test_eq_device(device):
+    labels_1 = Labels(names=("a", "b"), values=torch.tensor([[0, 0], [0, 1]]))
+    labels_2 = Labels(names=("a", "b"), values=torch.tensor([[0, 2], [0, 1]]))
+
+    # both labels on the device
+    assert labels_1.to(device) == labels_1.to(device)
+    assert labels_1.to(device) != labels_2.to(device)
+
+    # labels on different devices
+    assert labels_1.to(device) == labels_1
+    assert labels_1 == labels_1.to(device)
+    assert labels_1.to(device) != labels_2
+
 
 def test_to():
     devices = ["meta", torch.device("meta")]
