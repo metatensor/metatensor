@@ -21,8 +21,9 @@ This part of the code is still in it's early days, and will be improved as we go
         Read the documentation for all the classes and functions in the
         ``metatensor-learn`` Python package.
 
-        +++
-        Documentation for version |metatensor-learn-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-learn-version|
 
     .. grid-item-card:: 💡 Tutorials
         :link: learn-tutorials

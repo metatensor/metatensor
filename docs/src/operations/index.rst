@@ -43,8 +43,9 @@ reference below. If you need any other operation, please `open an issue
         Read the documentation for all the functions in the
         ``metatensor-operations`` Python package.
 
-        +++
-        Documentation for version |metatensor-operations-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-operations-version|
 
 .. toctree::
     :maxdepth: 2

@@ -42,8 +42,9 @@ below.
         Read the documentation for all the classes and functions in the
         ``metatensor`` and ``metatensor-core`` Python packages.
 
-        +++
-        Documentation for version |metatensor-core-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-core-version|
 
     .. grid-item-card:: |Cxx-16x16| C++ API reference
         :link: cxx-api-core
@@ -54,8 +55,9 @@ below.
         Read the documentation for all the classes and functions provided by
         the metatensor C++ API in the ``metatensor.hpp`` header.
 
-        +++
-        Documentation for version |metatensor-core-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-core-version|
 
     .. grid-item-card:: |C-16x16| C API reference
         :link: c-api-core
@@ -66,8 +68,9 @@ below.
         Read the documentation for all the types and functions provided by
         the metatensor C API in the ``metatensor.h`` header.
 
-        +++
-        Documentation for version |metatensor-core-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-core-version|
 
     .. grid-item-card:: |Rust-16x16| Rust API reference
         :link: rust-api-core
@@ -78,8 +81,9 @@ below.
         Read the documentation for all the types and functions provided by
         the metatensor Rust API in the ``metatensor`` crate.
 
-        +++
-        Documentation for version |metatensor-core-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-core-version|
 
 
 .. toctree::

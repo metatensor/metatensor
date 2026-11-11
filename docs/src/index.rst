@@ -29,8 +29,9 @@ store gradients, keeping them together with the associated values.
         The core of this library is written in Rust and we provide API for C,
         C++, and Python.
 
-        +++
-        |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
+        .. card-footer::
+
+            |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
 
     .. grid-item-card:: 📜 Our goals
         :link: goals
@@ -64,8 +65,9 @@ store gradients, keeping them together with the associated values.
         :py:class:`TensorBlock` and :py:class:`Labels`, and discover how to used
         them.
 
-        +++
-        |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
+        .. card-footer::
+
+            |Python-32x32| |Cxx-32x32| |C-32x32| |Rust-32x32|
 
 
     .. grid-item-card:: 📈 Operations
@@ -77,8 +79,9 @@ store gradients, keeping them together with the associated values.
         Use ``operations`` to manipulate the core types of metatensor and write
         new algorithms operating on metatensor's sparse data.
 
-        +++
-        |Python-32x32|
+        .. card-footer::
+
+            |Python-32x32|
 
 
     .. grid-item-card:: 🔥 TorchScript interface
@@ -90,8 +93,9 @@ store gradients, keeping them together with the associated values.
         Learn about the TorchScript version of metatensor, used to export and
         execute custom models inside non-Python software.
 
-        +++
-        |Python-32x32| |Cxx-32x32|
+        .. card-footer::
+
+            |Python-32x32| |Cxx-32x32|
 
 
     .. grid-item-card:: 🧑‍💻 Learning utilities
@@ -103,8 +107,9 @@ store gradients, keeping them together with the associated values.
         Use the utility class with the same API as torch or scikit-learn to
         train models based on metatensor!
 
-        +++
-        |Python-32x32|
+        .. card-footer::
+
+            |Python-32x32|
 
 
 
