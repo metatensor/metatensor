@@ -34,8 +34,9 @@ Python and C++ sides of this library.
         Read the documentation for all the classes and functions in the
         ``metatensor-torch`` Python package.
 
-        +++
-        Documentation for version |metatensor-torch-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-torch-version|
 
     .. grid-item-card:: |Cxx-16x16| TorchScript C++ API reference
         :link: cxx-api-torch
@@ -46,8 +47,9 @@ Python and C++ sides of this library.
         Read the documentation for all the classes and functions in the
         ``metatensor/torch.hpp`` C++ header.
 
-        +++
-        Documentation for version |metatensor-torch-version|
+        .. card-footer::
+
+            Documentation for version |metatensor-torch-version|
 
 .. _python-vs-torch:
 

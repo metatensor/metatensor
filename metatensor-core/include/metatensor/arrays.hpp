@@ -180,15 +180,15 @@ namespace details {
     }
 
     /// Map a C++ logical type to the storage type used to hold its data.
-    ///
-    /// `bool` is special-cased to `uint8_t` because of the stupid
-    /// `std::vector<bool>` specialization. All other types are stored directly.
     template<typename T>
     struct storage_type_of { using type = T; };
 
+    /// `bool` is special-cased to `uint8_t` because of the stupid
+    /// `std::vector<bool>` specialization.
     template<>
     struct storage_type_of<bool> { using type = uint8_t; };
 
+    /// All other types are stored directly
     template<typename T>
     using storage_type_t = typename storage_type_of<T>::type;
 
