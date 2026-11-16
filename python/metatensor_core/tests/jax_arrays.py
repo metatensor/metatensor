@@ -110,6 +110,7 @@ def test_array_backend():
     assert isinstance(copy.block(0).samples.values, np.ndarray)
     assert isinstance(copy.block(0).values, jax.Array)
 
+
 def test_operations_moving_data():
     # keys_to_samples / keys_to_properties / components_to_properties go through
     # `mts_array_t.create` and `mts_array_t.move_data`, which must handle immutable
