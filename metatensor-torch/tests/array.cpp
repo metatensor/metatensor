@@ -272,11 +272,21 @@ TEST_CASE("DLPack conversion") {
         auto tensor = torch::zeros({4}, torch::TensorOptions().dtype(torch::kF64));
         auto array = TorchDataArray(tensor);
 
-        // Passing a stream (non-null) to a CPU tensor should throw an error.
-        const auto* fake_stream = reinterpret_cast<const int64_t*>(0x1234);
+        // stream=-1 means no synchronization and is accepted.
+        int64_t stream_idx = -1;
+        auto* dl_managed = array.as_dlpack(
+            /*device=*/{kDLCPU, 0},
+            /*stream=*/&stream_idx,
+            /*max_version=*/version
+        );
+        CHECK(dl_managed->dl_tensor.device.device_type == kDLCPU);
+        dl_managed->deleter(dl_managed);
+
+        // Other non-null CPU stream values should be rejected.
+        stream_idx = 0;
         CHECK_THROWS_WITH(
-            array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/fake_stream, /*max_version=*/version),
-            Catch::Matchers::Contains("Stream must be NULL for CPU tensors")
+            array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/&stream_idx, /*max_version=*/version),
+            Catch::Matchers::Contains("Stream must be NULL or -1 for CPU tensors")
         );
 
         if (torch::cuda::is_available()) {
@@ -286,22 +296,52 @@ TEST_CASE("DLPack conversion") {
             auto cuda_array = TorchDataArray(cuda_tensor);
 
             // passing nullptr stream to CUDA is valid (uses default stream)
-            auto* dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
+            dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
             CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
             dl_managed->deleter(dl_managed);
 
-            // // passing a valid stream
-            // auto stream = c10::cuda::getStreamFromPool();
-            // CHECK(stream != at::cuda::getDefaultCUDAStream(cuda_tensor.device().index()));
+            // stream=-1 means no synchronization and is accepted.
+            stream_idx = -1;
+            dl_managed = cuda_array.as_dlpack(
+                /*device=*/{kDLCUDA, 0},
+                /*stream=*/&stream_idx,
+                /*max_version=*/version
+            );
+            CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+            dl_managed->deleter(dl_managed);
 
-            int64_t stream_idx = 33;
+            stream_idx = 0;
             CHECK_THROWS_WITH(cuda_array.as_dlpack(
                 /*device=*/{kDLCUDA, 0},
                 /*stream=*/&stream_idx,
                 /*max_version=*/version
-            ), Catch::Matchers::Contains("CUDA stream synchronization is not yet implemented"));
-            // CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
-            // dl_managed->deleter(dl_managed);
+            ), Catch::Matchers::Contains("stream=0 is invalid for CUDA"));
+
+            // `stream=1` is the CUDA legacy default stream, and is accepted.
+            stream_idx = 1;
+            dl_managed = cuda_array.as_dlpack(
+                /*device=*/{kDLCUDA, 0},
+                /*stream=*/&stream_idx,
+                /*max_version=*/version
+            );
+            CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+            dl_managed->deleter(dl_managed);
+
+            stream_idx = 2;
+            CHECK_THROWS_WITH(cuda_array.as_dlpack(
+                /*device=*/{kDLCUDA, 0},
+                /*stream=*/&stream_idx,
+                /*max_version=*/version
+            ), Catch::Matchers::Contains("Only stream=NULL or stream=1"));
+
+            stream_idx = 33;
+            CHECK_THROWS_WITH(cuda_array.as_dlpack(
+                /*device=*/{kDLCUDA, 0},
+                /*stream=*/&stream_idx,
+                /*max_version=*/version
+            ), Catch::Matchers::Contains("Only stream=NULL or stream=1"));
+        } else {
+            SUCCEED("CUDA stream validation checks skipped because CUDA is not available");
         }
     }
 

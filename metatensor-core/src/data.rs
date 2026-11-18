@@ -132,16 +132,18 @@ pub struct mts_array_t {
     /// copying).
     ///
     /// The `stream` parameter is a pointer to an integer representing a
-    /// device-specific stream or queue. If this is `NULL`, the implementation
-    /// should use the default stream for the specified device. If this is `-1`,
-    /// no synchronization should be performed. Some devices have specific
-    /// stream values:
+    /// device-specific stream or queue. For CUDA and ROCm this integer encodes
+    /// a `cudaStream_t` / `hipStream_t` pointer value. If this is `NULL`, the
+    /// implementation should use the default stream for the specified device.
+    /// If this is `-1`, no synchronization should be performed. Some devices
+    /// have specific stream values:
     /// - For CUDA devices, `1` represents the legacy default stream, `2` the
-    ///   per-thread default stream. Any value above `2` indicates the stream
-    ///   number. `0` is not allowed as it could mean the same as `NULL`, `1` or
-    ///   `2`.
+    ///   per-thread default stream. Any value above `2` indicates a
+    ///   `cudaStream_t` pointer value. `0` is not allowed as it could mean the
+    ///   same as `NULL`, `1` or `2`.
     /// - For ROCm devices, `0` represents the default stream, any value above
-    ///   `2` indicates the stream number. `1` and `2` are not allowed.
+    ///   `2` indicates a `hipStream_t` pointer value. `1` and `2` are not
+    ///   allowed.
     ///
     /// See also the documentation of `__dlpack__` for more information about
     /// streams:

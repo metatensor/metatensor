@@ -21,6 +21,12 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Comparing `Labels` for equality now checks values on device when both Labels
   are on the same device instead of making a copy to the host.
 
+### Fixed
+
+- `TorchDataArray::as_dlpack` now validates CUDA/ROCm stream arguments
+  according to the array API/DLPack conventions for default stream sentinel
+  values.
+
 ### Deprecated
 
 - The `arrays` parameter of `TensorBlock.to()` and `TensorMap.to()` is

@@ -350,14 +350,27 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
 
     // Stream sync ala:
     // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
-    if (tensor_to_pack.is_cuda()) {
-        if (stream != nullptr && *stream != 0) {
+    //
+    // We validate against the requested DLPack device type instead of the
+    // PyTorch device type. In ROCm builds, tensors are exposed through
+    // DeviceType::CUDA/is_cuda(), but __dlpack__ still uses ROCm stream
+    // sentinel values.
+    if (device.device_type == kDLCUDA) {
+        if (stream != nullptr && *stream == 0) {
+            throw metatensor::Error(
+                "TorchDataArray: stream=0 is invalid for CUDA in __dlpack__. "
+                "Use stream=NULL or stream=1 for the legacy default stream."
+            );
+        }
+
+        if (stream != nullptr && *stream != 1 && *stream != -1) {
             throw metatensor::Error(
                 "TorchDataArray: CUDA stream synchronization is not yet "
                 "implemented. The required functions (at::cuda::getCurrentCUDAStream, "
                 "at::cuda::getStreamFromExternal) are in libtorch_cuda.so, which "
-                "cannot be linked in pre-built CPU+CUDA wheels. Pass stream=nullptr "
-                "for default stream behavior."
+                "cannot be linked in pre-built CPU+CUDA wheels. Only stream=NULL "
+                "or stream=1 (legacy default stream), or stream=-1 (no "
+                "synchronization), are currently supported."
             );
         }
 
@@ -386,9 +399,25 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
         //     // and make the target stream wait for it
         //     event.block(target_stream);
         // }
-    } else if (tensor_to_pack.is_cpu() && stream != nullptr) {
+    } else if (device.device_type == kDLROCM) {
+        if (stream != nullptr && (*stream == 1 || *stream == 2)) {
+            throw metatensor::Error(
+                "TorchDataArray: stream=1 and stream=2 are invalid for ROCm in "
+                "__dlpack__. Use stream=NULL or stream=0 for the default stream, "
+                "or stream=-1 for no synchronization."
+            );
+        }
+
+        if (stream != nullptr && *stream != 0 && *stream != -1) {
+            throw metatensor::Error(
+                "TorchDataArray: ROCm stream synchronization is not yet "
+                "implemented. Only stream=NULL or stream=0 (default stream), "
+                "or stream=-1 (no synchronization), are currently supported."
+            );
+        }
+    } else if (tensor_to_pack.is_cpu() && stream != nullptr && *stream != -1) {
         throw metatensor::Error(
-            "TorchDataArray: Stream must be NULL for CPU tensors");
+            "TorchDataArray: Stream must be NULL or -1 for CPU tensors");
     } else {
         // ignore stream for all other devices for now
     }
