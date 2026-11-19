@@ -287,12 +287,12 @@ TEST_CASE("DLPack conversion") {
             auto cuda_array = TorchDataArray(cuda_tensor);
 
             // passing nullptr stream to CUDA is valid (uses default stream)
-            dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
+            auto* dl_managed = cuda_array.as_dlpack(/*device=*/{kDLCUDA, 0}, /*stream=*/nullptr, /*max_version=*/version);
             CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
             dl_managed->deleter(dl_managed);
 
             // stream=-1 means no synchronization and is accepted.
-            stream_idx = -1;
+            int64_t stream_idx = -1;
             dl_managed = cuda_array.as_dlpack(
                 /*device=*/{kDLCUDA, 0},
                 /*stream=*/&stream_idx,
