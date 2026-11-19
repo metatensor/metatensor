@@ -415,9 +415,9 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
                 "or stream=-1 (no synchronization), are currently supported."
             );
         }
-    } else if (tensor_to_pack.is_cpu() && stream != nullptr && *stream != -1) {
+    } else if (tensor_to_pack.is_cpu() && stream != nullptr) {
         throw metatensor::Error(
-            "TorchDataArray: Stream must be NULL or -1 for CPU tensors");
+            "TorchDataArray: Stream must be NULL for CPU tensors");
     } else {
         // ignore stream for all other devices for now
     }

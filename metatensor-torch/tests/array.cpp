@@ -272,22 +272,13 @@ TEST_CASE("DLPack conversion") {
         auto tensor = torch::zeros({4}, torch::TensorOptions().dtype(torch::kF64));
         auto array = TorchDataArray(tensor);
 
-        // stream=-1 means no synchronization and is accepted.
-        int64_t stream_idx = -1;
-        auto* dl_managed = array.as_dlpack(
-            /*device=*/{kDLCPU, 0},
-            /*stream=*/&stream_idx,
-            /*max_version=*/version
-        );
-        CHECK(dl_managed->dl_tensor.device.device_type == kDLCPU);
-        dl_managed->deleter(dl_managed);
-
-        // Other non-null CPU stream values should be rejected.
-        stream_idx = 0;
-        CHECK_THROWS_WITH(
-            array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/&stream_idx, /*max_version=*/version),
-            Catch::Matchers::Contains("Stream must be NULL or -1 for CPU tensors")
-        );
+        // On CPU, only NULL is accepted (None in the array API).
+        for (int64_t stream_idx : {-1, 0, 1}) {
+            CHECK_THROWS_WITH(
+                array.as_dlpack(/*device=*/{kDLCPU, 0}, /*stream=*/&stream_idx, /*max_version=*/version),
+                Catch::Matchers::Contains("Stream must be NULL for CPU tensors")
+            );
+        }
 
         if (torch::cuda::is_available()) {
             // Create a CUDA tensor
