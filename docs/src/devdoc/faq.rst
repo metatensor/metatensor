@@ -13,12 +13,6 @@ You can customize test execution by setting specific environment variables in
 your shell. Please refer to :ref:`running-tests` for a full list of supported
 variables and their descriptions.
 
-.. important::
-
-   When running ``tox`` locally, your host Python version must be compatible
-   with the ``torch`` version you request. For example, some versions of
-   ``torch`` do not support Python 3.14.
-
 How do I change the Python version used for local tests?
 --------------------------------------------------------
 
