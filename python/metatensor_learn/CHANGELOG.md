@@ -17,6 +17,10 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+### Changed
+
+- We now require Python >= 3.11
+
 ## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.2) - 2025-09-16
 
 ### Fixed

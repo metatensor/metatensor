@@ -29,10 +29,11 @@ from ._tensor import (
 )
 from ._tensor import save_tensor as _save_tensor
 from ._tensor import save_tensor_buffer_raw as _save_tensor_buffer_raw
-from ._utils import create_numpy_array, create_torch_array
+from ._utils import CreateArrayCallback, create_numpy_array, create_torch_array
 
 
 __all__ = [
+    "CreateArrayCallback",
     "create_numpy_array",
     "create_torch_array",
     "load_block_buffer_custom_array",

@@ -68,9 +68,7 @@ def save_buffer_raw(mts_function, data) -> ctypes.Array:
     return result
 
 
-# TODO: use a proper type alias when we drop support for Python <3.10; and remove the
-# quotes around the type annotations using this.
-# https://stackoverflow.com/a/73223518/4692076
+# TODO: turn this into a type once we drop Python 3.11 (type CreateArrayCallback = ...)
 CreateArrayCallback = Callable[
     [ctypes.POINTER(c_uintptr_t), c_uintptr_t, DLDataType, ctypes.POINTER(mts_array_t)],
     None,

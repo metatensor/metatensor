@@ -18,11 +18,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-24.04
-            python-version: "3.10"
+            python-version: "3.11"
             torch-version: "2.3"
             numpy-version-pin: "<2.0"
           - os: ubuntu-24.04
-            python-version: "3.10"
+            python-version: "3.11"
             torch-version: "2.14"
           - os: ubuntu-24.04
             # TorchScript is no longer supported in Python 3.14
