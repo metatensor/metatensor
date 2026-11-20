@@ -5,7 +5,6 @@
 
 #include <metatensor.hpp>
 
-#include "metatensor/torch/array.hpp"
 #include <ATen/DLConvertor.h>
 
 #include <torch/version.h>
@@ -15,6 +14,7 @@
 #include <c10/core/Event.h>
 #endif
 
+#include "metatensor/torch/array.hpp"
 using namespace metatensor_torch;
 
 
