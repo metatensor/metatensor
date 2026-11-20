@@ -92,10 +92,16 @@ jobs:
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:22.04'
+        env:
+          # python3.11 pulls in tzdata, which asks for a timezone
+          DEBIAN_FRONTEND: noninteractive
         run: |
           apt update
           apt install -y software-properties-common
-          apt install -y cmake make gcc g++ git curl python3-venv cargo-1.89
+          add-apt-repository ppa:deadsnakes/ppa
+          apt install -y cmake make gcc g++ git curl python3.11 python3.11-venv cargo-1.89
+
+          update-alternatives --install /usr/local/bin/python python /usr/bin/python3.11 1
 
           # for some reason, cargo-1.89 from APT tries to find `rustdoc` and
           # not `rustdoc-1.89`, so we force it to use the correct one

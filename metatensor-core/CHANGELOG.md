@@ -60,6 +60,10 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
   values as `ctypes_dlpack.DLPackArray`, and use them with any library
   supporting DLPack.
 
+### Changed
+
+- We now require Python >= 3.11
+
 #### Deprecated
 
 - `metatensor.register_external_data_wrapper`, `metatensor.ExternalCpuArray`
