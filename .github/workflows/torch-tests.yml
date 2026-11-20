@@ -20,7 +20,7 @@ jobs:
         include:
           - os: ubuntu-24.04
             torch-version: "2.14"
-            python-version: "3.14"
+            python-version: "3.15"
             cargo-test-flags: --release
             do-valgrind: true
 
@@ -33,23 +33,26 @@ jobs:
 
           - os: macos-15
             torch-version: "2.14"
-            python-version: "3.14"
+            python-version: "3.15"
             cargo-test-flags: --release
 
           - os: windows-2022
             torch-version: "2.14"
-            python-version: "3.14"
+            python-version: "3.15"
             cargo-test-flags: --release
     steps:
       - name: install dependencies in container
         if: matrix.container == 'ubuntu:22.04'
+        env:
+          # python3.11 pulls in tzdata, which asks for a timezone
+          DEBIAN_FRONTEND: noninteractive
         run: |
           apt update
           apt install -y software-properties-common
           add-apt-repository ppa:deadsnakes/ppa
-          apt install -y cmake make gcc g++ git curl python3.10 python3.10-venv
+          apt install -y cmake make gcc g++ git curl python3.11 python3.11-venv
 
-          update-alternatives --install /usr/local/bin/python python /usr/bin/python3.10 1
+          update-alternatives --install /usr/local/bin/python python /usr/bin/python3.11 1
 
       - uses: actions/checkout@v7
         with:

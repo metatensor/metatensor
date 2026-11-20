@@ -9,16 +9,9 @@ with the ecosystem.
 How do I use environment variables to control tests?
 ----------------------------------------------------
 
-You can customize test execution by setting specific environment variables in your
-shell. This provides a lighter alternative to the :ref:`devdoc-local-ci` setup.
-Please refer to :ref:`running-tests` for a full list of supported variables
-and their descriptions.
-
-.. important::
-
-   When running ``tox`` locally, your host Python version must be compatible
-   with the ``torch`` version you request. For example, some versions of
-   ``torch`` do not support Python 3.14.
+You can customize test execution by setting specific environment variables in
+your shell. Please refer to :ref:`running-tests` for a full list of supported
+variables and their descriptions.
 
 How do I change the Python version used for local tests?
 --------------------------------------------------------
@@ -32,52 +25,6 @@ Python interpreter. You can use ``tox`` within a specific Python environment:
     METATENSOR_TESTS_TORCH_VERSION="2.2" \
     tox -e core-tests -x testenv:core-tests.base_python=python3.11
 
-How do I run the full CI suite locally?
----------------------------------------
-
-You can use ``gh act`` to emulate GitHub Actions on your machine. This is
-useful for catching environment-specific bugs before pushing code.
-See :ref:`devdoc-local-ci` for setup and usage instructions.
-
-.. note::
-
-   These can be rather heavy for users without workstations. Using
-   ``--action-offline-mode`` after the first run will help.
-
-Often it makes sense for better logs to change ``tox.ini``, for instance to
-temporarily remove `` --quiet`` from ``uv build``.
-
-How do I run just the NumPy < 2.0 tests?
-----------------------------------------
-
-When using ``gh act``, you can isolate specific matrix configurations by
-specifying the matrix keys. To run the legacy NumPy tests:
-
-.. code-block:: bash
-
-    gh act -j python-tests \
-      --matrix os:ubuntu-24.04 \
-      --matrix python-version:3.10 \
-      --matrix torch-version:2.3 \
-      --matrix numpy-version-pin:"<2.0"
-
-.. tip::
-
-   If you don't need the full Docker isolation of ``act``, you can also
-   replicate this legacy environment using :ref:`the environment variables method <devdoc-faq-env-vars>`.
-
-.. _devdoc-faq-env-vars:
-
-How do I run a single tox environment in CI?
---------------------------------------------
-
-If you are using ``act`` and want to skip the full suite in favor of a
-single environment (e.g., ``core-tests``), pass the ``TOXENV``
-variable:
-
-.. code-block:: bash
-
-    gh act -j python-tests --env TOXENV=core-tests
 
 How do I make a new release?
 ----------------------------
@@ -210,36 +157,3 @@ Then generate an HTML report (including C/C++ code compiled via FFI):
 The CI workflow in ``.github/workflows/coverage.yml`` uploads both
 ``coverage.xml`` (Python) and ``rust_codecov.json`` (Rust) to
 `Codecov <https://app.codecov.io/gh/metatensor/metatensor>`_.
-The project coverage target is **82%** (configured in ``.codecov.yml``).
-
-How do I pin stuff for the Rust MSRV?
--------------------------------------
-
-Follow an `upgrade PR <https://github.com/metatensor/metatensor/pull/1053>`_.
-Update `the issue <https://github.com/metatensor/metatensor/issues/957>`_.
-
-To find the offending dependency and determine where to pin the version,
-consider:
-
-.. code-block:: bash
-
-    cargo tree # to find where the offending
-
-For handling these issues it may be worthwhile to have a local copy of our MSRV
-(currently 1.88):
-
-.. code-block:: bash
-
-    rustup toolchain install "1.88"
-    # run tests / see breakage
-    cargo +1.88 test
-    # nail down the dependency
-    cargo +1.88 tree
-
-.. note::
-
-   If a direct dependency is not the source of the pin, i.e a dependency of a
-   dependency needs to be pinned, the *actual* dependency must be pinned.
-   Concretely, if *X depends on Y* and **Y needs to be pinned**, use ``cargo
-   tree`` to find the **last compatible X and pin that**, setting a pin for Y
-   will not pass CI!!

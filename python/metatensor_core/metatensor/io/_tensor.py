@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import ctypes
 import io
 import json
@@ -92,7 +94,7 @@ def load_buffer(
 
 def load_custom_array(
     path: Union[str, pathlib.Path],
-    create_array: "CreateArrayCallback",
+    create_array: CreateArrayCallback,
     *,
     array_backend: Optional[ArrayBackend] = None,
 ) -> TensorMap:
@@ -101,14 +103,9 @@ def load_custom_array(
     array creation callback. This advanced functionality should not be needed by most
     users.
 
-    This function allows to specify the kind of array to use when loading the data
-    through the ``create_array`` callback. This callback should take three arguments: a
-    pointer to the shape, the number of elements in the shape, and a pointer to the
-    ``mts_array_t`` to be filled.
-
     :py:func:`metatensor.io.create_numpy_array` and
-    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
-    torch arrays respectively.
+    :py:func:`metatensor.io.create_torch_array` can be used as callbacks to load data
+    into numpy and torch arrays respectively.
 
     :param path: path of the file to load
     :param create_array: callback used to create arrays as needed
@@ -136,7 +133,7 @@ def load_custom_array(
 
 def load_buffer_custom_array(
     buffer: Union[bytes, bytearray, memoryview],
-    create_array: "CreateArrayCallback",
+    create_array: CreateArrayCallback,
     *,
     array_backend: Optional[ArrayBackend] = None,
 ) -> TensorMap:
@@ -145,14 +142,9 @@ def load_buffer_custom_array(
     array creation callback. This advanced functionality should not be needed by most
     users.
 
-    This function allows to specify the kind of array to use when loading the data
-    through the ``create_array`` callback. This callback should take three arguments: a
-    pointer to the shape, the number of elements in the shape, and a pointer to the
-    ``mts_array_t`` to be filled.
-
     :py:func:`metatensor.io.create_numpy_array` and
-    :py:func:`metatensor.io.create_torch_array` can be used to load data into numpy and
-    torch arrays respectively.
+    :py:func:`metatensor.io.create_torch_array` can be used as callbacks to load data
+    into numpy and torch arrays respectively.
 
     :param buffer: in-memory buffer containing a saved :py:class:`TensorMap`
     :param create_array: callback used to create arrays as needed
