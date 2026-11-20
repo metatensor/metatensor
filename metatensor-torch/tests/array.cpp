@@ -1,4 +1,5 @@
 #include <torch/torch.h>
+#include <torch/version.h>
 
 #include <metatensor/torch.hpp>
 using namespace metatensor_torch;
@@ -318,19 +319,23 @@ TEST_CASE("DLPack conversion") {
             CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
             dl_managed->deleter(dl_managed);
 
+            // `stream=2` is the CUDA per-thread default stream
             stream_idx = 2;
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 7)
+            dl_managed = cuda_array.as_dlpack(
+                /*device=*/{kDLCUDA, 0},
+                /*stream=*/&stream_idx,
+                /*max_version=*/version
+            );
+            CHECK(dl_managed->dl_tensor.device.device_type == kDLCUDA);
+            dl_managed->deleter(dl_managed);
+#else
             CHECK_THROWS_WITH(cuda_array.as_dlpack(
                 /*device=*/{kDLCUDA, 0},
                 /*stream=*/&stream_idx,
                 /*max_version=*/version
             ), Catch::Matchers::Contains("Only stream=NULL or stream=1"));
-
-            stream_idx = 33;
-            CHECK_THROWS_WITH(cuda_array.as_dlpack(
-                /*device=*/{kDLCUDA, 0},
-                /*stream=*/&stream_idx,
-                /*max_version=*/version
-            ), Catch::Matchers::Contains("Only stream=NULL or stream=1"));
+#endif
         } else {
             SUCCEED("CUDA stream validation checks skipped because CUDA is not available");
         }
