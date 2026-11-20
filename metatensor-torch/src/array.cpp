@@ -10,6 +10,11 @@
 
 #include <torch/version.h>
 
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 7)
+#include <ATen/DeviceAccelerator.h>
+#include <c10/core/Event.h>
+#endif
+
 using namespace metatensor_torch;
 
 
@@ -348,49 +353,86 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
         tensor_to_pack = tensor_to_pack.to(target_device, /*non_blocking=*/false);
     }
 
-    // Stream sync ala:
-    // https://github.com/pytorch/pytorch/blob/eb65b36914d039f37e24c2e0372f9e7c022f20ed/torch/_tensor.py#L1784-L1819
-    if (tensor_to_pack.is_cuda()) {
-        if (stream != nullptr && *stream != 0) {
+    // We validate against the requested DLPack device type instead of the
+    // PyTorch device type. In ROCm builds, tensors are exposed through
+    // DeviceType::CUDA/is_cuda(), but __dlpack__ still uses ROCm stream
+    // sentinel values.
+    int64_t default_stream = 0;
+    if (device.device_type == kDLCUDA) {
+        if (stream != nullptr && *stream == 0) {
             throw metatensor::Error(
-                "TorchDataArray: CUDA stream synchronization is not yet "
-                "implemented. The required functions (at::cuda::getCurrentCUDAStream, "
-                "at::cuda::getStreamFromExternal) are in libtorch_cuda.so, which "
-                "cannot be linked in pre-built CPU+CUDA wheels. Pass stream=nullptr "
-                "for default stream behavior."
+                "TorchDataArray: stream=0 is invalid for CUDA in __dlpack__. "
+                "Use stream=NULL or stream=1 for the legacy default stream."
             );
         }
-
-        // Stream synchronization requires libtorch_cuda.so. Linking it
-        // unconditionally breaks pre-built wheels that must work in both
-        // CUDA and CPU-only environments.
-
-        // auto device = tensor_to_pack.device();
-
-        // auto current_stream = at::cuda::getCurrentCUDAStream(device.index());
-        // auto target_stream = at::cuda::getCurrentCUDAStream(device.index());
-
-        // if (stream != nullptr) {
-        //     auto c10_stream = c10::Stream(c10::Stream::UNSAFE, device, c10::StreamId(*stream));
-        //     target_stream = at::cuda::getStreamFromExternal(
-        //         at::cuda::CUDAStream(c10_stream),
-        //         device.index()
-        //     );
-        // }
-
-        // if (current_stream != target_stream) {
-        //     // Record event on current stream
-        //     auto event = c10::Event(c10::DeviceType::CUDA);
-        //     event.record(current_stream);
-
-        //     // and make the target stream wait for it
-        //     event.block(target_stream);
-        // }
+        default_stream = 1;
+    } else if (device.device_type == kDLROCM) {
+        if (stream != nullptr && (*stream == 1 || *stream == 2)) {
+            throw metatensor::Error(
+                "TorchDataArray: stream=1 and stream=2 are invalid for ROCm in "
+                "__dlpack__. Use stream=NULL or stream=0 for the default stream, "
+                "or stream=-1 for no synchronization."
+            );
+        }
+        default_stream = 0;
     } else if (tensor_to_pack.is_cpu() && stream != nullptr) {
         throw metatensor::Error(
             "TorchDataArray: Stream must be NULL for CPU tensors");
     } else {
         // ignore stream for all other devices for now
+    }
+
+    auto is_gpu = device.device_type == kDLCUDA || device.device_type == kDLROCM;
+    // stream=NULL means the consumer uses the (legacy) default stream, and
+    // stream=-1 means the consumer does not want any synchronization.
+    if (is_gpu && (stream == nullptr || *stream != -1)) {
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 7)
+        // `at::accelerator::getCurrentStream()` and `c10::Event` dispatch to
+        // the device-specific implementation at runtime, so this does not
+        // require linking to libtorch_cuda.so/libtorch_hip.so. On ROCm, torch
+        // tensors still use `DeviceType::CUDA`.
+        auto torch_device = tensor_to_pack.device();
+        auto current_stream = at::accelerator::getCurrentStream(torch_device.index());
+
+        // c10 uses StreamId=0 for the default stream
+        auto consumer_stream = c10::Stream(c10::Stream::DEFAULT, torch_device);
+        if (stream != nullptr && *stream != default_stream) {
+            // For external streams, the StreamId is the raw cudaStream_t /
+            // hipStream_t pointer, this is the same thing that
+            // `at::cuda::getStreamFromExternal()` does.
+            consumer_stream = c10::Stream(
+                c10::Stream::UNSAFE,
+                torch_device,
+                static_cast<c10::StreamId>(*stream)
+            );
+        }
+
+        if (consumer_stream != current_stream) {
+            // record an event on the current stream, and make the consumer
+            // stream wait for it
+            auto event = c10::Event(torch_device.type());
+            event.record(current_stream);
+            event.block(consumer_stream);
+        }
+#else
+        if (stream != nullptr && *stream != default_stream) {
+            if (device.device_type == kDLCUDA) {
+                throw metatensor::Error(
+                    "TorchDataArray: CUDA stream synchronization requires "
+                    "PyTorch 2.7 or later. Only stream=NULL or stream=1 (legacy "
+                    "default stream), or stream=-1 (no synchronization), are "
+                    "supported with this version of PyTorch."
+                );
+            } else {
+                throw metatensor::Error(
+                    "TorchDataArray: ROCm stream synchronization requires "
+                    "PyTorch 2.7 or later. Only stream=NULL or stream=0 (default "
+                    "stream), or stream=-1 (no synchronization), are supported "
+                    "with this version of PyTorch."
+                );
+            }
+        }
+#endif
     }
 
 #if TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 9
