@@ -20,14 +20,18 @@ allocated outside of Python, for example by the metatensor library itself, or by
 code written in another language (C, C++, Rust, ...) and given to Python with
 :py:meth:`metatensor.TensorMap.unsafe_from_ptr` and related functions.
 
-Data allocated by Python (i.e. :py:class:`numpy.ndarray` or
-:py:class:`torch.Tensor` given to metatensor) is always returned as-is. Other
+Data allocated by Python (i.e. :py:class:`numpy.ndarray`,
+:py:class:`torch.Tensor` or :py:class:`jax.Array` given to metatensor) is always
+returned as-is. Other
 data is accessed through `DLPack`_, without copying it, and returned using one
 of the following array backends:
 
 - ``"numpy"``: data is returned as :py:class:`numpy.ndarray`. This requires the
   data to live on CPU;
-- ``"torch"``: data is returned as :py:class:`torch.Tensor`.
+- ``"torch"``: data is returned as :py:class:`torch.Tensor`;
+- ``"jax"``: values of blocks are returned as :py:class:`jax.Array`. Labels are
+  metadata, and use ``"numpy"`` instead. The loading functions do not support this
+  backend.
 
 The array backend is chosen with the ``array_backend`` parameter of
 :py:meth:`metatensor.TensorMap.unsafe_from_ptr`,

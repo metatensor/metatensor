@@ -2,6 +2,7 @@ from typing import List, Optional, Union
 
 from . import _dispatch
 from ._backend import (
+    Array,
     Labels,
     TensorBlock,
     TensorMap,
@@ -186,10 +187,7 @@ def _join_block_samples(
         check_blocks_raise(first_block, block, fname, ["components", "properties"])
         check_same_gradients_raise(first_block, block, fname, ["components"])
 
-    shape = list(first_block.values.shape)
-    shape[0] = n_joined_samples
-
-    new_values = _dispatch.empty_like(first_block.values, shape=shape)
+    new_values = _dispatch.concatenate([block.values for block in blocks], axis=0)
 
     first_sample_size = first_block.samples.values.shape[1]
     if add_dimension is None:
@@ -205,8 +203,6 @@ def _join_block_samples(
     start = 0
     for block_i, block in enumerate(blocks):
         stop = start + len(block.samples)
-        new_values[start:stop] = block.values[:]
-
         new_samples[start:stop, :first_sample_size] = block.samples.values[:, :]
         if add_dimension is not None:
             new_samples[start:stop, first_sample_size] = block_i
@@ -243,10 +239,9 @@ def _join_block_samples(
             n_gradient_samples += len(gradient.samples)
             gradients.append(gradient)
 
-        shape = list(first_gradient.values.shape)
-        shape[0] = n_gradient_samples
-
-        new_values = _dispatch.empty_like(first_gradient.values, shape=shape)
+        new_values = _dispatch.concatenate(
+            [gradient.values for gradient in gradients], axis=0
+        )
 
         new_samples = _dispatch.empty_like(
             first_gradient.samples.values,
@@ -257,8 +252,6 @@ def _join_block_samples(
         sample_shift = 0
         for block, gradient in zip(blocks, gradients, strict=True):
             stop = start + len(gradient.samples)
-            new_values[start:stop] = gradient.values[:]
-
             new_samples[start:stop] = gradient.samples.values[:]
             # update the "sample" dimension, matching the shift in the values
             new_samples[start:stop, 0] += sample_shift
@@ -313,10 +306,7 @@ def _join_block_properties(
         if block.properties.names != property_names:
             has_different_property_names = True
 
-    shape = list(first_block.values.shape)
-    shape[-1] = n_joined_properties
-
-    new_values = _dispatch.empty_like(first_block.values, shape=shape)
+    new_values = _dispatch.concatenate([block.values for block in blocks], axis=-1)
 
     first_properties_size = first_block.properties.values.shape[1]
     if add_dimension is None:
@@ -342,8 +332,6 @@ def _join_block_properties(
     start = 0
     for block_i, block in enumerate(blocks):
         stop = start + len(block.properties)
-        new_values[..., start:stop] = block.values[..., :]
-
         if has_different_property_names:
             new_properties_values[start:stop, 0] = block_i
             new_properties_values[start:stop, 1] = _dispatch.int_array_like(
@@ -400,23 +388,24 @@ def _join_block_properties(
             joined_gradient_samples = joined_gradient_samples.union(gradient.samples)
             gradients.append(gradient)
 
-        shape = list(first_gradient.values.shape)
-        shape[0] = len(joined_gradient_samples)
-        shape[-1] = len(new_properties)
-
-        # we need to use `zeros_like` instead of `empty_like`, because some
-        # gradients might be missing (i.e. implicitly zero) in some input blocks
-        new_values = _dispatch.zeros_like(first_gradient.values, shape=shape)
-
-        start = 0
+        # some gradients might be missing (i.e. implicitly zero) in some input
+        # blocks, so we put each of them in the rows of the joined samples
+        new_values_list: List[Array] = []
         for gradient in gradients:
-            stop = start + len(gradient.properties)
+            shape = list(gradient.values.shape)
+            shape[0] = len(joined_gradient_samples)
             # find where we should put the current gradients in the joined samples
             # we can not get the mapping in the first loop over gradients above since
             # `joined_gradient_samples` could still change
             _, _, mapping = joined_gradient_samples.union_and_mapping(gradient.samples)
-            new_values[mapping, ..., start:stop] = gradient.values
-            start = stop
+            new_values_list.append(
+                _dispatch.rows_add(
+                    _dispatch.zeros_like(gradient.values, shape=shape),
+                    gradient.values,
+                    mapping,
+                )
+            )
+        new_values = _dispatch.concatenate(new_values_list, axis=-1)
 
         new_gradient = TensorBlock(
             new_values,

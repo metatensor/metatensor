@@ -1,5 +1,6 @@
 from typing import Union
 
+from . import _dispatch
 from ._add import _add_impl
 from ._backend import (
     TensorMap,
@@ -30,15 +31,18 @@ def subtract(A: TensorMap, B: Union[float, int, TensorMap]) -> TensorMap:
             \nabla(A - B) = \nabla A - \nabla B
 
     :param A: First :py:class:`TensorMap` for the subtraction.
-    :param B: Second instance for the subtraction. Parameter can be a scalar or a
-              :py:class:`TensorMap`. In the latter case ``B`` must have the same
-              metadata of ``A``.
+    :param B: Second instance for the subtraction. Parameter can be a scalar (a
+              number, or an array of shape ``()``) or a :py:class:`TensorMap`. In
+              the latter case ``B`` must have the same metadata of ``A``.
 
     :return: New :py:class:`TensorMap` with the same metadata as ``A``.
     """
     if not torch_jit_is_scripting():
         if not isinstance_metatensor(A, "TensorMap"):
             raise TypeError(f"`A` must be a metatensor TensorMap, not {type(A)}")
+
+        if _dispatch.is_scalar_array(B):
+            return _add_impl(A=A, B=-B, fname="subtract")
 
     if torch_jit_is_scripting():
         is_tensor_map = isinstance(B, TensorMap)

@@ -81,14 +81,16 @@ class TensorBlock:
         self._parent = None
         self._gradient_parameters = []
         self._array_backend = _data.array_backend(values)
+        # Labels are metadata, they use numpy when the values use JAX
+        labels_backend = _data.labels_array_backend(self._array_backend)
 
         if not isinstance(samples, Labels):
             raise TypeError(f"`samples` must be metatensor Labels, not {type(samples)}")
 
-        if samples._array_backend != self._array_backend:
+        if samples._array_backend != labels_backend:
             raise ValueError(
                 "the samples must have the same array backend as the values, "
-                f"got '{samples._array_backend}' and '{self._array_backend}'"
+                f"got '{samples._array_backend}' and '{labels_backend}'"
             )
 
         components = list(components)
@@ -99,10 +101,10 @@ class TensorBlock:
                     f"not {type(component)}"
                 )
 
-            if component._array_backend != self._array_backend:
+            if component._array_backend != labels_backend:
                 raise ValueError(
                     "the components must have the same array backend as the values, "
-                    f"got '{component._array_backend}' and '{self._array_backend}'"
+                    f"got '{component._array_backend}' and '{labels_backend}'"
                 )
 
         if not isinstance(properties, Labels):
@@ -110,10 +112,10 @@ class TensorBlock:
                 f"`properties` must be metatensor Labels, not {type(properties)}"
             )
 
-        if properties._array_backend != self._array_backend:
+        if properties._array_backend != labels_backend:
             raise ValueError(
                 "the properties must have the same array backend as the values, "
-                f"got '{properties._array_backend}' and '{self._array_backend}'"
+                f"got '{properties._array_backend}' and '{labels_backend}'"
             )
 
         components_array = ctypes.ARRAY(ctypes.POINTER(mts_labels_t), len(components))()
@@ -695,9 +697,9 @@ class TensorBlock:
         :param device: new device to use for all arrays. The device stays the same if
             this is set to ``None``.
         :param Optional[str] array_backend: new backend to use for the arrays. This can
-            be either ``"numpy"``, ``"torch"`` or ``None`` (keeps the existing
-            backend); and must be given as a keyword argument
-            (``array_backend="numpy"``). This parameter was previously called
+            be either ``"numpy"``, ``"torch"``, ``"jax"`` (the labels use numpy) or
+            ``None`` (keeps the existing backend); and must be given as a keyword
+            argument (``array_backend="numpy"``). This parameter was previously called
             ``arrays``, which is still accepted but deprecated.
         :param bool non_blocking: If this is ``True`` and the :py:class:`TensorBlock`
             contains ``"torch"`` arrays, the function tries to move the data
