@@ -84,7 +84,15 @@ private:
     torch::Tensor tensor_;
 };
 
-torch::Device dlpack_device_to_torch(DLDevice device);
+namespace details {
+    torch::Device dlpack_device_to_torch(DLDevice device);
+
+    /// Get a `torch::Tensor` containing the data in `array`. If the array was
+    /// created from a `torch::Tensor` (i.e. it is a `TorchDataArray`), this returns
+    /// the corresponding tensor. Otherwise, this uses DLPack to create a new tensor
+    /// sharing memory with the array, on the same device as the array.
+    torch::Tensor mts_array_to_torch(metatensor::MtsArray& array);
+}
 
 }
 

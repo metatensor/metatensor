@@ -101,6 +101,7 @@ to_arguments_parse(
     return std::make_tuple(dtype, device);
 }
 
-}}
+} // namespace
+} // namespace metatensor_torch
 
 #endif
