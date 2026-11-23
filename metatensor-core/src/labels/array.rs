@@ -335,7 +335,7 @@ unsafe extern "C" fn labels_array_from_dlpack(
             });
 
         let mut values;
-        if (strides == [shape[1], 1]) || (shape[0] == 1 && strides[1] == 1) || shape[2] == 1 {
+        if (strides == [shape[1], 1]) || (shape[0] == 1 && strides[1] == 1) || (shape[1] == 1 && strides[0] == 1) {
             // If the data is contiguous, we can read it directly as a single slice.
             let size = (shape[0] * shape[1]) as usize;
             if size == 0 {
@@ -591,5 +591,39 @@ mod tests {
             )
         };
         assert_eq!(labels.values_cpu(), new_array_slice);
+    }
+
+    #[test]
+    fn labels_values_array_from_strided_dlpack() {
+        let labels = Labels::from_vec(&["a"], vec![1]).unwrap();
+        let values = labels.values();
+
+        let check_from_dlpack = |array: ndarray::Array2<i32>, expected: &[i32]| {
+            let shape = array.shape().to_vec();
+            let dl_tensor = DLPackTensor::try_from(array).unwrap();
+            let new_array = values.from_dlpack(dl_tensor).unwrap();
+            assert_eq!(new_array.shape().unwrap(), shape);
+
+            let new_dlpack = new_array.as_dlpack(DLDevice::cpu(), None, DLPackVersion::current()).unwrap();
+            let new_values = unsafe {
+                std::slice::from_raw_parts(new_dlpack.data_ptr::<i32>().unwrap(), expected.len())
+            };
+            assert_eq!(new_values, expected);
+        };
+
+        // Fortran-ordered array, shape (3, 2) with strides (1, 3)
+        let array = ndarray::arr2(&[[1, 2, 3], [4, 5, 6]]).reversed_axes();
+        assert_eq!(array.strides(), &[1, 3]);
+        check_from_dlpack(array, &[1, 4, 2, 5, 3, 6]);
+
+        // single column, non-contiguous: shape (3, 1) with strides (2, 0)
+        let array = ndarray::arr2(&[[1, 2], [3, 4], [5, 6]]).slice_move(ndarray::s![.., 0..1]);
+        assert_eq!(array.strides(), &[2, 0]);
+        check_from_dlpack(array, &[1, 3, 5]);
+
+        // single column, contiguous with unusual strides: shape (3, 1) with strides (1, 3)
+        let array = ndarray::arr2(&[[1, 2, 3]]).reversed_axes();
+        assert_eq!(array.strides(), &[1, 3]);
+        check_from_dlpack(array, &[1, 2, 3]);
     }
 }
