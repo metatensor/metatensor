@@ -1,13 +1,16 @@
+#include <cassert>
 #include <vector>
 #include <cstdint>
 
 #include <torch/script.h>
+#include <torch/version.h>
 
+// metatensor.hpp must be included before ATen/DLConvertor.h: both ship a
+// `dlpack.h` with the same include guard, and older versions of torch
+// use DLPack <1.0, which does not define `DLManagedTensorVersioned`.
 #include <metatensor.hpp>
 
 #include <ATen/DLConvertor.h>
-
-#include <torch/version.h>
 
 #if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 7)
 #include <ATen/DeviceAccelerator.h>
@@ -18,7 +21,7 @@
 using namespace metatensor_torch;
 
 
-torch::Device metatensor_torch::dlpack_device_to_torch(DLDevice device) {
+torch::Device metatensor_torch::details::dlpack_device_to_torch(DLDevice device) {
     torch::DeviceType type;
     // Reference:
     // https://github.com/pytorch/pytorch/blob/3eddf049221fc04c2ac9d4af53c00305484ef325/c10/core/Device.cpp#L13-L38
@@ -200,7 +203,7 @@ mts_data_origin_t TorchDataArray::origin() const {
 }
 
 std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::copy(DLDevice device) const {
-    auto torch_device = dlpack_device_to_torch(device);
+    auto torch_device = details::dlpack_device_to_torch(device);
     auto tensor_copy = this->tensor().to(torch_device, /*non_blocking=*/false, /*copy=*/true);
     return std::unique_ptr<DataArrayBase>(new TorchDataArray(std::move(tensor_copy)));
 }
@@ -341,7 +344,7 @@ DLManagedTensorVersioned* TorchDataArray::as_dlpack(DLDevice device, const int64
             std::to_string(DLPACK_MINOR_VERSION)
         );
     }
-    torch::Device target_device = dlpack_device_to_torch(device);
+    torch::Device target_device = details::dlpack_device_to_torch(device);
     torch::Tensor tensor_to_pack = this->tensor_;
 
     if (!tensor_to_pack.has_storage()) {
@@ -466,7 +469,7 @@ struct ManagedTensorCtx {
     DLManagedTensorVersioned* versioned_tensor;
 };
 
-std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::from_dlpack(DLManagedTensorVersioned *dl_tensor) const {
+static torch::Tensor dlpack_to_torch(DLManagedTensorVersioned* dl_tensor) {
 #if TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 9
     auto tensor = at::fromDLPackVersioned(dl_tensor);
 #elif TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR <= 8
@@ -494,7 +497,46 @@ std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::from_dlpack(DLManaged
     );
 #endif
 
-    return std::unique_ptr<metatensor::DataArrayBase>(new TorchDataArray(std::move(tensor)));
+    return tensor;
+}
+
+std::unique_ptr<metatensor::DataArrayBase> TorchDataArray::from_dlpack(DLManagedTensorVersioned *dl_tensor) const {
+    return std::unique_ptr<metatensor::DataArrayBase>(new TorchDataArray(dlpack_to_torch(dl_tensor)));
+}
+
+torch::Tensor metatensor_torch::details::mts_array_to_torch(metatensor::MtsArray& array) {
+    if (array.origin() == TORCH_DATA_ORIGIN) {
+        // array.ptr is a DataArrayBase* (from DataArrayBase::to_mts_array_t),
+        // specifically a TorchDataArray* since origin is TORCH_DATA_ORIGIN.
+        auto* base = static_cast<metatensor::DataArrayBase*>(array.as_mts_array_t().ptr);
+        auto* torch_array = dynamic_cast<TorchDataArray*>(base);
+        assert(torch_array != nullptr);
+        return torch_array->tensor();
+    }
+
+    // otherwise, go through DLPack to create a torch::Tensor sharing memory
+    // with the array, on the same device as the array.
+    auto device = array.device();
+
+    const int64_t* stream = nullptr;
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 7)
+    // make sure the data is ready to be used on the current torch stream.
+    // A null native handle corresponds to the default stream, which is
+    // requested with `stream=NULL`.
+    int64_t stream_value = 0;
+    if (device.device_type == kDLCUDA || device.device_type == kDLROCM) {
+        auto device_index = static_cast<c10::DeviceIndex>(device.device_id);
+        auto current_stream = at::accelerator::getCurrentStream(device_index);
+        auto* handle = current_stream.native_handle();
+        if (handle != nullptr) {
+            stream_value = reinterpret_cast<int64_t>(handle);
+            stream = &stream_value;
+        }
+    }
+#endif
+
+    auto* dl_tensor = array.as_dlpack(device, stream, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
+    return dlpack_to_torch(dl_tensor);
 }
 
 const std::vector<uintptr_t>& TorchDataArray::shape() const & {

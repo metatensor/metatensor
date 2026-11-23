@@ -22,6 +22,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 - Added support for PyTorch v2.15 in PyPI wheels
 - Comparing `Labels` for equality now checks values on device when both Labels
   are on the same device instead of making a copy to the host.
+- `TensorBlock.values` now supports data that is not a torch Tensor, but was
+  created by some other metatensor-compatible producer.
 
 ### Deprecated
 

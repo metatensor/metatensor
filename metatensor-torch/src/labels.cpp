@@ -183,48 +183,10 @@ LabelsHolder::LabelsHolder(metatensor::Labels labels): labels_(std::move(labels)
         this->names_.emplace_back(name);
     }
 
-    // check if the values array is backed by a torch tensor
-    auto origin = this->labels_.mts_array().origin();
-    auto* array_ptr = this->labels_.mts_array().as_mts_array_t().ptr;
-
-    if (origin == metatensor_torch::TORCH_DATA_ORIGIN && array_ptr != nullptr) {
-        // recover the torch tensor from the values array.
-        // array.ptr is a DataArrayBase* (from DataArrayBase::to_mts_array_t),
-        // specifically a TorchDataArray* since origin is TORCH_DATA_ORIGIN.
-        auto* base = static_cast<metatensor::DataArrayBase*>(array_ptr);
-        auto* torch_array = dynamic_cast<metatensor_torch::TorchDataArray*>(base);
-        assert(torch_array != nullptr);
-        this->values_ = torch_array->tensor();
-    } else {
-        metatensor::Labels clone = this->labels_;
-        // otherwise create a new tensor which shares memory with the Labels.
-        auto cloned_values = clone.values(clone.device());
-        const auto* values = cloned_values.data();
-        auto sizes = std::vector<int64_t>{
-            static_cast<int64_t>(clone.count()),
-            static_cast<int64_t>(clone.size()),
-        };
-
-        auto options = torch::TensorOptions().dtype(torch::kInt32)
-            .device(dlpack_device_to_torch(clone.device()));
-
-        this->values_ = torch::from_blob(
-            // This should really be a `const int32_t*`, but we can not prevent
-            // writing to this tensor since torch does not support read-only tensor:
-            // https://github.com/pytorch/pytorch/issues/44027
-            const_cast<int32_t*>(values),
-            sizes,
-            // capture `cloned_values` inside the torch::Tensor custom deleter to
-            // keep the corresponding data alive as long as the tensor might be
-            std::move([clone=std::move(clone)](void*) mutable {
-                // when running this function (i.e. when destroying the
-                // torch::Tensor), we move the clone & let it go out
-                // of scope, releasing the corresponding memory.
-                auto _ = std::move(clone);
-            }),
-            options
-        );
-    }
+    // recover the torch tensor if the values were created from torch, or
+    // create a new tensor sharing memory with the Labels through DLPack
+    auto array = this->labels_.mts_array();
+    this->values_ = details::mts_array_to_torch(array);
 }
 
 

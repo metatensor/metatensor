@@ -135,22 +135,7 @@ TensorBlock TensorBlockHolder::to_positional(
 
 torch::Tensor TensorBlockHolder::values() const {
     auto array = block_.const_mts_array();
-
-    if (array.origin() != TORCH_DATA_ORIGIN) {
-        C10_THROW_ERROR(ValueError,
-            "this TensorBlock does not contain a C++ torch Tensor"
-        );
-    }
-
-    auto* ptr = static_cast<metatensor::DataArrayBase*>(array.as_mts_array_t().ptr);
-    auto* wrapper = dynamic_cast<TorchDataArray*>(ptr);
-    if (wrapper == nullptr) {
-        C10_THROW_ERROR(ValueError,
-            "this TensorBlock does not contain a C++ torch Tensor"
-        );
-    }
-
-    return wrapper->tensor();
+    return details::mts_array_to_torch(array);
 }
 
 Labels TensorBlockHolder::labels(uintptr_t axis) const {

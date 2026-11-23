@@ -37,6 +37,30 @@ TEST_CASE("Blocks") {
         CHECK(block.properties()->names()[0] == "p");
     }
 
+    SECTION("non-torch data") {
+        auto array = std::make_unique<metatensor::SimpleDataArray<double>>(
+            std::vector<uintptr_t>{3, 2}, 4.5
+        );
+        auto* data_ptr = array->data();
+
+        auto mts_block = metatensor::TensorBlock(
+            std::move(array),
+            metatensor::Labels({"s"}, {{0}, {2}, {1}}),
+            {},
+            metatensor::Labels({"p"}, {{0}, {1}})
+        );
+        auto block = TensorBlockHolder(std::move(mts_block), torch::IValue());
+
+        auto values = block.values();
+        CHECK((values.sizes() == std::vector<int64_t>{3, 2}));
+        CHECK(values.dtype() == torch::kFloat64);
+        CHECK(values.device() == torch::Device("cpu"));
+        CHECK(torch::all(values == 4.5).item<bool>());
+
+        // the data is shared with the original array
+        CHECK(values.data_ptr() == data_ptr);
+    }
+
     SECTION("clone") {
         auto values = torch::full({3, 2}, 11.0);
         auto block = TensorBlockHolder(
