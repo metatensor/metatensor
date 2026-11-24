@@ -17,9 +17,12 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.5.1](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.1) - 2025-11-24
+
 ### Changed
 
 - We now require Python >= 3.11
+- Adapted the code to be compatible with metatensor-core v0.2.7
 
 ## [Version 0.5.0](https://github.com/metatensor/metatensor/releases/tag/metatensor-operations-v0.5.0) - 2025-05-13
 

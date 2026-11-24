@@ -16,6 +16,8 @@ a changelog](https://keepachangelog.com/en/1.1.0/) format. This project follows
 ### Removed
 -->
 
+## [Version 0.10.9](https://github.com/metatensor/metatensor/releases/tag/metatensor-torch-v0.10.9) - 2026-11-24
+
 ### Changed
 
 - We now require Python >= 3.11
