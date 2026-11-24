@@ -527,13 +527,25 @@ torch::Tensor metatensor_torch::details::mts_array_to_torch(metatensor::MtsArray
     if (device.device_type == kDLCUDA || device.device_type == kDLROCM) {
         auto device_index = static_cast<c10::DeviceIndex>(device.device_id);
         auto current_stream = at::accelerator::getCurrentStream(device_index);
+#if TORCH_VERSION_MAJOR > 2 || (TORCH_VERSION_MAJOR == 2 && TORCH_VERSION_MINOR >= 11)
         auto* handle = current_stream.native_handle();
         if (handle != nullptr) {
             stream_value = reinterpret_cast<int64_t>(handle);
             stream = &stream_value;
         }
+#else
+        // Before torch 2.11, getting the `cudaStream_t` corresponding to a
+        // stream requires linking to libc10_cuda. Stream ID 0 is always the
+        // default stream, which is the legacy default stream for CUDA.
+        if (current_stream.id() != 0) {
+            throw std::runtime_error(
+                "using non-default CUDA streams with vesin requires torch 2.11 or "
+                "later, you are using torch " TORCH_VERSION
+            );
+        }
+#endif // torch >= 2.11
     }
-#endif
+#endif // torch >= 2.7
 
     auto* dl_tensor = array.as_dlpack(device, stream, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
     return dlpack_to_torch(dl_tensor);
