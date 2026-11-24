@@ -76,9 +76,7 @@ fn check_labels_dimensions(
 }
 
 fn check_origin_device_dtype(blocks: &[TensorBlock]) -> Result<(), Error> {
-    if blocks.is_empty() {
-        return Ok(());
-    }
+    debug_assert_ne!(blocks.len(), 0);
 
     let first_origin = blocks[0].values.origin()?;
     let first_device = blocks[0].values.device()?;
@@ -435,8 +433,6 @@ mod tests {
             "invalid parameter: all blocks must have the same property dimensions, \
             got [something_else] and [properties]"
         );
-
-        // TODO: check error messages for gradients
     }
 
     #[test]
@@ -491,5 +487,106 @@ mod tests {
             "invalid parameter: invalid tensor map: got blocks with different \
             dtypes, at least 'f64' and 'f32' were detected"
         );
+    }
+
+    #[test]
+    fn blocks_origin_mismatch() {
+        let block_1 = TensorBlock::new(
+            TestArray::new(vec![1, 1]),
+            example_labels("samples", 1),
+            vec![],
+            example_labels("properties", 1),
+        ).unwrap();
+
+        let block_2 = TensorBlock::new(
+            TestArray::new_other_origin(vec![2, 1]),
+            example_labels("samples", 2),
+            vec![],
+            example_labels("properties", 1),
+        ).unwrap();
+
+        let result = TensorMap::new(
+            example_labels("keys", 2),
+            vec![block_1, block_2],
+        );
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: invalid tensor map: got blocks with different \
+            origins, at least ('rust.TestArray') and ('rust.TestArrayOtherOrigin') \
+            were detected"
+        );
+    }
+
+    #[test]
+    fn keys_blocks_count_mismatch() {
+        let block = TensorBlock::new(
+            TestArray::new(vec![1, 1]),
+            example_labels("samples", 1),
+            vec![],
+            example_labels("properties", 1),
+        ).unwrap();
+
+        let result = TensorMap::new(example_labels("keys", 2), vec![block]);
+        assert_eq!(
+            result.unwrap_err().to_string(),
+            "invalid parameter: expected the same number of blocks as the number \
+            of entries in the keys (2) when creating a `TensorMap`, got 1"
+        );
+    }
+
+    #[test]
+    fn blocks_gradients_mismatch() {
+        let create_block = |gradient: Option<&str>| {
+            let mut block = TensorBlock::new(
+                TestArray::new(vec![1, 1]),
+                example_labels("samples", 1),
+                vec![],
+                example_labels("properties", 1),
+            ).unwrap();
+
+            if let Some(parameter) = gradient {
+                let gradient = TensorBlock::new(
+                    TestArray::new(vec![1, 1]),
+                    example_labels("sample", 1),
+                    vec![],
+                    example_labels("properties", 1),
+                ).unwrap();
+                block.add_gradient(parameter, gradient).unwrap();
+            }
+
+            return block;
+        };
+
+        let message = "invalid parameter: all blocks must have the same set of \
+            gradients, with the same sample, property and component dimensions, \
+            and the same must be true for gradients of gradients";
+
+        // only the first block has gradients
+        let result = TensorMap::new(
+            example_labels("keys", 2),
+            vec![create_block(Some("g")), create_block(None)],
+        );
+        assert_eq!(result.unwrap_err().to_string(), message);
+
+        // only the second block has gradients
+        let result = TensorMap::new(
+            example_labels("keys", 2),
+            vec![create_block(None), create_block(Some("g"))],
+        );
+        assert_eq!(result.unwrap_err().to_string(), message);
+
+        // the blocks have different gradients
+        let result = TensorMap::new(
+            example_labels("keys", 2),
+            vec![create_block(Some("g")), create_block(Some("other"))],
+        );
+        assert_eq!(result.unwrap_err().to_string(), message);
+
+        // same gradients
+        let result = TensorMap::new(
+            example_labels("keys", 2),
+            vec![create_block(Some("g")), create_block(Some("g"))],
+        );
+        assert!(result.is_ok());
     }
 }

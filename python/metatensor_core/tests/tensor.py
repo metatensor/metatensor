@@ -952,3 +952,111 @@ def test_free():
         del tensor
     assert _tests_utils.address(raw) not in freed
     TensorMap.unsafe_from_ptr(raw)
+
+
+def test_keys_to_unknown_key(tensor):
+    message = (
+        "invalid parameter: 'not_a_key' is not part of the keys for this tensor map"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_samples("not_a_key")
+
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_properties("not_a_key")
+
+
+def test_keys_to_errors():
+    def create_block(components):
+        return TensorBlock(
+            values=np.zeros((1, len(components), 1)),
+            samples=Labels(["s"], np.array([[0]])),
+            components=[components],
+            properties=Labels(["p"], np.array([[0]])),
+        )
+
+    # blocks with different components
+    keys = Labels(["key"], np.array([[0], [1]]))
+    tensor = TensorMap(
+        keys,
+        [
+            create_block(Labels(["c"], np.array([[0], [1], [2]]))),
+            create_block(Labels(["c"], np.array([[0], [1], [3]]))),
+        ],
+    )
+
+    message = (
+        "invalid parameter: can not move keys to samples if the blocks have "
+        "different components labels, call components_to_properties first"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_samples("key")
+
+    message = (
+        "invalid parameter: can not move keys to properties if the blocks have "
+        "different components labels, call components_to_properties first"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_properties("key")
+
+    # blocks with gradients of gradients
+    gradient_gradient = TensorBlock(
+        values=np.zeros((1, 1)),
+        samples=Labels(["sample"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+    gradient = TensorBlock(
+        values=np.zeros((1, 1)),
+        samples=Labels(["sample"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+    gradient.add_gradient("h", gradient_gradient)
+
+    block = TensorBlock(
+        values=np.zeros((1, 1)),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0]])),
+    )
+    block.add_gradient("g", gradient)
+    tensor = TensorMap(Labels(["key"], np.array([[0]])), [block])
+
+    message = (
+        "invalid parameter: gradient of gradients are not supported yet in "
+        "keys_to_samples"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_samples("key")
+
+    message = (
+        "invalid parameter: gradient of gradients are not supported yet in "
+        "keys_to_properties"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        tensor.keys_to_properties("key")
+
+
+def test_keys_to_samples_non_contiguous_properties():
+    # the properties of the second block end up in a different order in the
+    # merged properties, so the data has to be moved in multiple chunks
+    block_1 = TensorBlock(
+        values=np.array([[1.0, 2.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [1]])),
+    )
+    block_2 = TensorBlock(
+        values=np.array([[3.0, 4.0, 5.0]]),
+        samples=Labels(["s"], np.array([[0]])),
+        components=[],
+        properties=Labels(["p"], np.array([[0], [2], [1]])),
+    )
+    tensor = TensorMap(Labels(["key"], np.array([[0], [1]])), [block_1, block_2])
+
+    tensor = tensor.keys_to_samples("key")
+    block = tensor.block()
+
+    assert block.samples == Labels(["s", "key"], np.array([[0, 0], [0, 1]]))
+    assert block.properties == Labels(["p"], np.array([[0], [1], [2]]))
+    assert_equal(block.values, np.array([[1.0, 2.0, 0.0], [3.0, 5.0, 4.0]]))
