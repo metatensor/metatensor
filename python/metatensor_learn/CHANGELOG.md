@@ -17,9 +17,14 @@ follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.6.3](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.3) - 2025-11-24
+
 ### Changed
 
 - We now require Python >= 3.11
+- Adapted the code to be compatible with metatensor-core v0.2.7
+- `metatensor.learn.nn.Module` can be initialized wth a specific `device` and
+  `dtype`, defaulting to the current torch defaults.
 
 ## [Version 0.6.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-learn-v0.6.2) - 2025-09-16
 

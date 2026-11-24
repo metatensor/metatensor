@@ -16,6 +16,8 @@ project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Removed
 -->
 
+## [Version 0.5.2](https://github.com/metatensor/metatensor/releases/tag/metatensor-rust-v0.5.2) - 2026-11-24
+
 ### Added
 
 - `metatensor::io::load_labels_custom_array()` and
