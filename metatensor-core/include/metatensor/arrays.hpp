@@ -1766,7 +1766,7 @@ public:
             );
         } else {
             throw metatensor::Error(
-                "unsupported DLDataType in default_create_array: code="
+                "unsupported DLDataType in SimpleDataArray::from_dlpack: code="
                 + std::to_string(dtype.code) + " bits=" + std::to_string(dtype.bits)
             );
         }
@@ -1928,6 +1928,10 @@ public:
     }
 
     void swap_axes(uintptr_t axis_1, uintptr_t axis_2) override {
+        if (axis_1 >= shape_.size() || axis_2 >= shape_.size()) {
+            throw metatensor::Error("out of bounds axis in swap_axes");
+        }
+
         std::swap(shape_[axis_1], shape_[axis_2]);
     }
 

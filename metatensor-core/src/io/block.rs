@@ -135,21 +135,24 @@ fn npy_descr_to_dtype(descr: &str) -> Result<(DLDataTypeCode, u8, Endianness), E
         return Err(Error::Serialization(format!("invalid type descriptor: {}", descr)));
     }
 
-    let endian = match &descr[0..1] {
-        "<" => Endianness::Little,
-        "="  => Endianness::Native,
-        ">" => Endianness::Big,
-        "|" => return Err(Error::Serialization(format!(
-            "endianness '|' (not applicable) is not supported in type descriptor: {}", descr
-        ))),
-        _ => return Err(Error::Serialization(format!("unknown endianness in type descriptor: {}", descr))),
-    };
-
     let type_char = &descr[1..2];
     let size_str = &descr[2..];
     let size: u8 = size_str.parse().map_err(|_| {
         Error::Serialization(format!("invalid size in type descriptor: {}", descr))
     })?;
+
+    let endian = match &descr[0..1] {
+        "<" => Endianness::Little,
+        "="  => Endianness::Native,
+        ">" => Endianness::Big,
+        // '|' means that endianness is not relevant, which is only the case
+        // for single byte types. numpy uses this for i1, u1 and b1.
+        "|" if size == 1 => Endianness::Native,
+        "|" => return Err(Error::Serialization(format!(
+            "endianness '|' (not applicable) is only supported for single byte types, got type descriptor: {}", descr
+        ))),
+        _ => return Err(Error::Serialization(format!("unknown endianness in type descriptor: {}", descr))),
+    };
 
     let (code, bits) = match (type_char, size) {
         ("f", 4) => (DLDataTypeCode::kDLFloat, 32),

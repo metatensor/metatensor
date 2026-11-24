@@ -906,3 +906,186 @@ def test_save_is_deterministic(tmp_path, use_numpy):
 
         assert len(parameters) == 6
         assert parameters == sorted(parameters)
+
+
+def npy_bytes(descr, shape, data, fortran_order=False):
+    """Create the content of a NPY file in memory, with the given header & data"""
+    header = (
+        f"{{'descr': {descr!r}, 'fortran_order': {fortran_order}, "
+        f"'shape': {tuple(shape)!r}, }}"
+    )
+    # pad the header with spaces, so the full header is a multiple of 64 bytes
+    # (magic string + version + header length + header + newline)
+    header_len = len(header) + 1
+    header += " " * (-(10 + header_len) % 64) + "\n"
+
+    magic = b"\x93NUMPY\x01\x00" + len(header).to_bytes(2, "little")
+    return magic + header.encode("ascii") + data
+
+
+def labels_npy_bytes(names, values, endianness="<"):
+    values = np.asarray(values, dtype=f"{endianness}i4")
+    descr = [(name, f"{endianness}i4") for name in names]
+    return npy_bytes(descr, (values.shape[0],), values.tobytes())
+
+
+def block_buffer(values_npy, n_samples=2, n_properties=3):
+    """Create a serialized TensorBlock with the given values in memory"""
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w") as archive:
+        archive.writestr("values.npy", values_npy)
+        archive.writestr(
+            "samples.npy",
+            labels_npy_bytes(["s"], np.arange(n_samples).reshape(-1, 1)),
+        )
+        archive.writestr(
+            "properties.npy",
+            labels_npy_bytes(["p"], np.arange(n_properties).reshape(-1, 1)),
+        )
+    return buffer.getvalue()
+
+
+@pytest.mark.parametrize("endianness", ["<", ">", "="])
+@pytest.mark.parametrize(
+    "dtype",
+    [
+        "f2",
+        "f4",
+        "f8",
+        "i1",
+        "i2",
+        "i4",
+        "i8",
+        "u1",
+        "u2",
+        "u4",
+        "u8",
+        "b1",
+        "c8",
+        "c16",
+    ],
+)
+def test_load_npy_dtypes(endianness, dtype):
+    descr = endianness + dtype
+    data = np.arange(6).reshape(2, 3).astype(descr)
+
+    buffer = block_buffer(npy_bytes(descr, data.shape, data.tobytes()))
+    block = mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    assert block.values.dtype == data.dtype.newbyteorder("=")
+    np.testing.assert_array_equal(block.values, data)
+
+
+@pytest.mark.parametrize("dtype", [np.int8, np.uint8, np.bool_])
+def test_load_numpy_single_byte(dtype):
+    # numpy uses '|' as the endianness for single byte types
+    values = np.arange(6).reshape(2, 3).astype(dtype)
+    assert values.dtype.str[0] == "|"
+
+    buffer = io.BytesIO()
+    np.savez(
+        buffer,
+        values=values,
+        samples=np.array([(0,), (1,)], dtype=[("s", "<i4")]),
+        properties=np.array([(0,), (1,), (2,)], dtype=[("p", "<i4")]),
+    )
+
+    block = mts.io.load_block_buffer(buffer.getvalue(), use_numpy=False)
+    assert block.values.dtype == dtype
+    np.testing.assert_array_equal(block.values, values)
+
+
+def test_load_npy_invalid_dtype():
+    data = bytes(48)
+
+    buffer = block_buffer(npy_bytes("f8", (2, 3), data))
+    message = "invalid type descriptor: f8"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes("|f8", (2, 3), data))
+    message = (
+        "endianness '\\|' \\(not applicable\\) is only supported for single "
+        "byte types, got type descriptor: \\|f8"
+    )
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes("!f8", (2, 3), data))
+    message = "unknown endianness in type descriptor: !f8"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes("<fx", (2, 3), data))
+    message = "invalid size in type descriptor: <fx"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes("<f3", (2, 3), data))
+    message = "unsupported type descriptor: <f3"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes("<U8", (2, 3), data))
+    message = "unsupported type descriptor: <U8"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+    buffer = block_buffer(npy_bytes([("a", "<f8")], (2, 3), data))
+    message = "structured arrays are not supported"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(buffer, use_numpy=False)
+
+
+def test_load_npy_invalid_data():
+    data = np.arange(6, dtype="<f8").reshape(2, 3)
+
+    values = npy_bytes("<f8", (2, 3), data.tobytes(), fortran_order=True)
+    message = "data can not be loaded from fortran-order arrays"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(block_buffer(values), use_numpy=False)
+
+    values = npy_bytes("<f8", (2, 3), data.tobytes() + bytes(4))
+    message = "found 4 extra bytes after the expected end of data"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_block_buffer(block_buffer(values), use_numpy=False)
+
+
+@pytest.mark.parametrize("endianness", ["<", ">"])
+def test_load_labels_endianness(endianness):
+    values = np.array([[0, 1], [2, 3], [-4, 5]])
+    buffer = labels_npy_bytes(["a", "b"], values, endianness)
+
+    labels = mts.io.load_labels_buffer(buffer)
+    assert labels.names == ["a", "b"]
+    np.testing.assert_equal(labels.values, values)
+
+
+def test_load_labels_invalid():
+    data = np.zeros((2, 2), dtype="<i4").tobytes()
+
+    invalid_dtypes = [
+        # mixed endianness
+        [("a", "<i4"), ("b", ">i4")],
+        [("a", ">i4"), ("b", "<i4")],
+        # not int32
+        [("a", "<i8")],
+        # not a structured array
+        "<i4",
+    ]
+    message = "invalid dtype for labels"
+    for descr in invalid_dtypes:
+        buffer = npy_bytes(descr, (2,), data)
+        with pytest.raises(MetatensorError, match=message):
+            mts.io.load_labels_buffer(buffer)
+
+    descr = [("a", "<i4"), ("b", "<i4")]
+    buffer = npy_bytes(descr, (2,), data, fortran_order=True)
+    message = "Labels can not be loaded from fortran-order arrays"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_labels_buffer(buffer)
+
+    buffer = npy_bytes(descr, (1, 2), data)
+    message = "Expected a 1-D array when loading Labels"
+    with pytest.raises(MetatensorError, match=message):
+        mts.io.load_labels_buffer(buffer)

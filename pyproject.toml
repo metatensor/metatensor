@@ -44,13 +44,29 @@ packages = []
 
 ### ======================================================================== ###
 
+[tool.coverage.run]
+# test environments only install a subset of the packages, which is fine
+disable_warnings = ["module-not-imported"]
+
 [tool.coverage.paths]
 # path remapping for coverage. `coverage` will map path matching the second
 # string to the first string.
-core = ["python/metatensor_core/", ".tox/*/lib/python*/site-packages/"]
-torch = ["python/metatensor_torch/", ".tox/*/lib/python*/site-packages/"]
-operations = ["python/metatensor_operations/", ".tox/*/lib/python*/site-packages/"]
-learn = ["python/metatensor_learn/", ".tox/*/lib/python*/site-packages/"]
+core = [
+    "python/metatensor_core/metatensor/",
+    ".tox/*/lib/python*/site-packages/metatensor/",
+]
+torch = [
+    "python/metatensor_torch/metatensor_torch/",
+    ".tox/*/lib/python*/site-packages/metatensor_torch/",
+]
+operations = [
+    "python/metatensor_operations/metatensor_operations/",
+    ".tox/*/lib/python*/site-packages/metatensor_operations/",
+]
+learn = [
+    "python/metatensor_learn/metatensor_learn/",
+    ".tox/*/lib/python*/site-packages/metatensor_learn/",
+]
 
 [tool.coverage.report]
 show_missing = true

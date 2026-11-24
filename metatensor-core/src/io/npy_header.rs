@@ -669,4 +669,141 @@ mod tests {
         let parsed = Header::from_str(&header.to_dict_literal()).unwrap();
         assert_eq!(parsed, header);
     }
+
+    /// Create the bytes of an NPY header with the given version and content.
+    /// `header` should not include the final new line.
+    fn npy_header_bytes(major: u8, header: &[u8]) -> Vec<u8> {
+        let mut bytes = MAGIC_STRING.to_vec();
+        bytes.push(major);
+        bytes.push(0);
+        if major == 1 {
+            let len = u16::try_from(header.len() + 1).unwrap();
+            bytes.extend_from_slice(&len.to_le_bytes());
+        } else {
+            let len = u32::try_from(header.len() + 1).unwrap();
+            bytes.extend_from_slice(&len.to_le_bytes());
+        }
+        bytes.extend_from_slice(header);
+        bytes.push(b'\n');
+        return bytes;
+    }
+
+    fn read_header(mut bytes: &[u8]) -> Result<Header, ReadHeaderError> {
+        return Header::from_reader(&mut bytes);
+    }
+
+    #[test]
+    fn npy_header_versions() {
+        let content = b"{'descr': '<f8', 'fortran_order': False, 'shape': (3, 4), }";
+        for major in [1, 2, 3] {
+            let header = read_header(&npy_header_bytes(major, content)).unwrap();
+            assert_eq!(header.type_descriptor, DataType::Scalar("<f8".into()));
+            assert!(!header.fortran_order);
+            assert_eq!(header.shape, [3, 4]);
+        }
+
+        // version 3 allows UTF-8 in the header
+        let content = "{'descr': [('é', '<i4')], 'fortran_order': False, 'shape': (3,), }";
+        let header = read_header(&npy_header_bytes(3, content.as_bytes())).unwrap();
+        assert_eq!(header.type_descriptor, DataType::Compound(vec![("é".into(), "<i4".into())]));
+
+        // but not version 1 and 2
+        for major in [1, 2] {
+            let error = read_header(&npy_header_bytes(major, content.as_bytes())).unwrap_err();
+            assert_eq!(
+                error.to_string(),
+                "error parsing header: non-ascii in array format string; this is \
+                not supported in .npy format versions 1.0 and 2.0"
+            );
+        }
+
+        let error = read_header(&npy_header_bytes(3, b"{'descr': '\xFF'}")).unwrap_err();
+        assert!(error.to_string().starts_with(
+            "error parsing header: error parsing array format string as UTF-8: "
+        ));
+        assert!(error.source().unwrap().source().is_some());
+
+        let error = read_header(&npy_header_bytes(4, content.as_bytes())).unwrap_err();
+        assert_eq!(error.to_string(), "error parsing header: unknown version number: 4.0");
+    }
+
+    #[test]
+    fn npy_header_invalid_file() {
+        let error = read_header(b"\x93NUMPZ\x01\x00").unwrap_err();
+        assert_eq!(error.to_string(), "error parsing header: start does not match magic string");
+
+        let content = b"{'descr': '<f8', 'fortran_order': False, 'shape': (3,), }";
+        let mut bytes = npy_header_bytes(1, content);
+        bytes.pop();
+        bytes.push(b' ');
+        let error = read_header(&bytes).unwrap_err();
+        assert_eq!(error.to_string(), "error parsing header: invalid header in file: missing new line");
+
+        // the file ends before the end of the header
+        let bytes = npy_header_bytes(1, content);
+        let error = read_header(&bytes[..20]).unwrap_err();
+        assert!(matches!(error, ReadHeaderError::Io(_)));
+        assert!(error.to_string().starts_with("I/O error: "));
+        assert!(error.source().is_some());
+        assert!(matches!(crate::Error::from(error), crate::Error::Io(_)));
+    }
+
+    #[test]
+    fn npy_header_parsing_alternative_syntax() {
+        // double quoted strings, no trailing commas, extra whitespace
+        let header = Header::from_str(
+            "{\"descr\":[(\"a\",\"<i4\"), ( 'b' , '<i4' )],\t\"fortran_order\" : True,'shape':( 3 , 4 )}"
+        ).unwrap();
+        assert_eq!(header.type_descriptor, DataType::Compound(
+            vec![("a".into(), "<i4".into()), ("b".into(), "<i4".into())]
+        ));
+        assert!(header.fortran_order);
+        assert_eq!(header.shape, [3, 4]);
+    }
+
+    #[test]
+    fn npy_header_parsing_errors() {
+        let check_error = |header: &str, message: &str| {
+            let error = Header::from_str(header).unwrap_err();
+            assert_eq!(error.to_string(), format!("invalid header in file: {}", message), "header: {}", header);
+        };
+
+        check_error("['descr': '<f8']", "expected '{', got '['");
+        check_error("{descr: '<f8'}", "expected a string, got 'd'");
+        check_error("{'descr' = '<f8'}", "expected ':', got '='");
+        check_error("{'other': '<f8'}", "unknown key: 'other'");
+        check_error("{'descr': '<f8';}", "expected '}', got ';'");
+
+        check_error("{'descr': 8}", "expected a string or a list, got '8'");
+        check_error("{'descr': ['a', '<f8']}", "expected '(', got '''");
+        check_error("{'descr': [('a' '<f8')]}", "expected ',', got '''");
+        check_error("{'descr': [('a', '<f8', 3)]}", "expected ')', got ','");
+        check_error("{'descr': [('a', '<f8') ('b', '<f8')]}", "expected ']', got '('");
+
+        check_error("{'fortran_order': 0}", "expected a bool, got '0'");
+        check_error("{'fortran_order': Fake}", "expected 'l', got 'k'");
+        check_error("{'fortran_order': Tree}", "expected 'u', got 'e'");
+
+        check_error("{'shape': 3}", "expected '(', got '3'");
+        check_error("{'shape': (a,)}", "expected an integer, got 'a'");
+        check_error("{'shape': (3; 4)}", "expected ')', got ';'");
+        check_error(
+            "{'shape': (99999999999999999999999,)}",
+            "failed to parse an integer: number too large to fit in target type"
+        );
+
+        check_error("{'fortran_order': False, 'shape': (3,)}", "missing 'descr' key");
+        check_error("{'descr': '<f8', 'shape': (3,)}", "missing 'fortran_order' key");
+        check_error("{'descr': '<f8', 'fortran_order': False}", "missing 'shape' key");
+
+        // the parser currently panics (index out of bounds) when the header
+        // ends before the parsing is done
+        let truncated = ["", "{", "{'descr", "{'descr': '<f8'", "{'descr': [('a', '<f8')", "{'shape': (3,"];
+        for header in truncated {
+            let result = std::panic::catch_unwind(|| Header::from_str(header));
+            let error = result.expect_err("parsing a truncated header should panic");
+            let message = error.downcast_ref::<String>().expect("panic message should be a String");
+            assert!(message.starts_with("index out of bounds"), "header: {:?}, panic: {}", header, message);
+        }
+    }
 }

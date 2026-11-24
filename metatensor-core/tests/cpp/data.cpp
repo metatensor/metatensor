@@ -102,110 +102,77 @@ TEST_CASE("SimpleDataArray - reshape and swap_axes") {
     CHECK(array == SimpleDataArray<double>({4, 3}, {0.0, 6.6, 1.1, 7.7, 2.2, 8.8, 3.3, 9.9, 4.4, 10.10, 5.5, 11.11}));
 }
 
-TEST_CASE("SimpleDataArray<double> - as_dlpack()") {
-    auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
-    {
-        auto view = data->view();
-        view(1, 1, 0) = 1.2345;
-    }
-    auto array = DataArrayBase::to_mts_array(std::move(data));
-
-    DLDevice cpu_device = {kDLCPU, 0};
-    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    auto dlpack_array = array.as_dlpack_array<double>(cpu_device, nullptr, ver);
-
-    CHECK(dlpack_array.device().device_type == kDLCPU);
-    CHECK(dlpack_array.device().device_id == 0);
-
-    CHECK(dlpack_array.dtype().code == kDLFloat);
-    CHECK(dlpack_array.dtype().bits == 64);
-    CHECK(dlpack_array.dtype().lanes == 1);
-
-    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
-
-    const auto* data_ptr = dlpack_array.data();
-    CHECK(data_ptr[16] == 1.2345);
-}
-
-TEST_CASE("SimpleDataArray<float> - as_dlpack()") {
-    // Create float-backed array via C++ class, expose through mts_array_t
-    auto data = std::make_unique<SimpleDataArray<float>>(SimpleDataArray<float>({2, 3, 4}));
-    {
-        auto view = data->view();
-        view(1, 1, 0) = 3.1415F;
-    }
-
-    auto array = DataArrayBase::to_mts_array(std::move(data));
-
-    DLDevice cpu_device = {kDLCPU, 0};
-    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    auto dlpack_array = array.as_dlpack_array<float>(cpu_device, nullptr, ver);
-
-    CHECK(dlpack_array.device().device_type == kDLCPU);
-    CHECK(dlpack_array.device().device_id == 0);
-
-    CHECK(dlpack_array.dtype().code == kDLFloat);
-    CHECK(dlpack_array.dtype().bits == 32);
-    CHECK(dlpack_array.dtype().lanes == 1);
-
-    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
-
-    const auto* data_ptr = dlpack_array.data();
-    CHECK(data_ptr[16] == 3.1415F);
-}
-
-TEST_CASE("SimpleDataArray<int32_t> - as_dlpack()") {
-    auto data = std::make_unique<SimpleDataArray<int32_t>>(SimpleDataArray<int32_t>({2, 3, 4}));
-    {
-        auto view = data->view();
-        view(1, 1, 0) = 42;
-    }
-
-    auto array = DataArrayBase::to_mts_array(std::move(data));
-
-    DLDevice cpu_device = {kDLCPU, 0};
-    DLPackVersion ver = {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    auto dlpack_array = array.as_dlpack_array<int32_t>(cpu_device, nullptr, ver);
-
-    CHECK(dlpack_array.device().device_type == kDLCPU);
-    CHECK(dlpack_array.device().device_id == 0);
-
-    CHECK(dlpack_array.dtype().code == kDLInt);
-    CHECK(dlpack_array.dtype().bits == 32);
-    CHECK(dlpack_array.dtype().lanes == 1);
-
-    CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
-
-    const auto* data_ptr = dlpack_array.data();
-    CHECK(data_ptr[16] == 42);
-}
-
-TEST_CASE("SimpleDataArray - from_dlpack()") {
-    auto double_data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3, 4}));
-    auto double_array = DataArrayBase::to_mts_array(std::move(double_data));
-
-    auto int_data = std::make_unique<SimpleDataArray<int16_t>>(SimpleDataArray<int16_t>({2, 3, 4}));
-    auto int_array = DataArrayBase::to_mts_array(std::move(int_data));
-
-    auto* double_dl_tensor = double_array.as_dlpack({kDLCPU, 0}, nullptr, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
-    auto* int_dl_tensor = int_array.as_dlpack({kDLCPU, 0}, nullptr, {DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION});
-
-    auto new_double_array = double_array.from_dlpack(double_dl_tensor);
-    // create an array of a different type from the source array
-    auto new_int_array = double_array.from_dlpack(int_dl_tensor);
-
-    auto device = DLDevice{kDLCPU, 0};
+TEMPLATE_TEST_CASE("SimpleDataArray - all dtypes", "",
+    double, float, int8_t, int16_t, int32_t, int64_t, uint8_t, uint16_t, uint32_t, uint64_t, bool
+) {
+    using storage_t = details::storage_type_t<TestType>;
+    auto cpu_device = DLDevice{kDLCPU, 0};
     auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
 
-    CHECK(
-        new_double_array.as_dlpack_array<double>(device, nullptr, version)
-        == double_array.as_dlpack_array<double>(device, nullptr, version)
-    );
+    SECTION("as_dlpack") {
+        auto data = std::make_unique<SimpleDataArray<TestType>>(std::vector<uintptr_t>{2, 3, 4});
+        {
+            auto view = data->view();
+            view(1, 1, 0) = 1;
+        }
+        MtsArray array = DataArrayBase::to_mts_array(std::move(data));
 
-    CHECK(
-        new_int_array.as_dlpack_array<int16_t>(device, nullptr, version)
-        == int_array.as_dlpack_array<int16_t>(device, nullptr, version)
-    );
+        auto dlpack_array = array.as_dlpack_array<TestType>(cpu_device, nullptr, version);
+        CHECK(dlpack_array.device().device_type == kDLCPU);
+        CHECK(dlpack_array.device().device_id == 0);
+        CHECK(details::dlpack_dtype_matches<TestType>(dlpack_array.dtype()));
+        CHECK(dlpack_array.shape() == std::vector<uintptr_t>{2, 3, 4});
+        CHECK(dlpack_array.data()[16] == static_cast<TestType>(1));
+    }
+
+    SECTION("default_create_array") {
+        auto shape = std::vector<uintptr_t>{2, 3};
+        mts_array_t raw_array = {};
+        details::check_status(details::default_create_array(
+            shape.data(), shape.size(), details::dtype_of<TestType>(), &raw_array
+        ));
+        auto array = MtsArray(raw_array);
+
+        CHECK(details::dlpack_dtype_matches<TestType>(array.dtype()));
+        CHECK(SimpleDataArray<TestType>::from_mts_array(array) == SimpleDataArray<TestType>({2, 3}));
+    }
+
+    SECTION("from_dlpack") {
+        auto data = SimpleDataArray<TestType>({2, 2}, std::vector<storage_t>{0, 1, 1, 0});
+
+        // from_dlpack can create arrays with a different dtype than the
+        // array it is called on
+        auto source = DataArrayBase::to_mts_array(
+            std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1})
+        );
+        auto array = source.from_dlpack(data.as_dlpack(cpu_device, nullptr, version));
+
+        CHECK(details::dlpack_dtype_matches<TestType>(array.dtype()));
+        CHECK(SimpleDataArray<TestType>::from_mts_array(array) == data);
+    }
+
+    SECTION("create") {
+        auto array = DataArrayBase::to_mts_array(
+            std::make_unique<SimpleDataArray<TestType>>(std::vector<uintptr_t>{2, 2})
+        );
+        auto fill_value = DataArrayBase::to_mts_array(
+            std::make_unique<SimpleDataArray<TestType>>(std::vector<uintptr_t>{}, static_cast<TestType>(1))
+        );
+
+        auto new_array = array.create({3, 2}, std::move(fill_value));
+        CHECK(details::dlpack_dtype_matches<TestType>(new_array.dtype()));
+        CHECK(
+            SimpleDataArray<TestType>::from_mts_array(new_array)
+            == SimpleDataArray<TestType>({3, 2}, static_cast<TestType>(1))
+        );
+    }
+
+    SECTION("create_empty_array") {
+        auto array = details::create_empty_array({2, 3}, details::dtype_of<TestType>());
+        REQUIRE(dynamic_cast<EmptyDataArray<TestType>*>(array.get()) != nullptr);
+        CHECK(array->shape() == std::vector<uintptr_t>{2, 3});
+        CHECK(details::dlpack_dtype_matches<TestType>(array->dtype()));
+    }
 }
 
 TEST_CASE("DLPackArray<T> - construction and access") {
@@ -405,76 +372,6 @@ TEST_CASE("SimpleDataArray - DLPack version mismatch") {
     managed->deleter(managed);
 }
 
-TEST_CASE("SimpleDataArray - dtype()") {
-    SECTION("double") {
-        auto data = SimpleDataArray<double>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLFloat);
-        CHECK(dt.bits == 64);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("float") {
-        auto data = SimpleDataArray<float>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLFloat);
-        CHECK(dt.bits == 32);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("int32") {
-        auto data = SimpleDataArray<int32_t>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLInt);
-        CHECK(dt.bits == 32);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("via mts_array_t callback") {
-        auto data = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({2, 3}));
-        auto array = DataArrayBase::to_mts_array(std::move(data));
-
-        CHECK(array.dtype().code == kDLFloat);
-        CHECK(array.dtype().bits == 64);
-        CHECK(array.dtype().lanes == 1);
-    }
-}
-
-TEST_CASE("EmptyDataArray - dtype()") {
-    SECTION("default (double)") {
-        auto data = EmptyDataArray<double>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLFloat);
-        CHECK(dt.bits == 64);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("int32") {
-        auto data = EmptyDataArray<int32_t>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLInt);
-        CHECK(dt.bits == 32);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("bool") {
-        auto data = EmptyDataArray<bool>({2, 3});
-        auto dt = data.dtype();
-        CHECK(dt.code == kDLBool);
-        CHECK(dt.bits == 8);
-        CHECK(dt.lanes == 1);
-    }
-
-    SECTION("via mts_array_t callback") {
-        auto data = std::make_unique<EmptyDataArray<int32_t>>(std::vector<uintptr_t>{2, 3});
-        auto array = DataArrayBase::to_mts_array(std::move(data));
-
-        CHECK(array.dtype().code == kDLInt);
-        CHECK(array.dtype().bits == 32);
-        CHECK(array.dtype().lanes == 1);
-    }
-}
-
 
 template<typename T>
 void check_array_equality() {
@@ -627,113 +524,6 @@ static DLManagedTensorVersioned* make_bool_dlpack(
 }
 
 
-TEST_CASE("default_create_array with bool dtype") {
-    auto dtype = metatensor::details::dtype_of<bool>();
-    CHECK(dtype.code == kDLBool);
-    CHECK(dtype.bits == 8);
-    CHECK(dtype.lanes == 1);
-
-    std::vector<uintptr_t> shape = {2, 3};
-
-    mts_array_t raw_array = {};
-    auto status = metatensor::details::default_create_array(
-        shape.data(), shape.size(), dtype, &raw_array
-    );
-    CHECK(status == MTS_SUCCESS);
-
-    auto array = MtsArray(raw_array);
-
-    CHECK(array.shape() == shape);
-
-    auto dt = array.dtype();
-    CHECK(dt.code == kDLBool);
-    CHECK(dt.bits == 8);
-    CHECK(dt.lanes == 1);
-
-    // The newly created array should be zero-initialised
-    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-    auto dlpack = DLPackArray<bool>(array.as_dlpack({kDLCPU, 0}, nullptr, version));
-
-    CHECK(dlpack.shape() == std::vector<size_t>{2, 3});
-    for (size_t i = 0; i < 6; i++) {
-        CHECK(dlpack.data()[i] == false);
-    }
-}
-
-
-TEST_CASE("SimpleDataArray<bool>") {
-    SECTION("from_dlpack() with bool") {
-        auto raw_data = std::make_shared<std::vector<uint8_t>>(
-            std::vector<uint8_t>{1, 0, 0, 1, 0, 1}
-        );
-        auto* dl_managed = make_bool_dlpack(raw_data, {2, 3});
-
-        // Use a SimpleDataArray<double> as the "source" array (its from_dlpack
-        // is the static dispatcher that handles all dtypes)
-        auto source = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({1}));
-        auto source_array = DataArrayBase::to_mts_array(std::move(source));
-
-        auto new_array = source_array.from_dlpack(dl_managed);
-
-        auto* base = static_cast<DataArrayBase*>(new_array.as_mts_array_t().ptr);
-        REQUIRE(dynamic_cast<SimpleDataArray<bool>*>(base) != nullptr);
-
-        CHECK(new_array.shape() == std::vector<uintptr_t>{2, 3});
-
-        auto dt = new_array.dtype();
-        CHECK(dt.code == kDLBool);
-        CHECK(dt.bits == 8);
-        CHECK(dt.lanes == 1);
-
-        // Verify the data round-trips through DLPack
-        auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        auto dlpack = DLPackArray<bool>(new_array.as_dlpack({kDLCPU, 0}, nullptr, version));
-
-        CHECK(dlpack.shape() == std::vector<size_t>{2, 3});
-        CHECK(dlpack.data()[0] == true);
-        CHECK(dlpack.data()[1] == false);
-        CHECK(dlpack.data()[2] == false);
-        CHECK(dlpack.data()[3] == true);
-        CHECK(dlpack.data()[4] == false);
-        CHECK(dlpack.data()[5] == true);
-    }
-
-    SECTION("round-trip through DLPack") {
-        // Start from a bool DLPack tensor, import via from_dlpack, export back
-        // via as_dlpack, and verify dtype + values are preserved.
-        auto raw_data = std::make_shared<std::vector<uint8_t>>(
-            std::vector<uint8_t>{0, 1, 1, 0, 1, 0, 0, 1}
-        );
-        auto* dl_managed = make_bool_dlpack(raw_data, {2, 4});
-
-        auto source = std::make_unique<SimpleDataArray<double>>(SimpleDataArray<double>({1}));
-        auto source_array = DataArrayBase::to_mts_array(std::move(source));
-
-        auto bool_array = source_array.from_dlpack(dl_managed);
-
-        // Export back to DLPack
-        auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
-        auto* re_exported = bool_array.as_dlpack({kDLCPU, 0}, nullptr, version);
-
-        CHECK(re_exported->dl_tensor.dtype.code == kDLBool);
-        CHECK(re_exported->dl_tensor.dtype.bits == 8);
-        CHECK(re_exported->dl_tensor.dtype.lanes == 1);
-
-        // Verify data is preserved
-        const auto* ptr = static_cast<const uint8_t*>(re_exported->dl_tensor.data);
-        CHECK(ptr[0] == 0);
-        CHECK(ptr[1] == 1);
-        CHECK(ptr[2] == 1);
-        CHECK(ptr[3] == 0);
-        CHECK(ptr[4] == 1);
-        CHECK(ptr[5] == 0);
-        CHECK(ptr[6] == 0);
-        CHECK(ptr[7] == 1);
-
-        re_exported->deleter(re_exported);
-    }
-}
-
 TEST_CASE("DLPackArray<bool>") {
     SECTION("construction and access") {
         auto raw_data = std::make_shared<std::vector<uint8_t>>(
@@ -783,4 +573,140 @@ TEST_CASE("DLPackArray<bool>") {
             Catch::Matchers::Contains("dtype mismatch")
         );
     }
+}
+
+TEST_CASE("Unsupported dtypes") {
+    auto shape = std::vector<uintptr_t>{2, 3};
+    auto complex = DLDataType{kDLComplex, 128, 1};
+    auto vector = DLDataType{kDLFloat, 64, 2};
+
+    mts_array_t raw_array = {};
+    CHECK_THROWS_WITH(
+        details::check_status(details::default_create_array(shape.data(), shape.size(), complex, &raw_array)),
+        "unsupported DLDataType in default_create_array: code=5 bits=128"
+    );
+    CHECK_THROWS_WITH(
+        details::check_status(details::default_create_array(shape.data(), shape.size(), vector, &raw_array)),
+        "unsupported DLDataType in default_create_array: lanes=2 (expected 1)"
+    );
+
+    // reset the last error, this should free the exception from
+    // `default_create_array` and avoid memory leak
+    auto status = mts_set_last_error(nullptr, nullptr, nullptr, nullptr);
+    CHECK(status == MTS_SUCCESS);
+
+    CHECK_THROWS_WITH(
+        details::create_empty_array(shape, complex),
+        "unsupported DLDataType in create_empty_array: code=5 bits=128"
+    );
+    CHECK_THROWS_WITH(
+        details::create_empty_array(shape, vector),
+        "unsupported DLDataType in create_empty_array: lanes=2 (expected 1)"
+    );
+}
+
+TEST_CASE("SimpleDataArray - errors") {
+    auto cpu_device = DLDevice{kDLCPU, 0};
+    auto cuda_device = DLDevice{kDLCUDA, 0};
+    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+
+    CHECK_THROWS_WITH(
+        SimpleDataArray<double>({2, 3}, std::vector<double>{1, 2, 3}),
+        "the shape and size of the data don't match in SimpleDataArray"
+    );
+
+    auto array = SimpleDataArray<double>({2, 3});
+    CHECK_THROWS_WITH(array.reshape({4, 2}), "invalid shape in reshape");
+    CHECK_THROWS_WITH(array.copy(cuda_device), "SimpleDataArray only supports copying to CPU");
+
+    CHECK_THROWS_WITH(
+        array.as_dlpack(cuda_device, nullptr, version),
+        "SimpleDataArray only supports CPU device (kDLCPU)"
+    );
+    int64_t stream = 0;
+    CHECK_THROWS_WITH(
+        array.as_dlpack(cpu_device, &stream, version),
+        "`stream` must be null for CPU data"
+    );
+
+    auto fill_value = DataArrayBase::to_mts_array(
+        std::make_unique<SimpleDataArray<double>>(std::vector<uintptr_t>{1}, 1.0)
+    );
+    CHECK_THROWS_WITH(
+        array.create({2, 2}, std::move(fill_value)),
+        "`fill_value` must be a single scalar"
+    );
+
+    // moving data with an empty list of moves does nothing
+    auto other = SimpleDataArray<double>({2, 3}, 1.0);
+    array.move_data(other, {});
+    CHECK(array == SimpleDataArray<double>({2, 3}));
+
+    CHECK_THROWS_WITH(
+        array.from_dlpack(nullptr),
+        "dlpack tensor is null in SimpleDataArray::from_dlpack"
+    );
+
+    auto* managed = array.as_dlpack(cpu_device, nullptr, version);
+    managed->version = {0, 8};
+    CHECK_THROWS_WITH(
+        array.from_dlpack(managed),
+        "DLPack version mismatch in SimpleDataArray::from_dlpack: expected major 1, got 0.8"
+    );
+
+    managed = array.as_dlpack(cpu_device, nullptr, version);
+    managed->dl_tensor.device = cuda_device;
+    CHECK_THROWS_WITH(
+        array.from_dlpack(managed),
+        "SimpleDataArray::from_dlpack only supports CPU device (kDLCPU), got device type 2"
+    );
+
+    managed = array.as_dlpack(cpu_device, nullptr, version);
+    managed->dl_tensor.dtype.lanes = 2;
+    CHECK_THROWS_WITH(
+        array.from_dlpack(managed),
+        "SimpleDataArray::from_dlpack only supports DLPack tensors with lanes == 1"
+    );
+
+    managed = array.as_dlpack(cpu_device, nullptr, version);
+    managed->dl_tensor.dtype = DLDataType{kDLComplex, 128, 1};
+    CHECK_THROWS_WITH(
+        array.from_dlpack(managed),
+        "unsupported DLDataType in SimpleDataArray::from_dlpack: code=5 bits=128"
+    );
+}
+
+TEST_CASE("EmptyDataArray") {
+    auto array = EmptyDataArray<float>({2, 3, 4});
+
+    array.reshape({6, 4});
+    CHECK(array.shape() == std::vector<uintptr_t>{6, 4});
+    CHECK_THROWS_WITH(array.reshape({5, 4}), "invalid shape in reshape");
+
+    array.swap_axes(0, 1);
+    CHECK(array.shape() == std::vector<uintptr_t>{4, 6});
+    CHECK_THROWS_WITH(array.swap_axes(0, 2), "out of bounds axis in swap_axes");
+
+    auto copy = array.copy(DLDevice{kDLCPU, 0});
+    REQUIRE(dynamic_cast<EmptyDataArray<float>*>(copy.get()) != nullptr);
+    CHECK(copy->shape() == std::vector<uintptr_t>{4, 6});
+    CHECK_THROWS_WITH(array.copy(DLDevice{kDLCUDA, 0}), "EmptyDataArray only supports copying to CPU");
+
+    auto created = array.create({3, 2}, MtsArray(mts_array_t{}));
+    REQUIRE(dynamic_cast<EmptyDataArray<float>*>(created.get()) != nullptr);
+    CHECK(created->shape() == std::vector<uintptr_t>{3, 2});
+
+    auto version = DLPackVersion{DLPACK_MAJOR_VERSION, DLPACK_MINOR_VERSION};
+    CHECK_THROWS_WITH(
+        array.as_dlpack(DLDevice{kDLCPU, 0}, nullptr, version),
+        "can not call `as_dlpack` for an EmptyDataArray"
+    );
+    CHECK_THROWS_WITH(
+        array.from_dlpack(nullptr),
+        "can not call `from_dlpack` for an EmptyDataArray"
+    );
+    CHECK_THROWS_WITH(
+        array.move_data(*copy, {}),
+        "can not call `move_data` for an EmptyDataArray"
+    );
 }
